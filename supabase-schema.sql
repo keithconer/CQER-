@@ -32,15 +32,19 @@ create policy "Users can insert own profile" on public.profiles
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
-  insert into public.profiles (id, email, first_name, last_name, user_type, avatar_url)
-  values (
-    new.id,
-    new.email,
-    new.raw_user_meta_data->>'first_name',
-    new.raw_user_meta_data->>'last_name',
-    coalesce(new.raw_user_meta_data->>'user_type', 'unit_coordinator'),
-    new.raw_user_meta_data->>'avatar_url'
-  );
+  -- Only create profile if user_type is provided (manual registration)
+  -- For OAuth, we'll handle profile creation in the registration flow (Step 2)
+  if new.raw_user_meta_data->>'user_type' is not null then
+    insert into public.profiles (id, email, first_name, last_name, user_type, avatar_url)
+    values (
+      new.id,
+      new.email,
+      new.raw_user_meta_data->>'first_name',
+      new.raw_user_meta_data->>'last_name',
+      new.raw_user_meta_data->>'user_type',
+      new.raw_user_meta_data->>'avatar_url'
+    );
+  end if;
   return new;
 end;
 $$ language plpgsql security definer;

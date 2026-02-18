@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, Suspense, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { StepIndicator } from "@/components/step-indicator";
@@ -41,8 +41,9 @@ function validatePassword(password: string) {
   return errors;
 }
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [currentStep, setCurrentStep] = useState(1);
   const [email, setEmail] = useState("");
   const [userType, setUserType] = useState<string>("");
@@ -54,6 +55,26 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
 
   const supabase = createClient();
+
+  useEffect(() => {
+    const step = searchParams.get("step");
+    const emailParam = searchParams.get("email");
+    if (step) setCurrentStep(parseInt(step));
+    if (emailParam) setEmail(emailParam);
+    
+    // If we're coming from OAuth, we might already have a user but no profile
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user && user.email) {
+        setEmail(user.email);
+        // If we are on step 1 but have a user, we should move to step 2
+        if (!step || step === "1") {
+          setCurrentStep(2);
+        }
+      }
+    };
+    checkUser();
+  }, [searchParams, supabase.auth]);
 
   const handleNextStep = () => {
     setError("");
@@ -79,6 +100,9 @@ export default function RegisterPage() {
     }
 
     if (currentStep === 3) {
+      // Step 3 is typically password. For OAuth, it might be optional, 
+      // but according to user prompt "it will start on number 2 process up to 4",
+      // we'll keep the password setup step.
       const passwordErrors = validatePassword(password);
       if (passwordErrors.length > 0) {
         setError(passwordErrors.join(", "));
@@ -103,11 +127,49 @@ export default function RegisterPage() {
     try {
       // Extract first name and last name from email
       const emailParts = email.split("@")[0].split(".");
-      const firstName =
-        emailParts[1].charAt(0).toUpperCase() + emailParts[1].slice(1);
-      const lastName =
-        emailParts[2].charAt(0).toUpperCase() + emailParts[2].slice(1);
+      let firstName = "";
+      let lastName = "";
+      
+      if (emailParts.length >= 3) {
+        firstName = emailParts[1].charAt(0).toUpperCase() + emailParts[1].slice(1);
+        lastName = emailParts[2].charAt(0).toUpperCase() + emailParts[2].slice(1);
+      }
 
+      // Check if user is already authenticated (OAuth flow)
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (user) {
+        // User exists (OAuth), just create/update the profile
+        const { error: profileError } = await supabase.from("profiles").upsert({
+          id: user.id,
+          email: email,
+          first_name: firstName,
+          last_name: lastName,
+          user_type: userType,
+        });
+
+        if (profileError) {
+          setError(profileError.message);
+          setLoading(false);
+          return;
+        }
+
+        // IMPORTANT: Sync metadata to Auth for role consistency
+        await supabase.auth.updateUser({
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+            user_type: userType,
+          },
+        });
+
+        // Redirect to dashboard as they are already confirmed
+        router.push("/dashboard");
+        router.refresh();
+        return;
+      }
+
+      // Traditional sign up flow
       const { error: signUpError } = await supabase.auth.signUp({
         email,
         password,
@@ -402,5 +464,13 @@ export default function RegisterPage() {
         )}
       </CardContent>
     </Card>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center p-8 text-xs text-muted-foreground">Loading registration...</div>}>
+      <RegisterForm />
+    </Suspense>
   );
 }

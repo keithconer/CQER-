@@ -13,7 +13,7 @@ export async function GET(request: Request) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
 
         if (!error) {
-            // Check if profile exists, if not create one (for OAuth users)
+            // Check if profile exists
             const {
                 data: { user },
             } = await supabase.auth.getUser();
@@ -25,34 +25,14 @@ export async function GET(request: Request) {
                     .eq("id", user.id)
                     .single();
 
-                if (!profile) {
-                    // Extract name from email or user metadata
-                    const email = user.email || "";
-                    const metadata = user.user_metadata;
-                    let firstName = metadata?.first_name || metadata?.full_name?.split(" ")[0] || "";
-                    let lastName = metadata?.last_name || metadata?.full_name?.split(" ").slice(1).join(" ") || "";
-
-                    // Try parsing from CvSU email format: main.firstname.lastname@cvsu.edu.ph
-                    if (!firstName && email.includes("@cvsu.edu.ph")) {
-                        const parts = email.split("@")[0].split(".");
-                        if (parts.length >= 3) {
-                            firstName = parts[1].charAt(0).toUpperCase() + parts[1].slice(1);
-                            lastName = parts[2].charAt(0).toUpperCase() + parts[2].slice(1);
-                        }
-                    }
-
-                    await supabase.from("profiles").insert({
-                        id: user.id,
-                        email: email,
-                        first_name: firstName,
-                        last_name: lastName,
-                        user_type: "unit_coordinator", // Default for OAuth, can be changed later
-                        avatar_url: metadata?.avatar_url || metadata?.picture || null,
-                    });
+                if (profile) {
+                    // Profile exists, go to dashboard
+                    return NextResponse.redirect(`${origin}${next}`);
+                } else {
+                    // No profile, redirect to complete registration from step 2
+                    return NextResponse.redirect(`${origin}/register?step=2`);
                 }
             }
-
-            return NextResponse.redirect(`${origin}${next}`);
         }
     }
 
