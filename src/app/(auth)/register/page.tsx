@@ -28,7 +28,7 @@ import {
   Users,
 } from "lucide-react";
 
-const STEP_LABELS = ["Email", "Role", "Password", "Confirm"];
+const STEP_LABELS = ["Email", "Role", "Department", "Password", "Confirm"];
 const EMAIL_REGEX = /^main\.[a-zA-Z]+\.[a-zA-Z]+@cvsu\.edu\.ph$/;
 
 function validatePassword(password: string) {
@@ -53,6 +53,8 @@ function RegisterForm() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [department, setDepartment] = useState("");
+  const [unit, setUnit] = useState("");
 
   const supabase = createClient();
 
@@ -97,25 +99,37 @@ function RegisterForm() {
         setError("Please select your role.");
         return;
       }
+      setCurrentStep(3);
+      return;
+    }
+
+    if (currentStep === 3) {
+      if (!department) {
+        setError("Please select your department.");
+        return;
+      }
+      if (userType === "unit_coordinator" && !unit) {
+        // Special case: for Agricultural and Food Engineering, the college coordinator is also the unit coordinator
+        // but for unit coordinators, they still need to pick a unit.
+        setError("Please select your unit.");
+        return;
+      }
 
       // If user is already authenticated (e.g., from Google or forced redirect), 
-      // they don't need Step 3 (Password). Go straight to handleRegister.
+      // they don't need Step 4 (Password). Go straight to handleRegister.
       const checkQuickSubmit = async () => {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           handleRegister();
           return;
         }
-        setCurrentStep(3);
+        setCurrentStep(4);
       };
       checkQuickSubmit();
       return;
     }
 
-    if (currentStep === 3) {
-      // Step 3 is typically password. For OAuth, it might be optional, 
-      // but according to user prompt "it will start on number 2 process up to 4",
-      // we'll keep the password setup step.
+    if (currentStep === 4) {
       const passwordErrors = validatePassword(password);
       if (passwordErrors.length > 0) {
         setError(passwordErrors.join(", "));
@@ -165,6 +179,8 @@ function RegisterForm() {
           first_name: firstName,
           last_name: lastName,
           user_type: userType,
+          department: department,
+          unit: unit || null,
         });
 
         if (profileError) {
@@ -179,6 +195,8 @@ function RegisterForm() {
             first_name: firstName,
             last_name: lastName,
             user_type: userType,
+            department: department,
+            unit: unit || null,
           },
         });
 
@@ -198,6 +216,8 @@ function RegisterForm() {
             first_name: firstName,
             last_name: lastName,
             user_type: userType,
+            department: department,
+            unit: unit || null,
           },
         },
       });
@@ -219,18 +239,18 @@ function RegisterForm() {
 
   return (
     <Card className="border-border/50 shadow-sm">
-      <CardHeader className="pb-3 pt-4 px-5">
-        <CardTitle className="text-sm font-bold">
+      <CardHeader className="pb-3 pt-5 px-6">
+        <CardTitle className="text-base font-bold">
           Create an account
         </CardTitle>
         <CardDescription className="text-[10px] text-muted-foreground/90">
           Join CQER with your CvSU email
         </CardDescription>
       </CardHeader>
-      <CardContent className="px-5 pb-5">
+      <CardContent className="px-6 pb-6">
         <StepIndicator
           currentStep={currentStep}
-          totalSteps={4}
+          totalSteps={5}
           labels={STEP_LABELS}
         />
 
@@ -306,8 +326,87 @@ function RegisterForm() {
           </div>
         )}
 
-        {/* Step 3: Password */}
+        {/* Step 3: Department and Unit */}
         {currentStep === 3 && (
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="department" className="text-[11px] font-semibold text-foreground/90 ml-0.5">
+                Department
+              </Label>
+              <select
+                id="department"
+                value={department}
+                onChange={(e) => {
+                  setDepartment(e.target.value);
+                  setUnit(""); // Reset unit when department changes
+                }}
+                className="flex h-9 w-full rounded-md border border-border/80 bg-muted/10 px-3 py-1 text-[11px] shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground/70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="" disabled>Select Department</option>
+                <option value="Department of Information Technology">Department of Information Technology</option>
+                <option value="Department of Industrial Engineering and Technology">Department of Industrial Engineering and Technology</option>
+                <option value="Department of Agricultural and Food Engineering">Department of Agricultural and Food Engineering</option>
+                <option value="Department of Computer Engineering and Electrical Engineering">Department of Computer Engineering and Electrical Engineering</option>
+                <option value="Department of Civil Engineering and Architecture">Department of Civil Engineering and Architecture</option>
+              </select>
+            </div>
+
+            {userType === "unit_coordinator" && department && (
+              <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                <Label htmlFor="unit" className="text-[11px] font-semibold text-foreground/90 ml-0.5">
+                  Unit
+                </Label>
+                <select
+                  id="unit"
+                  value={unit}
+                  onChange={(e) => setUnit(e.target.value)}
+                  className="flex h-9 w-full rounded-md border border-border/80 bg-muted/10 px-3 py-1 text-[11px] shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground/70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <option value="" disabled>Select Unit</option>
+                  {department === "Department of Information Technology" && (
+                    <>
+                      <option value="IT">IT</option>
+                      <option value="CS">CS</option>
+                    </>
+                  )}
+                  {department === "Department of Industrial Engineering and Technology" && (
+                    <>
+                      <option value="Automotive">Automotive</option>
+                      <option value="Electrical Engineer">Electrical Engineer</option>
+                    </>
+                  )}
+                  {department === "Department of Agricultural and Food Engineering" && (
+                    <>
+                      <option value="AGRI">AGRI</option>
+                      <option value="FE">FE</option>
+                    </>
+                  )}
+                  {department === "Department of Computer Engineering and Electrical Engineering" && (
+                    <>
+                      <option value="CE">CE</option>
+                      <option value="EE">EE</option>
+                    </>
+                  )}
+                  {department === "Department of Civil Engineering and Architecture" && (
+                    <>
+                      <option value="CE">CE</option>
+                      <option value="ARCHI">ARCHI</option>
+                    </>
+                  )}
+                </select>
+              </div>
+            )}
+
+            {userType === "college_coordinator" && department === "Department of Agricultural and Food Engineering" && (
+              <p className="text-[10px] text-muted-foreground italic px-0.5">
+                Note: As College Coordinator for this department, you will also act as the Unit Coordinator.
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Step 4: Password */}
+        {currentStep === 4 && (
           <div className="space-y-3">
             <div className="space-y-1.5">
               <Label htmlFor="password" className="text-[11px] font-semibold text-foreground/90 ml-0.5">
@@ -399,8 +498,8 @@ function RegisterForm() {
           </div>
         )}
 
-        {/* Step 4: Confirmation */}
-        {currentStep === 4 && (
+        {/* Step 5: Confirmation */}
+        {currentStep === 5 && (
           <div className="flex flex-col items-center text-center py-4 space-y-3">
             <div className="w-10 h-10 rounded-full bg-[#159E44]/10 flex items-center justify-center">
               <Mail className="h-5 w-5 text-[#159E44]" />
@@ -433,7 +532,7 @@ function RegisterForm() {
         )}
 
         {/* Navigation buttons */}
-        {currentStep < 4 && (
+        {currentStep < 5 && (
           <div className="flex items-center justify-between mt-4">
             {currentStep > 1 ? (
               <Button
@@ -459,10 +558,10 @@ function RegisterForm() {
             >
               {loading
                 ? "Creating..."
-                : currentStep === 3
+                : currentStep === 4
                   ? "Create Account"
                   : "Continue"}
-              {!loading && currentStep < 3 && (
+              {!loading && currentStep < 4 && (
                 <ArrowRight className="h-3 w-3 ml-1" />
               )}
             </Button>
@@ -470,7 +569,7 @@ function RegisterForm() {
         )}
 
         {/* Login link */}
-        {currentStep < 4 && (
+        {currentStep < 5 && (
           <p className="text-center text-[11px] text-muted-foreground mt-4">
             Already have an account?{" "}
             <Link
