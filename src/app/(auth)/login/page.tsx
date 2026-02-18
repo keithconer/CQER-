@@ -61,6 +61,7 @@ export default function LoginPage() {
         redirectTo: `${getBaseURL()}/auth/callback`,
         queryParams: {
           hd: "cvsu.edu.ph",
+          prompt: "select_account",
         },
       },
     });

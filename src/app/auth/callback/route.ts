@@ -37,8 +37,27 @@ export async function GET(request: Request) {
                     // Registered user, go to dashboard
                     return NextResponse.redirect(`${origin}${next}`);
                 } else {
+                    // PROFILE RECOVERY LOGIC:
+                    // If no profile exists, check if this was a manual sign-up attempt
+                    // that failed to trigger the DB trigger (bacause the user already existed).
+                    const metaData = user.user_metadata;
+                    if (metaData && metaData.user_type) {
+                        const { error: recoveryError } = await supabase.from("profiles").insert({
+                            id: user.id,
+                            email: user.email!,
+                            first_name: metaData.first_name || "",
+                            last_name: metaData.last_name || "",
+                            user_type: metaData.user_type,
+                            avatar_url: metaData.avatar_url || metaData.picture || null,
+                        });
+
+                        if (!recoveryError) {
+                            return NextResponse.redirect(`${origin}${next}`);
+                        }
+                    }
+
                     // RESTRICTION: Google Sign-in is for registered users only.
-                    // If no profile exists, sign out and redirect to login with error.
+                    // If no profile exists and no recovery metadata, sign out and error.
                     await supabase.auth.signOut();
                     return NextResponse.redirect(`${origin}/login?error=unregistered_oauth`);
                 }
