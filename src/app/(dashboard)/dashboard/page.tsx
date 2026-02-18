@@ -26,8 +26,12 @@ export default async function DashboardPage() {
     .eq("id", user.id)
     .single();
 
-  const userType = profile?.user_type || "unit_coordinator";
-  const firstName = profile?.first_name || "User";
+  if (!profile || !profile.first_name) {
+    redirect("/register?step=2");
+  }
+
+  const userType = profile.user_type;
+  const firstName = profile.first_name || "User";
 
   return (
     <div className="space-y-4">

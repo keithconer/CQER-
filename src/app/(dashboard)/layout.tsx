@@ -23,16 +23,21 @@ export default async function DashboardLayout({
     .eq("id", user.id)
     .single();
 
+  // BULLETPROOF REDIRECT: If no profile exists OR if it's incomplete (missing first name), they MUST pick a role
+  if (!profile || !profile.first_name) {
+    redirect("/register?step=2");
+  }
+
   const userData = {
-    firstName: profile?.first_name || user.user_metadata?.first_name || "User",
-    lastName: profile?.last_name || user.user_metadata?.last_name || "",
+    firstName: profile.first_name || user.user_metadata?.first_name || "User",
+    lastName: profile.last_name || user.user_metadata?.last_name || "",
     email: user.email || "",
     avatarUrl:
-      profile?.avatar_url ||
+      profile.avatar_url ||
       user.user_metadata?.avatar_url ||
       user.user_metadata?.picture ||
       null,
-    userType: profile?.user_type || "unit_coordinator",
+    userType: profile.user_type,
   };
 
   return (

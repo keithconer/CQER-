@@ -97,6 +97,19 @@ function RegisterForm() {
         setError("Please select your role.");
         return;
       }
+
+      // If user is already authenticated (e.g., from Google or forced redirect), 
+      // they don't need Step 3 (Password). Go straight to handleRegister.
+      const checkQuickSubmit = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          handleRegister();
+          return;
+        }
+        setCurrentStep(3);
+      };
+      checkQuickSubmit();
+      return;
     }
 
     if (currentStep === 3) {
@@ -126,13 +139,19 @@ function RegisterForm() {
 
     try {
       // Extract first name and last name from email
-      const emailParts = email.split("@")[0].split(".");
+      // Format: main.firstname.lastname@cvsu.edu.ph
+      const emailNamePart = email.split("@")[0]; // main.firstname.lastname
+      const parts = emailNamePart.split(".");
+      
       let firstName = "";
       let lastName = "";
       
-      if (emailParts.length >= 3) {
-        firstName = emailParts[1].charAt(0).toUpperCase() + emailParts[1].slice(1);
-        lastName = emailParts[2].charAt(0).toUpperCase() + emailParts[2].slice(1);
+      if (parts.length >= 3) {
+        // parts[0] is "main", parts[1] is firstname, parts[2] is lastname
+        firstName = parts[1].charAt(0).toUpperCase() + parts[1].slice(1);
+        lastName = parts[2].charAt(0).toUpperCase() + parts[2].slice(1);
+      } else if (parts.length === 2) {
+        firstName = parts[1].charAt(0).toUpperCase() + parts[1].slice(1);
       }
 
       // Check if user is already authenticated (OAuth flow)
