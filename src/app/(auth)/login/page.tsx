@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -11,9 +12,7 @@ import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Eye, EyeOff, Mail } from "lucide-react";
@@ -79,21 +78,105 @@ export default function LoginPage() {
   const callbackError = searchParams?.get("error");
 
   return (
-    <Card className="border-border/50 shadow-sm">
-      <CardHeader className="pb-4 pt-5 px-5">
-        <CardTitle className="text-base font-semibold">Welcome back</CardTitle>
-        <CardDescription className="text-xs">
-          Sign in to your CQER account
-        </CardDescription>
+    <Card className="border-border/50 shadow-md rounded-2xl overflow-hidden">
+      <CardHeader className="pt-8 pb-4 flex flex-col items-center space-y-4">
+        <div className="relative w-24 h-24">
+          <Image 
+            src="/CQERFINAL.png" 
+            alt="CQER Logo" 
+            fill 
+            className="object-contain"
+            priority
+          />
+        </div>
+        <div className="text-center space-y-1">
+          <h2 className="text-xs font-bold text-foreground">Welcome to</h2>
+          <p className="text-sm font-semibold text-foreground/80 tracking-tight">
+            CEIT Quarterly Extension Report
+          </p>
+        </div>
       </CardHeader>
-      <CardContent className="px-5 pb-5 space-y-4">
+      <CardContent className="px-6 pb-10 space-y-6">
+        {/* Manual Login Form */}
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="email" className="text-xs font-semibold text-foreground">
+              Email:
+            </Label>
+            <div className="relative">
+              <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/60" />
+              <Input
+                id="email"
+                type="email"
+                placeholder="your.email@cvsu.edu.ph"
+                value={email}
+                onChange={(e) => setEmail(e.target.value.toLowerCase())}
+                className="pl-8 h-10 text-xs bg-muted/10 border-border/80"
+                required
+              />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="password" className="text-xs font-semibold text-foreground">
+              Password
+            </Label>
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="pr-10 h-10 text-xs bg-muted/10 border-border/80"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-foreground"
+              >
+                {showPassword ? (
+                  <EyeOff className="h-3.5 w-3.5" />
+                ) : (
+                  <Eye className="h-3.5 w-3.5" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {(error || callbackError) && (
+            <p className="text-[11px] text-destructive font-medium">
+              {error ||
+                (callbackError === "auth_callback_error"
+                  ? "Authentication failed. Please try again."
+                  : "Email confirmation failed. Please try again.")}
+            </p>
+          )}
+
+          <Button
+            type="submit"
+            className="w-full h-10 text-xs font-bold bg-[#159E44] hover:bg-[#128A3B] text-white rounded-md shadow-sm transition-all active:scale-[0.98]"
+            disabled={loading}
+          >
+            {loading ? "Signing in..." : "Sign-in"}
+          </Button>
+        </form>
+
+        <div className="relative flex items-center">
+          <div className="flex-grow border-t border-border/60"></div>
+          <span className="flex-shrink mx-4 text-[10px] text-muted-foreground font-medium whitespace-nowrap">
+            One click sign-in process with
+          </span>
+          <div className="flex-grow border-t border-border/60"></div>
+        </div>
+
         {/* Google OAuth */}
         <Button
           variant="outline"
-          className="w-full h-9 text-xs font-medium"
+          className="w-full h-10 text-xs font-semibold border-border/80 bg-background text-foreground hover:bg-muted/30 transition-all active:scale-[0.98] rounded-md shadow-sm"
           onClick={handleGoogleLogin}
         >
-          <svg className="mr-2 h-3.5 w-3.5" viewBox="0 0 24 24">
+          <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
             <path
               d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
               fill="#4285F4"
@@ -107,94 +190,18 @@ export default function LoginPage() {
               fill="#FBBC05"
             />
             <path
-              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.47 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
               fill="#EA4335"
             />
           </svg>
-          Sign in with Google
+          Sign-in with Google
         </Button>
 
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <Separator />
-          </div>
-          <div className="relative flex justify-center text-[10px] uppercase">
-            <span className="bg-card px-2 text-muted-foreground">
-              or continue with email
-            </span>
-          </div>
-        </div>
-
-        {/* Manual Login Form */}
-        <form onSubmit={handleLogin} className="space-y-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="email" className="text-xs font-medium">
-              Email
-            </Label>
-            <div className="relative">
-              <Mail className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-              <Input
-                id="email"
-                type="email"
-                placeholder="your.email@cvsu.edu.ph"
-                value={email}
-                onChange={(e) => setEmail(e.target.value.toLowerCase())}
-                className="pl-8 h-9 text-xs"
-                required
-              />
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="password" className="text-xs font-medium">
-              Password
-            </Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="pr-8 h-9 text-xs"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground"
-              >
-                {showPassword ? (
-                  <EyeOff className="h-3.5 w-3.5" />
-                ) : (
-                  <Eye className="h-3.5 w-3.5" />
-                )}
-              </button>
-            </div>
-          </div>
-
-          {(error || callbackError) && (
-            <p className="text-[11px] text-destructive">
-              {error ||
-                (callbackError === "auth_callback_error"
-                  ? "Authentication failed. Please try again."
-                  : "Email confirmation failed. Please try again.")}
-            </p>
-          )}
-
-          <Button
-            type="submit"
-            className="w-full h-9 text-xs bg-[#159E44] hover:bg-[#128A3B] text-white"
-            disabled={loading}
-          >
-            {loading ? "Signing in..." : "Sign in"}
-          </Button>
-        </form>
-
-        <p className="text-center text-[11px] text-muted-foreground">
-          Don&apos;t have an account?{" "}
+        <p className="text-center text-[10px] text-muted-foreground">
+          Doesn&apos;t have an account yet?{" "}
           <Link
             href="/register"
-            className="text-[#159E44] hover:underline font-medium"
+            className="text-[#159E44] hover:underline font-semibold"
           >
             Register
           </Link>
