@@ -147,7 +147,9 @@ export default function LoginPage() {
           {(error || callbackError) && (
             <p className="text-[11px] text-destructive font-medium">
               {error ||
-                (callbackError === "auth_callback_error"
+                (callbackError === "unregistered_oauth"
+                  ? "This Google account is not registered. Please register with your CvSU email first."
+                  : callbackError === "auth_callback_error"
                   ? "Authentication failed. Please try again."
                   : "Email confirmation failed. Please try again.")}
             </p>

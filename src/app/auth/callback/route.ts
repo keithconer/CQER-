@@ -13,7 +13,6 @@ export async function GET(request: Request) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
 
         if (!error) {
-            // Check if profile exists
             const {
                 data: { user },
             } = await supabase.auth.getUser();
@@ -21,16 +20,27 @@ export async function GET(request: Request) {
             if (user) {
                 const { data: profile } = await supabase
                     .from("profiles")
-                    .select("id")
+                    .select("*")
                     .eq("id", user.id)
                     .single();
 
                 if (profile) {
-                    // Profile exists, go to dashboard
+                    // Sync avatar from Google if it exists and profile doesn't have one or it changed
+                    const googleAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture;
+                    if (googleAvatar && profile.avatar_url !== googleAvatar) {
+                        await supabase
+                            .from("profiles")
+                            .update({ avatar_url: googleAvatar })
+                            .eq("id", user.id);
+                    }
+
+                    // Registered user, go to dashboard
                     return NextResponse.redirect(`${origin}${next}`);
                 } else {
-                    // No profile, redirect to complete registration from step 2
-                    return NextResponse.redirect(`${origin}/register?step=2`);
+                    // RESTRICTION: Google Sign-in is for registered users only.
+                    // If no profile exists, sign out and redirect to login with error.
+                    await supabase.auth.signOut();
+                    return NextResponse.redirect(`${origin}/login?error=unregistered_oauth`);
                 }
             }
         }
