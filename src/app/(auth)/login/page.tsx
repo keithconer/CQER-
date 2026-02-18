@@ -80,7 +80,7 @@ export default function LoginPage() {
 
   return (
     <Card className="border-border/50 shadow-md rounded-2xl overflow-hidden">
-      <CardHeader className="pt-8 pb-4 flex flex-col items-center space-y-4">
+      <CardHeader className="pt-6 pb-2 flex flex-col items-center space-y-3">
         <div className="relative w-24 h-24">
           <Image 
             src="/CQERFINAL.png" 
@@ -90,16 +90,16 @@ export default function LoginPage() {
             priority
           />
         </div>
-        <div className="text-center space-y-1">
-          <h2 className="text-xs font-bold text-foreground">Welcome to</h2>
-          <p className="text-sm font-semibold text-foreground/80 tracking-tight">
+        <div className="text-center space-y-0.5">
+          <h2 className="text-[10px] font-bold text-foreground">Welcome to</h2>
+          <p className="text-xs font-semibold text-foreground/80 tracking-tight">
             CEIT Quarterly Extension Report
           </p>
         </div>
       </CardHeader>
-      <CardContent className="px-6 pb-10 space-y-6">
+      <CardContent className="px-5 pb-6 space-y-4">
         {/* Manual Login Form */}
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleLogin} className="space-y-3">
           <div className="space-y-1.5">
             <Label htmlFor="email" className="text-[11px] font-semibold text-foreground/90 ml-0.5">
               Email:
