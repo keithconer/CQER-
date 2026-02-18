@@ -15,6 +15,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "CQER - CEIT Quarterly Extension Report",
   description: "CvSU CEIT Quarterly Extension Report Management System",
+  icons: {
+    icon: "/CQERFINAL.png",
+  },
 };
 
 export default function RootLayout({
