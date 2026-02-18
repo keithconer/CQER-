@@ -100,24 +100,24 @@ export default function LoginPage() {
         {/* Manual Login Form */}
         <form onSubmit={handleLogin} className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="email" className="text-[11px] font-semibold text-foreground/70 ml-0.5">
+            <Label htmlFor="email" className="text-[11px] font-semibold text-foreground/90 ml-0.5">
               Email:
             </Label>
             <div className="relative">
-              <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40" />
+              <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/60" />
               <Input
                 id="email"
                 type="email"
                 placeholder="your.email@cvsu.edu.ph"
                 value={email}
                 onChange={(e) => setEmail(e.target.value.toLowerCase())}
-                className="pl-8 h-9 text-[11px] bg-muted/5 border-border/60 placeholder:text-[11px] placeholder:text-muted-foreground/40"
+                className="pl-8 h-9 text-[11px] bg-muted/10 border-border/80 placeholder:text-[11px] placeholder:text-muted-foreground/70"
                 required
               />
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="password" className="text-[11px] font-semibold text-foreground/70 ml-0.5">
+            <Label htmlFor="password" className="text-[11px] font-semibold text-foreground/90 ml-0.5">
               Password
             </Label>
             <div className="relative">
@@ -127,7 +127,7 @@ export default function LoginPage() {
                 placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="pr-10 h-9 text-[11px] bg-muted/5 border-border/60 placeholder:text-[11px] placeholder:text-muted-foreground/40"
+                className="pr-10 h-9 text-[11px] bg-muted/10 border-border/80 placeholder:text-[11px] placeholder:text-muted-foreground/70"
                 required
               />
               <button
@@ -175,7 +175,7 @@ export default function LoginPage() {
         {/* Google OAuth */}
         <Button
           variant="outline"
-          className="w-full h-9 text-[11px] font-semibold border-border/60 bg-background text-foreground hover:bg-muted/30 transition-all active:scale-[0.98] rounded-md shadow-sm"
+          className="w-full h-9 text-[11px] font-semibold border-border/80 bg-background text-foreground hover:bg-muted/30 transition-all active:scale-[0.98] rounded-md shadow-sm"
           onClick={handleGoogleLogin}
         >
           <svg className="mr-2 h-3.5 w-3.5" viewBox="0 0 24 24">

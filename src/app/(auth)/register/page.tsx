@@ -204,7 +204,7 @@ function RegisterForm() {
         <CardTitle className="text-sm font-bold">
           Create an account
         </CardTitle>
-        <CardDescription className="text-[10px] text-muted-foreground/70">
+        <CardDescription className="text-[10px] text-muted-foreground/90">
           Join CQER with your CvSU email
         </CardDescription>
       </CardHeader>
@@ -219,21 +219,21 @@ function RegisterForm() {
         {currentStep === 1 && (
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-[11px] font-semibold text-foreground/70 ml-0.5">
+              <Label htmlFor="email" className="text-[11px] font-semibold text-foreground/90 ml-0.5">
                 CvSU Email
               </Label>
               <div className="relative">
-                <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40" />
+                <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/60" />
                 <Input
                   id="email"
                   type="email"
                   placeholder="main.firstname.lastname@cvsu.edu.ph"
                   value={email}
                   onChange={(e) => setEmail(e.target.value.toLowerCase())}
-                  className="pl-8 h-9 text-[11px] bg-muted/5 border-border/60 placeholder:text-[11px] placeholder:text-muted-foreground/40"
+                  className="pl-8 h-9 text-[11px] bg-muted/10 border-border/80 placeholder:text-[11px] placeholder:text-muted-foreground/70"
                 />
               </div>
-              <p className="text-[10px] text-muted-foreground/50 ml-0.5">
+              <p className="text-[10px] text-muted-foreground/70 ml-0.5">
                 Format: main.firstname.lastname@cvsu.edu.ph
               </p>
             </div>
@@ -243,7 +243,7 @@ function RegisterForm() {
         {/* Step 2: User Type */}
         {currentStep === 2 && (
           <div className="space-y-3">
-            <Label className="text-[11px] font-semibold text-foreground/70 ml-0.5">Select your role</Label>
+            <Label className="text-[11px] font-semibold text-foreground/90 ml-0.5">Select your role</Label>
             <RadioGroup
               value={userType}
               onValueChange={setUserType}
@@ -291,7 +291,7 @@ function RegisterForm() {
         {currentStep === 3 && (
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label htmlFor="password" className="text-[11px] font-semibold text-foreground/70 ml-0.5">
+              <Label htmlFor="password" className="text-[11px] font-semibold text-foreground/90 ml-0.5">
                 Password
               </Label>
               <div className="relative">
@@ -301,7 +301,7 @@ function RegisterForm() {
                   placeholder="Create a password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pr-8 h-9 text-[11px] bg-muted/5 border-border/60 placeholder:text-[11px] placeholder:text-muted-foreground/40"
+                  className="pr-8 h-9 text-[11px] bg-muted/10 border-border/80 placeholder:text-[11px] placeholder:text-muted-foreground/70"
                 />
                 <button
                   type="button"
@@ -344,7 +344,7 @@ function RegisterForm() {
             <div className="space-y-1.5">
               <Label
                 htmlFor="confirmPassword"
-                className="text-[11px] font-semibold text-foreground/70 ml-0.5"
+                className="text-[11px] font-semibold text-foreground/90 ml-0.5"
               >
                 Confirm Password
               </Label>
@@ -355,7 +355,7 @@ function RegisterForm() {
                   placeholder="Confirm your password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="pr-8 h-9 text-[11px] bg-muted/5 border-border/60 placeholder:text-[11px] placeholder:text-muted-foreground/40"
+                  className="pr-8 h-9 text-[11px] bg-muted/10 border-border/80 placeholder:text-[11px] placeholder:text-muted-foreground/70"
                 />
                 <button
                   type="button"
