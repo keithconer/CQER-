@@ -35,11 +35,21 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-sm font-semibold">Dashboard</h1>
-        <p className="text-xs text-muted-foreground">
-          Welcome back, {firstName}
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div>
+          <h1 className="text-sm font-semibold text-foreground/90">Dashboard</h1>
+          <p className="text-xs text-muted-foreground">
+            Welcome back, {firstName}
+          </p>
+        </div>
+        <div className="flex flex-col items-start sm:items-end gap-1">
+          <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#159E44]/10 text-[#159E44] text-[10px] font-medium border border-[#159E44]/20">
+            {userType === "college_coordinator" ? "College Coordinator" : "Unit Coordinator"}
+          </div>
+          <p className="text-[10px] text-muted-foreground font-medium px-1">
+            {profile.department} {profile.unit ? `• ${profile.unit}` : ""}
+          </p>
+        </div>
       </div>
 
       {userType === "college_coordinator" ? (

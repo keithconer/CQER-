@@ -229,7 +229,7 @@ function RegisterForm() {
       }
 
       // Move to confirmation step
-      setCurrentStep(4);
+      setCurrentStep(5);
     } catch {
       setError("An unexpected error occurred. Please try again.");
     } finally {
