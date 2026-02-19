@@ -101,6 +101,17 @@ const classificationOptions = [
   "Societal Development and Equality",
 ];
 
+const beneficiaryOptions = [
+  "Farmers / Fisherfolks",
+  "Women and Children",
+  "Youth and Students",
+  "Senior Citizens and PWDs",
+  "Local Government Units (LGUs)",
+  "Small and Medium Enterprises (SMEs)",
+  "Indigenous Peoples (IPs)",
+  "Cooperatives / Associations",
+];
+
 interface ProjectFormValues {
   title: string;
   classification: string[];
@@ -110,7 +121,7 @@ interface ProjectFormValues {
   proponents: { name: string }[];
   college: string;
   collaborating_agencies: string;
-  target_beneficiaries: string;
+  target_beneficiaries: string[];
   community_location: string;
   start_date: Date;
   end_date: Date;
@@ -129,7 +140,7 @@ const projectSchema = z.object({
   })).min(1, "At least one proponent is required"),
   college: z.string(),
   collaborating_agencies: z.string(),
-  target_beneficiaries: z.string(),
+  target_beneficiaries: z.array(z.string()).min(1, "Select at least one beneficiary"),
   community_location: z.string(),
   start_date: z.date(),
   end_date: z.date(),
@@ -158,7 +169,7 @@ export function ProjectForm({ onSuccess, project, isViewOnly }: ProjectFormProps
       proponents: project?.proponents || [{ name: "" }],
       college: project?.college || "CEIT",
       collaborating_agencies: project?.collaborating_agencies || "",
-      target_beneficiaries: project?.target_beneficiaries || "",
+      target_beneficiaries: Array.isArray(project?.target_beneficiaries) ? project.target_beneficiaries : project?.target_beneficiaries ? [project.target_beneficiaries] : [],
       community_location: project?.community_location || "",
       start_date: project?.start_date ? new Date(project.start_date) : new Date(),
       end_date: project?.end_date ? new Date(project.end_date) : new Date(),
@@ -333,8 +344,8 @@ export function ProjectForm({ onSuccess, project, isViewOnly }: ProjectFormProps
                               field.value.map((val: string) => {
                                 const option = sdgOptions.find(o => o.id === val);
                                 return (
-                                  <div key={val} className="bg-[#159E44]/10 text-[#159E44] px-1.5 py-0.5 rounded-sm flex items-center gap-1 border border-[#159E44]/20">
-                                    <span>{option?.id}</span>
+                                  <div key={val} className="bg-[#159E44]/10 text-[#159E44] px-1.5 py-0.5 rounded-sm flex items-center gap-1 border border-[#159E44]/20 text-[9px]">
+                                    <span>{option?.label || option?.id}</span>
                                   </div>
                                 );
                               })
@@ -511,11 +522,70 @@ export function ProjectForm({ onSuccess, project, isViewOnly }: ProjectFormProps
                 control={form.control as any}
                 name="target_beneficiaries"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel className="text-xs">Target Beneficiaries</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Beneficiaries" {...field} className="h-8 text-xs" disabled={isViewOnly} />
-                    </FormControl>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          disabled={isViewOnly}
+                          className={cn(
+                            "w-full justify-between h-auto min-h-[32px] text-xs px-2 py-1",
+                            !field.value?.length && "text-muted-foreground"
+                          )}
+                        >
+                          <div className="flex flex-wrap gap-1">
+                            {field.value?.length > 0 ? (
+                              field.value.map((val: string) => (
+                                <div key={val} className="bg-muted px-1.5 py-0.5 rounded-sm flex items-center gap-1 border">
+                                  <span>{val}</span>
+                                </div>
+                              ))
+                            ) : (
+                              <span>Select beneficiaries</span>
+                            )}
+                          </div>
+                          <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[300px] p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Search beneficiary..." className="h-8 text-xs" />
+                          <CommandEmpty className="text-xs p-2">No beneficiary found.</CommandEmpty>
+                          <CommandGroup className="p-0">
+                            <CommandList className="max-h-64 overflow-y-auto">
+                              {beneficiaryOptions.map((option) => (
+                                <CommandItem
+                                  key={option}
+                                  value={option}
+                                  onSelect={() => {
+                                    const current = new Set(field.value || []);
+                                    if (current.has(option)) {
+                                      current.delete(option);
+                                    } else {
+                                      current.add(option);
+                                    }
+                                    field.onChange(Array.from(current));
+                                  }}
+                                  className="text-xs"
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-3 w-3",
+                                      (field.value || []).includes(option)
+                                        ? "opacity-100"
+                                        : "opacity-0"
+                                    )}
+                                  />
+                                  {option}
+                                </CommandItem>
+                              ))}
+                            </CommandList>
+                          </CommandGroup>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                     <FormMessage className="text-[10px]" />
                   </FormItem>
                 )}
@@ -608,7 +678,10 @@ export function ProjectForm({ onSuccess, project, isViewOnly }: ProjectFormProps
                           onSelect={field.onChange}
                           disabled={(date) => {
                             const startDate = form.getValues("start_date");
-                            return startDate ? date < startDate : false;
+                            if (!startDate) return false;
+                            const d1 = new Date(startDate);
+                            d1.setHours(0, 0, 0, 0);
+                            return date < d1;
                           }}
                           initialFocus
                           className="text-xs"
@@ -723,9 +796,13 @@ export function ProjectForm({ onSuccess, project, isViewOnly }: ProjectFormProps
             <div className="rounded-full bg-[#159E44]/10 p-3 mb-4">
               <CheckCircle2 className="h-10 w-10 text-[#159E44]" />
             </div>
-            <DialogTitle className="text-lg font-semibold text-center">Project Created!</DialogTitle>
+            <DialogTitle className="text-lg font-semibold text-center">
+              {project?.id ? "Project Updated!" : "Project Created!"}
+            </DialogTitle>
             <DialogDescription className="text-xs text-center">
-              The project has been successfully registered.
+              {project?.id 
+                ? "The project information has been successfully updated." 
+                : "The project has been successfully registered."}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="sm:justify-center">

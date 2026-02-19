@@ -35,6 +35,7 @@ interface Project {
   end_date: string;
   gad_score: number;
   sdg_goals: string[];
+  target_beneficiaries: string[];
 }
 
 interface ProjectsTableProps {
@@ -127,8 +128,8 @@ export function ProjectsTable({ projects }: ProjectsTableProps) {
                       <span className="text-xs font-medium truncate" title={project.title}>
                         {project.title}
                       </span>
-                      <span className="text-[10px] text-muted-foreground line-clamp-1" title={Array.isArray(project.classification) ? project.classification.join(", ") : project.classification}>
-                        {Array.isArray(project.classification) ? project.classification.join(", ") : project.classification}
+                      <span className="text-[10px] text-muted-foreground line-clamp-1" title={Array.isArray(project.classification) ? project.classification.join(", ") : String(project.classification).replace(/[\[\]"]/g, '')}>
+                        {Array.isArray(project.classification) ? project.classification.join(", ") : String(project.classification).replace(/[\[\]"]/g, '')}
                       </span>
                     </div>
                   </TableCell>

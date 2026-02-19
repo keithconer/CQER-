@@ -69,7 +69,7 @@ create table if not exists public.projects (
   proponents jsonb not null default '[]',
   college text not null default 'CEIT',
   collaborating_agencies text,
-  target_beneficiaries text,
+  target_beneficiaries jsonb not null default '[]',
   community_location text,
   start_date date,
   end_date date,
