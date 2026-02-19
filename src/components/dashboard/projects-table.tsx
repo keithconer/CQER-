@@ -24,6 +24,12 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ProjectForm } from "./project-form";
 import { useRouter } from "next/navigation";
 
@@ -88,26 +94,22 @@ export function ProjectsTable({ projects }: ProjectsTableProps) {
     }
   };
 
-  const handleDownload = async (project: Project) => {
-    if (!project.documents || project.documents.length === 0) return;
+  const handleDownload = async (url: string) => {
+    if (!url) return;
     
     const supabase = createClient();
     const { data: dataResponse, error } = await supabase.storage
       .from("cqer-projects_pdfs")
-      .createSignedUrls(project.documents.map((d: { url: string }) => d.url), 60);
+      .createSignedUrl(url, 60);
 
     if (error) {
-      console.error("Error creating signed URLs:", error);
-      alert("Error fetching document links.");
+      console.error("Error creating signed URL:", error);
+      alert("Error fetching document link.");
       return;
     }
 
-    if (dataResponse) {
-      // If only one, open it. If multiple, open all for now or the first one.
-      // Usually opening one is safer to avoid popup blockers.
-      dataResponse.forEach((d: { signedUrl: string }) => {
-        if (d.signedUrl) window.open(d.signedUrl, "_blank");
-      });
+    if (dataResponse?.signedUrl) {
+      window.open(dataResponse.signedUrl, "_blank");
     }
   };
 
@@ -190,15 +192,45 @@ export function ProjectsTable({ projects }: ProjectsTableProps) {
                   <TableCell className="py-2.5 px-3 text-right">
                     <div className="flex justify-end gap-1">
                       {project.documents && project.documents.length > 0 && (
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-7 w-7 text-primary hover:text-primary/80 hover:bg-primary/10"
-                          onClick={() => handleDownload(project)}
-                          title={`${project.documents.length} document(s)`}
-                        >
-                          <FileText className="h-3.5 w-3.5" />
-                        </Button>
+                        project.documents.length === 1 ? (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7 text-primary hover:text-primary/80 hover:bg-primary/10"
+                            onClick={() => handleDownload(project.documents[0].url)}
+                            title={project.documents[0].name}
+                          >
+                            <FileText className="h-3.5 w-3.5" />
+                          </Button>
+                        ) : (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-7 w-7 text-primary hover:text-primary/80 hover:bg-primary/10"
+                                title={`${project.documents.length} document(s)`}
+                              >
+                                <FileText className="h-3.5 w-3.5" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56">
+                              <div className="px-2 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                                Select Document
+                              </div>
+                              {project.documents.map((doc, idx) => (
+                                <DropdownMenuItem 
+                                  key={idx} 
+                                  onClick={() => handleDownload(doc.url)}
+                                  className="text-xs py-2 cursor-pointer"
+                                >
+                                  <FileText className="h-3 w-3 mr-2 text-primary" />
+                                  <span className="truncate">{doc.name}</span>
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )
                       )}
                       <Button 
                         variant="ghost" 

@@ -45,8 +45,8 @@ export function Navbar({ user }: NavbarProps) {
             <Image
               src="/CQERFINAL.png"
               alt="CQER Logo"
-              width={24}
-              height={24}
+              width={30}
+              height={30}
               className="object-contain"
             />
             <span className="text-sm font-bold tracking-tight">CQER</span>
