@@ -8,12 +8,13 @@ import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 
 interface FileUploadProps {
-  value?: { url: string; name: string } | null;
-  onChange: (value: { url: string; name: string } | null) => void;
+  value: { url: string; name: string }[];
+  onChange: (value: { url: string; name: string }[]) => void;
   disabled?: boolean;
+  maxFiles?: number;
 }
 
-export function FileUpload({ value, onChange, disabled }: FileUploadProps) {
+export function FileUpload({ value = [], onChange, disabled, maxFiles = 5 }: FileUploadProps) {
   const [uploading, setUploading] = React.useState(false);
   const [progress, setProgress] = React.useState(0);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -33,6 +34,11 @@ export function FileUpload({ value, onChange, disabled }: FileUploadProps) {
       return;
     }
 
+    if (value.length >= maxFiles) {
+      alert(`Maximum of ${maxFiles} files allowed.`);
+      return;
+    }
+
     try {
       setUploading(true);
       setProgress(10);
@@ -40,12 +46,11 @@ export function FileUpload({ value, onChange, disabled }: FileUploadProps) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Path: userId/uuid-filename.pdf
       const fileExt = file.name.split(".").pop();
       const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
       const filePath = `${user.id}/${fileName}`;
 
-      const { error: uploadError, data } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from("cqer-projects_pdfs")
         .upload(filePath, file, {
           upsert: true,
@@ -54,14 +59,10 @@ export function FileUpload({ value, onChange, disabled }: FileUploadProps) {
 
       if (uploadError) throw uploadError;
 
-      setProgress(90);
-
-      const { data: { publicUrl } } = supabase.storage
-        .from("cqer-projects_pdfs")
-        .getPublicUrl(filePath);
-
-      onChange({ url: filePath, name: file.name });
       setProgress(100);
+
+      const newDocs = [...value, { url: filePath, name: file.name }];
+      onChange(newDocs);
       
       setTimeout(() => {
         setUploading(false);
@@ -73,24 +74,56 @@ export function FileUpload({ value, onChange, disabled }: FileUploadProps) {
       alert(error.message || "Upload failed");
       setUploading(false);
       setProgress(0);
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
-  const removeFile = async () => {
-    if (!value?.url) return;
-    
-    // We don't delete from storage immediately to allow cancellation
-    // But in a real app, we might want to cleanup orphaned files later
-    onChange(null);
+  const removeFile = (index: number) => {
+    const newDocs = [...value];
+    newDocs.splice(index, 1);
+    onChange(newDocs);
   };
 
   return (
     <div className="space-y-3">
-      {!value ? (
+      {/* List of uploaded files */}
+      {value.length > 0 && (
+        <div className="grid grid-cols-1 gap-2">
+          {value.map((file, index) => (
+            <div key={index} className="flex items-center justify-between p-2.5 border rounded-lg bg-muted/30 group">
+              <div className="flex items-center gap-3">
+                <div className="p-1.5 rounded-md bg-primary/10">
+                  <FileText className="h-4 w-4 text-primary" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs font-medium truncate max-w-[200px]">{file.name}</span>
+                  <span className="text-[9px] text-muted-foreground flex items-center gap-1">
+                    <CheckCircle2 className="h-2 w-2 text-green-500" /> Uploaded
+                  </span>
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => removeFile(index)}
+                disabled={disabled}
+                className="h-7 w-7 text-muted-foreground hover:text-destructive"
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Upload area - only show if under limit or uploading */}
+      {(value.length < maxFiles || uploading) && (
         <div
           onClick={() => !disabled && !uploading && fileInputRef.current?.click()}
           className={cn(
-            "border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center gap-2 transition-colors cursor-pointer",
+            "border-2 border-dashed rounded-lg p-5 flex flex-col items-center justify-center gap-2 transition-colors cursor-pointer",
             disabled || uploading ? "opacity-50 cursor-not-allowed" : "hover:border-primary/50 hover:bg-muted/50",
             "border-muted"
           )}
@@ -104,46 +137,24 @@ export function FileUpload({ value, onChange, disabled }: FileUploadProps) {
             disabled={disabled || uploading}
           />
           {uploading ? (
-            <div className="flex flex-col items-center gap-2">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              <p className="text-xs font-medium text-muted-foreground">Uploading... {progress}%</p>
-              <Progress value={progress} className="w-32 h-1" />
+            <div className="flex flex-col items-center gap-2 w-full max-w-[200px]">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <p className="text-[10px] font-medium text-muted-foreground text-center">Uploading... {progress}%</p>
+              <Progress value={progress} className="h-1" />
             </div>
           ) : (
             <>
-              <div className="p-2 rounded-full bg-muted">
-                <Upload className="h-5 w-5 text-muted-foreground" />
+              <div className="p-1.5 rounded-full bg-muted">
+                <Upload className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="text-center">
-                <p className="text-sm font-medium">Click to upload copies</p>
-                <p className="text-[10px] text-muted-foreground">PDF only (Max 5MB)</p>
+                <p className="text-xs font-medium">
+                  {value.length > 0 ? "Add another copy" : "Click to upload copies"}
+                </p>
+                <p className="text-[9px] text-muted-foreground">PDF (Max 5MB each)</p>
               </div>
             </>
           )}
-        </div>
-      ) : (
-        <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-md bg-primary/10">
-              <FileText className="h-5 w-5 text-primary" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xs font-medium truncate max-w-[200px]">{value.name}</span>
-              <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                <CheckCircle2 className="h-2.5 w-2.5 text-green-500" /> Uploaded
-              </span>
-            </div>
-          </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={removeFile}
-            disabled={disabled}
-            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-          >
-            <X className="h-4 w-4" />
-          </Button>
         </div>
       )}
     </div>

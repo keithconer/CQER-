@@ -37,8 +37,7 @@ interface Project {
   gad_score: number;
   sdg_goals: string[];
   target_beneficiaries: string[];
-  pdf_url?: string;
-  pdf_name?: string;
+  documents: { url: string; name: string }[];
 }
 
 interface ProjectsTableProps {
@@ -90,21 +89,25 @@ export function ProjectsTable({ projects }: ProjectsTableProps) {
   };
 
   const handleDownload = async (project: Project) => {
-    if (!project.pdf_url) return;
+    if (!project.documents || project.documents.length === 0) return;
     
     const supabase = createClient();
-    const { data, error } = await supabase.storage
+    const { data: dataResponse, error } = await supabase.storage
       .from("cqer-projects_pdfs")
-      .createSignedUrl(project.pdf_url, 60); // 60 seconds
+      .createSignedUrls(project.documents.map((d: { url: string }) => d.url), 60);
 
     if (error) {
-      console.error("Error creating signed URL:", error);
-      alert("Error fetching document link.");
+      console.error("Error creating signed URLs:", error);
+      alert("Error fetching document links.");
       return;
     }
 
-    if (data?.signedUrl) {
-      window.open(data.signedUrl, "_blank");
+    if (dataResponse) {
+      // If only one, open it. If multiple, open all for now or the first one.
+      // Usually opening one is safer to avoid popup blockers.
+      dataResponse.forEach((d: { signedUrl: string }) => {
+        if (d.signedUrl) window.open(d.signedUrl, "_blank");
+      });
     }
   };
 
@@ -186,13 +189,13 @@ export function ProjectsTable({ projects }: ProjectsTableProps) {
                   </TableCell>
                   <TableCell className="py-2.5 px-3 text-right">
                     <div className="flex justify-end gap-1">
-                      {project.pdf_url && (
+                      {project.documents && project.documents.length > 0 && (
                         <Button 
                           variant="ghost" 
                           size="icon" 
                           className="h-7 w-7 text-primary hover:text-primary/80 hover:bg-primary/10"
                           onClick={() => handleDownload(project)}
-                          title="View Copy"
+                          title={`${project.documents.length} document(s)`}
                         >
                           <FileText className="h-3.5 w-3.5" />
                         </Button>

@@ -128,8 +128,7 @@ interface ProjectFormValues {
   end_date: Date;
   budget_requirements: { name: string; amount: number }[];
   gad_score: number;
-  pdf_url?: string;
-  pdf_name?: string;
+  documents: { url: string; name: string }[];
 }
 
 const projectSchema = z.object({
@@ -152,8 +151,10 @@ const projectSchema = z.object({
     amount: z.coerce.number().min(0, "Amount must be positive")
   })),
   gad_score: z.coerce.number().min(0).max(100),
-  pdf_url: z.string().optional(),
-  pdf_name: z.string().optional(),
+  documents: z.array(z.object({
+    url: z.string(),
+    name: z.string()
+  })).default([]),
 });
 
 interface ProjectFormProps {
@@ -180,8 +181,7 @@ export function ProjectForm({ onSuccess, project, isViewOnly }: ProjectFormProps
       end_date: project?.end_date ? new Date(project.end_date) : new Date(),
       budget_requirements: project?.budget_requirements || [{ name: "", amount: 0 }],
       gad_score: project?.gad_score || 0,
-      pdf_url: project?.pdf_url || "",
-      pdf_name: project?.pdf_name || "",
+      documents: project?.documents || [],
     },
   });
 
@@ -790,17 +790,15 @@ export function ProjectForm({ onSuccess, project, isViewOnly }: ProjectFormProps
               </FormDescription>
               <FormField
                 control={form.control as any}
-                name="pdf_url"
+                name="documents"
                 render={({ field }) => (
                   <FormItem>
                     <FormControl>
                       <FileUpload
-                        value={field.value ? { url: field.value, name: form.getValues("pdf_name") || "Untitled.pdf" } : null}
-                        onChange={(val) => {
-                          field.onChange(val?.url || "");
-                          form.setValue("pdf_name", val?.name || "");
-                        }}
+                        value={field.value || []}
+                        onChange={field.onChange}
                         disabled={isViewOnly || isSubmitting}
+                        maxFiles={10}
                       />
                     </FormControl>
                     <FormMessage className="text-[10px]" />

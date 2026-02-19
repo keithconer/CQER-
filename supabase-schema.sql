@@ -109,6 +109,10 @@ alter table public.projects
 add column if not exists pdf_url text,
 add column if not exists pdf_name text;
 
+-- Add documents JSONB column for multiple files
+alter table public.projects
+add column if not exists documents jsonb default '[]';
+
 -- Storage Setup (Manual step in Supabase Dashboard):
 -- 1. Create bucket: cqer-projects_pdfs
 -- 2. Public: OFF
