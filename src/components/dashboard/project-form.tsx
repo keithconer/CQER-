@@ -681,7 +681,7 @@ export function ProjectForm({ onSuccess, project, isViewOnly }: ProjectFormProps
                             if (!startDate) return false;
                             const d1 = new Date(startDate);
                             d1.setHours(0, 0, 0, 0);
-                            return date < d1;
+                            return date <= d1;
                           }}
                           initialFocus
                           className="text-xs"
