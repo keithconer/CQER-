@@ -98,3 +98,56 @@ create policy "Users can update own projects" on public.projects
 drop policy if exists "Users can delete own projects" on public.projects;
 create policy "Users can delete own projects" on public.projects
   for delete using (auth.uid() = created_by);
+
+-- ============================================
+-- PDF Upload Enhancement
+-- Run this in Supabase SQL Editor
+-- ============================================
+
+-- Add PDF columns to projects table
+alter table public.projects 
+add column if not exists pdf_url text,
+add column if not exists pdf_name text;
+
+-- Storage Setup (Manual step in Supabase Dashboard):
+-- 1. Create bucket: cqer-projects_pdfs
+-- 2. Public: OFF
+-- 3. Allowed MIME types: application/pdf
+-- 4. Max file size: 5242880 (5MB)
+
+-- Storage RLS Policies (Run after creating the bucket)
+-- Allow users to upload their own files
+create policy "Allow authenticated uploads"
+on storage.objects for insert
+to authenticated
+with check (
+  bucket_id = 'cqer-projects_pdfs' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+
+-- Allow users to view their own files
+create policy "Allow individual read"
+on storage.objects for select
+to authenticated
+using (
+  bucket_id = 'cqer-projects_pdfs' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+
+-- Allow users to delete their own files
+create policy "Allow individual delete"
+on storage.objects for delete
+to authenticated
+using (
+  bucket_id = 'cqer-projects_pdfs' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+
+-- Allow users to update their own files
+create policy "Allow individual update"
+on storage.objects for update
+to authenticated
+using (
+  bucket_id = 'cqer-projects_pdfs' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);

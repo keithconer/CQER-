@@ -11,10 +11,11 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { Eye, Pencil, Trash2, Search, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
+import { Eye, Pencil, Trash2, Search, ChevronLeft, ChevronRight, AlertTriangle, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { deleteProject } from "@/lib/actions/projects";
+import { createClient } from "@/lib/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -36,6 +37,8 @@ interface Project {
   gad_score: number;
   sdg_goals: string[];
   target_beneficiaries: string[];
+  pdf_url?: string;
+  pdf_name?: string;
 }
 
 interface ProjectsTableProps {
@@ -83,6 +86,25 @@ export function ProjectsTable({ projects }: ProjectsTableProps) {
       alert("Something went wrong");
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleDownload = async (project: Project) => {
+    if (!project.pdf_url) return;
+    
+    const supabase = createClient();
+    const { data, error } = await supabase.storage
+      .from("cqer-projects_pdfs")
+      .createSignedUrl(project.pdf_url, 60); // 60 seconds
+
+    if (error) {
+      console.error("Error creating signed URL:", error);
+      alert("Error fetching document link.");
+      return;
+    }
+
+    if (data?.signedUrl) {
+      window.open(data.signedUrl, "_blank");
     }
   };
 
@@ -164,6 +186,17 @@ export function ProjectsTable({ projects }: ProjectsTableProps) {
                   </TableCell>
                   <TableCell className="py-2.5 px-3 text-right">
                     <div className="flex justify-end gap-1">
+                      {project.pdf_url && (
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-7 w-7 text-primary hover:text-primary/80 hover:bg-primary/10"
+                          onClick={() => handleDownload(project)}
+                          title="View Copy"
+                        >
+                          <FileText className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                       <Button 
                         variant="ghost" 
                         size="icon" 

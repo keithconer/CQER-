@@ -53,6 +53,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { FileUpload } from "./file-upload";
 
 const sdgOptions = [
   { id: "Goal 1", label: "Goal 1 - No Poverty" },
@@ -127,6 +128,8 @@ interface ProjectFormValues {
   end_date: Date;
   budget_requirements: { name: string; amount: number }[];
   gad_score: number;
+  pdf_url?: string;
+  pdf_name?: string;
 }
 
 const projectSchema = z.object({
@@ -149,6 +152,8 @@ const projectSchema = z.object({
     amount: z.coerce.number().min(0, "Amount must be positive")
   })),
   gad_score: z.coerce.number().min(0).max(100),
+  pdf_url: z.string().optional(),
+  pdf_name: z.string().optional(),
 });
 
 interface ProjectFormProps {
@@ -175,6 +180,8 @@ export function ProjectForm({ onSuccess, project, isViewOnly }: ProjectFormProps
       end_date: project?.end_date ? new Date(project.end_date) : new Date(),
       budget_requirements: project?.budget_requirements || [{ name: "", amount: 0 }],
       gad_score: project?.gad_score || 0,
+      pdf_url: project?.pdf_url || "",
+      pdf_name: project?.pdf_name || "",
     },
   });
 
@@ -774,6 +781,33 @@ export function ProjectForm({ onSuccess, project, isViewOnly }: ProjectFormProps
                 </FormItem>
               )}
             />
+
+            {/* Document Copies (PDF) */}
+            <div className="space-y-3 pt-2">
+              <FormLabel className="text-xs">Document Copies (Optional)</FormLabel>
+              <FormDescription className="text-[10px] -mt-2 mb-2">
+                Upload signed and scanned copies of the project documents (PDF format).
+              </FormDescription>
+              <FormField
+                control={form.control as any}
+                name="pdf_url"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <FileUpload
+                        value={field.value ? { url: field.value, name: form.getValues("pdf_name") || "Untitled.pdf" } : null}
+                        onChange={(val) => {
+                          field.onChange(val?.url || "");
+                          form.setValue("pdf_name", val?.name || "");
+                        }}
+                        disabled={isViewOnly || isSubmitting}
+                      />
+                    </FormControl>
+                    <FormMessage className="text-[10px]" />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             {!isViewOnly && (
               <div className="flex justify-end gap-3 pt-6">

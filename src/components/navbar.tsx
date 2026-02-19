@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Settings, LogOut } from "lucide-react";
+import Image from "next/image";
 
 interface NavbarProps {
   user: {
@@ -39,9 +40,18 @@ export function Navbar({ user }: NavbarProps) {
     <header className="border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="max-w-6xl mx-auto flex h-12 items-center justify-between px-4">
         {/* Left: App name */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold tracking-tight">CQER</span>
-          <span className="text-[10px] text-muted-foreground font-medium px-1.5 py-0.5 rounded bg-muted">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Image
+              src="/CQERFINAL.png"
+              alt="CQER Logo"
+              width={24}
+              height={24}
+              className="object-contain"
+            />
+            <span className="text-sm font-bold tracking-tight">CQER</span>
+          </div>
+          <span className="text-[10px] text-muted-foreground font-semibold px-1.5 py-0.5 rounded bg-muted uppercase tracking-wider">
             {user.userType === "college_coordinator"
               ? "College"
               : "Unit"}
