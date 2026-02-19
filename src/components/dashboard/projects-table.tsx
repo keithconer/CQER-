@@ -11,9 +11,20 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { Eye, Pencil, Trash2, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Eye, Pencil, Trash2, Search, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { deleteProject } from "@/lib/actions/projects";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { ProjectForm } from "./project-form";
+import { useRouter } from "next/navigation";
 
 interface Project {
   id: string;
@@ -49,6 +60,30 @@ export function ProjectsTable({ projects }: ProjectsTableProps) {
   React.useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm]);
+
+  const [viewProject, setViewProject] = React.useState<Project | null>(null);
+  const [editProject, setEditProject] = React.useState<Project | null>(null);
+  const [deleteId, setDeleteId] = React.useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+  const router = useRouter();
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    setIsDeleting(true);
+    try {
+      const result = await deleteProject(deleteId);
+      if (result.error) {
+        alert("Error: " + result.error);
+      } else {
+        setDeleteId(null);
+        router.refresh();
+      }
+    } catch (error) {
+      alert("Something went wrong");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   if (!projects || projects.length === 0) {
     return (
@@ -126,13 +161,28 @@ export function ProjectsTable({ projects }: ProjectsTableProps) {
                   </TableCell>
                   <TableCell className="py-2.5 px-3 text-right">
                     <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                        onClick={() => setViewProject(project)}
+                      >
                         <Eye className="h-3.5 w-3.5" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                        onClick={() => setEditProject(project)}
+                      >
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive/80 hover:bg-destructive/10">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-7 w-7 text-destructive hover:text-destructive/80 hover:bg-destructive/10"
+                        onClick={() => setDeleteId(project.id)}
+                      >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
@@ -181,6 +231,76 @@ export function ProjectsTable({ projects }: ProjectsTableProps) {
           </div>
         </div>
       )}
+
+      {/* View Modal */}
+      <Dialog open={!!viewProject} onOpenChange={(open) => !open && setViewProject(null)}>
+        <DialogContent className="sm:max-w-[800px] p-6 max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="text-sm font-semibold">Project Details</DialogTitle>
+            <DialogDescription className="text-[10px]">
+              Viewing complete information for {viewProject?.title}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden">
+            {viewProject && <ProjectForm project={viewProject} isViewOnly onSuccess={() => setViewProject(null)} />}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Modal */}
+      <Dialog open={!!editProject} onOpenChange={(open) => !open && setEditProject(null)}>
+        <DialogContent className="sm:max-w-[800px] p-6 max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="text-sm font-semibold">Edit Project</DialogTitle>
+            <DialogDescription className="text-[10px]">
+              Modify project information below.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden">
+            {editProject && (
+              <ProjectForm 
+                project={editProject} 
+                onSuccess={() => {
+                  setEditProject(null);
+                  router.refresh();
+                }} 
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader className="flex flex-col items-center justify-center pt-4">
+            <div className="rounded-full bg-destructive/10 p-3 mb-4">
+              <AlertTriangle className="h-10 w-10 text-destructive" />
+            </div>
+            <DialogTitle className="text-lg font-semibold text-center">Delete Project?</DialogTitle>
+            <DialogDescription className="text-xs text-center">
+              This action cannot be undone. This will permanently delete the project data.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="sm:justify-center gap-2">
+            <Button 
+              variant="outline"
+              onClick={() => setDeleteId(null)}
+              className="h-9 text-xs"
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive"
+              className="h-9 text-xs px-8"
+              onClick={handleDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

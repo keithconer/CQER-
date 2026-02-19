@@ -43,7 +43,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Textarea } from "@/components/ui/textarea";
-import { createProject } from "@/lib/actions/projects";
+import { createProject, updateProject } from "@/lib/actions/projects";
 import { CheckCircle2 } from "lucide-react";
 import {
   Dialog,
@@ -134,26 +134,28 @@ const projectSchema = z.object({
 
 interface ProjectFormProps {
   onSuccess?: () => void;
+  project?: any;
+  isViewOnly?: boolean;
 }
 
-export function ProjectForm({ onSuccess }: ProjectFormProps) {
+export function ProjectForm({ onSuccess, project, isViewOnly }: ProjectFormProps) {
   const form = useForm<ProjectFormValues>({
     resolver: zodResolver(projectSchema) as any,
     defaultValues: {
-      title: "",
-      classification: "",
-      sdg_goals: [],
-      academic_program: "",
-      major: "",
-      proponents: [{ name: "" }],
-      college: "CEIT",
-      collaborating_agencies: "",
-      target_beneficiaries: "",
-      community_location: "",
-      start_date: new Date(),
-      end_date: new Date(),
-      budget_requirements: [{ name: "", amount: 0 }],
-      gad_score: 0,
+      title: project?.title || "",
+      classification: project?.classification || "",
+      sdg_goals: project?.sdg_goals || [],
+      academic_program: project?.academic_program || "",
+      major: project?.major || "",
+      proponents: project?.proponents || [{ name: "" }],
+      college: project?.college || "CEIT",
+      collaborating_agencies: project?.collaborating_agencies || "",
+      target_beneficiaries: project?.target_beneficiaries || "",
+      community_location: project?.community_location || "",
+      start_date: project?.start_date ? new Date(project.start_date) : new Date(),
+      end_date: project?.end_date ? new Date(project.end_date) : new Date(),
+      budget_requirements: project?.budget_requirements || [{ name: "", amount: 0 }],
+      gad_score: project?.gad_score || 0,
     },
   });
 
@@ -171,9 +173,16 @@ export function ProjectForm({ onSuccess }: ProjectFormProps) {
   });
 
   async function onSubmit(data: ProjectFormValues) {
+    if (isViewOnly) return;
     setIsSubmitting(true);
     try {
-      const result = await createProject(data);
+      let result;
+      if (project?.id) {
+        result = await updateProject(project.id, data);
+      } else {
+        result = await createProject(data);
+      }
+      
       if (result.error) {
         alert("Error: " + result.error);
         return;
@@ -212,6 +221,7 @@ export function ProjectForm({ onSuccess }: ProjectFormProps) {
                         placeholder="Enter title"
                         {...field}
                         className="min-h-[80px] text-xs resize-none"
+                        disabled={isViewOnly}
                       />
                     </FormControl>
                     <FormMessage className="text-[10px]" />
@@ -225,7 +235,7 @@ export function ProjectForm({ onSuccess }: ProjectFormProps) {
                   <FormItem>
                     <FormLabel className="text-xs">University Extension Agenda Classification</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter classification" {...field} className="h-8 text-xs" />
+                      <Input placeholder="Enter classification" {...field} className="h-8 text-xs" disabled={isViewOnly} />
                     </FormControl>
                     <FormMessage className="text-[10px]" />
                   </FormItem>
@@ -245,6 +255,7 @@ export function ProjectForm({ onSuccess }: ProjectFormProps) {
                       <Button
                         variant="outline"
                         role="combobox"
+                        disabled={isViewOnly}
                         className={cn(
                           "w-full justify-between h-8 text-xs px-2",
                           !field.value.length && "text-muted-foreground"
@@ -260,9 +271,8 @@ export function ProjectForm({ onSuccess }: ProjectFormProps) {
                       <Command>
                         <CommandInput placeholder="Search SDG..." className="h-8 text-xs" />
                         <CommandEmpty className="text-xs p-2">No SDG found.</CommandEmpty>
-                        <CommandGroup>
-                          <ScrollArea className="h-64">
-                            <CommandList>
+                        <CommandGroup className="p-0">
+                          <CommandList className="max-h-64 overflow-y-auto">
                               {sdgOptions.map((option) => (
                                 <CommandItem
                                   key={option.id}
@@ -290,7 +300,6 @@ export function ProjectForm({ onSuccess }: ProjectFormProps) {
                                 </CommandItem>
                               ))}
                             </CommandList>
-                          </ScrollArea>
                         </CommandGroup>
                       </Command>
                     </PopoverContent>
@@ -308,7 +317,7 @@ export function ProjectForm({ onSuccess }: ProjectFormProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-xs">Academic Program</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isViewOnly}>
                       <FormControl>
                         <SelectTrigger className="h-8 text-xs">
                           <SelectValue placeholder="Select program" />
@@ -334,7 +343,7 @@ export function ProjectForm({ onSuccess }: ProjectFormProps) {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs">Major</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isViewOnly}>
                         <FormControl>
                           <SelectTrigger className="h-8 text-xs">
                             <SelectValue placeholder="Select major" />
@@ -359,15 +368,17 @@ export function ProjectForm({ onSuccess }: ProjectFormProps) {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <FormLabel className="text-xs">Proponents</FormLabel>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => appendProponent({ name: "" })}
-                  className="h-6 text-[10px] px-2"
-                >
-                  <Plus className="h-3 w-3 mr-1" /> Add
-                </Button>
+                {!isViewOnly && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => appendProponent({ name: "" })}
+                    className="h-6 text-[10px] px-2"
+                  >
+                    <Plus className="h-3 w-3 mr-1" /> Add
+                  </Button>
+                )}
               </div>
               {proponentFields.map((field, index) => (
                 <div key={field.id} className="flex gap-2">
@@ -381,13 +392,14 @@ export function ProjectForm({ onSuccess }: ProjectFormProps) {
                             placeholder="Firstname MI. Lastname"
                             {...inputField}
                             className="h-8 text-xs"
+                            disabled={isViewOnly}
                           />
                         </FormControl>
                         <FormMessage className="text-[10px]" />
                       </FormItem>
                     )}
                   />
-                  {proponentFields.length > 1 && (
+                  {!isViewOnly && proponentFields.length > 1 && (
                     <Button
                       type="button"
                       variant="ghost"
@@ -411,7 +423,7 @@ export function ProjectForm({ onSuccess }: ProjectFormProps) {
                   <FormItem>
                     <FormLabel className="text-xs">Collaborating Agencies</FormLabel>
                     <FormControl>
-                      <Input placeholder="Agencies" {...field} className="h-8 text-xs" />
+                      <Input placeholder="Agencies" {...field} className="h-8 text-xs" disabled={isViewOnly} />
                     </FormControl>
                     <FormMessage className="text-[10px]" />
                   </FormItem>
@@ -424,7 +436,7 @@ export function ProjectForm({ onSuccess }: ProjectFormProps) {
                   <FormItem>
                     <FormLabel className="text-xs">Target Beneficiaries</FormLabel>
                     <FormControl>
-                      <Input placeholder="Beneficiaries" {...field} className="h-8 text-xs" />
+                      <Input placeholder="Beneficiaries" {...field} className="h-8 text-xs" disabled={isViewOnly} />
                     </FormControl>
                     <FormMessage className="text-[10px]" />
                   </FormItem>
@@ -437,7 +449,7 @@ export function ProjectForm({ onSuccess }: ProjectFormProps) {
                   <FormItem>
                     <FormLabel className="text-xs">Community Location</FormLabel>
                     <FormControl>
-                      <Input placeholder="Location" {...field} className="h-8 text-xs" />
+                      <Input placeholder="Location" {...field} className="h-8 text-xs" disabled={isViewOnly} />
                     </FormControl>
                     <FormMessage className="text-[10px]" />
                   </FormItem>
@@ -531,15 +543,17 @@ export function ProjectForm({ onSuccess }: ProjectFormProps) {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <FormLabel className="text-xs">Budgetary Requirement (Php)</FormLabel>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => appendBudget({ name: "", amount: 0 })}
-                  className="h-6 text-[10px] px-2"
-                >
-                  <Plus className="h-3 w-3 mr-1" /> Add
-                </Button>
+                {!isViewOnly && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => appendBudget({ name: "", amount: 0 })}
+                    className="h-6 text-[10px] px-2"
+                  >
+                    <Plus className="h-3 w-3 mr-1" /> Add
+                  </Button>
+                )}
               </div>
               {budgetFields.map((field, index) => (
                 <div key={field.id} className="flex gap-2">
@@ -549,7 +563,7 @@ export function ProjectForm({ onSuccess }: ProjectFormProps) {
                     render={({ field: inputField }) => (
                       <FormItem className="flex-[2]">
                         <FormControl>
-                          <Input placeholder="Source/Item" {...inputField} className="h-8 text-xs" />
+                          <Input placeholder="Source/Item" {...inputField} className="h-8 text-xs" disabled={isViewOnly} />
                         </FormControl>
                         <FormMessage className="text-[10px]" />
                       </FormItem>
@@ -561,13 +575,13 @@ export function ProjectForm({ onSuccess }: ProjectFormProps) {
                     render={({ field: inputField }) => (
                       <FormItem className="flex-1">
                         <FormControl>
-                          <Input type="number" placeholder="Amount" {...inputField} className="h-8 text-xs" />
+                          <Input type="number" placeholder="Amount" {...inputField} className="h-8 text-xs" disabled={isViewOnly} />
                         </FormControl>
                         <FormMessage className="text-[10px]" />
                       </FormItem>
                     )}
                   />
-                  {budgetFields.length > 1 && (
+                  {!isViewOnly && budgetFields.length > 1 && (
                     <Button
                       type="button"
                       variant="ghost"
@@ -590,22 +604,24 @@ export function ProjectForm({ onSuccess }: ProjectFormProps) {
                 <FormItem>
                   <FormLabel className="text-xs">Total GAD Score for project identification and design stages</FormLabel>
                   <FormControl>
-                    <Input type="number" step="0.01" placeholder="0.00" {...field} className="h-8 text-xs" />
+                    <Input type="number" step="0.01" placeholder="0.00" {...field} className="h-8 text-xs" disabled={isViewOnly} />
                   </FormControl>
                   <FormMessage className="text-[10px]" />
                 </FormItem>
               )}
             />
 
-            <div className="flex justify-end gap-3 pt-6">
-              <Button 
-                type="submit" 
-                className="h-8 text-xs px-6 bg-[#159E44] hover:bg-[#128A3B]"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? "Submitting..." : "Submit Project"}
-              </Button>
-            </div>
+            {!isViewOnly && (
+              <div className="flex justify-end gap-3 pt-6">
+                <Button 
+                  type="submit" 
+                  className="h-8 text-xs px-6 bg-[#159E44] hover:bg-[#128A3B]"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? "Submitting..." : project?.id ? "Update Project" : "Submit Project"}
+                </Button>
+              </div>
+            )}
           </div>
         </ScrollArea>
       </form>
