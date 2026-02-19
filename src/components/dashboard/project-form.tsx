@@ -42,7 +42,17 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { Textarea } from "@/components/ui/textarea";
 import { createProject } from "@/lib/actions/projects";
+import { CheckCircle2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 const sdgOptions = [
   { id: "Goal 1", label: "Goal 1 - No Poverty" },
@@ -147,6 +157,9 @@ export function ProjectForm({ onSuccess }: ProjectFormProps) {
     },
   });
 
+  const [showSuccess, setShowSuccess] = React.useState(false);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+
   const { fields: proponentFields, append: appendProponent, remove: removeProponent } = useFieldArray({
     name: "proponents",
     control: form.control,
@@ -158,18 +171,26 @@ export function ProjectForm({ onSuccess }: ProjectFormProps) {
   });
 
   async function onSubmit(data: ProjectFormValues) {
+    setIsSubmitting(true);
     try {
       const result = await createProject(data);
       if (result.error) {
         alert("Error: " + result.error);
         return;
       }
-      form.reset();
-      onSuccess?.();
+      setShowSuccess(true);
     } catch (error) {
       alert("Something went wrong");
+    } finally {
+      setIsSubmitting(false);
     }
   }
+
+  const handleSuccessClose = () => {
+    setShowSuccess(false);
+    form.reset();
+    onSuccess?.();
+  };
 
   const selectedProgram = form.watch("academic_program");
 
@@ -187,7 +208,11 @@ export function ProjectForm({ onSuccess }: ProjectFormProps) {
                   <FormItem>
                     <FormLabel className="text-xs">Program/Project Title</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter title" {...field} className="h-8 text-xs" />
+                      <Textarea
+                        placeholder="Enter title"
+                        {...field}
+                        className="min-h-[80px] text-xs resize-none"
+                      />
                     </FormControl>
                     <FormMessage className="text-[10px]" />
                   </FormItem>
@@ -571,15 +596,42 @@ export function ProjectForm({ onSuccess }: ProjectFormProps) {
                 </FormItem>
               )}
             />
+
+            <div className="flex justify-end gap-3 pt-6">
+              <Button 
+                type="submit" 
+                className="h-8 text-xs px-6 bg-[#159E44] hover:bg-[#128A3B]"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Submitting..." : "Submit Project"}
+              </Button>
+            </div>
           </div>
         </ScrollArea>
-
-        <div className="flex justify-end gap-3 pt-2">
-          <Button type="submit" className="h-8 text-xs px-6 bg-[#159E44] hover:bg-[#128A3B]">
-            Submit Project
-          </Button>
-        </div>
       </form>
+
+      <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader className="flex flex-col items-center justify-center pt-4">
+            <div className="rounded-full bg-[#159E44]/10 p-3 mb-4">
+              <CheckCircle2 className="h-10 w-10 text-[#159E44]" />
+            </div>
+            <DialogTitle className="text-lg font-semibold text-center">Project Created!</DialogTitle>
+            <DialogDescription className="text-xs text-center">
+              The project has been successfully registered.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="sm:justify-center">
+            <Button 
+              type="button" 
+              className="bg-[#159E44] hover:bg-[#128A3B] px-8 h-9 text-xs"
+              onClick={handleSuccessClose}
+            >
+              Continue
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Form>
   );
 }
