@@ -93,9 +93,17 @@ const industrialTechMajors = [
   "Electronics Technology",
 ];
 
+const classificationOptions = [
+  "Agri-Fisheries and Food Security",
+  "Biodiversity and Environmental Conservation",
+  "Smart Engineering, ICT, and Industrial Competitiveness",
+  "Public Health and Welfare",
+  "Societal Development and Equality",
+];
+
 interface ProjectFormValues {
   title: string;
-  classification: string;
+  classification: string[];
   sdg_goals: string[];
   academic_program: string;
   major: string;
@@ -112,7 +120,7 @@ interface ProjectFormValues {
 
 const projectSchema = z.object({
   title: z.string().min(1, "Title is required"),
-  classification: z.string().min(1, "Classification is required"),
+  classification: z.array(z.string()).min(1, "Select at least one classification"),
   sdg_goals: z.array(z.string()).min(1, "Select at least one SDG"),
   academic_program: z.string().min(1, "Academic program is required"),
   major: z.string(),
@@ -143,7 +151,7 @@ export function ProjectForm({ onSuccess, project, isViewOnly }: ProjectFormProps
     resolver: zodResolver(projectSchema) as any,
     defaultValues: {
       title: project?.title || "",
-      classification: project?.classification || "",
+      classification: Array.isArray(project?.classification) ? project.classification : project?.classification ? [project.classification] : [],
       sdg_goals: project?.sdg_goals || [],
       academic_program: project?.academic_program || "",
       major: project?.major || "",
@@ -232,11 +240,70 @@ export function ProjectForm({ onSuccess, project, isViewOnly }: ProjectFormProps
                 control={form.control as any}
                 name="classification"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel className="text-xs">University Extension Agenda Classification</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter classification" {...field} className="h-8 text-xs" disabled={isViewOnly} />
-                    </FormControl>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          disabled={isViewOnly}
+                          className={cn(
+                            "w-full justify-between h-auto min-h-[32px] text-xs px-2 py-1",
+                            !field.value?.length && "text-muted-foreground"
+                          )}
+                        >
+                          <div className="flex flex-wrap gap-1">
+                            {field.value?.length > 0 ? (
+                              field.value.map((val: string) => (
+                                <div key={val} className="bg-muted px-1.5 py-0.5 rounded-sm flex items-center gap-1 border">
+                                  <span>{val}</span>
+                                </div>
+                              ))
+                            ) : (
+                              <span>Select classification</span>
+                            )}
+                          </div>
+                          <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[400px] p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Search classification..." className="h-8 text-xs" />
+                          <CommandEmpty className="text-xs p-2">No classification found.</CommandEmpty>
+                          <CommandGroup className="p-0">
+                            <CommandList className="max-h-64 overflow-y-auto">
+                              {classificationOptions.map((option) => (
+                                <CommandItem
+                                  key={option}
+                                  value={option}
+                                  onSelect={() => {
+                                    const current = new Set(field.value || []);
+                                    if (current.has(option)) {
+                                      current.delete(option);
+                                    } else {
+                                      current.add(option);
+                                    }
+                                    field.onChange(Array.from(current));
+                                  }}
+                                  className="text-xs"
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-3 w-3",
+                                      (field.value || []).includes(option)
+                                        ? "opacity-100"
+                                        : "opacity-0"
+                                    )}
+                                  />
+                                  {option}
+                                </CommandItem>
+                              ))}
+                            </CommandList>
+                          </CommandGroup>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                     <FormMessage className="text-[10px]" />
                   </FormItem>
                 )}
@@ -252,20 +319,31 @@ export function ProjectForm({ onSuccess, project, isViewOnly }: ProjectFormProps
                   <FormLabel className="text-xs">Sustainable Development Goals (SDGs)</FormLabel>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        disabled={isViewOnly}
-                        className={cn(
-                          "w-full justify-between h-8 text-xs px-2",
-                          !field.value.length && "text-muted-foreground"
-                        )}
-                      >
-                        {field.value.length > 0
-                          ? `${field.value.length} goal(s) selected`
-                          : "Select SDGs"}
-                        <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
-                      </Button>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          disabled={isViewOnly}
+                          className={cn(
+                            "w-full justify-between h-auto min-h-[32px] text-xs px-2 py-1",
+                            !field.value.length && "text-muted-foreground"
+                          )}
+                        >
+                          <div className="flex flex-wrap gap-1">
+                            {field.value.length > 0 ? (
+                              field.value.map((val: string) => {
+                                const option = sdgOptions.find(o => o.id === val);
+                                return (
+                                  <div key={val} className="bg-[#159E44]/10 text-[#159E44] px-1.5 py-0.5 rounded-sm flex items-center gap-1 border border-[#159E44]/20">
+                                    <span>{option?.id}</span>
+                                  </div>
+                                );
+                              })
+                            ) : (
+                              <span>Select SDGs</span>
+                            )}
+                          </div>
+                          <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+                        </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-[300px] p-0">
                       <Command>
@@ -528,6 +606,10 @@ export function ProjectForm({ onSuccess, project, isViewOnly }: ProjectFormProps
                           mode="single"
                           selected={field.value}
                           onSelect={field.onChange}
+                          disabled={(date) => {
+                            const startDate = form.getValues("start_date");
+                            return startDate ? date < startDate : false;
+                          }}
                           initialFocus
                           className="text-xs"
                         />
@@ -575,7 +657,16 @@ export function ProjectForm({ onSuccess, project, isViewOnly }: ProjectFormProps
                     render={({ field: inputField }) => (
                       <FormItem className="flex-1">
                         <FormControl>
-                          <Input type="number" placeholder="Amount" {...inputField} className="h-8 text-xs" disabled={isViewOnly} />
+                          <div className="relative">
+                            <span className="absolute left-2 top-2.5 text-xs text-muted-foreground">₱</span>
+                            <Input 
+                              type="number" 
+                              placeholder="Amount" 
+                              {...inputField} 
+                              className="h-8 text-xs pl-5" 
+                              disabled={isViewOnly} 
+                            />
+                          </div>
                         </FormControl>
                         <FormMessage className="text-[10px]" />
                       </FormItem>

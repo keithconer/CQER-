@@ -62,7 +62,7 @@ create trigger on_auth_user_created
 create table if not exists public.projects (
   id uuid default gen_random_uuid() primary key,
   title text not null,
-  classification text not null,
+  classification jsonb not null default '[]',
   sdg_goals jsonb not null default '[]',
   academic_program text not null,
   major text,

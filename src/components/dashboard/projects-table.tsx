@@ -29,7 +29,7 @@ import { useRouter } from "next/navigation";
 interface Project {
   id: string;
   title: string;
-  classification: string;
+  classification: string[];
   academic_program: string;
   start_date: string;
   end_date: string;
@@ -127,7 +127,9 @@ export function ProjectsTable({ projects }: ProjectsTableProps) {
                       <span className="text-xs font-medium truncate" title={project.title}>
                         {project.title}
                       </span>
-                      <span className="text-[10px] text-muted-foreground">{project.classification}</span>
+                      <span className="text-[10px] text-muted-foreground line-clamp-1" title={Array.isArray(project.classification) ? project.classification.join(", ") : project.classification}>
+                        {Array.isArray(project.classification) ? project.classification.join(", ") : project.classification}
+                      </span>
                     </div>
                   </TableCell>
                   <TableCell className="text-[10px] py-2.5 px-3">
