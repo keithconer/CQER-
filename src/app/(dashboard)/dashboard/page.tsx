@@ -1,14 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import { CheckCircle2 } from "lucide-react";
 import {
   Card,
-  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Plus, CheckCircle2 } from "lucide-react";
+import { ProjectManagement } from "@/components/dashboard/project-management";
+import { getProjects } from "@/lib/actions/projects";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -29,6 +29,8 @@ export default async function DashboardPage() {
   if (!profile || !profile.first_name) {
     redirect("/register?step=2");
   }
+
+  const { data: projects } = await getProjects();
 
   const userType = profile.user_type;
   const firstName = profile.first_name || "User";
@@ -53,23 +55,7 @@ export default async function DashboardPage() {
       </div>
 
       {userType === "college_coordinator" ? (
-        <Card className="border-border/50 shadow-sm">
-          <CardHeader className="pb-3 pt-4 px-4">
-            <CardTitle className="text-xs font-semibold">Projects</CardTitle>
-            <CardDescription className="text-[10px]">
-              Manage your college extension projects
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
-            <Button
-              size="sm"
-              className="text-xs h-8 bg-[#159E44] hover:bg-[#128A3B] text-white"
-            >
-              <Plus className="h-3 w-3 mr-1" />
-              Create Project
-            </Button>
-          </CardContent>
-        </Card>
+        <ProjectManagement initialProjects={projects || []} />
       ) : (
         <Card className="border-border/50 shadow-sm">
           <CardHeader className="pb-3 pt-4 px-4">

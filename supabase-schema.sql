@@ -57,3 +57,41 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+
+-- Create projects table
+create table if not exists public.projects (
+  id uuid default gen_random_uuid() primary key,
+  title text not null,
+  classification text not null,
+  sdg_goals jsonb not null default '[]',
+  academic_program text not null,
+  major text,
+  proponents jsonb not null default '[]',
+  college text not null default 'CEIT',
+  collaborating_agencies text,
+  target_beneficiaries text,
+  community_location text,
+  start_date date,
+  end_date date,
+  budget_requirements jsonb not null default '[]',
+  gad_score decimal(5,2),
+  created_by uuid references public.profiles(id) on delete cascade not null,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+-- Enable RLS
+alter table public.projects enable row level security;
+
+-- RLS Policies
+drop policy if exists "Users can view own projects" on public.projects;
+create policy "Users can view own projects" on public.projects
+  for select using (auth.uid() = created_by);
+
+drop policy if exists "Users can create own projects" on public.projects;
+create policy "Users can create own projects" on public.projects
+  for insert with check (auth.uid() = created_by);
+
+drop policy if exists "Users can update own projects" on public.projects;
+create policy "Users can update own projects" on public.projects
+  for update using (auth.uid() = created_by);
