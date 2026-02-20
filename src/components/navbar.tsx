@@ -40,13 +40,16 @@ export function Navbar({ user }: NavbarProps) {
     <header className="border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="max-w-6xl mx-auto flex h-12 items-center justify-between px-4">
         {/* Left: App name */}
-        <div className="flex items-center gap-3">
+        <button 
+          onClick={() => router.push("/dashboard")}
+          className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+        >
           <div className="flex items-center gap-2">
             <Image
               src="/CQERFINAL.png"
               alt="CQER Logo"
-              width={30}
-              height={30}
+              width={36}
+              height={36}
               className="object-contain"
             />
             <span className="text-sm font-bold tracking-tight">CQER</span>
@@ -58,7 +61,7 @@ export function Navbar({ user }: NavbarProps) {
               ? "College"
               : "Unit"}
           </span>
-        </div>
+        </button>
 
         {/* Right: Profile section */}
         <div className="flex items-center gap-2">

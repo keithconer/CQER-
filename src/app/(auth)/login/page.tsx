@@ -199,16 +199,6 @@ export default function LoginPage() {
           </svg>
           Sign-in with Google
         </Button>
-
-        <p className="text-center text-[10px] text-muted-foreground">
-          Forgot password?{" "}
-          <Link
-            href="/forgot-password"
-            className="text-[#159E44] hover:underline font-semibold"
-          >
-            Click here
-          </Link>
-        </p>
       </CardContent>
     </Card>
   );

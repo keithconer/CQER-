@@ -6,7 +6,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 
 function UpdatePasswordContent() {
   const router = useRouter();
@@ -18,15 +18,11 @@ function UpdatePasswordContent() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    // When the user clicks the invite link, Supabase handles the session exchange automatically.
-    // We just need to check if we have a session.
     const checkSession = async () => {
         const supabase = createClient();
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
-            // Optional: check if we have a hash fragment (implicit flow) or code (PKCE)
-            // But usually Supabase client handles this.
-            // If no session after a short delay, maybe redirect.
+            // Session check
         }
     };
     checkSession();
@@ -65,51 +61,58 @@ function UpdatePasswordContent() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-sm space-y-6 bg-white p-6 rounded-lg shadow-sm border border-border/50">
-        <div className="space-y-2 text-center">
-          <h1 className="text-xl font-bold tracking-tight text-[#159E44]">Set Your Password</h1>
-          <p className="text-xs text-muted-foreground">
-            Welcome to CQER! Please set a secure password for your account.
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <div className="w-full max-w-sm space-y-4 bg-card p-5 rounded-lg shadow-sm border border-border/50 relative">
+        <button
+          onClick={() => router.push("/dashboard")}
+          className="absolute top-3 right-3 p-1 rounded-md hover:bg-muted transition-colors"
+        >
+          <X className="h-3.5 w-3.5 text-muted-foreground" />
+        </button>
+
+        <div className="space-y-1 text-center">
+          <h1 className="text-sm font-bold tracking-tight">Set Your Password</h1>
+          <p className="text-[10px] text-muted-foreground">
+            Please set a secure password for your account.
           </p>
         </div>
 
         {success ? (
-          <div className="p-4 bg-green-50 text-green-700 rounded-md text-xs text-center font-medium">
+          <div className="p-3 bg-green-50 text-green-700 rounded-md text-[10px] text-center font-medium">
              Password set successfully! Redirecting...
           </div>
         ) : (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label className="text-xs">New Password</Label>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-semibold">New Password</Label>
               <Input
                 type="password"
                 placeholder="Enter new password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="h-9 text-xs"
+                className="h-8 text-[11px]"
               />
             </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Confirm Password</Label>
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-semibold">Confirm Password</Label>
               <Input
                 type="password"
                 placeholder="Confirm new password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="h-9 text-xs"
+                className="h-8 text-[11px]"
               />
             </div>
 
-            {error && <p className="text-xs text-destructive font-medium">{error}</p>}
+            {error && <p className="text-[10px] text-destructive font-medium">{error}</p>}
 
             <Button
-              className="w-full h-9 bg-[#159E44] hover:bg-[#128A3B] text-white text-xs font-semibold"
+              className="w-full h-8 bg-[#159E44] hover:bg-[#128A3B] text-white text-[11px] font-semibold"
               onClick={handleUpdatePassword}
               disabled={loading}
             >
               {loading && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
-              Set Password & Login
+              Set Password
             </Button>
           </div>
         )}
@@ -121,8 +124,8 @@ function UpdatePasswordContent() {
 export default function UpdatePasswordPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="h-6 w-6 animate-spin text-[#159E44]" />
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-5 w-5 animate-spin text-[#159E44]" />
       </div>
     }>
       <UpdatePasswordContent />
