@@ -8,6 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ProjectManagement } from "@/components/dashboard/project-management";
+import { CoordinatorRegistration } from "@/components/dashboard/coordinator-registration";
 import { getProjects } from "@/lib/actions/projects";
 
 export default async function DashboardPage() {
@@ -46,29 +47,42 @@ export default async function DashboardPage() {
         </div>
         <div className="flex flex-col items-start sm:items-end gap-1">
           <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#159E44]/10 text-[#159E44] text-[10px] font-medium border border-[#159E44]/20">
-            {userType === "college_coordinator" ? "College Coordinator" : "Unit Coordinator"}
+            {userType === "super_admin" 
+              ? "Super Admin" 
+              : userType === "college_coordinator" 
+                ? "College Coordinator" 
+                : "Unit Coordinator"}
           </div>
-          <p className="text-[10px] text-muted-foreground font-medium px-1">
-            {profile.department} {profile.unit ? `• ${profile.unit}` : ""}
-          </p>
+          {profile.department && (
+            <p className="text-[10px] text-muted-foreground font-medium px-1">
+              {profile.department} {profile.unit ? `• ${profile.unit}` : ""}
+            </p>
+          )}
         </div>
       </div>
 
-      {userType === "college_coordinator" ? (
+      {userType === "super_admin" && (
+        <CoordinatorRegistration 
+          userType="college_coordinator" 
+          title="College Coordinators"
+          description="Register emails of College coordinators for their specific departments."
+        />
+      )}
+
+      {userType === "college_coordinator" && (
+        <div className="space-y-4">
+          <CoordinatorRegistration 
+            userType="unit_coordinator" 
+            title="Unit Coordinators"
+            description="Register emails of Unit coordinators for your department."
+            department={profile.department}
+          />
+          <ProjectManagement initialProjects={projects || []} readOnly />
+        </div>
+      )}
+
+      {userType === "unit_coordinator" && (
         <ProjectManagement initialProjects={projects || []} />
-      ) : (
-        <Card className="border-border/50 shadow-sm">
-          <CardHeader className="pb-3 pt-4 px-4">
-            <CardTitle className="text-xs font-semibold flex items-center gap-1.5">
-              <CheckCircle2 className="h-3.5 w-3.5 text-[#159E44]" />
-              You&apos;re logged in
-            </CardTitle>
-            <CardDescription className="text-[10px]">
-              You&apos;re signed in as a Unit Coordinator. Your dashboard
-              features are coming soon.
-            </CardDescription>
-          </CardHeader>
-        </Card>
       )}
     </div>
   );

@@ -24,9 +24,10 @@ import { useRouter } from "next/navigation";
 
 interface ProjectManagementProps {
   initialProjects: any[];
+  readOnly?: boolean;
 }
 
-export function ProjectManagement({ initialProjects }: ProjectManagementProps) {
+export function ProjectManagement({ initialProjects, readOnly }: ProjectManagementProps) {
   const [open, setOpen] = React.useState(false);
   const router = useRouter();
 
@@ -45,26 +46,28 @@ export function ProjectManagement({ initialProjects }: ProjectManagementProps) {
               Manage your college extension projects
             </CardDescription>
           </div>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button
-                size="sm"
-                className="text-xs h-8 bg-[#159E44] hover:bg-[#128A3B] text-white"
-              >
-                <Plus className="h-3 w-3 mr-1" />
-                Create Project
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[800px] p-6 max-h-[90vh] overflow-hidden">
-              <DialogHeader className="pb-2">
-                <DialogTitle className="text-sm font-semibold">Create New Project</DialogTitle>
-                <DialogDescription className="text-[10px]">
-                  Fill out the form below to register a new college extension project.
-                </DialogDescription>
-              </DialogHeader>
-              <ProjectForm onSuccess={handleSuccess} />
-            </DialogContent>
-          </Dialog>
+          {!readOnly && (
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  size="sm"
+                  className="text-xs h-8 bg-[#159E44] hover:bg-[#128A3B] text-white"
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Create Project
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[800px] p-6 max-h-[90vh] overflow-hidden">
+                <DialogHeader className="pb-2">
+                  <DialogTitle className="text-sm font-semibold">Create New Project</DialogTitle>
+                  <DialogDescription className="text-[10px]">
+                    Fill out the form below to register a new college extension project.
+                  </DialogDescription>
+                </DialogHeader>
+                <ProjectForm onSuccess={handleSuccess} />
+              </DialogContent>
+            </Dialog>
+          )}
         </CardHeader>
         <CardContent className="px-4 pb-4">
           <ProjectsTable projects={initialProjects} />

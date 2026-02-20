@@ -102,7 +102,7 @@ export default function LoginPage() {
         <form onSubmit={handleLogin} className="space-y-3">
           <div className="space-y-1.5">
             <Label htmlFor="email" className="text-[11px] font-semibold text-foreground/90 ml-0.5">
-              Email:
+              Email
             </Label>
             <div className="relative">
               <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/60" />
@@ -149,7 +149,7 @@ export default function LoginPage() {
             <p className="text-[11px] text-destructive font-medium">
               {error ||
                 (callbackError === "unregistered_oauth"
-                  ? "This Google account is not registered. Please register with your CvSU email first."
+                  ? "This Google account is not registered. Please contact your coordinator."
                   : callbackError === "auth_callback_error"
                   ? "Authentication failed. Please try again."
                   : "Email confirmation failed. Please try again.")}
@@ -161,14 +161,14 @@ export default function LoginPage() {
             className="w-full h-9 text-[11px] font-bold bg-[#159E44] hover:bg-[#128A3B] text-white rounded-md shadow-sm transition-all active:scale-[0.98]"
             disabled={loading}
           >
-            {loading ? "Signing in..." : "Sign-in"}
+            {loading ? "Signing in..." : "Login"}
           </Button>
         </form>
 
         <div className="relative flex items-center">
           <div className="flex-grow border-t border-border/60"></div>
           <span className="flex-shrink mx-4 text-[10px] text-muted-foreground font-medium whitespace-nowrap">
-            One click sign-in process with
+            Or
           </span>
           <div className="flex-grow border-t border-border/60"></div>
         </div>
@@ -201,12 +201,12 @@ export default function LoginPage() {
         </Button>
 
         <p className="text-center text-[10px] text-muted-foreground">
-          Doesn&apos;t have an account yet?{" "}
+          Forgot password?{" "}
           <Link
-            href="/register"
+            href="/forgot-password"
             className="text-[#159E44] hover:underline font-semibold"
           >
-            Register
+            Click here
           </Link>
         </p>
       </CardContent>

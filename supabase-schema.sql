@@ -9,7 +9,9 @@ create table if not exists public.profiles (
   email text not null,
   first_name text,
   last_name text,
-  user_type text check (user_type in ('college_coordinator', 'unit_coordinator')) not null,
+  user_type text check (user_type in ('super_admin', 'college_coordinator', 'unit_coordinator')) not null,
+  department text,
+  unit text,
   avatar_url text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
@@ -38,13 +40,15 @@ begin
   -- Only create profile if user_type is provided (manual registration)
   -- For OAuth, we'll handle profile creation in the registration flow (Step 2)
   if new.raw_user_meta_data->>'user_type' is not null then
-    insert into public.profiles (id, email, first_name, last_name, user_type, avatar_url)
+    insert into public.profiles (id, email, first_name, last_name, user_type, department, unit, avatar_url)
     values (
       new.id,
       new.email,
       new.raw_user_meta_data->>'first_name',
       new.raw_user_meta_data->>'last_name',
       new.raw_user_meta_data->>'user_type',
+      new.raw_user_meta_data->>'department',
+      new.raw_user_meta_data->>'unit',
       new.raw_user_meta_data->>'avatar_url'
     );
   end if;

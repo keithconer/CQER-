@@ -52,7 +52,9 @@ export function Navbar({ user }: NavbarProps) {
             <span className="text-sm font-bold tracking-tight">CQER</span>
           </div>
           <span className="text-[10px] text-muted-foreground font-semibold px-1.5 py-0.5 rounded bg-muted uppercase tracking-wider">
-            {user.userType === "college_coordinator"
+            {user.userType === "super_admin"
+              ? "Admin"
+              : user.userType === "college_coordinator"
               ? "College"
               : "Unit"}
           </span>
@@ -88,6 +90,14 @@ export function Navbar({ user }: NavbarProps) {
                   {user.email}
                 </p>
               </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => router.push("/settings")}
+                className="text-xs cursor-pointer"
+              >
+                <Settings className="mr-2 h-3 w-3" />
+                Settings
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={handleLogout}

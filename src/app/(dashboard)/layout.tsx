@@ -23,8 +23,26 @@ export default async function DashboardLayout({
     .eq("id", user.id)
     .single();
 
-  // BULLETPROOF REDIRECT: If no profile exists OR if it's incomplete (missing first name), they MUST pick a role
-  if (!profile || !profile.first_name) {
+  // BULLETPROOF REDIRECT: If no profile exists, redirected to login 
+  // (unless they are the super admin we just registered)
+  if (!profile) {
+    if (user.email === "main.keithbrian.coner@cvsu.edu.ph") {
+      // Proactively create super_admin profile if it doesn't exist
+      await supabase.from("profiles").upsert({
+        id: user.id,
+        email: user.email,
+        first_name: "Keith Brian",
+        last_name: "Coner",
+        user_type: "super_admin",
+      });
+      // Refresh to get the new profile
+      return redirect("/dashboard");
+    }
+    redirect("/login");
+  }
+
+  // If incomplete (missing first name) and NOT super_admin, they might need setup
+  if (!profile.first_name && profile.user_type !== "super_admin") {
     redirect("/register?step=2");
   }
 
