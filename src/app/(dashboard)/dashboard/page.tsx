@@ -11,6 +11,10 @@ import { ProjectManagement } from "@/components/dashboard/project-management";
 import { CoordinatorRegistration } from "@/components/dashboard/coordinator-registration";
 import { getProjects } from "@/lib/actions/projects";
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function DashboardPage() {
   const supabase = await createClient();
   const {

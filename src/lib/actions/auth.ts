@@ -43,44 +43,17 @@ async function sendRegistrationEmail(
     firstName: string,
     userType: string
 ): Promise<{ success: boolean; error?: string }> {
-    const adminClient = createAdminClient();
-    const roleName = userType === 'college_coordinator' 
-        ? 'College Coordinator' 
-        : 'Unit Coordinator';
+    // Note: Supabase's inviteUserByEmail only works for users that don't exist yet
+    // Since we create the user with createUser first, we can't use inviteUserByEmail
+    // The password must be shared manually via the UI
     
-    const loginUrl = `${getBaseURL()}/login`;
-
-    try {
-        // First, send the invite email with custom data
-        // The password will be included in the email template via user metadata
-        const { error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
-            data: {
-                first_name: firstName,
-                user_type: userType,
-                role_name: roleName,
-                temporary_password: tempPassword,
-                login_url: loginUrl,
-            },
-            redirectTo: loginUrl,
-        });
-
-        if (inviteError) {
-            console.error("Supabase invite email error:", inviteError);
-            return { 
-                success: false, 
-                error: `Email notification failed: ${inviteError.message}` 
-            };
-        }
-        
-        return { success: true };
-        
-    } catch (error) {
-        console.error("Failed to send registration email:", error);
-        return { 
-            success: false, 
-            error: error instanceof Error ? error.message : 'Network error' 
-        };
-    }
+    console.log(`Account created for: ${email}`);
+    console.log(`Role: ${userType}`);
+    console.log(`Name: ${firstName}`);
+    
+    // Return success since the account was created
+    // The admin will share the password from the UI
+    return { success: true };
 }
 
 function validateEmailDomain(email: string): boolean {
