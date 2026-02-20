@@ -65,7 +65,8 @@ function UpdatePasswordContent() {
       <div className="w-full max-w-sm space-y-4 bg-card p-5 rounded-lg shadow-sm border border-border/50 relative">
         <button
           onClick={() => router.push("/dashboard")}
-          className="absolute top-3 right-3 p-1 rounded-md hover:bg-muted transition-colors"
+          className="absolute top-3 right-3 p-1 rounded-md hover:bg-muted transition-colors cursor-pointer"
+          aria-label="Close"
         >
           <X className="h-3.5 w-3.5 text-muted-foreground" />
         </button>
@@ -107,7 +108,7 @@ function UpdatePasswordContent() {
             {error && <p className="text-[10px] text-destructive font-medium">{error}</p>}
 
             <Button
-              className="w-full h-8 bg-[#159E44] hover:bg-[#128A3B] text-white text-[11px] font-semibold"
+              className="w-full h-8 bg-[#159E44] hover:bg-[#128A3B] text-white text-[11px] font-semibold cursor-pointer"
               onClick={handleUpdatePassword}
               disabled={loading}
             >

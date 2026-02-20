@@ -42,14 +42,14 @@ export function Navbar({ user }: NavbarProps) {
         {/* Left: App name */}
         <button 
           onClick={() => router.push("/dashboard")}
-          className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+          className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer"
         >
           <div className="flex items-center gap-2">
             <Image
               src="/CQERFINAL.png"
               alt="CQER Logo"
-              width={36}
-              height={36}
+              width={42}
+              height={42}
               className="object-contain"
             />
             <span className="text-sm font-bold tracking-tight">CQER</span>
@@ -80,7 +80,7 @@ export function Navbar({ user }: NavbarProps) {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="p-1.5 rounded-md hover:bg-muted transition-colors">
+              <button className="p-1.5 rounded-md hover:bg-muted transition-colors cursor-pointer">
                 <Settings className="h-3.5 w-3.5 text-muted-foreground" />
               </button>
             </DropdownMenuTrigger>
