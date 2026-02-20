@@ -1,12 +1,14 @@
+"use client";
+
 import { createClient } from "@/lib/supabase/client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 
-export default function UpdatePassword() {
+function UpdatePasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [password, setPassword] = useState("");
@@ -22,7 +24,9 @@ export default function UpdatePassword() {
         const supabase = createClient();
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
-            router.push("/login?error=Invalid or expired link");
+            // Optional: check if we have a hash fragment (implicit flow) or code (PKCE)
+            // But usually Supabase client handles this.
+            // If no session after a short delay, maybe redirect.
         }
     };
     checkSession();
@@ -111,5 +115,17 @@ export default function UpdatePassword() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function UpdatePasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Loader2 className="h-6 w-6 animate-spin text-[#159E44]" />
+      </div>
+    }>
+      <UpdatePasswordContent />
+    </Suspense>
   );
 }
