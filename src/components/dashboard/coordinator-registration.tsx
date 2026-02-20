@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, X, ArrowRight, ArrowLeft, Mail, Building2, CheckCircle2, Copy, Check } from "lucide-react";
+import { Plus, X, ArrowRight, ArrowLeft, Mail, Building2, CheckCircle2, Copy, Check, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -239,9 +239,23 @@ export function CoordinatorRegistration({ userType, title, description, departme
           {currentStep === 4 && (
             <div className="space-y-4">
               <div className="text-center space-y-1 pb-2">
-                <p className="text-[11px] font-semibold text-[#159E44]">Invitations Sent Successfully!</p>
-                <p className="text-[10px] text-muted-foreground">The coordinators have been sent an email to set up their accounts.</p>
+                <p className="text-[11px] font-semibold text-[#159E44]">Process Completed</p>
+                <p className="text-[10px] text-muted-foreground">The coordinator registration process is finished.</p>
               </div>
+
+              {results.some(r => r.error && r.error.includes("Rate limit")) && (
+                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md flex gap-2 items-start">
+                  <AlertTriangle className="h-4 w-4 text-yellow-600 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="text-[11px] font-semibold text-yellow-800">Email Rate Limit Exceeded</p>
+                    <p className="text-[10px] text-yellow-700">
+                      Supabase Free Tier limits email invites (approx 3/hour). 
+                      <br/>Some invitations were not sent. Please wait an hour before retrying.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
                 {results.map((result, idx) => (
                   <div key={idx} className="p-3 rounded-lg border border-border/50 bg-muted/10 space-y-2">

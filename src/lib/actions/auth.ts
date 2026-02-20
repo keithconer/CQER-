@@ -61,7 +61,12 @@ export async function registerCoordinators(coordinators: { email: string; depart
 
             if (error) {
                 console.error("Invite Error:", error);
-                results.push({ email: coord.email, success: false, error: error.message });
+                let errorMessage = error.message;
+                // Check for rate limit status (429)
+                if (error.status === 429 || (error as any)?.code === 429 || error.message.toLowerCase().includes("rate limit")) {
+                    errorMessage = "Rate limit reached. Please wait a while before sending more invites.";
+                }
+                results.push({ email: coord.email, success: false, error: errorMessage });
             } else {
                 results.push({ email: coord.email, success: true });
             }
