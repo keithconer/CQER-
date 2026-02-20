@@ -228,9 +228,9 @@ export function CoordinatorRegistration({ userType, title, description, departme
                 <CheckCircle2 className="h-6 w-6 text-[#159E44]" />
               </div>
               <div className="space-y-1">
-                <p className="text-[11px] font-semibold">Ready to invite {emails.length} coordinators</p>
+                <p className="text-[11px] font-semibold">Ready to register {emails.length} coordinators</p>
                 <p className="text-[10px] text-muted-foreground px-4">
-                  They will receive an email invitation to set up their password.
+                  Temporary passwords will be generated and sent via email.
                 </p>
               </div>
             </div>
@@ -239,22 +239,11 @@ export function CoordinatorRegistration({ userType, title, description, departme
           {currentStep === 4 && (
             <div className="space-y-4">
               <div className="text-center space-y-1 pb-2">
-                <p className="text-[11px] font-semibold text-[#159E44]">Process Completed</p>
-                <p className="text-[10px] text-muted-foreground">The coordinator registration process is finished.</p>
-              </div>
-
-              {results.some(r => r.error && r.error.includes("Rate limit")) && (
-                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md flex gap-2 items-start">
-                  <AlertTriangle className="h-4 w-4 text-yellow-600 shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    <p className="text-[11px] font-semibold text-yellow-800">Email Rate Limit Exceeded</p>
-                    <p className="text-[10px] text-yellow-700">
-                      Supabase Free Tier limits email invites (approx 3/hour). 
-                      <br/>Some invitations were not sent. Please wait an hour before retrying.
-                    </p>
-                  </div>
+                <p className="text-[11px] font-semibold text-[#159E44]">Registration Successful!</p>
+                <div className="px-6">
+                   <p className="text-[10px] text-muted-foreground">The account has been created including its password and it will be sent to their email.</p>
                 </div>
-              )}
+              </div>
 
               <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
                 {results.map((result, idx) => (
