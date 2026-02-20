@@ -1,9 +1,18 @@
 import { createClient } from "@supabase/supabase-js";
 
 export function createAdminClient() {
+    const serviceRoleKey =
+        process.env.SUPABASE_SERVICE_ROLE_KEY ||
+        process.env.SERVICE_ROLE_KEY ||
+        process.env.SUPABASE_SERVICE_KEY;
+
+    if (!serviceRoleKey) {
+        throw new Error("SUPABASE_SERVICE_ROLE_KEY is missing in environment variables.");
+    }
+
     return createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        serviceRoleKey,
         {
             auth: {
                 autoRefreshToken: false,

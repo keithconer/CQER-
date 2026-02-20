@@ -14,65 +14,70 @@ function generateTempPassword() {
 }
 
 export async function registerCoordinators(coordinators: { email: string; department: string; unit?: string; userType: string }[]) {
-    const supabase = await createClient();
-    const adminClient = createAdminClient();
+    try {
+        const supabase = await createClient();
+        const adminClient = createAdminClient();
 
-    // Check if current user is authorized
-    const { data: { user: currentUser } } = await supabase.auth.getUser();
-    if (!currentUser) throw new Error("Unauthorized");
+        // Check if current user is authorized
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (!currentUser) return { error: "Unauthorized" };
 
-    const { data: profile } = await supabase
-        .from("profiles")
-        .select("user_type")
-        .eq("id", currentUser.id)
-        .single();
+        const { data: profile } = await supabase
+            .from("profiles")
+            .select("user_type")
+            .eq("id", currentUser.id)
+            .single();
 
-    if (!profile || (profile.user_type !== "super_admin" && profile.user_type !== "college_coordinator")) {
-        // Hardcoded check for the super admin email as requested
-        if (currentUser.email !== "main.keithbrian.coner@cvsu.edu.ph") {
-            throw new Error("Insufficient permissions");
+        if (!profile || (profile.user_type !== "super_admin" && profile.user_type !== "college_coordinator")) {
+            // Hardcoded check for the super admin email as requested
+            if (currentUser.email !== "main.keithbrian.coner@cvsu.edu.ph") {
+                return { error: "Insufficient permissions" };
+            }
         }
+
+        const results = [];
+
+        for (const coord of coordinators) {
+            const tempPassword = generateTempPassword();
+
+            // Create first name and last name from email part
+            const emailNamePart = coord.email.split("@")[0];
+            const parts = emailNamePart.split(".");
+            let firstName = "";
+            let lastName = "";
+
+            if (parts.length >= 3) {
+                firstName = parts[1].charAt(0).toUpperCase() + parts[1].slice(1);
+                lastName = parts[2].charAt(0).toUpperCase() + parts[2].slice(1);
+            } else if (parts.length === 2) {
+                firstName = parts[1].charAt(0).toUpperCase() + parts[1].slice(1);
+            }
+
+            const { data, error } = await adminClient.auth.admin.createUser({
+                email: coord.email,
+                password: tempPassword,
+                email_confirm: true,
+                user_metadata: {
+                    first_name: firstName,
+                    last_name: lastName,
+                    user_type: coord.userType,
+                    department: coord.department,
+                    unit: coord.unit || null,
+                },
+            });
+
+            if (error) {
+                results.push({ email: coord.email, success: false, error: error.message });
+            } else {
+                results.push({ email: coord.email, success: true, tempPassword });
+            }
+        }
+
+        return { results };
+    } catch (err: any) {
+        console.error("Registration error:", err);
+        return { error: err.message || "An unexpected error occurred during registration" };
     }
-
-    const results = [];
-
-    for (const coord of coordinators) {
-        const tempPassword = generateTempPassword();
-
-        // Create first name and last name from email part
-        const emailNamePart = coord.email.split("@")[0];
-        const parts = emailNamePart.split(".");
-        let firstName = "";
-        let lastName = "";
-
-        if (parts.length >= 3) {
-            firstName = parts[1].charAt(0).toUpperCase() + parts[1].slice(1);
-            lastName = parts[2].charAt(0).toUpperCase() + parts[2].slice(1);
-        } else if (parts.length === 2) {
-            firstName = parts[1].charAt(0).toUpperCase() + parts[1].slice(1);
-        }
-
-        const { data, error } = await adminClient.auth.admin.createUser({
-            email: coord.email,
-            password: tempPassword,
-            email_confirm: true,
-            user_metadata: {
-                first_name: firstName,
-                last_name: lastName,
-                user_type: coord.userType,
-                department: coord.department,
-                unit: coord.unit || null,
-            },
-        });
-
-        if (error) {
-            results.push({ email: coord.email, success: false, error: error.message });
-        } else {
-            results.push({ email: coord.email, success: true, tempPassword });
-        }
-    }
-
-    return results;
 }
 
 export async function changePassword(newPassword: string) {

@@ -100,8 +100,18 @@ export function CoordinatorRegistration({ userType, title, description, departme
       }));
 
       const response = await registerCoordinators(payload);
-      setResults(response);
-      setCurrentStep(4);
+      
+      if (response && 'error' in response) {
+        setError(response.error as string);
+        return;
+      }
+
+      if (response && 'results' in response) {
+        setResults(response.results as any[]);
+        setCurrentStep(4);
+      } else {
+        setError("Invalid response from server");
+      }
     } catch (err: any) {
       setError(err.message || "Failed to register coordinators");
     } finally {
