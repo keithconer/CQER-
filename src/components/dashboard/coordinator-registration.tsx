@@ -241,7 +241,7 @@ export function CoordinatorRegistration({ userType, title, description, departme
               <div className="text-center space-y-1 pb-2">
                 <p className="text-[11px] font-semibold text-[#159E44]">Registration Successful!</p>
                 <div className="px-6">
-                   <p className="text-[10px] text-muted-foreground">Accounts created. Share the temporary passwords below with each coordinator.</p>
+                   <p className="text-[10px] text-muted-foreground">Copy and share the temporary passwords below with each coordinator via email or messaging.</p>
                 </div>
               </div>
 
@@ -258,7 +258,7 @@ export function CoordinatorRegistration({ userType, title, description, departme
                     </div>
                     {result.success && result.tempPassword && (
                       <div className="bg-[#f0fdf4] border border-[#159E44]/30 rounded p-2 space-y-1">
-                        <p className="text-[9px] text-[#166534] font-semibold uppercase">Temporary Password</p>
+                        <p className="text-[9px] text-[#166534] font-semibold uppercase">Temporary Password - Share This</p>
                         <div className="flex items-center justify-between gap-2">
                           <code className="text-[11px] font-mono text-[#159E44] font-bold break-all">{result.tempPassword}</code>
                           <Button
@@ -274,6 +274,9 @@ export function CoordinatorRegistration({ userType, title, description, departme
                             )}
                           </Button>
                         </div>
+                        {result.emailSent && (
+                          <p className="text-[9px] text-[#166534] mt-1">✓ Notification email sent</p>
+                        )}
                       </div>
                     )}
                     {!result.success && (
@@ -281,6 +284,11 @@ export function CoordinatorRegistration({ userType, title, description, departme
                     )}
                   </div>
                 ))}
+              </div>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <p className="text-[10px] text-amber-900 leading-relaxed">
+                  <strong>⚠️ Important:</strong> Copy each password and send it to the coordinator via email or messaging. They'll need it to log in.
+                </p>
               </div>
               <Button className="w-full h-9 text-[11px] font-bold bg-[#159E44] hover:bg-[#128A3B]" onClick={() => setOpen(false)}>
                 Done

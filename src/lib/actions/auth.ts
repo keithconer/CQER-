@@ -51,8 +51,9 @@ async function sendRegistrationEmail(
     const loginUrl = `${getBaseURL()}/login`;
 
     try {
-        // Use Supabase Auth to send email with temporary password included in metadata
-        const { error } = await adminClient.auth.admin.inviteUserByEmail(email, {
+        // First, send the invite email with custom data
+        // The password will be included in the email template via user metadata
+        const { error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
             data: {
                 first_name: firstName,
                 user_type: userType,
@@ -63,11 +64,11 @@ async function sendRegistrationEmail(
             redirectTo: loginUrl,
         });
 
-        if (error) {
-            console.error("Supabase invite email error:", error);
+        if (inviteError) {
+            console.error("Supabase invite email error:", inviteError);
             return { 
                 success: false, 
-                error: `Email service error: ${error.message}` 
+                error: `Email notification failed: ${inviteError.message}` 
             };
         }
         

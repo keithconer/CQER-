@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { getBaseURL } from "@/lib/utils";
+import { revalidatePath } from "next/cache";
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
@@ -55,6 +56,9 @@ export async function GET(request: Request) {
                             .eq("id", user.id);
                     }
 
+                    // Revalidate the dashboard path to ensure fresh data
+                    revalidatePath('/dashboard', 'page');
+                    
                     // Create response with explicit cookie forwarding
                     const response = NextResponse.redirect(`${origin}${next}`);
                     
@@ -87,6 +91,9 @@ export async function GET(request: Request) {
                         });
 
                         if (!recoveryError) {
+                            // Revalidate after profile recovery
+                            revalidatePath('/dashboard', 'page');
+                            
                             // Create response with cookies for recovered profile
                             const response = NextResponse.redirect(`${origin}${next}`);
                             const allCookies = cookieStore.getAll();
