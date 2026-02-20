@@ -241,7 +241,7 @@ export function CoordinatorRegistration({ userType, title, description, departme
               <div className="text-center space-y-1 pb-2">
                 <p className="text-[11px] font-semibold text-[#159E44]">Registration Successful!</p>
                 <div className="px-6">
-                   <p className="text-[10px] text-muted-foreground">The account has been created including its password and it will be sent to their email.</p>
+                   <p className="text-[10px] text-muted-foreground">Accounts created. Share the temporary passwords below with each coordinator.</p>
                 </div>
               </div>
 
@@ -251,11 +251,31 @@ export function CoordinatorRegistration({ userType, title, description, departme
                     <div className="flex justify-between items-center">
                       <p className="text-[10px] font-bold truncate flex-grow mr-2">{result.email}</p>
                       {result.success ? (
-                         <span className="text-[9px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 font-bold uppercase">Sent</span>
+                         <span className="text-[9px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 font-bold uppercase">Created</span>
                       ) : (
                         <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-bold uppercase">Error</span>
                       )}
                     </div>
+                    {result.success && result.tempPassword && (
+                      <div className="bg-[#f0fdf4] border border-[#159E44]/30 rounded p-2 space-y-1">
+                        <p className="text-[9px] text-[#166534] font-semibold uppercase">Temporary Password</p>
+                        <div className="flex items-center justify-between gap-2">
+                          <code className="text-[11px] font-mono text-[#159E44] font-bold break-all">{result.tempPassword}</code>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 flex-shrink-0"
+                            onClick={() => copyToClipboard(result.tempPassword, result.email)}
+                          >
+                            {copied === result.email ? (
+                              <Check className="h-3 w-3 text-[#159E44]" />
+                            ) : (
+                              <Copy className="h-3 w-3" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                     {!result.success && (
                       <p className="text-[10px] text-destructive">{result.error}</p>
                     )}

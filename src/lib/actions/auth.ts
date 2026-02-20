@@ -3,77 +3,87 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { getBaseURL } from "@/lib/utils";
+import crypto from "crypto";
 
-
-
-
-function generateTempPassword() {
-    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-    let password = "";
-    for (let i = 0; i < 10; i++) {
-        password += chars.charAt(Math.floor(Math.random() * chars.length));
+function generateTempPassword(): string {
+    // Use Node.js crypto for cryptographically secure random generation
+    const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+    const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const numbers = '0123456789';
+    const special = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+    
+    const allChars = lowercase + uppercase + numbers + special;
+    
+    // Ensure at least one character from each category
+    let password = '';
+    password += lowercase[crypto.randomInt(0, lowercase.length)];
+    password += uppercase[crypto.randomInt(0, uppercase.length)];
+    password += numbers[crypto.randomInt(0, numbers.length)];
+    password += special[crypto.randomInt(0, special.length)];
+    
+    // Fill remaining characters (12 total - 4 guaranteed = 8 random)
+    for (let i = 0; i < 8; i++) {
+        password += allChars[crypto.randomInt(0, allChars.length)];
     }
-    return password;
+    
+    // Shuffle the password to avoid predictable patterns
+    const passwordArray = password.split('');
+    for (let i = passwordArray.length - 1; i > 0; i--) {
+        const j = crypto.randomInt(0, i + 1);
+        [passwordArray[i], passwordArray[j]] = [passwordArray[j], passwordArray[i]];
+    }
+    
+    return passwordArray.join('');
 }
 
-async function sendRegistrationEmail(email: string, tempPassword: string, firstName: string, userType: string) {
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) {
-        console.log("--- Simulated Email (RESEND_API_KEY missing) ---");
-        console.log(`To: ${email}`);
-        console.log(`Subject: Your CQER Account Credentials`);
-        console.log(`Body: Hello ${firstName || 'Coordinator'}, your temporary password for CQER (${userType.replace('_', ' ')}) is: ${tempPassword}`);
-        console.log("----------------------------------------------");
-        return;
-    }
-
-    const roleName = userType === 'college_coordinator' ? 'College Coordinator' : 'Unit Coordinator';
+async function sendRegistrationEmail(
+    email: string,
+    tempPassword: string,
+    firstName: string,
+    userType: string
+): Promise<{ success: boolean; error?: string }> {
+    const adminClient = createAdminClient();
+    const roleName = userType === 'college_coordinator' 
+        ? 'College Coordinator' 
+        : 'Unit Coordinator';
+    
+    const loginUrl = `${getBaseURL()}/login`;
 
     try {
-        const response = await fetch('https://api.resend.com/emails', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Content-Type': 'application/json',
+        // Use Supabase Auth to send email with temporary password included in metadata
+        const { error } = await adminClient.auth.admin.inviteUserByEmail(email, {
+            data: {
+                first_name: firstName,
+                user_type: userType,
+                role_name: roleName,
+                temporary_password: tempPassword,
+                login_url: loginUrl,
             },
-            body: JSON.stringify({
-                from: 'CQER System <onboarding@resend.dev>',
-                to: email,
-                subject: 'Temporary Account Credentials - CQER Platform',
-                html: `
-                    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
-                        <h2 style="color: #159E44; margin-bottom: 16px;">Welcome to CQER!</h2>
-                        <p style="font-size: 14px; color: #475569;">Hello ${firstName || 'Coordinator'},</p>
-                        <p style="font-size: 14px; color: #475569;">An account has been created for you as a <strong>${roleName}</strong> on the CvSU CQER Platform.</p>
-                        
-                        <div style="background-color: #f8fafc; padding: 16px; border-radius: 6px; margin: 24px 0;">
-                            <p style="margin: 0; font-size: 12px; color: #64748b; text-transform: uppercase; font-weight: bold; letter-spacing: 0.05em;">Temporary Password</p>
-                            <p style="margin: 8px 0 0; font-size: 24px; font-family: monospace; color: #159E44; font-weight: bold; letter-spacing: 2px;">${tempPassword}</p>
-                        </div>
-                        
-                        <p style="font-size: 14px; color: #475569;">For security reasons, we recommend that you change your password immediately after your first login.</p>
-                        
-                        <div style="margin-top: 32px;">
-                            <a href="https://cqer.vercel.app/login" style="background-color: #159E44; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 14px;">Log in to your Dashboard</a>
-                        </div>
-                        
-                        <hr style="margin-top: 40px; border: 0; border-top: 1px solid #e2e8f0;" />
-                        <p style="font-size: 12px; color: #94a3b8; text-align: center;">This is an automated message. Please do not reply directly to this email.</p>
-                    </div>
-                `
-            }),
+            redirectTo: loginUrl,
         });
 
-        if (!response.ok) {
-            const error = await response.json();
-            console.error("Resend API Error details:", JSON.stringify(error, null, 2));
-        } else {
-            const data = await response.json();
-            console.log("Email sent successfully via Resend:", data.id);
+        if (error) {
+            console.error("Supabase invite email error:", error);
+            return { 
+                success: false, 
+                error: `Email service error: ${error.message}` 
+            };
         }
-    } catch (err) {
-        console.error("Failed to send email (Network or Fetch error):", err);
+        
+        return { success: true };
+        
+    } catch (error) {
+        console.error("Failed to send registration email:", error);
+        return { 
+            success: false, 
+            error: error instanceof Error ? error.message : 'Network error' 
+        };
     }
+}
+
+function validateEmailDomain(email: string): boolean {
+    return email.toLowerCase().endsWith('@cvsu.edu.ph');
 }
 
 export async function registerCoordinators(coordinators: { email: string; department: string; unit?: string; userType: string }[]) {
@@ -96,6 +106,14 @@ export async function registerCoordinators(coordinators: { email: string; depart
             if (currentUser.email !== "main.keithbrian.coner@cvsu.edu.ph") {
                 return { error: "Insufficient permissions" };
             }
+        }
+
+        // Validate all email domains before processing
+        const invalidEmails = coordinators.filter(coord => !validateEmailDomain(coord.email));
+        if (invalidEmails.length > 0) {
+            return { 
+                error: `Invalid email domain. Only @cvsu.edu.ph emails are allowed: ${invalidEmails.map(c => c.email).join(', ')}` 
+            };
         }
 
         const results = [];
@@ -131,12 +149,22 @@ export async function registerCoordinators(coordinators: { email: string; depart
 
             if (error) {
                 console.error("Create User Error:", error);
-                results.push({ email: coord.email, success: false, error: error.message });
+                results.push({ 
+                    email: coord.email, 
+                    success: false, 
+                    error: error.message,
+                    tempPassword: null 
+                });
             } else {
-                console.log(`[DEBUG] Created user ${coord.email} with temp password: ${tempPassword}`);
-                results.push({ email: coord.email, success: true });
-                // Send automated email (don't await so it doesn't slow down the response)
-                sendRegistrationEmail(coord.email, tempPassword, firstName, coord.userType);
+                // Send email notification with temporary password
+                const emailResult = await sendRegistrationEmail(coord.email, tempPassword, firstName, coord.userType);
+                
+                results.push({ 
+                    email: coord.email, 
+                    success: true,
+                    tempPassword: tempPassword,
+                    emailSent: emailResult.success
+                });
             }
         }
 
