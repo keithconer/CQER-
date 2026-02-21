@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getBaseURL } from "@/lib/utils";
@@ -14,8 +14,9 @@ import {
   CardHeader,
 } from "@/components/ui/card";
 import { Eye, EyeOff, Mail } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
@@ -222,5 +223,19 @@ export default function LoginPage() {
         </Button>
       </CardContent>
     </Card>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <Loader2 className="h-5 w-5 animate-spin text-[#159E44]" />
+        </div>
+      }
+    >
+      <LoginContent />
+    </Suspense>
   );
 }
