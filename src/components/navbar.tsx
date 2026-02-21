@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -27,25 +27,13 @@ interface NavbarProps {
 export function Navbar({ user }: NavbarProps) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
-  const [navigating, setNavigating] = useState(false);
 
   useEffect(() => {
     router.prefetch("/dashboard");
     router.prefetch("/settings");
   }, [router]);
 
-  const goToDashboard = () => {
-    setNavigating(true);
-    router.push("/dashboard");
-  };
-
-  const goToSettings = () => {
-    setNavigating(true);
-    router.push("/settings");
-  };
-
   const handleLogout = async () => {
-    setNavigating(true);
     await supabase.auth.signOut();
     router.push("/login");
     router.refresh();
@@ -55,16 +43,11 @@ export function Navbar({ user }: NavbarProps) {
     (user.firstName?.[0] || "") + (user.lastName?.[0] || "");
 
   return (
-    <header
-      className={`border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 ${
-        navigating ? "cursor-wait" : ""
-      }`}
-    >
+    <header className="border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="max-w-6xl mx-auto flex h-12 items-center justify-between px-4">
         {/* Left: App name */}
         <button 
-          onClick={goToDashboard}
-          disabled={navigating}
+          onClick={() => router.push("/dashboard")}
           className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer"
         >
           <div className="flex items-center gap-2">
@@ -118,9 +101,8 @@ export function Navbar({ user }: NavbarProps) {
               </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                onClick={goToSettings}
+                onClick={() => router.push("/settings")}
                 className="text-xs cursor-pointer"
-                disabled={navigating}
               >
                 <Settings className="mr-2 h-3 w-3" />
                 Settings
@@ -129,7 +111,6 @@ export function Navbar({ user }: NavbarProps) {
               <DropdownMenuItem
                 onClick={handleLogout}
                 className="text-xs cursor-pointer text-destructive focus:text-destructive"
-                disabled={navigating}
               >
                 <LogOut className="mr-2 h-3 w-3" />
                 Log out

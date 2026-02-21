@@ -14,18 +14,12 @@ function UpdatePasswordContent() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [navigating, setNavigating] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
     router.prefetch("/dashboard");
   }, [router]);
-
-  const handleClose = () => {
-    setNavigating(true);
-    router.push("/dashboard");
-  };
 
   const handleUpdatePassword = async () => {
     if (password !== confirmPassword) {
@@ -63,16 +57,12 @@ function UpdatePasswordContent() {
   };
 
   return (
-    <div
-      className={`min-h-screen flex items-center justify-center bg-background px-4 ${
-        loading || navigating ? "cursor-wait" : ""
-      }`}
-    >
+    <div className={`min-h-screen flex items-center justify-center bg-background px-4 ${loading ? "cursor-wait" : ""}`}>
       <div className="w-full max-w-sm space-y-4 bg-card p-5 rounded-lg shadow-sm border border-border/50 relative">
         <button
-          onClick={handleClose}
+          onClick={() => router.push("/dashboard")}
           className="absolute top-3 right-3 p-1 rounded-md hover:bg-muted transition-colors cursor-pointer"
-          disabled={loading || navigating}
+          disabled={loading}
           aria-label="Close"
         >
           <X className="h-3.5 w-3.5 text-muted-foreground" />
@@ -98,7 +88,7 @@ function UpdatePasswordContent() {
                 placeholder="Enter new password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="h-8 text-[11px]"
+                className="h-8 text-[11px] placeholder:text-[10px]"
               />
             </div>
             <div className="space-y-1.5">
@@ -108,7 +98,7 @@ function UpdatePasswordContent() {
                 placeholder="Confirm new password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="h-8 text-[11px]"
+                className="h-8 text-[11px] placeholder:text-[10px]"
               />
             </div>
 
@@ -117,7 +107,7 @@ function UpdatePasswordContent() {
             <Button
               className="w-full h-8 bg-[#159E44] hover:bg-[#128A3B] text-white text-[11px] font-semibold cursor-pointer"
               onClick={handleUpdatePassword}
-              disabled={loading || navigating}
+              disabled={loading}
             >
               {loading && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
               Set Password

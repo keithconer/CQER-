@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import type { NextRequest } from "next/server";
 import { getBaseURL } from "@/lib/utils";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const origin = getBaseURL();
     const code = searchParams.get("code");
@@ -14,18 +14,20 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${origin}/login?error=auth_callback_error`);
     }
 
-    const cookieStore = await cookies();
+    const redirectUrl = `${origin}${next}`;
+    const response = NextResponse.redirect(redirectUrl);
+
     const supabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         {
             cookies: {
                 getAll() {
-                    return cookieStore.getAll();
+                    return request.cookies.getAll();
                 },
                 setAll(cookiesToSet) {
                     cookiesToSet.forEach(({ name, value, options }) => {
-                        cookieStore.set(name, value, options);
+                        response.cookies.set(name, value, options);
                     });
                 },
             },
@@ -86,5 +88,5 @@ export async function GET(request: Request) {
             .eq("id", user.id);
     }
 
-    return NextResponse.redirect(`${origin}${next}`);
+    return response;
 }

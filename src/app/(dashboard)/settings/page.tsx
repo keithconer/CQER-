@@ -23,16 +23,10 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
-  const [navigating, setNavigating] = useState(false);
 
   useEffect(() => {
     router.prefetch("/dashboard");
   }, [router]);
-
-  const handleClose = () => {
-    setNavigating(true);
-    router.push("/dashboard");
-  };
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,13 +60,13 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className={`max-w-md mx-auto space-y-3 ${loading || navigating ? "cursor-wait" : ""}`}>
+    <div className={`max-w-md mx-auto space-y-3 ${loading ? "cursor-wait" : ""}`}>
       <div className="flex items-center justify-between">
         <h1 className="text-sm font-semibold text-foreground/90">Settings</h1>
         <button
-          onClick={handleClose}
+          onClick={() => router.push("/dashboard")}
           className="p-1 rounded-md hover:bg-muted transition-colors cursor-pointer"
-          disabled={loading || navigating}
+          disabled={loading}
           aria-label="Close"
         >
           <X className="h-3.5 w-3.5 text-muted-foreground" />
@@ -99,7 +93,7 @@ export default function SettingsPage() {
                   placeholder="Enter new password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="h-8 text-[10px] bg-muted/10 border-border/80 pr-9"
+                  className="h-8 text-[10px] placeholder:text-[10px] bg-muted/10 border-border/80 pr-9"
                   required
                 />
                 <button
@@ -123,7 +117,7 @@ export default function SettingsPage() {
                 placeholder="Confirm new password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="h-8 text-[10px] bg-muted/10 border-border/80"
+                className="h-8 text-[10px] placeholder:text-[10px] bg-muted/10 border-border/80"
                 required
               />
             </div>
@@ -139,7 +133,7 @@ export default function SettingsPage() {
             <Button
               type="submit"
               className="w-full h-8 text-[10px] bg-[#159E44] hover:bg-[#128A3B] text-white cursor-pointer"
-              disabled={loading || navigating}
+              disabled={loading}
             >
               {loading ? "Updating..." : "Update Password"}
             </Button>
