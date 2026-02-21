@@ -1,10 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { Plus } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
@@ -36,6 +37,7 @@ export function UnitProjectsManagement({
   const [activeTab, setActiveTab] = React.useState<"my_projects" | "existing_projects">(
     "my_projects"
   );
+  const [searchTerm, setSearchTerm] = React.useState("");
   const router = useRouter();
 
   React.useEffect(() => {
@@ -66,6 +68,10 @@ export function UnitProjectsManagement({
 
   const isMyProjects = activeTab === "my_projects";
 
+  React.useEffect(() => {
+    setSearchTerm("");
+  }, [activeTab]);
+
   return (
     <div className="space-y-4">
       <Dialog open={open} onOpenChange={setOpen}>
@@ -93,43 +99,58 @@ export function UnitProjectsManagement({
 
       <Card className="border-border/50 shadow-sm">
         <CardHeader className="pb-3 pt-4 px-4 space-y-3">
-          <div>
-            <CardTitle className="text-xs font-semibold">Projects</CardTitle>
-            <CardDescription className="text-[10px]">
-              {isMyProjects
-                ? "Projects that you created."
-                : "All projects created under your unit."}
-            </CardDescription>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <CardTitle className="text-xs font-semibold">Projects</CardTitle>
+              <CardDescription className="text-[10px]">
+                {isMyProjects
+                  ? "Projects that you created."
+                  : "All projects created under your unit."}
+              </CardDescription>
+            </div>
+            <div className="inline-flex rounded-md border border-border/60 p-0.5 bg-muted/20">
+              <Button
+                size="sm"
+                onClick={() => setActiveTab("my_projects")}
+                className={`h-7 text-[10px] px-2.5 ${
+                  isMyProjects
+                    ? "bg-[#159E44] hover:bg-[#128A3B] text-white"
+                    : "bg-transparent text-foreground hover:bg-muted"
+                }`}
+              >
+                My Projects
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => setActiveTab("existing_projects")}
+                className={`h-7 text-[10px] px-2.5 ${
+                  !isMyProjects
+                    ? "bg-[#159E44] hover:bg-[#128A3B] text-white"
+                    : "bg-transparent text-foreground hover:bg-muted"
+                }`}
+              >
+                Existing Projects
+              </Button>
+            </div>
           </div>
-          <div className="inline-flex rounded-md border border-border/60 p-0.5 bg-muted/20">
-            <Button
-              size="sm"
-              onClick={() => setActiveTab("my_projects")}
-              className={`h-7 text-[10px] px-2.5 ${
-                isMyProjects
-                  ? "bg-[#159E44] hover:bg-[#128A3B] text-white"
-                  : "bg-transparent text-foreground hover:bg-muted"
-              }`}
-            >
-              My Projects
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => setActiveTab("existing_projects")}
-              className={`h-7 text-[10px] px-2.5 ${
-                !isMyProjects
-                  ? "bg-[#159E44] hover:bg-[#128A3B] text-white"
-                  : "bg-transparent text-foreground hover:bg-muted"
-              }`}
-            >
-              Existing Projects
-            </Button>
+          <div className="relative max-w-sm">
+            <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              placeholder="Search projects..."
+              className="pl-8 h-8 text-xs bg-muted/20 border-border/50"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
         </CardHeader>
         <CardContent className="px-4 pb-4">
           <ProjectsTable
             projects={isMyProjects ? myProjects : unitProjects}
             readOnly={!isMyProjects}
+            searchTerm={searchTerm}
+            onSearchTermChange={setSearchTerm}
+            showSearch={false}
+            paginationAlign="right"
           />
         </CardContent>
       </Card>

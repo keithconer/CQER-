@@ -49,10 +49,23 @@ export interface Project {
 interface ProjectsTableProps {
   projects: Project[];
   readOnly?: boolean;
+  searchTerm?: string;
+  onSearchTermChange?: (value: string) => void;
+  showSearch?: boolean;
+  paginationAlign?: "between" | "right";
 }
 
-export function ProjectsTable({ projects, readOnly = false }: ProjectsTableProps) {
-  const [searchTerm, setSearchTerm] = React.useState("");
+export function ProjectsTable({
+  projects,
+  readOnly = false,
+  searchTerm: controlledSearchTerm,
+  onSearchTermChange,
+  showSearch = true,
+  paginationAlign = "between",
+}: ProjectsTableProps) {
+  const [internalSearchTerm, setInternalSearchTerm] = React.useState("");
+  const searchTerm = controlledSearchTerm ?? internalSearchTerm;
+  const setSearchTerm = onSearchTermChange ?? setInternalSearchTerm;
   const [currentPage, setCurrentPage] = React.useState(1);
   const itemsPerPage = 5;
 
@@ -123,17 +136,18 @@ export function ProjectsTable({ projects, readOnly = false }: ProjectsTableProps
   }
 
   return (
-    <div className="space-y-3">
-      {/* Search Bar */}
-      <div className="relative max-w-sm">
-        <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-        <Input
-          placeholder="Search projects..."
-          className="pl-8 h-8 text-xs bg-muted/20 border-border/50"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
+      <div className="space-y-3">
+      {showSearch && (
+        <div className="relative max-w-sm">
+          <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            placeholder="Search projects..."
+            className="pl-8 h-8 text-xs bg-muted/20 border-border/50"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+      )}
 
       <div className="rounded-md border border-border/50 overflow-hidden">
         <Table>
@@ -278,10 +292,16 @@ export function ProjectsTable({ projects, readOnly = false }: ProjectsTableProps
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between px-2 pt-1">
-          <p className="text-[10px] text-muted-foreground">
-            Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredProjects.length)} of {filteredProjects.length} projects
-          </p>
+        <div
+          className={`flex items-center px-2 pt-1 ${
+            paginationAlign === "right" ? "justify-end" : "justify-between"
+          }`}
+        >
+          {paginationAlign === "between" && (
+            <p className="text-[10px] text-muted-foreground">
+              Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredProjects.length)} of {filteredProjects.length} projects
+            </p>
+          )}
           <div className="flex items-center gap-1">
             <Button
               variant="outline"

@@ -102,17 +102,6 @@ const classificationOptions = [
   "Societal Development and Equality",
 ];
 
-const beneficiaryOptions = [
-  "Farmers / Fisherfolks",
-  "Women and Children",
-  "Youth and Students",
-  "Senior Citizens and PWDs",
-  "Local Government Units (LGUs)",
-  "Small and Medium Enterprises (SMEs)",
-  "Indigenous Peoples (IPs)",
-  "Cooperatives / Associations",
-];
-
 interface ProjectFormValues {
   title: string;
   classification: string[];
@@ -529,70 +518,23 @@ export function ProjectForm({ onSuccess, project, isViewOnly }: ProjectFormProps
                 control={form.control as any}
                 name="target_beneficiaries"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col">
+                  <FormItem>
                     <FormLabel className="text-xs">Target Beneficiaries</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          disabled={isViewOnly}
-                          className={cn(
-                            "w-full justify-between h-auto min-h-[32px] text-xs px-2 py-1",
-                            !field.value?.length && "text-muted-foreground"
-                          )}
-                        >
-                          <div className="flex flex-wrap gap-1">
-                            {field.value?.length > 0 ? (
-                              field.value.map((val: string) => (
-                                <div key={val} className="bg-muted px-1.5 py-0.5 rounded-sm flex items-center gap-1 border">
-                                  <span>{val}</span>
-                                </div>
-                              ))
-                            ) : (
-                              <span>Select beneficiaries</span>
-                            )}
-                          </div>
-                          <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[300px] p-0" align="start">
-                        <Command>
-                          <CommandInput placeholder="Search beneficiary..." className="h-8 text-xs" />
-                          <CommandEmpty className="text-xs p-2">No beneficiary found.</CommandEmpty>
-                          <CommandGroup className="p-0">
-                            <CommandList className="max-h-64 overflow-y-auto">
-                              {beneficiaryOptions.map((option) => (
-                                <CommandItem
-                                  key={option}
-                                  value={option}
-                                  onSelect={() => {
-                                    const current = new Set(field.value || []);
-                                    if (current.has(option)) {
-                                      current.delete(option);
-                                    } else {
-                                      current.add(option);
-                                    }
-                                    field.onChange(Array.from(current));
-                                  }}
-                                  className="text-xs"
-                                >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-3 w-3",
-                                      (field.value || []).includes(option)
-                                        ? "opacity-100"
-                                        : "opacity-0"
-                                    )}
-                                  />
-                                  {option}
-                                </CommandItem>
-                              ))}
-                            </CommandList>
-                          </CommandGroup>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
+                    <FormControl>
+                      <Input
+                        placeholder="Type beneficiaries (separate with commas)"
+                        value={(field.value || []).join(", ")}
+                        onChange={(e) => {
+                          const parsed = e.target.value
+                            .split(",")
+                            .map((item) => item.trim())
+                            .filter(Boolean);
+                          field.onChange(parsed);
+                        }}
+                        className="h-8 text-xs"
+                        disabled={isViewOnly}
+                      />
+                    </FormControl>
                     <FormMessage className="text-[10px]" />
                   </FormItem>
                 )}
