@@ -4,7 +4,6 @@ import Image from "next/image";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { getBaseURL } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -57,10 +56,13 @@ function LoginContent() {
   const handleGoogleLogin = async () => {
     setError("");
     setOauthLoading(true);
+    const redirectBase =
+      typeof window !== "undefined" ? window.location.origin : "";
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${getBaseURL()}/auth/callback`,
+        redirectTo: `${redirectBase}/auth/callback`,
         queryParams: {
           hd: "cvsu.edu.ph",
           prompt: "select_account",

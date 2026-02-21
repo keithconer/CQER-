@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import type { NextRequest } from "next/server";
-import { getBaseURL } from "@/lib/utils";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
-    const origin = getBaseURL();
+    const origin = request.nextUrl.origin;
     const code = searchParams.get("code");
     const next = searchParams.get("next") ?? "/dashboard";
 

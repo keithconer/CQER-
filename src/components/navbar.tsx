@@ -105,7 +105,7 @@ export function Navbar({ user }: NavbarProps) {
                 className="text-xs cursor-pointer"
               >
                 <Settings className="mr-2 h-3 w-3" />
-                Settings
+                Change Password
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
