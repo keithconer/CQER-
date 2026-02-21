@@ -13,7 +13,9 @@ export async function GET(request: NextRequest) {
         return NextResponse.redirect(`${origin}/login?error=auth_callback_error`);
     }
 
-    const redirectUrl = `${origin}${next}`;
+    const redirectUrl = `${origin}/oauth-loading?next=${encodeURIComponent(
+        next
+    )}`;
     const response = NextResponse.redirect(redirectUrl);
 
     const supabase = createServerClient(

@@ -172,7 +172,7 @@ function LoginContent() {
             <p className="text-[11px] text-destructive font-medium">
               {error ||
                 (callbackError === "unregistered_oauth"
-                  ? "Account not registered. Please contact your coordinator."
+                  ? "Account is not registered, please contact either the super admin or your college coordinator."
                   : callbackError === "auth_callback_error"
                   ? "Authentication failed. Please try again."
                   : "Email confirmation failed. Please try again.")}

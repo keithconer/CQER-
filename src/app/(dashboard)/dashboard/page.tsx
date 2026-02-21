@@ -2,7 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { ProjectManagement } from "@/components/dashboard/project-management";
 import { CoordinatorRegistration } from "@/components/dashboard/coordinator-registration";
+import { SuperAdminOverview } from "@/components/dashboard/super-admin-overview";
 import { getProjects } from "@/lib/actions/projects";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -26,6 +28,70 @@ export default async function DashboardPage() {
 
   const projects =
     profile.user_type !== "super_admin" ? (await getProjects()).data || [] : [];
+
+  let allAccounts: {
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+    user_type: "super_admin" | "college_coordinator" | "unit_coordinator";
+    department: string | null;
+    unit: string | null;
+  }[] = [];
+
+  let allProjects: {
+    id: string;
+    title: string;
+    academic_program: string | null;
+    start_date: string | null;
+    end_date: string | null;
+    gad_score: number | null;
+    created_by: string;
+    created_by_name: string;
+    created_by_department: string | null;
+  }[] = [];
+
+  if (profile.user_type === "super_admin") {
+    const adminClient = createAdminClient();
+
+    const [{ data: accountsData }, { data: projectsData }] = await Promise.all([
+      adminClient
+        .from("profiles")
+        .select("id, first_name, last_name, user_type, department, unit")
+        .order("created_at", { ascending: false }),
+      adminClient
+        .from("projects")
+        .select("id, title, academic_program, start_date, end_date, gad_score, created_by")
+        .order("created_at", { ascending: false }),
+    ]);
+
+    allAccounts =
+      (accountsData as typeof allAccounts | null)?.filter(
+        (account) =>
+          account.user_type === "super_admin" ||
+          account.user_type === "college_coordinator" ||
+          account.user_type === "unit_coordinator"
+      ) || [];
+
+    const profileMap = new Map(
+      allAccounts.map((account) => [
+        account.id,
+        {
+          name: `${account.first_name || ""} ${account.last_name || ""}`.trim() || "Unknown User",
+          department: account.department,
+        },
+      ])
+    );
+
+    allProjects =
+      (projectsData || []).map((project) => {
+        const createdBy = profileMap.get(project.created_by);
+        return {
+          ...project,
+          created_by_name: createdBy?.name || "Unknown User",
+          created_by_department: createdBy?.department || null,
+        };
+      });
+  }
 
   const userType = profile.user_type;
   const firstName = profile.first_name || "User";
@@ -56,11 +122,14 @@ export default async function DashboardPage() {
       </div>
 
       {userType === "super_admin" && (
-        <CoordinatorRegistration 
-          userType="college_coordinator" 
-          title="College Coordinators"
-          description="Register emails of College coordinators for their specific departments."
-        />
+        <div className="space-y-4">
+          <CoordinatorRegistration 
+            userType="college_coordinator" 
+            title="College Coordinators"
+            description="Register emails of College coordinators for their specific departments."
+          />
+          <SuperAdminOverview accounts={allAccounts} projects={allProjects} />
+        </div>
       )}
 
       {userType === "college_coordinator" && (
