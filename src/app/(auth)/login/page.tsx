@@ -1,9 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getBaseURL } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -14,18 +13,19 @@ import {
   CardContent,
   CardHeader,
 } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Eye, EyeOff, Mail } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState(false);
 
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,6 +55,7 @@ export default function LoginPage() {
 
   const handleGoogleLogin = async () => {
     setError("");
+    setOauthLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
@@ -68,18 +69,37 @@ export default function LoginPage() {
 
     if (error) {
       setError(error.message);
+      setOauthLoading(false);
     }
   };
 
-  // Check for callback errors
-  const searchParams =
-    typeof window !== "undefined"
-      ? new URLSearchParams(window.location.search)
-      : null;
-  const callbackError = searchParams?.get("error");
+  useEffect(() => {
+    const warmRoutes = async () => {
+      router.prefetch("/dashboard");
+    };
+
+    const syncSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session) {
+        router.replace("/dashboard");
+      }
+    };
+
+    warmRoutes();
+    syncSession();
+  }, [router, supabase]);
+
+  const callbackError = searchParams.get("error");
 
   return (
-    <Card className="border-border/50 shadow-md rounded-2xl overflow-hidden">
+    <Card
+      className={`border-border/50 shadow-md rounded-2xl overflow-hidden ${
+        loading || oauthLoading ? "cursor-wait" : ""
+      }`}
+    >
       <CardHeader className="pt-6 pb-2 flex flex-col items-center space-y-3">
         <div className="relative w-24 h-24">
           <Image 
@@ -149,7 +169,7 @@ export default function LoginPage() {
             <p className="text-[11px] text-destructive font-medium">
               {error ||
                 (callbackError === "unregistered_oauth"
-                  ? "This Google account is not registered. Please contact your coordinator."
+                  ? "Account not registered. Please contact your coordinator."
                   : callbackError === "auth_callback_error"
                   ? "Authentication failed. Please try again."
                   : "Email confirmation failed. Please try again.")}
@@ -159,7 +179,7 @@ export default function LoginPage() {
           <Button
             type="submit"
             className="w-full h-9 text-[11px] font-bold bg-[#159E44] hover:bg-[#128A3B] text-white rounded-md shadow-sm transition-all active:scale-[0.98]"
-            disabled={loading}
+            disabled={loading || oauthLoading}
           >
             {loading ? "Signing in..." : "Login"}
           </Button>
@@ -178,6 +198,7 @@ export default function LoginPage() {
           variant="outline"
           className="w-full h-9 text-[11px] font-semibold border-border/80 bg-background text-foreground hover:bg-muted/30 transition-all active:scale-[0.98] rounded-md shadow-sm"
           onClick={handleGoogleLogin}
+          disabled={loading || oauthLoading}
         >
           <svg className="mr-2 h-3.5 w-3.5" viewBox="0 0 24 24">
             <path
@@ -197,7 +218,7 @@ export default function LoginPage() {
               fill="#EA4335"
             />
           </svg>
-          Sign-in with Google
+          {oauthLoading ? "Please wait..." : "Sign-in with Google"}
         </Button>
       </CardContent>
     </Card>

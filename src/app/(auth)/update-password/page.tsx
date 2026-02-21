@@ -1,8 +1,8 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { useState, useEffect, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useState, useEffect, Suspense, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -10,23 +10,22 @@ import { Loader2, X } from "lucide-react";
 
 function UpdatePasswordContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const supabase = useMemo(() => createClient(), []);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [navigating, setNavigating] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    const checkSession = async () => {
-        const supabase = createClient();
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-            // Session check
-        }
-    };
-    checkSession();
+    router.prefetch("/dashboard");
   }, [router]);
+
+  const handleClose = () => {
+    setNavigating(true);
+    router.push("/dashboard");
+  };
 
   const handleUpdatePassword = async () => {
     if (password !== confirmPassword) {
@@ -42,7 +41,6 @@ function UpdatePasswordContent() {
     setError("");
 
     try {
-      const supabase = createClient();
       const { error } = await supabase.auth.updateUser({
         password: password,
       });
@@ -53,19 +51,28 @@ function UpdatePasswordContent() {
       setTimeout(() => {
         router.push("/dashboard");
       }, 2000);
-    } catch (err: any) {
-      setError(err.message || "Failed to update password");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Failed to update password");
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+    <div
+      className={`min-h-screen flex items-center justify-center bg-background px-4 ${
+        loading || navigating ? "cursor-wait" : ""
+      }`}
+    >
       <div className="w-full max-w-sm space-y-4 bg-card p-5 rounded-lg shadow-sm border border-border/50 relative">
         <button
-          onClick={() => router.push("/dashboard")}
+          onClick={handleClose}
           className="absolute top-3 right-3 p-1 rounded-md hover:bg-muted transition-colors cursor-pointer"
+          disabled={loading || navigating}
           aria-label="Close"
         >
           <X className="h-3.5 w-3.5 text-muted-foreground" />
@@ -110,7 +117,7 @@ function UpdatePasswordContent() {
             <Button
               className="w-full h-8 bg-[#159E44] hover:bg-[#128A3B] text-white text-[11px] font-semibold cursor-pointer"
               onClick={handleUpdatePassword}
-              disabled={loading}
+              disabled={loading || navigating}
             >
               {loading && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
               Set Password

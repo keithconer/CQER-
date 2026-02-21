@@ -1,12 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { CheckCircle2 } from "lucide-react";
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { ProjectManagement } from "@/components/dashboard/project-management";
 import { CoordinatorRegistration } from "@/components/dashboard/coordinator-registration";
 import { getProjects } from "@/lib/actions/projects";
@@ -31,7 +24,8 @@ export default async function DashboardPage() {
     redirect("/register?step=2");
   }
 
-  const { data: projects } = await getProjects();
+  const projects =
+    profile.user_type !== "super_admin" ? (await getProjects()).data || [] : [];
 
   const userType = profile.user_type;
   const firstName = profile.first_name || "User";
@@ -77,12 +71,12 @@ export default async function DashboardPage() {
             description="Register emails of Unit coordinators for your department."
             department={profile.department}
           />
-          <ProjectManagement initialProjects={projects || []} readOnly />
+          <ProjectManagement initialProjects={projects} readOnly />
         </div>
       )}
 
       {userType === "unit_coordinator" && (
-        <ProjectManagement initialProjects={projects || []} />
+        <ProjectManagement initialProjects={projects} />
       )}
     </div>
   );

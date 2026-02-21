@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Key, Eye, EyeOff, CheckCircle2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,16 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [navigating, setNavigating] = useState(false);
+
+  useEffect(() => {
+    router.prefetch("/dashboard");
+  }, [router]);
+
+  const handleClose = () => {
+    setNavigating(true);
+    router.push("/dashboard");
+  };
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,12 +66,13 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="max-w-md mx-auto space-y-3">
+    <div className={`max-w-md mx-auto space-y-3 ${loading || navigating ? "cursor-wait" : ""}`}>
       <div className="flex items-center justify-between">
         <h1 className="text-sm font-semibold text-foreground/90">Settings</h1>
         <button
-          onClick={() => router.push("/dashboard")}
+          onClick={handleClose}
           className="p-1 rounded-md hover:bg-muted transition-colors cursor-pointer"
+          disabled={loading || navigating}
           aria-label="Close"
         >
           <X className="h-3.5 w-3.5 text-muted-foreground" />
@@ -128,7 +139,7 @@ export default function SettingsPage() {
             <Button
               type="submit"
               className="w-full h-8 text-[10px] bg-[#159E44] hover:bg-[#128A3B] text-white cursor-pointer"
-              disabled={loading}
+              disabled={loading || navigating}
             >
               {loading ? "Updating..." : "Update Password"}
             </Button>
