@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 
 export async function createProject(formData: object) {
@@ -48,6 +49,7 @@ export async function getProjects() {
 
 export async function getUnitProjects() {
     const supabase = await createClient();
+    const adminClient = createAdminClient();
 
     const {
         data: { user },
@@ -58,17 +60,52 @@ export async function getUnitProjects() {
 
     const { data: profile } = await supabase
         .from("profiles")
-        .select("user_type")
+        .select("user_type, department, unit")
         .eq("id", user.id)
         .single();
 
-    if (!profile || profile.user_type !== "unit_coordinator") {
+    if (
+        !profile ||
+        profile.user_type !== "unit_coordinator" ||
+        !profile.department ||
+        !profile.unit
+    ) {
         return { data: [] };
     }
 
-    const { data, error } = await supabase
+    const normalize = (value: string) => value.trim().toLowerCase();
+    const viewerDepartment = normalize(profile.department);
+    const viewerUnit = normalize(profile.unit);
+
+    const { data: unitProfiles, error: unitProfilesError } = await adminClient
+        .from("profiles")
+        .select("id, user_type, department, unit");
+
+    if (unitProfilesError) {
+        console.error("Error fetching unit profiles:", unitProfilesError);
+        return { error: unitProfilesError.message };
+    }
+
+    const sameUnitCoordinatorIds =
+        unitProfiles
+            ?.filter(
+                (p) =>
+                    p.user_type === "unit_coordinator" &&
+                    !!p.department &&
+                    !!p.unit &&
+                    normalize(p.department) === viewerDepartment &&
+                    normalize(p.unit) === viewerUnit
+            )
+            .map((p) => p.id) || [];
+
+    if (sameUnitCoordinatorIds.length === 0) {
+        return { data: [] };
+    }
+
+    const { data, error } = await adminClient
         .from("projects")
         .select("*")
+        .in("created_by", sameUnitCoordinatorIds)
         .order("created_at", { ascending: false });
 
     if (error) {

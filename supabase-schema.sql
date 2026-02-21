@@ -92,6 +92,9 @@ drop policy if exists "Users can view own projects" on public.projects;
 create policy "Users can view own projects" on public.projects
   for select using (auth.uid() = created_by);
 
+-- ============================================================
+-- START COPY: Unit Coordinator Shared Visibility + Realtime
+-- ============================================================
 -- Unit coordinators can also view projects created by fellow coordinators in the same department+unit
 drop policy if exists "Unit coordinators can view projects in same unit" on public.projects;
 create policy "Unit coordinators can view projects in same unit" on public.projects
@@ -137,6 +140,9 @@ begin
   end if;
 end
 $$;
+-- ============================================================
+-- END COPY: Unit Coordinator Shared Visibility + Realtime
+-- ============================================================
 
 -- ============================================
 -- PDF Upload Enhancement

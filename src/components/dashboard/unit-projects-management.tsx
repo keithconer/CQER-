@@ -49,8 +49,13 @@ export function UnitProjectsManagement({
       )
       .subscribe();
 
+    const intervalId = window.setInterval(() => {
+      router.refresh();
+    }, 5000);
+
     return () => {
       supabase.removeChannel(channel);
+      window.clearInterval(intervalId);
     };
   }, [router]);
 
@@ -62,17 +67,40 @@ export function UnitProjectsManagement({
   const isMyProjects = activeTab === "my_projects";
 
   return (
-    <Card className="border-border/50 shadow-sm">
-      <CardHeader className="pb-3 pt-4 px-4 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-        <div>
-          <CardTitle className="text-xs font-semibold">Projects</CardTitle>
-          <CardDescription className="text-[10px]">
-            {isMyProjects
-              ? "Projects that you created."
-              : "All projects created under your unit."}
-          </CardDescription>
-        </div>
-        <div className="flex items-center gap-2">
+    <div className="space-y-4">
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button
+            size="sm"
+            className="h-8 text-xs bg-[#159E44] hover:bg-[#128A3B] text-white"
+          >
+            <Plus className="h-3 w-3 mr-1" />
+            Add Project
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-[800px] p-6 max-h-[90vh] overflow-hidden">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="text-sm font-semibold">
+              Create New Project
+            </DialogTitle>
+            <DialogDescription className="text-[10px]">
+              Fill out the form below to register a new college extension project.
+            </DialogDescription>
+          </DialogHeader>
+          <ProjectForm onSuccess={handleSuccess} />
+        </DialogContent>
+      </Dialog>
+
+      <Card className="border-border/50 shadow-sm">
+        <CardHeader className="pb-3 pt-4 px-4 space-y-3">
+          <div>
+            <CardTitle className="text-xs font-semibold">Projects</CardTitle>
+            <CardDescription className="text-[10px]">
+              {isMyProjects
+                ? "Projects that you created."
+                : "All projects created under your unit."}
+            </CardDescription>
+          </div>
           <div className="inline-flex rounded-md border border-border/60 p-0.5 bg-muted/20">
             <Button
               size="sm"
@@ -97,36 +125,14 @@ export function UnitProjectsManagement({
               Existing Projects
             </Button>
           </div>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button
-                size="sm"
-                className="text-xs h-8 bg-[#159E44] hover:bg-[#128A3B] text-white"
-              >
-                <Plus className="h-3 w-3 mr-1" />
-                Create Project
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[800px] p-6 max-h-[90vh] overflow-hidden">
-              <DialogHeader className="pb-2">
-                <DialogTitle className="text-sm font-semibold">
-                  Create New Project
-                </DialogTitle>
-                <DialogDescription className="text-[10px]">
-                  Fill out the form below to register a new college extension project.
-                </DialogDescription>
-              </DialogHeader>
-              <ProjectForm onSuccess={handleSuccess} />
-            </DialogContent>
-          </Dialog>
-        </div>
-      </CardHeader>
-      <CardContent className="px-4 pb-4">
-        <ProjectsTable
-          projects={isMyProjects ? myProjects : unitProjects}
-          readOnly={!isMyProjects}
-        />
-      </CardContent>
-    </Card>
+        </CardHeader>
+        <CardContent className="px-4 pb-4">
+          <ProjectsTable
+            projects={isMyProjects ? myProjects : unitProjects}
+            readOnly={!isMyProjects}
+          />
+        </CardContent>
+      </Card>
+    </div>
   );
 }
