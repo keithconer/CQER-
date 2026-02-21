@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
-export async function createProject(formData: any) {
+export async function createProject(formData: object) {
     const supabase = await createClient();
 
     const { data: { user } } = await supabase.auth.getUser();
@@ -45,7 +45,40 @@ export async function getProjects() {
 
     return { data };
 }
-export async function updateProject(id: string, formData: any) {
+
+export async function getUnitProjects() {
+    const supabase = await createClient();
+
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+        return { error: "Unauthorized" };
+    }
+
+    const { data: profile } = await supabase
+        .from("profiles")
+        .select("user_type")
+        .eq("id", user.id)
+        .single();
+
+    if (!profile || profile.user_type !== "unit_coordinator") {
+        return { data: [] };
+    }
+
+    const { data, error } = await supabase
+        .from("projects")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+    if (error) {
+        console.error("Error fetching unit projects:", error);
+        return { error: error.message };
+    }
+
+    return { data };
+}
+export async function updateProject(id: string, formData: object) {
     const supabase = await createClient();
 
     const { data: { user } } = await supabase.auth.getUser();

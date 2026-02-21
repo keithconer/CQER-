@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, X, ArrowRight, ArrowLeft, Mail, Building2, CheckCircle2, Copy, Check, AlertTriangle } from "lucide-react";
+import { Plus, X, ArrowRight, ArrowLeft, Mail, CheckCircle2, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,7 +15,12 @@ import {
 } from "@/components/ui/dialog";
 import { StepIndicator } from "@/components/step-indicator";
 import { registerCoordinators } from "@/lib/actions/auth";
-import { cn } from "@/lib/utils";
+import {
+  BSINDT_TRACKS,
+  DEPARTMENTS,
+  UNITS_BY_DEPARTMENT,
+  buildUnitValue,
+} from "@/lib/departments";
 
 interface CoordinatorRegistrationProps {
   userType: "college_coordinator" | "unit_coordinator";
@@ -24,21 +29,12 @@ interface CoordinatorRegistrationProps {
   department?: string;
 }
 
-const DEPARTMENTS = [
-  "Department of Information Technology",
-  "Department of Industrial Engineering and Technology",
-  "Department of Agricultural and Food Engineering",
-  "Department of Computer Engineering and Electrical Engineering",
-  "Department of Civil Engineering and Architecture",
-];
-
-const UNITS: Record<string, string[]> = {
-  "Department of Information Technology": ["IT", "CS"],
-  "Department of Industrial Engineering and Technology": ["Automotive", "Electrical Engineer"],
-  "Department of Agricultural and Food Engineering": ["AGRI", "FE"],
-  "Department of Computer Engineering and Electrical Engineering": ["CE", "EE"],
-  "Department of Civil Engineering and Architecture": ["CE", "ARCHI"],
-};
+interface RegistrationResult {
+  email: string;
+  success: boolean;
+  error?: string;
+  tempPassword?: string | null;
+}
 
 export function CoordinatorRegistration({ userType, title, description, department: fixedDepartment }: CoordinatorRegistrationProps) {
   const [open, setOpen] = useState(false);
@@ -46,9 +42,10 @@ export function CoordinatorRegistration({ userType, title, description, departme
   const [emails, setEmails] = useState<string[]>([""]);
   const [departments, setDepartments] = useState<Record<string, string>>({});
   const [units, setUnits] = useState<Record<string, string>>({});
+  const [dietTracks, setDietTracks] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [results, setResults] = useState<any[]>([]);
+  const [results, setResults] = useState<RegistrationResult[]>([]);
   const [copied, setCopied] = useState<string | null>(null);
 
   const handleAddEmail = () => setEmails([...emails, ""]);
@@ -81,6 +78,20 @@ export function CoordinatorRegistration({ userType, title, description, departme
         setError("Please select units for all coordinators.");
         return;
       }
+      if (
+        userType === "unit_coordinator" &&
+        emails.some((e) => {
+          const selectedDepartment = fixedDepartment || departments[e];
+          return (
+            selectedDepartment === "DIET" &&
+            units[e] === "BSINDT" &&
+            !dietTracks[e]
+          );
+        })
+      ) {
+        setError("Please select BSINDT track for all BSINDT coordinators.");
+        return;
+      }
       setError("");
       setCurrentStep(3);
     } else if (currentStep === 3) {
@@ -95,7 +106,10 @@ export function CoordinatorRegistration({ userType, title, description, departme
       const payload = emails.map(email => ({
         email,
         department: fixedDepartment || departments[email],
-        unit: units[email],
+        unit:
+          userType === "unit_coordinator"
+            ? buildUnitValue(units[email], dietTracks[email])
+            : undefined,
         userType
       }));
 
@@ -107,13 +121,17 @@ export function CoordinatorRegistration({ userType, title, description, departme
       }
 
       if (response && 'results' in response) {
-        setResults(response.results as any[]);
+        setResults(response.results as RegistrationResult[]);
         setCurrentStep(4);
       } else {
         setError("Invalid response from server");
       }
-    } catch (err: any) {
-      setError(err.message || "Failed to register coordinators");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Failed to register coordinators");
+      }
     } finally {
       setLoading(false);
     }
@@ -136,6 +154,7 @@ export function CoordinatorRegistration({ userType, title, description, departme
         setEmails([""]);
         setDepartments({});
         setUnits({});
+        setDietTracks({});
         setError("");
         setResults([]);
       }
@@ -193,11 +212,17 @@ export function CoordinatorRegistration({ userType, title, description, departme
                       <Label className="text-[10px] font-semibold">Department</Label>
                       <select
                         value={departments[email] || ""}
-                        onChange={(e) => setDepartments({ ...departments, [email]: e.target.value })}
+                        onChange={(e) => {
+                          setDepartments({ ...departments, [email]: e.target.value });
+                          setUnits({ ...units, [email]: "" });
+                          setDietTracks({ ...dietTracks, [email]: "" });
+                        }}
                         className="flex h-8 w-full rounded-md border border-border/80 bg-background px-3 py-1 text-[11px] shadow-sm focus:outline-none"
                       >
                         <option value="" disabled>Select Department</option>
-                        {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+                        {DEPARTMENTS.map((d) => (
+                          <option key={d} value={d}>{d}</option>
+                        ))}
                       </select>
                     </div>
                   )}
@@ -207,16 +232,41 @@ export function CoordinatorRegistration({ userType, title, description, departme
                       <Label className="text-[10px] font-semibold">Unit</Label>
                       <select
                         value={units[email] || ""}
-                        onChange={(e) => setUnits({ ...units, [email]: e.target.value })}
+                        onChange={(e) => {
+                          setUnits({ ...units, [email]: e.target.value });
+                          setDietTracks({ ...dietTracks, [email]: "" });
+                        }}
                         className="flex h-8 w-full rounded-md border border-border/80 bg-background px-3 py-1 text-[11px] shadow-sm focus:outline-none"
                       >
                         <option value="" disabled>Select Unit</option>
-                        {UNITS[fixedDepartment || departments[email]]?.map(u => (
+                        {(UNITS_BY_DEPARTMENT[(fixedDepartment || departments[email]) as keyof typeof UNITS_BY_DEPARTMENT] || []).map(u => (
                           <option key={u} value={u}>{u}</option>
                         ))}
                       </select>
                     </div>
                   )}
+
+                  {userType === "unit_coordinator" &&
+                    (fixedDepartment || departments[email]) === "DIET" &&
+                    units[email] === "BSINDT" && (
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] font-semibold">BSINDT Track</Label>
+                        <select
+                          value={dietTracks[email] || ""}
+                          onChange={(e) =>
+                            setDietTracks({ ...dietTracks, [email]: e.target.value })
+                          }
+                          className="flex h-8 w-full rounded-md border border-border/80 bg-background px-3 py-1 text-[11px] shadow-sm focus:outline-none"
+                        >
+                          <option value="" disabled>Select Track</option>
+                          {BSINDT_TRACKS.map((track) => (
+                            <option key={track} value={track}>
+                              {track}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                 </div>
               ))}
             </div>
@@ -265,7 +315,7 @@ export function CoordinatorRegistration({ userType, title, description, departme
                             variant="ghost"
                             size="icon"
                             className="h-6 w-6 flex-shrink-0"
-                            onClick={() => copyToClipboard(result.tempPassword, result.email)}
+                            onClick={() => copyToClipboard(result.tempPassword || "", result.email)}
                           >
                             {copied === result.email ? (
                               <Check className="h-3 w-3 text-[#159E44]" />

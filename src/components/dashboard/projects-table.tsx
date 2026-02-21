@@ -33,7 +33,7 @@ import {
 import { ProjectForm } from "./project-form";
 import { useRouter } from "next/navigation";
 
-interface Project {
+export interface Project {
   id: string;
   title: string;
   classification: string[];
@@ -48,9 +48,10 @@ interface Project {
 
 interface ProjectsTableProps {
   projects: Project[];
+  readOnly?: boolean;
 }
 
-export function ProjectsTable({ projects }: ProjectsTableProps) {
+export function ProjectsTable({ projects, readOnly = false }: ProjectsTableProps) {
   const [searchTerm, setSearchTerm] = React.useState("");
   const [currentPage, setCurrentPage] = React.useState(1);
   const itemsPerPage = 5;
@@ -87,7 +88,7 @@ export function ProjectsTable({ projects }: ProjectsTableProps) {
         setDeleteId(null);
         router.refresh();
       }
-    } catch (error) {
+    } catch {
       alert("Something went wrong");
     } finally {
       setIsDeleting(false);
@@ -240,22 +241,26 @@ export function ProjectsTable({ projects }: ProjectsTableProps) {
                       >
                         <Eye className="h-3.5 w-3.5" />
                       </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                        onClick={() => setEditProject(project)}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-7 w-7 text-destructive hover:text-destructive/80 hover:bg-destructive/10"
-                        onClick={() => setDeleteId(project.id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      {!readOnly && (
+                        <>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            onClick={() => setEditProject(project)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7 text-destructive hover:text-destructive/80 hover:bg-destructive/10"
+                            onClick={() => setDeleteId(project.id)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -263,7 +268,7 @@ export function ProjectsTable({ projects }: ProjectsTableProps) {
             ) : (
               <TableRow>
                 <TableCell colSpan={6} className="h-24 text-center text-xs text-muted-foreground">
-                  No matches found for "{searchTerm}"
+                  No matches found for &quot;{searchTerm}&quot;
                 </TableCell>
               </TableRow>
             )}

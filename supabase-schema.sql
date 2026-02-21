@@ -92,6 +92,22 @@ drop policy if exists "Users can view own projects" on public.projects;
 create policy "Users can view own projects" on public.projects
   for select using (auth.uid() = created_by);
 
+-- Unit coordinators can also view projects created by fellow coordinators in the same department+unit
+drop policy if exists "Unit coordinators can view projects in same unit" on public.projects;
+create policy "Unit coordinators can view projects in same unit" on public.projects
+  for select using (
+    exists (
+      select 1
+      from public.profiles viewer
+      join public.profiles creator on creator.id = projects.created_by
+      where viewer.id = auth.uid()
+        and viewer.user_type = 'unit_coordinator'
+        and creator.user_type = 'unit_coordinator'
+        and viewer.department = creator.department
+        and viewer.unit = creator.unit
+    )
+  );
+
 drop policy if exists "Users can create own projects" on public.projects;
 create policy "Users can create own projects" on public.projects
   for insert with check (auth.uid() = created_by);
@@ -102,6 +118,25 @@ create policy "Users can update own projects" on public.projects
 drop policy if exists "Users can delete own projects" on public.projects;
 create policy "Users can delete own projects" on public.projects
   for delete using (auth.uid() = created_by);
+
+-- Helpful indexes for scalable unit-based lookups
+create index if not exists idx_profiles_department_unit_type on public.profiles (department, unit, user_type);
+create index if not exists idx_projects_created_by on public.projects (created_by);
+
+-- Realtime support for unit project visibility (safe to run multiple times)
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'projects'
+  ) then
+    alter publication supabase_realtime add table public.projects;
+  end if;
+end
+$$;
 
 -- ============================================
 -- PDF Upload Enhancement

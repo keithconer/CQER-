@@ -1,9 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { ProjectManagement } from "@/components/dashboard/project-management";
+import { UnitProjectsManagement } from "@/components/dashboard/unit-projects-management";
 import { CoordinatorRegistration } from "@/components/dashboard/coordinator-registration";
 import { SuperAdminOverview } from "@/components/dashboard/super-admin-overview";
-import { getProjects } from "@/lib/actions/projects";
+import { getProjects, getUnitProjects } from "@/lib/actions/projects";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export default async function DashboardPage() {
@@ -28,6 +29,10 @@ export default async function DashboardPage() {
 
   const projects =
     profile.user_type !== "super_admin" ? (await getProjects()).data || [] : [];
+  const unitProjects =
+    profile.user_type === "unit_coordinator"
+      ? (await getUnitProjects()).data || []
+      : [];
 
   let allAccounts: {
     id: string;
@@ -145,7 +150,10 @@ export default async function DashboardPage() {
       )}
 
       {userType === "unit_coordinator" && (
-        <ProjectManagement initialProjects={projects} />
+        <UnitProjectsManagement
+          myProjects={projects}
+          unitProjects={unitProjects}
+        />
       )}
     </div>
   );

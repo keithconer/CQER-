@@ -6,6 +6,12 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { StepIndicator } from "@/components/step-indicator";
 import { getBaseURL } from "@/lib/utils";
+import {
+  BSINDT_TRACKS,
+  DEPARTMENTS,
+  UNITS_BY_DEPARTMENT,
+  buildUnitValue,
+} from "@/lib/departments";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,6 +61,7 @@ function RegisterForm() {
   const [loading, setLoading] = useState(false);
   const [department, setDepartment] = useState("");
   const [unit, setUnit] = useState("");
+  const [dietTrack, setDietTrack] = useState("");
 
   const supabase = createClient();
 
@@ -109,9 +116,16 @@ function RegisterForm() {
         return;
       }
       if (userType === "unit_coordinator" && !unit) {
-        // Special case: for Agricultural and Food Engineering, the college coordinator is also the unit coordinator
-        // but for unit coordinators, they still need to pick a unit.
         setError("Please select your unit.");
+        return;
+      }
+      if (
+        userType === "unit_coordinator" &&
+        department === "DIET" &&
+        unit === "BSINDT" &&
+        !dietTrack
+      ) {
+        setError("Please select BSINDT track.");
         return;
       }
 
@@ -168,6 +182,11 @@ function RegisterForm() {
         firstName = parts[1].charAt(0).toUpperCase() + parts[1].slice(1);
       }
 
+      const finalUnitValue =
+        userType === "unit_coordinator"
+          ? buildUnitValue(unit, dietTrack)
+          : null;
+
       // Check if user is already authenticated (OAuth flow)
       const { data: { user } } = await supabase.auth.getUser();
 
@@ -180,7 +199,7 @@ function RegisterForm() {
           last_name: lastName,
           user_type: userType,
           department: department,
-          unit: unit || null,
+          unit: finalUnitValue,
         });
 
         if (profileError) {
@@ -196,7 +215,7 @@ function RegisterForm() {
             last_name: lastName,
             user_type: userType,
             department: department,
-            unit: unit || null,
+            unit: finalUnitValue,
           },
         });
 
@@ -217,7 +236,7 @@ function RegisterForm() {
             last_name: lastName,
             user_type: userType,
             department: department,
-            unit: unit || null,
+            unit: finalUnitValue,
           },
         },
       });
@@ -339,15 +358,16 @@ function RegisterForm() {
                 onChange={(e) => {
                   setDepartment(e.target.value);
                   setUnit(""); // Reset unit when department changes
+                  setDietTrack("");
                 }}
                 className="flex h-9 w-full rounded-md border border-border/80 bg-muted/10 px-3 py-1 text-[11px] shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground/70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <option value="" disabled>Select Department</option>
-                <option value="Department of Information Technology">Department of Information Technology</option>
-                <option value="Department of Industrial Engineering and Technology">Department of Industrial Engineering and Technology</option>
-                <option value="Department of Agricultural and Food Engineering">Department of Agricultural and Food Engineering</option>
-                <option value="Department of Computer Engineering and Electrical Engineering">Department of Computer Engineering and Electrical Engineering</option>
-                <option value="Department of Civil Engineering and Architecture">Department of Civil Engineering and Architecture</option>
+                {DEPARTMENTS.map((dept) => (
+                  <option key={dept} value={dept}>
+                    {dept}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -363,44 +383,36 @@ function RegisterForm() {
                   className="flex h-9 w-full rounded-md border border-border/80 bg-muted/10 px-3 py-1 text-[11px] shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground/70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <option value="" disabled>Select Unit</option>
-                  {department === "Department of Information Technology" && (
-                    <>
-                      <option value="IT">IT</option>
-                      <option value="CS">CS</option>
-                    </>
-                  )}
-                  {department === "Department of Industrial Engineering and Technology" && (
-                    <>
-                      <option value="Automotive">Automotive</option>
-                      <option value="Electrical Engineer">Electrical Engineer</option>
-                    </>
-                  )}
-                  {department === "Department of Agricultural and Food Engineering" && (
-                    <>
-                      <option value="AGRI">AGRI</option>
-                      <option value="FE">FE</option>
-                    </>
-                  )}
-                  {department === "Department of Computer Engineering and Electrical Engineering" && (
-                    <>
-                      <option value="CE">CE</option>
-                      <option value="EE">EE</option>
-                    </>
-                  )}
-                  {department === "Department of Civil Engineering and Architecture" && (
-                    <>
-                      <option value="CE">CE</option>
-                      <option value="ARCHI">ARCHI</option>
-                    </>
-                  )}
+                  {(UNITS_BY_DEPARTMENT[department as keyof typeof UNITS_BY_DEPARTMENT] || []).map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
                 </select>
               </div>
             )}
 
-            {userType === "college_coordinator" && department === "Department of Agricultural and Food Engineering" && (
-              <p className="text-[10px] text-muted-foreground italic px-0.5">
-                Note: As College Coordinator for this department, you will also act as the Unit Coordinator.
-              </p>
+            {userType === "unit_coordinator" &&
+              department === "DIET" &&
+              unit === "BSINDT" && (
+              <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                <Label htmlFor="diet-track" className="text-[11px] font-semibold text-foreground/90 ml-0.5">
+                  BSINDT Track
+                </Label>
+                <select
+                  id="diet-track"
+                  value={dietTrack}
+                  onChange={(e) => setDietTrack(e.target.value)}
+                  className="flex h-9 w-full rounded-md border border-border/80 bg-muted/10 px-3 py-1 text-[11px] shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground/70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <option value="" disabled>Select Track</option>
+                  {BSINDT_TRACKS.map((track) => (
+                    <option key={track} value={track}>
+                      {track}
+                    </option>
+                  ))}
+                </select>
+              </div>
             )}
           </div>
         )}
