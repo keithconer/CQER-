@@ -116,9 +116,10 @@ export function SuperAdminOverview({
     if (!startDate || !endDate) return "-";
     const start = new Date(startDate);
     const end = new Date(endDate);
-    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) return "-";
-    const years = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 365);
-    return `${years.toFixed(1)} year${years >= 1.95 ? "s" : ""}`;
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return "-";
+    const startYear = start.getFullYear();
+    const endYear = end.getFullYear();
+    return startYear === endYear ? String(startYear) : `${startYear}-${endYear}`;
   };
 
   const getBudgetTotal = (project: ExistingProject) => {
@@ -134,6 +135,12 @@ export function SuperAdminOverview({
       .filter(Boolean) as string[];
     return names.length > 0 ? names.join(", ") : "-";
   };
+
+  const toTitleCase = (value?: string | null) =>
+    (value || "")
+      .split(" ")
+      .map((word) => (word ? word[0].toUpperCase() + word.slice(1).toLowerCase() : ""))
+      .join(" ");
 
   const formatBudgetTotal = (value: number) =>
     new Intl.NumberFormat("en-PH", {
@@ -193,7 +200,7 @@ export function SuperAdminOverview({
             placeholder={
               activeTab === "accounts"
                 ? "Search accounts..."
-                : "Search projects..."
+                : "Search..."
             }
             className="pl-8 h-8 text-xs bg-muted/20 border-border/50"
             value={searchTerm}
@@ -294,7 +301,7 @@ export function SuperAdminOverview({
                           : "-"}
                       </TableCell>
                       <TableCell className="text-[10px] py-2.5 px-3">
-                        {project.category || "-"}
+                        {project.category ? toTitleCase(project.category) : "-"}
                       </TableCell>
                       <TableCell className="text-[10px] py-2.5 px-3">
                         {project.funding_source || "-"}

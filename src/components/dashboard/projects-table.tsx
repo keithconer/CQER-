@@ -102,10 +102,17 @@ export function ProjectsTable({
     if (!startDate || !endDate) return "-";
     const start = new Date(startDate);
     const end = new Date(endDate);
-    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) return "-";
-    const years = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 365);
-    return `${years.toFixed(1)} year${years >= 1.95 ? "s" : ""}`;
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return "-";
+    const startYear = start.getFullYear();
+    const endYear = end.getFullYear();
+    return startYear === endYear ? String(startYear) : `${startYear}-${endYear}`;
   };
+
+  const toTitleCase = (value?: string | null) =>
+    (value || "")
+      .split(" ")
+      .map((word) => (word ? word[0].toUpperCase() + word.slice(1).toLowerCase() : ""))
+      .join(" ");
 
   const formatCoProjectLeaders = (leaders: Project["co_project_leaders"]) => {
     if (!Array.isArray(leaders) || leaders.length === 0) return "-";
@@ -195,7 +202,7 @@ export function ProjectsTable({
         <div className="relative max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
           <Input
-            placeholder="Search projects..."
+            placeholder="Search..."
             className="pl-8 h-8 text-xs bg-muted/20 border-border/50"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -267,7 +274,7 @@ export function ProjectsTable({
                     )}
                   </TableCell>
                   <TableCell className="text-[10px] py-2.5 px-3">
-                    {project.category || "-"}
+                    {project.category ? toTitleCase(project.category) : "-"}
                   </TableCell>
                   <TableCell className="text-[10px] py-2.5 px-3">
                     {project.funding_source || "-"}

@@ -19,8 +19,13 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ProjectForm } from "./project-form";
 import { ProjectsTable, type Project } from "./projects-table";
 
@@ -74,28 +79,25 @@ export function UnitProjectsManagement({
 
   return (
     <div className="space-y-4">
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
           <Button
             size="sm"
             className="h-8 text-xs bg-[#159E44] hover:bg-[#128A3B] text-white"
           >
             <Plus className="h-3 w-3 mr-1" />
-            Add Project
+            Create
           </Button>
-        </DialogTrigger>
-        <DialogContent className="sm:max-w-[800px] p-6 max-h-[90vh] overflow-hidden">
-          <DialogHeader className="pb-2">
-            <DialogTitle className="text-sm font-semibold">
-              Create New Project
-            </DialogTitle>
-            <DialogDescription className="text-[10px]">
-              Fill out the form below to register a new college extension project.
-            </DialogDescription>
-          </DialogHeader>
-          <ProjectForm onSuccess={handleSuccess} />
-        </DialogContent>
-      </Dialog>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-44">
+          <DropdownMenuItem
+            onClick={() => setOpen(true)}
+            className="text-xs cursor-pointer"
+          >
+            Create Project
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       <Card className="border-border/50 shadow-sm">
         <CardHeader className="pb-3 pt-4 px-4 space-y-3">
@@ -136,7 +138,7 @@ export function UnitProjectsManagement({
           <div className="relative max-w-sm">
             <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
             <Input
-              placeholder="Search projects..."
+              placeholder="Search..."
               className="pl-8 h-8 text-xs bg-muted/20 border-border/50"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -154,6 +156,20 @@ export function UnitProjectsManagement({
           />
         </CardContent>
       </Card>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-[800px] p-6 max-h-[90vh] overflow-hidden">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="text-sm font-semibold">
+              Create New Project
+            </DialogTitle>
+            <DialogDescription className="text-[10px]">
+              Fill out the form below to register a new college extension project.
+            </DialogDescription>
+          </DialogHeader>
+          <ProjectForm onSuccess={handleSuccess} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

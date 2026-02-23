@@ -104,6 +104,12 @@ const classificationOptions = [
 const categoryOptions = ["new", "existing", "on process"] as const;
 const fundingSourceOptions = ["internally funded", "externally funded"] as const;
 
+const toTitleCase = (value: string) =>
+  value
+    .split(" ")
+    .map((word) => (word ? word[0].toUpperCase() + word.slice(1).toLowerCase() : ""))
+    .join(" ");
+
 interface ProjectFormValues {
   title: string;
   classification: string[];
@@ -254,6 +260,21 @@ export function ProjectForm({ onSuccess, project, isViewOnly }: ProjectFormProps
   };
 
   const selectedProgram = form.watch("academic_program");
+  const watchedBudgetRequirements = form.watch("budget_requirements");
+
+  const computedBudgetTotal = React.useMemo(() => {
+    return (watchedBudgetRequirements || []).reduce(
+      (sum, item) => sum + (Number(item?.amount) || 0),
+      0
+    );
+  }, [watchedBudgetRequirements]);
+
+  React.useEffect(() => {
+    form.setValue("budget_total", computedBudgetTotal, {
+      shouldValidate: true,
+      shouldDirty: false,
+    });
+  }, [computedBudgetTotal, form]);
 
   return (
     <Form {...form}>
@@ -662,7 +683,7 @@ export function ProjectForm({ onSuccess, project, isViewOnly }: ProjectFormProps
                       <SelectContent>
                         {categoryOptions.map((category) => (
                           <SelectItem key={category} value={category} className="text-xs capitalize">
-                            {category}
+                            {toTitleCase(category)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -866,13 +887,25 @@ export function ProjectForm({ onSuccess, project, isViewOnly }: ProjectFormProps
                 name="budget_total"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs">Budget Total (Php)</FormLabel>
+                    <FormLabel className="text-xs">Budget Total (Php, Auto Computed)</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <span className="absolute left-2 top-2.5 text-xs text-muted-foreground">₱</span>
-                        <Input type="number" step="0.01" placeholder="0.00" {...field} className="h-8 text-xs pl-5" disabled={isViewOnly} />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="0.00"
+                          {...field}
+                          value={computedBudgetTotal}
+                          readOnly
+                          className="h-8 text-xs pl-5 bg-muted/20"
+                          disabled={isViewOnly}
+                        />
                       </div>
                     </FormControl>
+                    <FormDescription className="text-[10px]">
+                      This is automatically computed from Budgetary Requirement entries.
+                    </FormDescription>
                     <FormMessage className="text-[10px]" />
                   </FormItem>
                 )}
