@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Settings, LogOut } from "lucide-react";
 import Image from "next/image";
 
@@ -32,6 +33,7 @@ export function Navbar({ user }: NavbarProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const supabase = useMemo(() => createClient(), []);
+  const [rolePopoverOpen, setRolePopoverOpen] = useState(false);
   const activeView = searchParams.get("view") === "programs" ? "programs" : "projects";
   const showDataNav =
     pathname?.startsWith("/dashboard") &&
@@ -123,14 +125,28 @@ export function Navbar({ user }: NavbarProps) {
             <span className="text-xs font-medium">
               {user.firstName}
             </span>
-            <span className="inline-flex w-fit mt-0.5 rounded-full border border-[#159E44]/25 bg-white px-1.5 py-0.5 text-[9px] font-medium text-[#159E44]">
-              {roleLabel}
-            </span>
-            {deptUnitLabel && (
-              <span className="text-[9px] text-muted-foreground mt-0.5">
-                {deptUnitLabel}
-              </span>
-            )}
+            <Popover open={rolePopoverOpen} onOpenChange={setRolePopoverOpen}>
+              <PopoverTrigger asChild>
+                <span
+                  onMouseEnter={() => setRolePopoverOpen(true)}
+                  onMouseLeave={() => setRolePopoverOpen(false)}
+                  className="inline-flex w-fit mt-0.5 rounded-full border border-[#159E44]/25 bg-[#159E44] px-1.5 py-0.5 text-[9px] font-medium text-white cursor-default"
+                >
+                  {roleLabel}
+                </span>
+              </PopoverTrigger>
+              <PopoverContent
+                side="bottom"
+                align="start"
+                onMouseEnter={() => setRolePopoverOpen(true)}
+                onMouseLeave={() => setRolePopoverOpen(false)}
+                className="w-auto px-2 py-1.5 text-[10px] leading-none"
+              >
+                <span className="text-muted-foreground">
+                  {deptUnitLabel || "No Department - Unit"}
+                </span>
+              </PopoverContent>
+            </Popover>
           </div>
 
           <DropdownMenu>
