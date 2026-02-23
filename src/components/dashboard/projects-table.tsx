@@ -34,6 +34,9 @@ import { useRouter } from "next/navigation";
 
 export interface Project {
   id: string;
+  created_by?: string;
+  created_by_user_type?: "super_admin" | "college_coordinator" | "unit_coordinator" | null;
+  created_by_unit?: string | null;
   entry_type?: "project" | "program" | null;
   title: string;
   classification: string[];

@@ -93,7 +93,7 @@ export async function getCollegeProjects() {
 
     const { data: deptProfiles, error: deptProfilesError } = await adminClient
         .from("profiles")
-        .select("id")
+        .select("id, user_type, unit")
         .in("user_type", ["college_coordinator", "unit_coordinator"])
         .eq("department", profile.department);
 
@@ -102,6 +102,9 @@ export async function getCollegeProjects() {
         return { error: deptProfilesError.message };
     }
 
+    const profileMap = new Map(
+        (deptProfiles || []).map((p) => [p.id, { user_type: p.user_type, unit: p.unit }])
+    );
     const creatorIds = deptProfiles?.map((p) => p.id) || [];
     if (creatorIds.length === 0) {
         return { data: [] };
@@ -118,7 +121,17 @@ export async function getCollegeProjects() {
         return { error: error.message };
     }
 
-    return { data };
+    const enriched =
+        (data || []).map((project) => {
+            const creator = profileMap.get(project.created_by);
+            return {
+                ...project,
+                created_by_user_type: creator?.user_type || null,
+                created_by_unit: creator?.unit || null,
+            };
+        }) || [];
+
+    return { data: enriched };
 }
 
 export async function getUnitProjects() {

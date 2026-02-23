@@ -1,13 +1,21 @@
 "use client";
 
 import * as React from "react";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, SlidersHorizontal } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ProjectForm } from "./project-form";
 import { ProjectsTable, type Project } from "./projects-table";
 
@@ -35,6 +43,7 @@ export function CollegeProjectsManagement({
     "my_projects"
   );
   const [searchTerm, setSearchTerm] = React.useState("");
+  const [selectedUnits, setSelectedUnits] = React.useState<string[]>([]);
   const router = useRouter();
 
   React.useEffect(() => {
@@ -68,28 +77,48 @@ export function CollegeProjectsManagement({
   );
 
   const myRecords = React.useMemo(
-    () => filteredByEntity.filter((record) => (record as any).created_by === currentUserId),
+    () => filteredByEntity.filter((record) => record.created_by === currentUserId),
     [filteredByEntity, currentUserId]
   );
 
-  const departmentRecords = React.useMemo(
+  const departmentUnitRecords = React.useMemo(
     () =>
       filteredByEntity.filter(
         (record) =>
-          (record as any).created_by !== currentUserId &&
-          !!(record as any).created_by
+          record.created_by !== currentUserId &&
+          record.created_by_user_type === "unit_coordinator"
       ),
     [filteredByEntity, currentUserId]
   );
 
+  const departmentRecords = React.useMemo(
+    () => {
+      if (selectedUnits.length === 0) return departmentUnitRecords;
+      return departmentUnitRecords.filter((record) =>
+        selectedUnits.includes(record.created_by_unit || "")
+      );
+    },
+    [departmentUnitRecords, selectedUnits]
+  );
+
   React.useEffect(() => {
     setSearchTerm("");
+    setSelectedUnits([]);
   }, [activeTab]);
 
   React.useEffect(() => {
     setActiveTab("my_projects");
     setSearchTerm("");
+    setSelectedUnits([]);
   }, [entityType]);
+
+  const toggleUnitFilter = (unitValue: string) => {
+    setSelectedUnits((prev) =>
+      prev.includes(unitValue)
+        ? prev.filter((unit) => unit !== unitValue)
+        : [...prev, unitValue]
+    );
+  };
 
   return (
     <div className="space-y-4">
@@ -141,14 +170,54 @@ export function CollegeProjectsManagement({
               {isProgramsView ? "Department Programs" : "Department Projects"}
             </Button>
           </div>
-          <div className="relative max-w-sm">
-            <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-            <Input
-              placeholder="Search..."
-              className="pl-8 h-8 text-xs placeholder:text-[10px] bg-muted/20 border-border/50"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+          <div className="flex items-center justify-between gap-2">
+            <div className="relative max-w-sm w-full">
+              <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Search..."
+                className="pl-8 h-8 text-xs placeholder:text-[10px] bg-muted/20 border-border/50"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            {!isMyProjects && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-[10px] border-border/50 bg-muted/20"
+                  >
+                    <SlidersHorizontal className="h-3 w-3 mr-1" />
+                    Filter
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  <DropdownMenuLabel className="text-[10px]">Scope</DropdownMenuLabel>
+                  <DropdownMenuCheckboxItem
+                    className="text-[10px]"
+                    checked={selectedUnits.length === 0}
+                    onCheckedChange={(checked) => {
+                      if (checked) setSelectedUnits([]);
+                    }}
+                  >
+                    All Projects
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-[10px]">Unit Projects</DropdownMenuLabel>
+                  {unitOptions.map((unitOption) => (
+                    <DropdownMenuCheckboxItem
+                      key={unitOption}
+                      className="text-[10px]"
+                      checked={selectedUnits.includes(unitOption)}
+                      onCheckedChange={() => toggleUnitFilter(unitOption)}
+                    >
+                      {unitOption}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </CardHeader>
         <CardContent className="px-4 pb-4">
@@ -188,4 +257,3 @@ export function CollegeProjectsManagement({
     </div>
   );
 }
-
