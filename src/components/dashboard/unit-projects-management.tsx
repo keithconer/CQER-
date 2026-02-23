@@ -27,12 +27,20 @@ interface UnitProjectsManagementProps {
   myProjects: Project[];
   unitProjects: Project[];
   entityType?: "project" | "program";
+  userType?: "super_admin" | "college_coordinator" | "unit_coordinator";
+  department?: string | null;
+  unit?: string | null;
+  unitOptions?: string[];
 }
 
 export function UnitProjectsManagement({
   myProjects,
   unitProjects,
   entityType = "project",
+  userType,
+  department,
+  unit,
+  unitOptions = [],
 }: UnitProjectsManagementProps) {
   const [open, setOpen] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState<"my_projects" | "existing_projects">(
@@ -153,6 +161,7 @@ export function UnitProjectsManagement({
             onSearchTermChange={setSearchTerm}
             showSearch={false}
             paginationAlign="right"
+            formContext={{ userType, department, unit, unitOptions }}
           />
         </CardContent>
       </Card>
@@ -167,7 +176,14 @@ export function UnitProjectsManagement({
               Fill out the form below to register a new college extension {recordLabel.toLowerCase()}.
             </DialogDescription>
           </DialogHeader>
-          <ProjectForm mode={entityType} onSuccess={handleSuccess} />
+          <ProjectForm
+            mode={entityType}
+            onSuccess={handleSuccess}
+            currentUserType={userType}
+            currentDepartment={department}
+            currentUnit={unit}
+            unitOptions={unitOptions}
+          />
         </DialogContent>
       </Dialog>
     </div>

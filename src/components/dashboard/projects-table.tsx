@@ -44,6 +44,8 @@ export interface Project {
   co_project_leaders: { name: string }[];
   category: "new" | "existing" | "on process" | null;
   funding_source: "internally funded" | "externally funded" | null;
+  visibility_scope?: "public" | "specific_units" | null;
+  visible_units?: string[];
   budget_total: number | null;
   budget_requirements: { name: string; amount: number }[];
   gad_score: number;
@@ -60,6 +62,12 @@ interface ProjectsTableProps {
   onSearchTermChange?: (value: string) => void;
   showSearch?: boolean;
   paginationAlign?: "between" | "right";
+  formContext?: {
+    userType?: "super_admin" | "college_coordinator" | "unit_coordinator";
+    department?: string | null;
+    unit?: string | null;
+    unitOptions?: string[];
+  };
 }
 
 export function ProjectsTable({
@@ -70,6 +78,7 @@ export function ProjectsTable({
   onSearchTermChange,
   showSearch = true,
   paginationAlign = "between",
+  formContext,
 }: ProjectsTableProps) {
   const recordLabel = entityType === "program" ? "Program" : "Project";
   const recordLabelPlural = entityType === "program" ? "programs" : "projects";
@@ -424,7 +433,18 @@ export function ProjectsTable({
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-hidden">
-            {viewProject && <ProjectForm project={viewProject} mode={(viewProject.entry_type || entityType) as "project" | "program"} isViewOnly onSuccess={() => setViewProject(null)} />}
+            {viewProject && (
+              <ProjectForm
+                project={viewProject}
+                mode={(viewProject.entry_type || entityType) as "project" | "program"}
+                isViewOnly
+                onSuccess={() => setViewProject(null)}
+                currentUserType={formContext?.userType}
+                currentDepartment={formContext?.department}
+                currentUnit={formContext?.unit}
+                unitOptions={formContext?.unitOptions}
+              />
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -443,6 +463,10 @@ export function ProjectsTable({
               <ProjectForm 
                 project={editProject} 
                 mode={(editProject.entry_type || entityType) as "project" | "program"}
+                currentUserType={formContext?.userType}
+                currentDepartment={formContext?.department}
+                currentUnit={formContext?.unit}
+                unitOptions={formContext?.unitOptions}
                 onSuccess={() => {
                   setEditProject(null);
                   router.refresh();

@@ -235,6 +235,44 @@ alter column entry_type set not null;
 -- END COPY: Program Support Using Shared Projects Table
 -- ============================================================
 
+-- ============================================================
+-- START COPY: College Coordinator Post Visibility Controls
+-- ============================================================
+-- Visibility scope for college coordinator posts:
+-- - public: visible to all units within same department
+-- - specific_units: visible only to selected unit coordinators
+alter table public.projects
+add column if not exists visibility_scope text default 'public',
+add column if not exists visible_units jsonb default '[]';
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'projects_visibility_scope_check'
+  ) then
+    alter table public.projects
+      add constraint projects_visibility_scope_check
+      check (visibility_scope in ('public', 'specific_units'));
+  end if;
+end
+$$;
+
+update public.projects
+set
+  visibility_scope = coalesce(visibility_scope, 'public'),
+  visible_units = coalesce(visible_units, '[]'::jsonb);
+
+alter table public.projects
+alter column visibility_scope set default 'public',
+alter column visibility_scope set not null,
+alter column visible_units set default '[]'::jsonb,
+alter column visible_units set not null;
+-- ============================================================
+-- END COPY: College Coordinator Post Visibility Controls
+-- ============================================================
+
 -- ============================================
 -- PDF Upload Enhancement
 -- Run this in Supabase SQL Editor

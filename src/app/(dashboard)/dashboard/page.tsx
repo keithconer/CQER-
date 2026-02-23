@@ -4,8 +4,9 @@ import { ProjectManagement } from "@/components/dashboard/project-management";
 import { UnitProjectsManagement } from "@/components/dashboard/unit-projects-management";
 import { CoordinatorRegistration } from "@/components/dashboard/coordinator-registration";
 import { SuperAdminOverview } from "@/components/dashboard/super-admin-overview";
-import { getProjects, getUnitProjects } from "@/lib/actions/projects";
+import { getCollegeProjects, getProjects, getUnitProjects } from "@/lib/actions/projects";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { UNITS_BY_DEPARTMENT, type DepartmentCode } from "@/lib/departments";
 
 export default async function DashboardPage({
   searchParams,
@@ -36,7 +37,11 @@ export default async function DashboardPage({
   }
 
   const projects =
-    profile.user_type !== "super_admin" ? (await getProjects()).data || [] : [];
+    profile.user_type === "college_coordinator"
+      ? (await getCollegeProjects()).data || []
+      : profile.user_type !== "super_admin"
+        ? (await getProjects()).data || []
+        : [];
   const unitProjects =
     profile.user_type === "unit_coordinator"
       ? (await getUnitProjects()).data || []
@@ -50,6 +55,7 @@ export default async function DashboardPage({
     department: string | null;
     unit: string | null;
   }[] = [];
+  let availableUnitsForCollege: string[] = [];
 
   let allProjects: {
     id: string;
@@ -62,6 +68,8 @@ export default async function DashboardPage({
     co_project_leaders: { name: string }[] | null;
     category: "new" | "existing" | "on process" | null;
     funding_source: "internally funded" | "externally funded" | null;
+    visibility_scope?: "public" | "specific_units" | null;
+    visible_units?: string[] | null;
     budget_total: number | null;
     budget_requirements: { name: string; amount: number }[] | null;
   }[] = [];
@@ -76,7 +84,7 @@ export default async function DashboardPage({
         .order("created_at", { ascending: false }),
       adminClient
         .from("projects")
-        .select("id, entry_type, title, academic_program, start_date, end_date, proponents, co_project_leaders, category, funding_source, budget_total, budget_requirements")
+        .select("id, entry_type, title, academic_program, start_date, end_date, proponents, co_project_leaders, category, funding_source, visibility_scope, visible_units, budget_total, budget_requirements")
         .order("created_at", { ascending: false }),
     ]);
 
@@ -91,8 +99,31 @@ export default async function DashboardPage({
     allProjects = (projectsData as typeof allProjects | null) || [];
   }
 
+  if (profile.user_type === "college_coordinator" && profile.department) {
+    const adminClient = createAdminClient();
+    const { data: unitsData } = await adminClient
+      .from("profiles")
+      .select("unit")
+      .eq("user_type", "unit_coordinator")
+      .eq("department", profile.department)
+      .not("unit", "is", null);
+
+    availableUnitsForCollege =
+      Array.from(
+        new Set(
+          (unitsData || [])
+            .map((row) => row.unit)
+            .filter(Boolean) as string[]
+        )
+      ) ||
+      [];
+  }
+
   const userType = profile.user_type;
   const firstName = profile.first_name || "User";
+  if (availableUnitsForCollege.length === 0 && profile.department) {
+    availableUnitsForCollege = UNITS_BY_DEPARTMENT[profile.department as DepartmentCode] || [];
+  }
 
   return (
     <div className="space-y-4">
@@ -122,7 +153,15 @@ export default async function DashboardPage({
             description="Register emails of Unit coordinators for your department."
             department={profile.department}
           />
-          <ProjectManagement initialProjects={projects} readOnly entityType={activeEntityType} />
+          <ProjectManagement
+            initialProjects={projects}
+            readOnly={false}
+            entityType={activeEntityType}
+            userType={userType}
+            department={profile.department}
+            unit={profile.unit}
+            unitOptions={availableUnitsForCollege}
+          />
         </div>
       )}
 
@@ -131,6 +170,10 @@ export default async function DashboardPage({
           myProjects={projects}
           unitProjects={unitProjects}
           entityType={activeEntityType}
+          userType={userType}
+          department={profile.department}
+          unit={profile.unit}
+          unitOptions={[]}
         />
       )}
     </div>

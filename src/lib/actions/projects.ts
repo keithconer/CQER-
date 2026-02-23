@@ -12,11 +12,34 @@ export async function createProject(formData: object) {
         throw new Error("Unauthorized");
     }
 
+    const { data: profile } = await supabase
+        .from("profiles")
+        .select("user_type, unit")
+        .eq("id", user.id)
+        .single();
+
+    const payload = { ...(formData as Record<string, unknown>) };
+
+    if (profile?.user_type === "unit_coordinator") {
+        payload.visibility_scope = "specific_units";
+        payload.visible_units = profile.unit ? [profile.unit] : [];
+    } else if (profile?.user_type === "college_coordinator") {
+        const scope = payload.visibility_scope === "specific_units" ? "specific_units" : "public";
+        payload.visibility_scope = scope;
+        payload.visible_units =
+            scope === "specific_units" && Array.isArray(payload.visible_units)
+                ? payload.visible_units
+                : [];
+    } else {
+        payload.visibility_scope = "public";
+        payload.visible_units = [];
+    }
+
     const { data, error } = await supabase
         .from("projects")
         .insert([
             {
-                ...formData,
+                ...payload,
                 created_by: user.id,
             },
         ])
@@ -41,6 +64,57 @@ export async function getProjects() {
 
     if (error) {
         console.error("Error fetching projects:", error);
+        return { error: error.message };
+    }
+
+    return { data };
+}
+
+export async function getCollegeProjects() {
+    const supabase = await createClient();
+    const adminClient = createAdminClient();
+
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+        return { error: "Unauthorized" };
+    }
+
+    const { data: profile } = await supabase
+        .from("profiles")
+        .select("user_type, department")
+        .eq("id", user.id)
+        .single();
+
+    if (!profile || profile.user_type !== "college_coordinator" || !profile.department) {
+        return { data: [] };
+    }
+
+    const { data: deptProfiles, error: deptProfilesError } = await adminClient
+        .from("profiles")
+        .select("id")
+        .in("user_type", ["college_coordinator", "unit_coordinator"])
+        .eq("department", profile.department);
+
+    if (deptProfilesError) {
+        console.error("Error fetching department profiles:", deptProfilesError);
+        return { error: deptProfilesError.message };
+    }
+
+    const creatorIds = deptProfiles?.map((p) => p.id) || [];
+    if (creatorIds.length === 0) {
+        return { data: [] };
+    }
+
+    const { data, error } = await adminClient
+        .from("projects")
+        .select("*")
+        .in("created_by", creatorIds)
+        .order("created_at", { ascending: false });
+
+    if (error) {
+        console.error("Error fetching college projects:", error);
         return { error: error.message };
     }
 
@@ -73,29 +147,30 @@ export async function getUnitProjects() {
         return { data: [] };
     }
 
-    const { data: unitProfiles, error: unitProfilesError } = await adminClient
+    const { data: deptProfiles, error: deptProfilesError } = await adminClient
         .from("profiles")
-        .select("id")
-        .eq("user_type", "unit_coordinator")
-        .eq("department", profile.department)
-        .eq("unit", profile.unit);
+        .select("id, user_type, unit")
+        .in("user_type", ["unit_coordinator", "college_coordinator"])
+        .eq("department", profile.department);
 
-    if (unitProfilesError) {
-        console.error("Error fetching unit profiles:", unitProfilesError);
-        return { error: unitProfilesError.message };
+    if (deptProfilesError) {
+        console.error("Error fetching department profiles:", deptProfilesError);
+        return { error: deptProfilesError.message };
     }
 
-    const sameUnitCoordinatorIds =
-        unitProfiles?.map((p) => p.id) || [];
+    const profileMap = new Map(
+        (deptProfiles || []).map((p) => [p.id, { user_type: p.user_type, unit: p.unit }])
+    );
+    const creatorIds = (deptProfiles || []).map((p) => p.id);
 
-    if (sameUnitCoordinatorIds.length === 0) {
+    if (creatorIds.length === 0) {
         return { data: [] };
     }
 
     const { data, error } = await adminClient
         .from("projects")
         .select("*")
-        .in("created_by", sameUnitCoordinatorIds)
+        .in("created_by", creatorIds)
         .order("created_at", { ascending: false });
 
     if (error) {
@@ -103,7 +178,28 @@ export async function getUnitProjects() {
         return { error: error.message };
     }
 
-    return { data };
+    const filtered =
+        data?.filter((project) => {
+            const creator = profileMap.get(project.created_by);
+            if (!creator) return false;
+
+            if (creator.user_type === "unit_coordinator") {
+                return creator.unit === profile.unit;
+            }
+
+            if (creator.user_type === "college_coordinator") {
+                if (project.visibility_scope === "public") return true;
+                if (project.visibility_scope === "specific_units") {
+                    const visibleUnits = Array.isArray(project.visible_units) ? project.visible_units : [];
+                    return visibleUnits.includes(profile.unit);
+                }
+                return false;
+            }
+
+            return false;
+        }) || [];
+
+    return { data: filtered };
 }
 export async function updateProject(id: string, formData: object) {
     const supabase = await createClient();
@@ -113,10 +209,30 @@ export async function updateProject(id: string, formData: object) {
         throw new Error("Unauthorized");
     }
 
+    const { data: profile } = await supabase
+        .from("profiles")
+        .select("user_type, unit")
+        .eq("id", user.id)
+        .single();
+
+    const payload = { ...(formData as Record<string, unknown>) };
+
+    if (profile?.user_type === "unit_coordinator") {
+        payload.visibility_scope = "specific_units";
+        payload.visible_units = profile.unit ? [profile.unit] : [];
+    } else if (profile?.user_type === "college_coordinator") {
+        const scope = payload.visibility_scope === "specific_units" ? "specific_units" : "public";
+        payload.visibility_scope = scope;
+        payload.visible_units =
+            scope === "specific_units" && Array.isArray(payload.visible_units)
+                ? payload.visible_units
+                : [];
+    }
+
     const { data, error } = await supabase
         .from("projects")
         .update({
-            ...formData,
+            ...payload,
             updated_at: new Date().toISOString(),
         })
         .eq("id", id)

@@ -25,9 +25,21 @@ interface ProjectManagementProps {
   initialProjects: any[];
   readOnly?: boolean;
   entityType?: "project" | "program";
+  userType?: "super_admin" | "college_coordinator" | "unit_coordinator";
+  department?: string | null;
+  unit?: string | null;
+  unitOptions?: string[];
 }
 
-export function ProjectManagement({ initialProjects, readOnly, entityType = "project" }: ProjectManagementProps) {
+export function ProjectManagement({
+  initialProjects,
+  readOnly,
+  entityType = "project",
+  userType,
+  department,
+  unit,
+  unitOptions = [],
+}: ProjectManagementProps) {
   const [open, setOpen] = React.useState(false);
   const router = useRouter();
   const filteredRecords = React.useMemo(
@@ -63,7 +75,12 @@ export function ProjectManagement({ initialProjects, readOnly, entityType = "pro
           )}
         </CardHeader>
         <CardContent className="px-4 pb-4">
-          <ProjectsTable projects={filteredRecords} entityType={entityType} readOnly={readOnly} />
+          <ProjectsTable
+            projects={filteredRecords}
+            entityType={entityType}
+            readOnly={readOnly}
+            formContext={{ userType, department, unit, unitOptions }}
+          />
         </CardContent>
       </Card>
 
@@ -76,7 +93,14 @@ export function ProjectManagement({ initialProjects, readOnly, entityType = "pro
                     Fill out the form below to register a new college extension {recordLabel.toLowerCase()}.
                   </DialogDescription>
                 </DialogHeader>
-                <ProjectForm mode={entityType} onSuccess={handleSuccess} />
+                <ProjectForm
+                  mode={entityType}
+                  onSuccess={handleSuccess}
+                  currentUserType={userType}
+                  currentDepartment={department}
+                  currentUnit={unit}
+                  unitOptions={unitOptions}
+                />
               </DialogContent>
         </Dialog>
       )}

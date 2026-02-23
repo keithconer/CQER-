@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Command,
   CommandEmpty,
@@ -125,6 +126,8 @@ interface ProjectFormValues {
   community_location: string;
   category: "new" | "existing" | "on process";
   funding_source: "internally funded" | "externally funded";
+  visibility_scope: "public" | "specific_units";
+  visible_units: string[];
   start_date: Date;
   end_date: Date;
   budget_requirements: { name: string; amount: number }[];
@@ -156,6 +159,8 @@ const projectSchema = z.object({
   funding_source: z.enum(fundingSourceOptions, {
     message: "Funding source is required",
   }),
+  visibility_scope: z.enum(["public", "specific_units"]).default("public"),
+  visible_units: z.array(z.string()).default([]),
   start_date: z.date(),
   end_date: z.date(),
   budget_requirements: z.array(z.object({
@@ -168,6 +173,14 @@ const projectSchema = z.object({
     url: z.string(),
     name: z.string()
   })).default([]),
+}).superRefine((values, ctx) => {
+  if (values.visibility_scope === "specific_units" && values.visible_units.length === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["visible_units"],
+      message: "Select at least one unit.",
+    });
+  }
 });
 
 interface ProjectFormProps {
@@ -175,11 +188,25 @@ interface ProjectFormProps {
   project?: any;
   isViewOnly?: boolean;
   mode?: "project" | "program";
+  currentUserType?: "super_admin" | "college_coordinator" | "unit_coordinator";
+  currentDepartment?: string | null;
+  currentUnit?: string | null;
+  unitOptions?: string[];
 }
 
-export function ProjectForm({ onSuccess, project, isViewOnly, mode = "project" }: ProjectFormProps) {
+export function ProjectForm({
+  onSuccess,
+  project,
+  isViewOnly,
+  mode = "project",
+  currentUserType,
+  currentDepartment,
+  currentUnit,
+  unitOptions = [],
+}: ProjectFormProps) {
   const resolvedMode = (project?.entry_type as "project" | "program" | undefined) || mode;
   const recordLabel = resolvedMode === "program" ? "Program" : "Project";
+  const isCollegeCoordinator = currentUserType === "college_coordinator";
 
   const form = useForm<ProjectFormValues>({
     resolver: zodResolver(projectSchema) as any,
@@ -201,6 +228,12 @@ export function ProjectForm({ onSuccess, project, isViewOnly, mode = "project" }
       community_location: project?.community_location || "",
       category: project?.category || "new",
       funding_source: project?.funding_source || "internally funded",
+      visibility_scope:
+        project?.visibility_scope ||
+        (currentUserType === "unit_coordinator" ? "specific_units" : "public"),
+      visible_units:
+        project?.visible_units ||
+        (currentUserType === "unit_coordinator" && currentUnit ? [currentUnit] : []),
       start_date: project?.start_date ? new Date(project.start_date) : new Date(),
       end_date: project?.end_date ? new Date(project.end_date) : new Date(),
       budget_requirements: project?.budget_requirements || [{ name: "", amount: 0 }],
@@ -266,6 +299,7 @@ export function ProjectForm({ onSuccess, project, isViewOnly, mode = "project" }
 
   const selectedProgram = form.watch("academic_program");
   const watchedBudgetRequirements = form.watch("budget_requirements");
+  const selectedVisibilityScope = form.watch("visibility_scope");
 
   const computedBudgetTotal = React.useMemo(() => {
     return (watchedBudgetRequirements || []).reduce(
@@ -280,6 +314,13 @@ export function ProjectForm({ onSuccess, project, isViewOnly, mode = "project" }
       shouldDirty: false,
     });
   }, [computedBudgetTotal, form]);
+
+  React.useEffect(() => {
+    if (currentUserType === "unit_coordinator") {
+      form.setValue("visibility_scope", "specific_units", { shouldValidate: true });
+      form.setValue("visible_units", currentUnit ? [currentUnit] : [], { shouldValidate: true });
+    }
+  }, [currentUserType, currentUnit, form]);
 
   return (
     <Form {...form}>
@@ -694,6 +735,85 @@ export function ProjectForm({ onSuccess, project, isViewOnly, mode = "project" }
                 )}
               />
             </div>
+
+            {/* Visibility Settings (College Coordinator) */}
+            {isCollegeCoordinator && (
+              <div className="space-y-3 rounded-md border border-border/50 p-3 bg-muted/10">
+                <div>
+                  <FormLabel className="text-xs">Who can see this post?</FormLabel>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    Control visibility for unit coordinators in your department.
+                  </p>
+                </div>
+                <FormField
+                  control={form.control as any}
+                  name="visibility_scope"
+                  render={({ field }) => (
+                    <FormItem>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={isViewOnly}>
+                        <FormControl>
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue placeholder="Select visibility" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="public" className="text-xs">
+                            Public (Entire College and Units)
+                          </SelectItem>
+                          <SelectItem value="specific_units" className="text-xs">
+                            Specific Unit
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage className="text-[10px]" />
+                    </FormItem>
+                  )}
+                />
+
+                {selectedVisibilityScope === "specific_units" && (
+                  <FormField
+                    control={form.control as any}
+                    name="visible_units"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormLabel className="text-xs">Select Unit(s)</FormLabel>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {unitOptions.length > 0 ? (
+                            unitOptions.map((unitOption) => {
+                              const checked = (field.value || []).includes(unitOption);
+                              return (
+                                <label
+                                  key={unitOption}
+                                  className="flex items-center gap-2 rounded-md border border-border/50 px-2 py-1.5 bg-background"
+                                >
+                                  <Checkbox
+                                    checked={checked}
+                                    disabled={isViewOnly}
+                                    onCheckedChange={(isChecked) => {
+                                      const current = new Set(field.value || []);
+                                      if (isChecked) {
+                                        current.add(unitOption);
+                                      } else {
+                                        current.delete(unitOption);
+                                      }
+                                      field.onChange(Array.from(current));
+                                    }}
+                                  />
+                                  <span className="text-[10px]">{unitOption}</span>
+                                </label>
+                              );
+                            })
+                          ) : (
+                            <p className="text-[10px] text-muted-foreground">No units available.</p>
+                          )}
+                        </div>
+                        <FormMessage className="text-[10px]" />
+                      </FormItem>
+                    )}
+                  />
+                )}
+              </div>
+            )}
 
             {/* Dates */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
