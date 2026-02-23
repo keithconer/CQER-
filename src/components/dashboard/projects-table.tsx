@@ -98,7 +98,7 @@ export function ProjectsTable({
     return names.length > 0 ? names.join(", ") : "-";
   };
 
-  const formatDurationYears = (startDate?: string, endDate?: string) => {
+  const formatDurationYears = (startDate?: string | null, endDate?: string | null) => {
     if (!startDate || !endDate) return "-";
     const start = new Date(startDate);
     const end = new Date(endDate);

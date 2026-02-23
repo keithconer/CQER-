@@ -143,10 +143,10 @@ const projectSchema = z.object({
   target_beneficiaries: z.array(z.string()).min(1, "Select at least one beneficiary"),
   community_location: z.string(),
   category: z.enum(categoryOptions, {
-    errorMap: () => ({ message: "Category is required" }),
+    message: "Category is required",
   }),
   funding_source: z.enum(fundingSourceOptions, {
-    errorMap: () => ({ message: "Funding source is required" }),
+    message: "Funding source is required",
   }),
   start_date: z.date(),
   end_date: z.date(),
