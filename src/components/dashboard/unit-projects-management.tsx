@@ -52,13 +52,8 @@ export function UnitProjectsManagement({
       )
       .subscribe();
 
-    const intervalId = window.setInterval(() => {
-      router.refresh();
-    }, 5000);
-
     return () => {
       supabase.removeChannel(channel);
-      window.clearInterval(intervalId);
     };
   }, [router]);
 

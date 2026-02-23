@@ -73,13 +73,12 @@ export async function getUnitProjects() {
         return { data: [] };
     }
 
-    const normalize = (value: string) => value.trim().toLowerCase();
-    const viewerDepartment = normalize(profile.department);
-    const viewerUnit = normalize(profile.unit);
-
     const { data: unitProfiles, error: unitProfilesError } = await adminClient
         .from("profiles")
-        .select("id, user_type, department, unit");
+        .select("id")
+        .eq("user_type", "unit_coordinator")
+        .eq("department", profile.department)
+        .eq("unit", profile.unit);
 
     if (unitProfilesError) {
         console.error("Error fetching unit profiles:", unitProfilesError);
@@ -87,16 +86,7 @@ export async function getUnitProjects() {
     }
 
     const sameUnitCoordinatorIds =
-        unitProfiles
-            ?.filter(
-                (p) =>
-                    p.user_type === "unit_coordinator" &&
-                    !!p.department &&
-                    !!p.unit &&
-                    normalize(p.department) === viewerDepartment &&
-                    normalize(p.unit) === viewerUnit
-            )
-            .map((p) => p.id) || [];
+        unitProfiles?.map((p) => p.id) || [];
 
     if (sameUnitCoordinatorIds.length === 0) {
         return { data: [] };

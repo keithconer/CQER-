@@ -37,6 +37,8 @@ export function Navbar({ user }: NavbarProps) {
 
   useEffect(() => {
     router.prefetch("/dashboard");
+    router.prefetch("/dashboard?view=projects");
+    router.prefetch("/dashboard?view=programs");
     router.prefetch("/settings");
   }, [router]);
 
@@ -67,13 +69,6 @@ export function Navbar({ user }: NavbarProps) {
             />
             <span className="text-sm font-bold tracking-tight">CQER</span>
           </div>
-          <span className="text-[10px] text-muted-foreground font-semibold px-1.5 py-0.5 rounded bg-muted uppercase tracking-wider">
-            {user.userType === "super_admin"
-              ? "Admin"
-              : user.userType === "college_coordinator"
-              ? "College"
-              : "Unit"}
-          </span>
         </button>
 
         {/* Right: Profile section */}
