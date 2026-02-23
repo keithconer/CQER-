@@ -32,7 +32,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Command,
@@ -112,6 +111,7 @@ interface ProjectFormValues {
   academic_program: string;
   major: string;
   proponents: { name: string }[];
+  co_project_leaders: { name: string }[];
   college: string;
   collaborating_agencies: string;
   target_beneficiaries: string[];
@@ -135,6 +135,9 @@ const projectSchema = z.object({
   proponents: z.array(z.object({
     name: z.string().min(1, "Name is required")
   })).min(1, "At least one proponent is required"),
+  co_project_leaders: z.array(z.object({
+    name: z.string().min(1, "Name is required")
+  })).default([]),
   college: z.string(),
   collaborating_agencies: z.string(),
   target_beneficiaries: z.array(z.string()).min(1, "Select at least one beneficiary"),
@@ -175,6 +178,7 @@ export function ProjectForm({ onSuccess, project, isViewOnly }: ProjectFormProps
       academic_program: project?.academic_program || "",
       major: project?.major || "",
       proponents: project?.proponents || [{ name: "" }],
+      co_project_leaders: project?.co_project_leaders || [],
       college: project?.college || "CEIT",
       collaborating_agencies: project?.collaborating_agencies || "",
       target_beneficiaries: Array.isArray(project?.target_beneficiaries) ? project.target_beneficiaries : project?.target_beneficiaries ? [project.target_beneficiaries] : [],
@@ -203,6 +207,15 @@ export function ProjectForm({ onSuccess, project, isViewOnly }: ProjectFormProps
 
   const { fields: proponentFields, append: appendProponent, remove: removeProponent } = useFieldArray({
     name: "proponents",
+    control: form.control,
+  });
+
+  const {
+    fields: coProjectLeaderFields,
+    append: appendCoProjectLeader,
+    remove: removeCoProjectLeader,
+  } = useFieldArray({
+    name: "co_project_leaders",
     control: form.control,
   });
 
@@ -473,10 +486,10 @@ export function ProjectForm({ onSuccess, project, isViewOnly }: ProjectFormProps
               )}
             </div>
 
-            {/* Proponents */}
+            {/* Project Leaders (Required) */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <FormLabel className="text-xs">Proponents</FormLabel>
+                <FormLabel className="text-xs">Project Leader/s (Proponents)</FormLabel>
                 {!isViewOnly && (
                   <Button
                     type="button"
@@ -521,6 +534,60 @@ export function ProjectForm({ onSuccess, project, isViewOnly }: ProjectFormProps
                   )}
                 </div>
               ))}
+            </div>
+
+            {/* Co-Project Leaders (Optional) */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <FormLabel className="text-xs">Co-Project Leaders (Optional)</FormLabel>
+                {!isViewOnly && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => appendCoProjectLeader({ name: "" })}
+                    className="h-6 text-[10px] px-2"
+                  >
+                    <Plus className="h-3 w-3 mr-1" /> Add
+                  </Button>
+                )}
+              </div>
+              {coProjectLeaderFields.length === 0 ? (
+                <p className="text-[10px] text-muted-foreground">No co-project leaders added.</p>
+              ) : (
+                coProjectLeaderFields.map((field, index) => (
+                  <div key={field.id} className="flex gap-2">
+                    <FormField
+                      control={form.control as any}
+                      name={`co_project_leaders.${index}.name`}
+                      render={({ field: inputField }) => (
+                        <FormItem className="flex-1">
+                          <FormControl>
+                            <Input
+                              placeholder="Firstname MI. Lastname"
+                              {...inputField}
+                              className="h-8 text-xs"
+                              disabled={isViewOnly}
+                            />
+                          </FormControl>
+                          <FormMessage className="text-[10px]" />
+                        </FormItem>
+                      )}
+                    />
+                    {!isViewOnly && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeCoProjectLeader(index)}
+                        className="h-8 w-8 text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
 
             {/* Agencies & Beneficiaries & Location */}
@@ -661,7 +728,14 @@ export function ProjectForm({ onSuccess, project, isViewOnly }: ProjectFormProps
                         <Calendar
                           mode="single"
                           selected={field.value}
-                          onSelect={field.onChange}
+                          onSelect={(date) => {
+                            if (!date) return;
+                            field.onChange(date);
+                            const currentEndDate = form.getValues("end_date");
+                            if (currentEndDate && currentEndDate < date) {
+                              form.setValue("end_date", date, { shouldValidate: true });
+                            }
+                          }}
                           initialFocus
                           className="text-xs"
                         />
@@ -706,7 +780,7 @@ export function ProjectForm({ onSuccess, project, isViewOnly }: ProjectFormProps
                             if (!startDate) return false;
                             const d1 = new Date(startDate);
                             d1.setHours(0, 0, 0, 0);
-                            return date <= d1;
+                            return date < d1;
                           }}
                           initialFocus
                           className="text-xs"

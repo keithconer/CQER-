@@ -151,7 +151,8 @@ $$;
 alter table public.projects
 add column if not exists category text,
 add column if not exists funding_source text,
-add column if not exists budget_total numeric(14,2);
+add column if not exists budget_total numeric(14,2),
+add column if not exists co_project_leaders jsonb not null default '[]';
 
 -- Enforce allowed dropdown values.
 do $$
@@ -185,10 +186,12 @@ $$;
 -- Backfill existing rows:
 -- 1) Default category/funding where missing.
 -- 2) Compute budget_total from budget_requirements JSON when available.
+-- 3) Ensure co_project_leaders always has [] when old rows are null.
 update public.projects
 set
   category = coalesce(category, 'existing'),
   funding_source = coalesce(funding_source, 'internally funded'),
+  co_project_leaders = coalesce(co_project_leaders, '[]'::jsonb),
   budget_total = coalesce(
     budget_total,
     (

@@ -70,7 +70,7 @@ export function ProjectManagement({ initialProjects, readOnly }: ProjectManageme
           )}
         </CardHeader>
         <CardContent className="px-4 pb-4">
-          <ProjectsTable projects={initialProjects} />
+          <ProjectsTable projects={initialProjects} readOnly={readOnly} />
         </CardContent>
       </Card>
     </div>

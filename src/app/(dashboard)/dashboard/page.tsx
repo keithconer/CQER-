@@ -50,6 +50,7 @@ export default async function DashboardPage() {
     start_date: string | null;
     end_date: string | null;
     proponents: { name: string }[] | null;
+    co_project_leaders: { name: string }[] | null;
     category: "new" | "existing" | "on process" | null;
     funding_source: "internally funded" | "externally funded" | null;
     budget_total: number | null;
@@ -66,7 +67,7 @@ export default async function DashboardPage() {
         .order("created_at", { ascending: false }),
       adminClient
         .from("projects")
-        .select("id, title, academic_program, start_date, end_date, proponents, category, funding_source, budget_total, budget_requirements")
+        .select("id, title, academic_program, start_date, end_date, proponents, co_project_leaders, category, funding_source, budget_total, budget_requirements")
         .order("created_at", { ascending: false }),
     ]);
 

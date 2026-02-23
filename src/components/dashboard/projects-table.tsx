@@ -40,6 +40,7 @@ export interface Project {
   start_date: string | null;
   end_date: string | null;
   proponents: { name: string }[];
+  co_project_leaders: { name: string }[];
   category: "new" | "existing" | "on process" | null;
   funding_source: "internally funded" | "externally funded" | null;
   budget_total: number | null;
@@ -79,6 +80,7 @@ export function ProjectsTable({
         project.title,
         project.academic_program,
         (project.proponents || []).map((person) => person?.name || "").join(", "),
+        (project.co_project_leaders || []).map((person) => person?.name || "").join(", "),
         project.category || "",
         project.funding_source || "",
       ]
@@ -103,6 +105,14 @@ export function ProjectsTable({
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) return "-";
     const years = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 365);
     return `${years.toFixed(1)} year${years >= 1.95 ? "s" : ""}`;
+  };
+
+  const formatCoProjectLeaders = (leaders: Project["co_project_leaders"]) => {
+    if (!Array.isArray(leaders) || leaders.length === 0) return "-";
+    const names = leaders
+      .map((item) => item?.name?.trim())
+      .filter(Boolean) as string[];
+    return names.length > 0 ? names.join(", ") : "-";
   };
 
   const getBudgetTotal = (project: Project) => {
@@ -199,9 +209,10 @@ export function ProjectsTable({
             <TableRow className="hover:bg-transparent border-border/50">
               <TableHead className="text-[10px] font-semibold h-9">Project Title</TableHead>
               <TableHead className="text-[10px] font-semibold h-9">Project Leader/s (Proponents)</TableHead>
+              <TableHead className="text-[10px] font-semibold h-9">Co-Project Leaders (Optional)</TableHead>
               <TableHead className="text-[10px] font-semibold h-9">Program</TableHead>
               <TableHead className="text-[10px] font-semibold h-9">Duration (Year)</TableHead>
-              <TableHead className="text-[10px] font-semibold h-9">Period</TableHead>
+              <TableHead className="text-[10px] font-semibold h-9">Period (Date)</TableHead>
               <TableHead className="text-[10px] font-semibold h-9">Category</TableHead>
               <TableHead className="text-[10px] font-semibold h-9">Funding</TableHead>
               <TableHead className="text-[10px] font-semibold h-9">Budget Total</TableHead>
@@ -227,6 +238,11 @@ export function ProjectsTable({
                   <TableCell className="text-[10px] py-2.5 px-3 max-w-[220px]">
                     <span className="line-clamp-2" title={formatProjectLeaders(project.proponents)}>
                       {formatProjectLeaders(project.proponents)}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-[10px] py-2.5 px-3 max-w-[220px]">
+                    <span className="line-clamp-2" title={formatCoProjectLeaders(project.co_project_leaders)}>
+                      {formatCoProjectLeaders(project.co_project_leaders)}
                     </span>
                   </TableCell>
                   <TableCell className="text-[10px] py-2.5 px-3">
@@ -338,7 +354,7 @@ export function ProjectsTable({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={readOnly ? 8 : 9} className="h-24 text-center text-xs text-muted-foreground">
+                <TableCell colSpan={readOnly ? 9 : 10} className="h-24 text-center text-xs text-muted-foreground">
                   No matches found for &quot;{searchTerm}&quot;
                 </TableCell>
               </TableRow>

@@ -34,6 +34,7 @@ interface ExistingProject {
   start_date: string | null;
   end_date: string | null;
   proponents: { name: string }[] | null;
+  co_project_leaders: { name: string }[] | null;
   category: "new" | "existing" | "on process" | null;
   funding_source: "internally funded" | "externally funded" | null;
   budget_total: number | null;
@@ -58,7 +59,7 @@ export function SuperAdminOverview({
   projects,
 }: SuperAdminOverviewProps) {
   const [activeTab, setActiveTab] = React.useState<"accounts" | "projects">(
-    "accounts"
+    "projects"
   );
   const [searchTerm, setSearchTerm] = React.useState("");
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -92,6 +93,11 @@ export function SuperAdminOverview({
           .join(", ")
           .toLowerCase()
           .includes(term) ||
+        (project.co_project_leaders || [])
+          .map((person) => person?.name || "")
+          .join(", ")
+          .toLowerCase()
+          .includes(term) ||
         (project.category || "").toLowerCase().includes(term) ||
         (project.funding_source || "").toLowerCase().includes(term)
       );
@@ -119,6 +125,14 @@ export function SuperAdminOverview({
     if (typeof project.budget_total === "number") return project.budget_total;
     if (!Array.isArray(project.budget_requirements)) return 0;
     return project.budget_requirements.reduce((sum, item) => sum + (Number(item?.amount) || 0), 0);
+  };
+
+  const formatCoProjectLeaders = (leaders: ExistingProject["co_project_leaders"]) => {
+    if (!Array.isArray(leaders) || leaders.length === 0) return "-";
+    const names = leaders
+      .map((item) => item?.name?.trim())
+      .filter(Boolean) as string[];
+    return names.length > 0 ? names.join(", ") : "-";
   };
 
   const formatBudgetTotal = (value: number) =>
@@ -242,9 +256,10 @@ export function SuperAdminOverview({
                 <TableRow className="hover:bg-transparent border-border/50">
                   <TableHead className="text-[10px] font-semibold h-9">Project Title</TableHead>
                   <TableHead className="text-[10px] font-semibold h-9">Project Leader/s (Proponents)</TableHead>
+                  <TableHead className="text-[10px] font-semibold h-9">Co-Project Leaders (Optional)</TableHead>
                   <TableHead className="text-[10px] font-semibold h-9">Program</TableHead>
                   <TableHead className="text-[10px] font-semibold h-9">Duration (Year)</TableHead>
-                  <TableHead className="text-[10px] font-semibold h-9">Period</TableHead>
+                  <TableHead className="text-[10px] font-semibold h-9">Period (Date)</TableHead>
                   <TableHead className="text-[10px] font-semibold h-9">Category</TableHead>
                   <TableHead className="text-[10px] font-semibold h-9">Funding</TableHead>
                   <TableHead className="text-[10px] font-semibold h-9">Budget Total</TableHead>
@@ -260,6 +275,11 @@ export function SuperAdminOverview({
                       <TableCell className="text-[10px] py-2.5 px-3 max-w-[220px]">
                         <span className="line-clamp-2" title={formatProjectLeaders(project.proponents)}>
                           {formatProjectLeaders(project.proponents)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-[10px] py-2.5 px-3 max-w-[220px]">
+                        <span className="line-clamp-2" title={formatCoProjectLeaders(project.co_project_leaders)}>
+                          {formatCoProjectLeaders(project.co_project_leaders)}
                         </span>
                       </TableCell>
                       <TableCell className="text-[10px] py-2.5 px-3">
@@ -286,7 +306,7 @@ export function SuperAdminOverview({
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} className="h-24 text-center text-xs text-muted-foreground">
+                    <TableCell colSpan={9} className="h-24 text-center text-xs text-muted-foreground">
                       No projects found.
                     </TableCell>
                   </TableRow>
