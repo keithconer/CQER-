@@ -49,10 +49,11 @@ export default async function DashboardPage() {
     academic_program: string | null;
     start_date: string | null;
     end_date: string | null;
-    gad_score: number | null;
-    created_by: string;
-    created_by_name: string;
-    created_by_department: string | null;
+    proponents: { name: string }[] | null;
+    category: "new" | "existing" | "on process" | null;
+    funding_source: "internally funded" | "externally funded" | null;
+    budget_total: number | null;
+    budget_requirements: { name: string; amount: number }[] | null;
   }[] = [];
 
   if (profile.user_type === "super_admin") {
@@ -65,7 +66,7 @@ export default async function DashboardPage() {
         .order("created_at", { ascending: false }),
       adminClient
         .from("projects")
-        .select("id, title, academic_program, start_date, end_date, gad_score, created_by")
+        .select("id, title, academic_program, start_date, end_date, proponents, category, funding_source, budget_total, budget_requirements")
         .order("created_at", { ascending: false }),
     ]);
 
@@ -77,25 +78,7 @@ export default async function DashboardPage() {
           account.user_type === "unit_coordinator"
       ) || [];
 
-    const profileMap = new Map(
-      allAccounts.map((account) => [
-        account.id,
-        {
-          name: `${account.first_name || ""} ${account.last_name || ""}`.trim() || "Unknown User",
-          department: account.department,
-        },
-      ])
-    );
-
-    allProjects =
-      (projectsData || []).map((project) => {
-        const createdBy = profileMap.get(project.created_by);
-        return {
-          ...project,
-          created_by_name: createdBy?.name || "Unknown User",
-          created_by_department: createdBy?.department || null,
-        };
-      });
+    allProjects = (projectsData as typeof allProjects | null) || [];
   }
 
   const userType = profile.user_type;

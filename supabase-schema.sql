@@ -144,6 +144,62 @@ $$;
 -- END COPY: Unit Coordinator Shared Visibility + Realtime
 -- ============================================================
 
+-- ============================================================
+-- START COPY: Dashboard Table Column Support (Category/Funding/Budget Total)
+-- ============================================================
+-- Add new project fields used by Unit Coordinator and Super Admin dashboard tables.
+alter table public.projects
+add column if not exists category text,
+add column if not exists funding_source text,
+add column if not exists budget_total numeric(14,2);
+
+-- Enforce allowed dropdown values.
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'projects_category_check'
+  ) then
+    alter table public.projects
+      add constraint projects_category_check
+      check (category in ('new', 'existing', 'on process') or category is null);
+  end if;
+end
+$$;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'projects_funding_source_check'
+  ) then
+    alter table public.projects
+      add constraint projects_funding_source_check
+      check (funding_source in ('internally funded', 'externally funded') or funding_source is null);
+  end if;
+end
+$$;
+
+-- Backfill existing rows:
+-- 1) Default category/funding where missing.
+-- 2) Compute budget_total from budget_requirements JSON when available.
+update public.projects
+set
+  category = coalesce(category, 'existing'),
+  funding_source = coalesce(funding_source, 'internally funded'),
+  budget_total = coalesce(
+    budget_total,
+    (
+      select coalesce(sum((item->>'amount')::numeric), 0)
+      from jsonb_array_elements(coalesce(projects.budget_requirements, '[]'::jsonb)) as item
+    )
+  );
+-- ============================================================
+-- END COPY: Dashboard Table Column Support (Category/Funding/Budget Total)
+-- ============================================================
+
 -- ============================================
 -- PDF Upload Enhancement
 -- Run this in Supabase SQL Editor

@@ -9,7 +9,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { Eye, Pencil, Trash2, Search, ChevronLeft, ChevronRight, AlertTriangle, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -38,8 +37,13 @@ export interface Project {
   title: string;
   classification: string[];
   academic_program: string;
-  start_date: string;
-  end_date: string;
+  start_date: string | null;
+  end_date: string | null;
+  proponents: { name: string }[];
+  category: "new" | "existing" | "on process" | null;
+  funding_source: "internally funded" | "externally funded" | null;
+  budget_total: number | null;
+  budget_requirements: { name: string; amount: number }[];
   gad_score: number;
   sdg_goals: string[];
   target_beneficiaries: string[];
@@ -71,9 +75,49 @@ export function ProjectsTable({
 
   const filteredProjects = React.useMemo(() => {
     return projects.filter((project) =>
-      project.title.toLowerCase().includes(searchTerm.toLowerCase())
+      [
+        project.title,
+        project.academic_program,
+        (project.proponents || []).map((person) => person?.name || "").join(", "),
+        project.category || "",
+        project.funding_source || "",
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase())
     );
   }, [projects, searchTerm]);
+
+  const formatProjectLeaders = (proponents: Project["proponents"]) => {
+    if (!Array.isArray(proponents) || proponents.length === 0) return "-";
+    const names = proponents
+      .map((item) => item?.name?.trim())
+      .filter(Boolean) as string[];
+    return names.length > 0 ? names.join(", ") : "-";
+  };
+
+  const formatDurationYears = (startDate?: string, endDate?: string) => {
+    if (!startDate || !endDate) return "-";
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) return "-";
+    const years = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 365);
+    return `${years.toFixed(1)} year${years >= 1.95 ? "s" : ""}`;
+  };
+
+  const getBudgetTotal = (project: Project) => {
+    if (typeof project.budget_total === "number") return project.budget_total;
+    if (!Array.isArray(project.budget_requirements)) return 0;
+    return project.budget_requirements.reduce((sum, item) => sum + (Number(item?.amount) || 0), 0);
+  };
+
+  const formatBudgetTotal = (value: number) =>
+    new Intl.NumberFormat("en-PH", {
+      style: "currency",
+      currency: "PHP",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
 
   const totalPages = Math.ceil(filteredProjects.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -154,11 +198,16 @@ export function ProjectsTable({
           <TableHeader className="bg-muted/30">
             <TableRow className="hover:bg-transparent border-border/50">
               <TableHead className="text-[10px] font-semibold h-9">Project Title</TableHead>
+              <TableHead className="text-[10px] font-semibold h-9">Project Leader/s (Proponents)</TableHead>
               <TableHead className="text-[10px] font-semibold h-9">Program</TableHead>
+              <TableHead className="text-[10px] font-semibold h-9">Duration (Year)</TableHead>
               <TableHead className="text-[10px] font-semibold h-9">Period</TableHead>
-              <TableHead className="text-[10px] font-semibold h-9">GAD Score</TableHead>
-              <TableHead className="text-[10px] font-semibold h-9">SDGs</TableHead>
-              <TableHead className="text-[10px] font-semibold h-9 text-right">Actions</TableHead>
+              <TableHead className="text-[10px] font-semibold h-9">Category</TableHead>
+              <TableHead className="text-[10px] font-semibold h-9">Funding</TableHead>
+              <TableHead className="text-[10px] font-semibold h-9">Budget Total</TableHead>
+              {!readOnly && (
+                <TableHead className="text-[10px] font-semibold h-9 text-right">Actions</TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -175,36 +224,43 @@ export function ProjectsTable({
                       </span>
                     </div>
                   </TableCell>
+                  <TableCell className="text-[10px] py-2.5 px-3 max-w-[220px]">
+                    <span className="line-clamp-2" title={formatProjectLeaders(project.proponents)}>
+                      {formatProjectLeaders(project.proponents)}
+                    </span>
+                  </TableCell>
                   <TableCell className="text-[10px] py-2.5 px-3">
                     {project.academic_program}
                   </TableCell>
                   <TableCell className="text-[10px] py-2.5 px-3">
-                    <span className="whitespace-nowrap">
-                      {format(new Date(project.start_date), "MMM d, yyyy")}
-                    </span>
-                    <span className="mx-1 text-muted-foreground">-</span>
-                    <span className="whitespace-nowrap">
-                      {format(new Date(project.end_date), "MMM d, yyyy")}
-                    </span>
+                    {formatDurationYears(project.start_date, project.end_date)}
                   </TableCell>
-                  <TableCell className="text-[10px] py-2.5 px-3 font-medium">
-                    {project.gad_score}
+                  <TableCell className="text-[10px] py-2.5 px-3">
+                    {project.start_date && project.end_date ? (
+                      <>
+                        <span className="whitespace-nowrap">
+                          {format(new Date(project.start_date), "MMM d, yyyy")}
+                        </span>
+                        <span className="mx-1 text-muted-foreground">-</span>
+                        <span className="whitespace-nowrap">
+                          {format(new Date(project.end_date), "MMM d, yyyy")}
+                        </span>
+                      </>
+                    ) : (
+                      "-"
+                    )}
                   </TableCell>
-                  <TableCell className="py-2.5 px-3">
-                    <div className="flex flex-wrap gap-1">
-                      {project.sdg_goals.slice(0, 1).map((sdg) => (
-                        <Badge key={sdg} variant="outline" className="text-[9px] px-1.5 py-0 leading-none h-4 bg-[#159E44]/5 text-[#159E44] border-[#159E44]/20">
-                          {sdg}
-                        </Badge>
-                      ))}
-                      {project.sdg_goals.length > 1 && (
-                        <Badge variant="outline" className="text-[9px] px-1.5 py-0 leading-none h-4">
-                          +{project.sdg_goals.length - 1} more
-                        </Badge>
-                      )}
-                    </div>
+                  <TableCell className="text-[10px] py-2.5 px-3">
+                    {project.category || "-"}
                   </TableCell>
-                  <TableCell className="py-2.5 px-3 text-right">
+                  <TableCell className="text-[10px] py-2.5 px-3">
+                    {project.funding_source || "-"}
+                  </TableCell>
+                  <TableCell className="text-[10px] py-2.5 px-3 font-medium whitespace-nowrap">
+                    {formatBudgetTotal(getBudgetTotal(project))}
+                  </TableCell>
+                  {!readOnly && (
+                    <TableCell className="py-2.5 px-3 text-right">
                     <div className="flex justify-end gap-1">
                       {project.documents && project.documents.length > 0 && (
                         project.documents.length === 1 ? (
@@ -276,12 +332,13 @@ export function ProjectsTable({
                         </>
                       )}
                     </div>
-                  </TableCell>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center text-xs text-muted-foreground">
+                <TableCell colSpan={readOnly ? 8 : 9} className="h-24 text-center text-xs text-muted-foreground">
                   No matches found for &quot;{searchTerm}&quot;
                 </TableCell>
               </TableRow>

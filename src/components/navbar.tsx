@@ -44,7 +44,7 @@ export function Navbar({ user }: NavbarProps) {
 
   return (
     <header className="border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="max-w-6xl mx-auto flex h-12 items-center justify-between px-4">
+      <div className="max-w-[95rem] mx-auto flex h-12 items-center justify-between px-2 sm:px-3 md:px-4">
         {/* Left: App name */}
         <button 
           onClick={() => router.push("/dashboard")}

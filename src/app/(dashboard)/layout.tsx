@@ -61,7 +61,7 @@ export default async function DashboardLayout({
   return (
     <div className="min-h-screen bg-background">
       <Navbar user={userData} />
-      <main className="max-w-6xl mx-auto px-4 py-6">{children}</main>
+      <main className="max-w-[95rem] mx-auto px-2 sm:px-3 md:px-4 py-6">{children}</main>
     </div>
   );
 }

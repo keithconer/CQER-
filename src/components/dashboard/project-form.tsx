@@ -102,6 +102,9 @@ const classificationOptions = [
   "Societal Development and Equality",
 ];
 
+const categoryOptions = ["new", "existing", "on process"] as const;
+const fundingSourceOptions = ["internally funded", "externally funded"] as const;
+
 interface ProjectFormValues {
   title: string;
   classification: string[];
@@ -113,9 +116,12 @@ interface ProjectFormValues {
   collaborating_agencies: string;
   target_beneficiaries: string[];
   community_location: string;
+  category: "new" | "existing" | "on process";
+  funding_source: "internally funded" | "externally funded";
   start_date: Date;
   end_date: Date;
   budget_requirements: { name: string; amount: number }[];
+  budget_total: number;
   gad_score: number;
   documents: { url: string; name: string }[];
 }
@@ -133,12 +139,19 @@ const projectSchema = z.object({
   collaborating_agencies: z.string(),
   target_beneficiaries: z.array(z.string()).min(1, "Select at least one beneficiary"),
   community_location: z.string(),
+  category: z.enum(categoryOptions, {
+    errorMap: () => ({ message: "Category is required" }),
+  }),
+  funding_source: z.enum(fundingSourceOptions, {
+    errorMap: () => ({ message: "Funding source is required" }),
+  }),
   start_date: z.date(),
   end_date: z.date(),
   budget_requirements: z.array(z.object({
     name: z.string().min(1, "Budget name is required"),
     amount: z.coerce.number().min(0, "Amount must be positive")
   })),
+  budget_total: z.coerce.number().min(0, "Budget total must be positive"),
   gad_score: z.coerce.number().min(0).max(100),
   documents: z.array(z.object({
     url: z.string(),
@@ -166,9 +179,20 @@ export function ProjectForm({ onSuccess, project, isViewOnly }: ProjectFormProps
       collaborating_agencies: project?.collaborating_agencies || "",
       target_beneficiaries: Array.isArray(project?.target_beneficiaries) ? project.target_beneficiaries : project?.target_beneficiaries ? [project.target_beneficiaries] : [],
       community_location: project?.community_location || "",
+      category: project?.category || "new",
+      funding_source: project?.funding_source || "internally funded",
       start_date: project?.start_date ? new Date(project.start_date) : new Date(),
       end_date: project?.end_date ? new Date(project.end_date) : new Date(),
       budget_requirements: project?.budget_requirements || [{ name: "", amount: 0 }],
+      budget_total:
+        typeof project?.budget_total === "number"
+          ? project.budget_total
+          : Array.isArray(project?.budget_requirements)
+            ? project.budget_requirements.reduce(
+                (sum: number, item: { amount?: number }) => sum + (Number(item?.amount) || 0),
+                0
+              )
+            : 0,
       gad_score: project?.gad_score || 0,
       documents: project?.documents || [],
     },
@@ -554,6 +578,58 @@ export function ProjectForm({ onSuccess, project, isViewOnly }: ProjectFormProps
               />
             </div>
 
+            {/* Category & Funding Source */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control as any}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs">Category</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isViewOnly}>
+                      <FormControl>
+                        <SelectTrigger className="h-8 text-xs capitalize">
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {categoryOptions.map((category) => (
+                          <SelectItem key={category} value={category} className="text-xs capitalize">
+                            {category}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage className="text-[10px]" />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control as any}
+                name="funding_source"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs">Funding Source</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isViewOnly}>
+                      <FormControl>
+                        <SelectTrigger className="h-8 text-xs capitalize">
+                          <SelectValue placeholder="Select funding source" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {fundingSourceOptions.map((source) => (
+                          <SelectItem key={source} value={source} className="text-xs capitalize">
+                            {source}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage className="text-[10px]" />
+                  </FormItem>
+                )}
+              />
+            </div>
+
             {/* Dates */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
@@ -710,19 +786,37 @@ export function ProjectForm({ onSuccess, project, isViewOnly }: ProjectFormProps
             </div>
 
             {/* GAD Score */}
-            <FormField
-              control={form.control as any}
-              name="gad_score"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs">Total GAD Score for project identification and design stages</FormLabel>
-                  <FormControl>
-                    <Input type="number" step="0.01" placeholder="0.00" {...field} className="h-8 text-xs" disabled={isViewOnly} />
-                  </FormControl>
-                  <FormMessage className="text-[10px]" />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control as any}
+                name="budget_total"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs">Budget Total (Php)</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <span className="absolute left-2 top-2.5 text-xs text-muted-foreground">₱</span>
+                        <Input type="number" step="0.01" placeholder="0.00" {...field} className="h-8 text-xs pl-5" disabled={isViewOnly} />
+                      </div>
+                    </FormControl>
+                    <FormMessage className="text-[10px]" />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control as any}
+                name="gad_score"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs">Total GAD Score for project identification and design stages</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" placeholder="0.00" {...field} className="h-8 text-xs" disabled={isViewOnly} />
+                    </FormControl>
+                    <FormMessage className="text-[10px]" />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             {/* Document Copies (PDF) */}
             <div className="space-y-3 pt-2">
