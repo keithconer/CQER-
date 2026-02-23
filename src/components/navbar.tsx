@@ -22,6 +22,8 @@ interface NavbarProps {
     email: string;
     avatarUrl: string | null;
     userType: string;
+    department: string | null;
+    unit: string | null;
   };
 }
 
@@ -50,10 +52,19 @@ export function Navbar({ user }: NavbarProps) {
 
   const initials =
     (user.firstName?.[0] || "") + (user.lastName?.[0] || "");
+  const roleLabel =
+    user.userType === "super_admin"
+      ? "Super Admin"
+      : user.userType === "college_coordinator"
+        ? "College Coordinator"
+        : "Unit Coordinator";
+  const deptUnitLabel = user.department
+    ? `${user.department}${user.unit ? ` • ${user.unit}` : ""}`
+    : null;
 
   return (
     <header className="border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="max-w-[95rem] mx-auto flex h-12 items-center justify-between px-2 sm:px-3 md:px-4">
+      <div className="max-w-[95rem] mx-auto flex min-h-12 items-center justify-between px-2 sm:px-3 md:px-4 py-1.5">
         {/* Left: App name */}
         <button 
           onClick={() => router.push("/dashboard")}
@@ -108,9 +119,19 @@ export function Navbar({ user }: NavbarProps) {
               {initials.toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          <span className="text-xs font-medium hidden sm:inline">
-            {user.firstName}
-          </span>
+          <div className="hidden sm:flex flex-col leading-tight">
+            <span className="text-xs font-medium">
+              {user.firstName}
+            </span>
+            <span className="inline-flex w-fit mt-0.5 rounded-full border border-[#159E44]/25 bg-white px-1.5 py-0.5 text-[9px] font-medium text-[#159E44]">
+              {roleLabel}
+            </span>
+            {deptUnitLabel && (
+              <span className="text-[9px] text-muted-foreground mt-0.5">
+                {deptUnitLabel}
+              </span>
+            )}
+          </div>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

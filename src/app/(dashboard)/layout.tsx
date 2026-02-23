@@ -56,6 +56,8 @@ export default async function DashboardLayout({
       user.user_metadata?.picture ||
       null,
     userType: profile.user_type,
+    department: profile.department || null,
+    unit: profile.unit || null,
   };
 
   return (
