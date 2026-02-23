@@ -104,7 +104,7 @@ export default async function DashboardPage({
           </p>
         </div>
         <div className="flex flex-col items-start sm:items-end gap-1">
-          <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#159E44]/10 text-[#159E44] text-[10px] font-medium border border-[#159E44]/20">
+          <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-white text-[#159E44] text-[10px] font-medium border border-[#159E44]/25">
             {userType === "super_admin" 
               ? "Super Admin" 
               : userType === "college_coordinator" 

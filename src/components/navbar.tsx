@@ -80,7 +80,7 @@ export function Navbar({ user }: NavbarProps) {
                 onClick={() => router.push("/dashboard?view=programs")}
                 className={`h-7 text-[10px] px-2.5 ${
                   activeView === "programs"
-                    ? "bg-[#159E44] hover:bg-[#128A3B] text-white"
+                    ? "bg-transparent text-[#159E44] hover:bg-muted"
                     : "bg-transparent text-foreground hover:bg-muted"
                 }`}
               >
@@ -91,7 +91,7 @@ export function Navbar({ user }: NavbarProps) {
                 onClick={() => router.push("/dashboard?view=projects")}
                 className={`h-7 text-[10px] px-2.5 ${
                   activeView === "projects"
-                    ? "bg-[#159E44] hover:bg-[#128A3B] text-white"
+                    ? "bg-transparent text-[#159E44] hover:bg-muted"
                     : "bg-transparent text-foreground hover:bg-muted"
                 }`}
               >
