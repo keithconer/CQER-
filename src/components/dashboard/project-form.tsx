@@ -111,6 +111,7 @@ const toTitleCase = (value: string) =>
     .join(" ");
 
 interface ProjectFormValues {
+  entry_type: "project" | "program";
   title: string;
   classification: string[];
   sdg_goals: string[];
@@ -133,6 +134,7 @@ interface ProjectFormValues {
 }
 
 const projectSchema = z.object({
+  entry_type: z.enum(["project", "program"]),
   title: z.string().min(1, "Title is required"),
   classification: z.array(z.string()).min(1, "Select at least one classification"),
   sdg_goals: z.array(z.string()).min(1, "Select at least one SDG"),
@@ -172,12 +174,17 @@ interface ProjectFormProps {
   onSuccess?: () => void;
   project?: any;
   isViewOnly?: boolean;
+  mode?: "project" | "program";
 }
 
-export function ProjectForm({ onSuccess, project, isViewOnly }: ProjectFormProps) {
+export function ProjectForm({ onSuccess, project, isViewOnly, mode = "project" }: ProjectFormProps) {
+  const resolvedMode = (project?.entry_type as "project" | "program" | undefined) || mode;
+  const recordLabel = resolvedMode === "program" ? "Program" : "Project";
+
   const form = useForm<ProjectFormValues>({
     resolver: zodResolver(projectSchema) as any,
     defaultValues: {
+      entry_type: resolvedMode,
       title: project?.title || "",
       classification: Array.isArray(project?.classification) ? project.classification : project?.classification ? [project.classification] : [],
       sdg_goals: project?.sdg_goals || [],
@@ -288,7 +295,7 @@ export function ProjectForm({ onSuccess, project, isViewOnly }: ProjectFormProps
                 name="title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs">Program/Project Title</FormLabel>
+                    <FormLabel className="text-xs">{recordLabel} Title</FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder="Enter title"
@@ -957,7 +964,7 @@ export function ProjectForm({ onSuccess, project, isViewOnly }: ProjectFormProps
                   className="h-8 text-xs px-6 bg-[#159E44] hover:bg-[#128A3B]"
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? "Submitting..." : project?.id ? "Update Project" : "Submit Project"}
+                  {isSubmitting ? "Submitting..." : project?.id ? `Update ${recordLabel}` : `Submit ${recordLabel}`}
                 </Button>
               </div>
             )}
@@ -972,12 +979,12 @@ export function ProjectForm({ onSuccess, project, isViewOnly }: ProjectFormProps
               <CheckCircle2 className="h-10 w-10 text-[#159E44]" />
             </div>
             <DialogTitle className="text-lg font-semibold text-center">
-              {project?.id ? "Project Updated!" : "Project Created!"}
+              {project?.id ? `${recordLabel} Updated!` : `${recordLabel} Created!`}
             </DialogTitle>
             <DialogDescription className="text-xs text-center">
               {project?.id 
-                ? "The project information has been successfully updated." 
-                : "The project has been successfully registered."}
+                ? `The ${recordLabel.toLowerCase()} information has been successfully updated.` 
+                : `The ${recordLabel.toLowerCase()} has been successfully registered.`}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="sm:justify-center">

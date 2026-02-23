@@ -203,6 +203,38 @@ set
 -- END COPY: Dashboard Table Column Support (Category/Funding/Budget Total)
 -- ============================================================
 
+-- ============================================================
+-- START COPY: Program Support Using Shared Projects Table
+-- ============================================================
+-- Reuse public.projects for both "project" and "program" records.
+alter table public.projects
+add column if not exists entry_type text default 'project';
+
+-- Enforce allowed values and non-null moving forward.
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'projects_entry_type_check'
+  ) then
+    alter table public.projects
+      add constraint projects_entry_type_check
+      check (entry_type in ('project', 'program'));
+  end if;
+end
+$$;
+
+update public.projects
+set entry_type = coalesce(entry_type, 'project');
+
+alter table public.projects
+alter column entry_type set default 'project',
+alter column entry_type set not null;
+-- ============================================================
+-- END COPY: Program Support Using Shared Projects Table
+-- ============================================================
+
 -- ============================================
 -- PDF Upload Enhancement
 -- Run this in Supabase SQL Editor

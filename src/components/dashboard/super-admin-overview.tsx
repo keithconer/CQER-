@@ -29,6 +29,7 @@ interface RegisteredAccount {
 
 interface ExistingProject {
   id: string;
+  entry_type?: "project" | "program" | null;
   title: string;
   academic_program: string | null;
   start_date: string | null;
@@ -58,7 +59,7 @@ export function SuperAdminOverview({
   accounts,
   projects,
 }: SuperAdminOverviewProps) {
-  const [activeTab, setActiveTab] = React.useState<"accounts" | "projects">(
+  const [activeTab, setActiveTab] = React.useState<"accounts" | "projects" | "programs">(
     "projects"
   );
   const [searchTerm, setSearchTerm] = React.useState("");
@@ -85,6 +86,30 @@ export function SuperAdminOverview({
   const filteredProjects = React.useMemo(() => {
     const term = searchTerm.toLowerCase();
     return projects.filter((project) => {
+      if ((project.entry_type || "project") !== "project") return false;
+      return (
+        project.title.toLowerCase().includes(term) ||
+        (project.academic_program || "").toLowerCase().includes(term) ||
+        (project.proponents || [])
+          .map((person) => person?.name || "")
+          .join(", ")
+          .toLowerCase()
+          .includes(term) ||
+        (project.co_project_leaders || [])
+          .map((person) => person?.name || "")
+          .join(", ")
+          .toLowerCase()
+          .includes(term) ||
+        (project.category || "").toLowerCase().includes(term) ||
+        (project.funding_source || "").toLowerCase().includes(term)
+      );
+    });
+  }, [projects, searchTerm]);
+
+  const filteredPrograms = React.useMemo(() => {
+    const term = searchTerm.toLowerCase();
+    return projects.filter((project) => {
+      if ((project.entry_type || "project") !== "program") return false;
       return (
         project.title.toLowerCase().includes(term) ||
         (project.academic_program || "").toLowerCase().includes(term) ||
@@ -150,13 +175,19 @@ export function SuperAdminOverview({
       maximumFractionDigits: 2,
     }).format(value);
 
-  const activeItems = activeTab === "accounts" ? filteredAccounts : filteredProjects;
+  const activeItems =
+    activeTab === "accounts"
+      ? filteredAccounts
+      : activeTab === "projects"
+        ? filteredProjects
+        : filteredPrograms;
   const totalPages = Math.max(1, Math.ceil(activeItems.length / ITEMS_PER_PAGE));
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
 
   const paginatedAccounts = filteredAccounts.slice(startIndex, endIndex);
   const paginatedProjects = filteredProjects.slice(startIndex, endIndex);
+  const paginatedPrograms = filteredPrograms.slice(startIndex, endIndex);
 
   return (
     <Card className="border-border/50 shadow-sm">
@@ -189,7 +220,18 @@ export function SuperAdminOverview({
                   : "bg-transparent text-foreground hover:bg-muted"
               }`}
             >
-              Existing Projects
+              Project Tables
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => setActiveTab("programs")}
+              className={`h-7 text-[10px] px-2.5 ${
+                activeTab === "programs"
+                  ? "bg-[#159E44] hover:bg-[#128A3B] text-white"
+                  : "bg-transparent text-foreground hover:bg-muted"
+              }`}
+            >
+              Program Tables
             </Button>
           </div>
         </div>
@@ -202,7 +244,7 @@ export function SuperAdminOverview({
                 ? "Search accounts..."
                 : "Search..."
             }
-            className="pl-8 h-8 text-xs bg-muted/20 border-border/50"
+            className="pl-8 h-8 text-xs placeholder:text-[10px] bg-muted/20 border-border/50"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -257,13 +299,13 @@ export function SuperAdminOverview({
                 )}
               </TableBody>
             </Table>
-          ) : (
+          ) : activeTab === "projects" ? (
             <Table>
               <TableHeader className="bg-muted/30">
                 <TableRow className="hover:bg-transparent border-border/50">
                   <TableHead className="text-[10px] font-semibold h-9">Project Title</TableHead>
                   <TableHead className="text-[10px] font-semibold h-9">Project Leader/s (Proponents)</TableHead>
-                  <TableHead className="text-[10px] font-semibold h-9">Co-Project Leaders (Optional)</TableHead>
+                  <TableHead className="text-[10px] font-semibold h-9">Co-Project Leaders</TableHead>
                   <TableHead className="text-[10px] font-semibold h-9">Program</TableHead>
                   <TableHead className="text-[10px] font-semibold h-9">Duration (Year)</TableHead>
                   <TableHead className="text-[10px] font-semibold h-9">Period (Date)</TableHead>
@@ -320,6 +362,69 @@ export function SuperAdminOverview({
                 )}
               </TableBody>
             </Table>
+          ) : (
+            <Table>
+              <TableHeader className="bg-muted/30">
+                <TableRow className="hover:bg-transparent border-border/50">
+                  <TableHead className="text-[10px] font-semibold h-9">Program Title</TableHead>
+                  <TableHead className="text-[10px] font-semibold h-9">Project Leader/s (Proponents)</TableHead>
+                  <TableHead className="text-[10px] font-semibold h-9">Co-Project Leaders</TableHead>
+                  <TableHead className="text-[10px] font-semibold h-9">Program</TableHead>
+                  <TableHead className="text-[10px] font-semibold h-9">Duration (Year)</TableHead>
+                  <TableHead className="text-[10px] font-semibold h-9">Period (Date)</TableHead>
+                  <TableHead className="text-[10px] font-semibold h-9">Category</TableHead>
+                  <TableHead className="text-[10px] font-semibold h-9">Funding</TableHead>
+                  <TableHead className="text-[10px] font-semibold h-9">Budget Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginatedPrograms.length > 0 ? (
+                  paginatedPrograms.map((program) => (
+                    <TableRow key={program.id} className="hover:bg-muted/10 border-border/30">
+                      <TableCell className="text-[10px] py-2.5 px-3 font-medium max-w-[260px] truncate" title={program.title}>
+                        {program.title}
+                      </TableCell>
+                      <TableCell className="text-[10px] py-2.5 px-3 max-w-[220px]">
+                        <span className="line-clamp-2" title={formatProjectLeaders(program.proponents)}>
+                          {formatProjectLeaders(program.proponents)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-[10px] py-2.5 px-3 max-w-[220px]">
+                        <span className="line-clamp-2" title={formatCoProjectLeaders(program.co_project_leaders)}>
+                          {formatCoProjectLeaders(program.co_project_leaders)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-[10px] py-2.5 px-3">
+                        {program.academic_program || "-"}
+                      </TableCell>
+                      <TableCell className="text-[10px] py-2.5 px-3">
+                        {formatDurationYears(program.start_date, program.end_date)}
+                      </TableCell>
+                      <TableCell className="text-[10px] py-2.5 px-3">
+                        {program.start_date && program.end_date
+                          ? `${format(new Date(program.start_date), "MMM d, yyyy")} - ${format(new Date(program.end_date), "MMM d, yyyy")}`
+                          : "-"}
+                      </TableCell>
+                      <TableCell className="text-[10px] py-2.5 px-3">
+                        {program.category ? toTitleCase(program.category) : "-"}
+                      </TableCell>
+                      <TableCell className="text-[10px] py-2.5 px-3">
+                        {program.funding_source || "-"}
+                      </TableCell>
+                      <TableCell className="text-[10px] py-2.5 px-3 font-medium whitespace-nowrap">
+                        {formatBudgetTotal(getBudgetTotal(program))}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={9} className="h-24 text-center text-xs text-muted-foreground">
+                      No programs found.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
           )}
         </div>
 
@@ -327,7 +432,7 @@ export function SuperAdminOverview({
           <div className="flex items-center justify-between px-2 pt-1">
             <p className="text-[10px] text-muted-foreground">
               Showing {startIndex + 1} to {Math.min(endIndex, activeItems.length)} of{" "}
-              {activeItems.length} {activeTab === "accounts" ? "records" : "projects"}
+              {activeItems.length} {activeTab === "accounts" ? "records" : activeTab === "projects" ? "projects" : "programs"}
             </p>
             <div className="flex items-center gap-1">
               <Button

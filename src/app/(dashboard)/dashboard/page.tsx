@@ -45,6 +45,7 @@ export default async function DashboardPage() {
 
   let allProjects: {
     id: string;
+    entry_type?: "project" | "program" | null;
     title: string;
     academic_program: string | null;
     start_date: string | null;
@@ -67,7 +68,7 @@ export default async function DashboardPage() {
         .order("created_at", { ascending: false }),
       adminClient
         .from("projects")
-        .select("id, title, academic_program, start_date, end_date, proponents, co_project_leaders, category, funding_source, budget_total, budget_requirements")
+        .select("id, entry_type, title, academic_program, start_date, end_date, proponents, co_project_leaders, category, funding_source, budget_total, budget_requirements")
         .order("created_at", { ascending: false }),
     ]);
 

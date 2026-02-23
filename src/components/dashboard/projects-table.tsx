@@ -34,6 +34,7 @@ import { useRouter } from "next/navigation";
 
 export interface Project {
   id: string;
+  entry_type?: "project" | "program" | null;
   title: string;
   classification: string[];
   academic_program: string;
@@ -53,6 +54,7 @@ export interface Project {
 
 interface ProjectsTableProps {
   projects: Project[];
+  entityType?: "project" | "program";
   readOnly?: boolean;
   searchTerm?: string;
   onSearchTermChange?: (value: string) => void;
@@ -62,12 +64,16 @@ interface ProjectsTableProps {
 
 export function ProjectsTable({
   projects,
+  entityType = "project",
   readOnly = false,
   searchTerm: controlledSearchTerm,
   onSearchTermChange,
   showSearch = true,
   paginationAlign = "between",
 }: ProjectsTableProps) {
+  const recordLabel = entityType === "program" ? "Program" : "Project";
+  const recordLabelPlural = entityType === "program" ? "programs" : "projects";
+
   const [internalSearchTerm, setInternalSearchTerm] = React.useState("");
   const searchTerm = controlledSearchTerm ?? internalSearchTerm;
   const setSearchTerm = onSearchTermChange ?? setInternalSearchTerm;
@@ -191,7 +197,7 @@ export function ProjectsTable({
   if (!projects || projects.length === 0) {
     return (
       <div className="text-center py-8 border border-dashed rounded-lg bg-muted/20">
-        <p className="text-xs text-muted-foreground">No projects found. Create one to get started.</p>
+        <p className="text-xs text-muted-foreground">No {recordLabelPlural} found. Create one to get started.</p>
       </div>
     );
   }
@@ -203,7 +209,7 @@ export function ProjectsTable({
           <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
           <Input
             placeholder="Search..."
-            className="pl-8 h-8 text-xs bg-muted/20 border-border/50"
+            className="pl-8 h-8 text-xs placeholder:text-[10px] bg-muted/20 border-border/50"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -214,9 +220,9 @@ export function ProjectsTable({
         <Table>
           <TableHeader className="bg-muted/30">
             <TableRow className="hover:bg-transparent border-border/50">
-              <TableHead className="text-[10px] font-semibold h-9">Project Title</TableHead>
+              <TableHead className="text-[10px] font-semibold h-9">{recordLabel} Title</TableHead>
               <TableHead className="text-[10px] font-semibold h-9">Project Leader/s (Proponents)</TableHead>
-              <TableHead className="text-[10px] font-semibold h-9">Co-Project Leaders (Optional)</TableHead>
+              <TableHead className="text-[10px] font-semibold h-9">Co-Project Leaders</TableHead>
               <TableHead className="text-[10px] font-semibold h-9">Program</TableHead>
               <TableHead className="text-[10px] font-semibold h-9">Duration (Year)</TableHead>
               <TableHead className="text-[10px] font-semibold h-9">Period (Date)</TableHead>
@@ -379,7 +385,7 @@ export function ProjectsTable({
         >
           {paginationAlign === "between" && (
             <p className="text-[10px] text-muted-foreground">
-              Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredProjects.length)} of {filteredProjects.length} projects
+              Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredProjects.length)} of {filteredProjects.length} {recordLabelPlural}
             </p>
           )}
           <div className="flex items-center gap-1">
@@ -412,13 +418,13 @@ export function ProjectsTable({
       <Dialog open={!!viewProject} onOpenChange={(open) => !open && setViewProject(null)}>
         <DialogContent className="sm:max-w-[800px] p-6 max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader className="pb-2">
-            <DialogTitle className="text-sm font-semibold">Project Details</DialogTitle>
+            <DialogTitle className="text-sm font-semibold">{recordLabel} Details</DialogTitle>
             <DialogDescription className="text-[10px]">
               Viewing complete information for {viewProject?.title}
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-hidden">
-            {viewProject && <ProjectForm project={viewProject} isViewOnly onSuccess={() => setViewProject(null)} />}
+            {viewProject && <ProjectForm project={viewProject} mode={(viewProject.entry_type || entityType) as "project" | "program"} isViewOnly onSuccess={() => setViewProject(null)} />}
           </div>
         </DialogContent>
       </Dialog>
@@ -427,15 +433,16 @@ export function ProjectsTable({
       <Dialog open={!!editProject} onOpenChange={(open) => !open && setEditProject(null)}>
         <DialogContent className="sm:max-w-[800px] p-6 max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader className="pb-2">
-            <DialogTitle className="text-sm font-semibold">Edit Project</DialogTitle>
+            <DialogTitle className="text-sm font-semibold">Edit {recordLabel}</DialogTitle>
             <DialogDescription className="text-[10px]">
-              Modify project information below.
+              Modify {recordLabel.toLowerCase()} information below.
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-hidden">
             {editProject && (
               <ProjectForm 
                 project={editProject} 
+                mode={(editProject.entry_type || entityType) as "project" | "program"}
                 onSuccess={() => {
                   setEditProject(null);
                   router.refresh();
@@ -453,9 +460,9 @@ export function ProjectsTable({
             <div className="rounded-full bg-destructive/10 p-3 mb-4">
               <AlertTriangle className="h-10 w-10 text-destructive" />
             </div>
-            <DialogTitle className="text-lg font-semibold text-center">Delete Project?</DialogTitle>
+            <DialogTitle className="text-lg font-semibold text-center">Delete {recordLabel}?</DialogTitle>
             <DialogDescription className="text-xs text-center">
-              This action cannot be undone. This will permanently delete the project data.
+              This action cannot be undone. This will permanently delete the {recordLabel.toLowerCase()} data.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="sm:justify-center gap-2">
