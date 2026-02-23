@@ -76,11 +76,10 @@ export function Navbar({ user }: NavbarProps) {
             <Image
               src="/CQERFINAL.png"
               alt="CQER Logo"
-              width={42}
-              height={42}
+              width={48}
+              height={48}
               className="object-contain"
             />
-            <span className="text-sm font-bold tracking-tight">CQER</span>
           </div>
         </button>
 
@@ -130,7 +129,7 @@ export function Navbar({ user }: NavbarProps) {
                 <span
                   onMouseEnter={() => setRolePopoverOpen(true)}
                   onMouseLeave={() => setRolePopoverOpen(false)}
-                  className="inline-flex w-fit mt-0.5 rounded-full border border-[#159E44]/25 bg-[#159E44] px-1.5 py-0.5 text-[9px] font-medium text-white cursor-default"
+                  className="inline-flex w-fit mt-0.5 rounded-full border border-border/40 bg-white px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground/80 cursor-default"
                 >
                   {roleLabel}
                 </span>
