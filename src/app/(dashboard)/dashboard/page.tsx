@@ -7,7 +7,15 @@ import { SuperAdminOverview } from "@/components/dashboard/super-admin-overview"
 import { getProjects, getUnitProjects } from "@/lib/actions/projects";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ view?: string }>;
+}) {
+  const resolvedSearchParams = (await searchParams) || {};
+  const activeEntityType: "project" | "program" =
+    resolvedSearchParams.view === "programs" ? "program" : "project";
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -130,7 +138,7 @@ export default async function DashboardPage() {
             description="Register emails of Unit coordinators for your department."
             department={profile.department}
           />
-          <ProjectManagement initialProjects={projects} readOnly />
+          <ProjectManagement initialProjects={projects} readOnly entityType={activeEntityType} />
         </div>
       )}
 
@@ -138,6 +146,7 @@ export default async function DashboardPage() {
         <UnitProjectsManagement
           myProjects={projects}
           unitProjects={unitProjects}
+          entityType={activeEntityType}
         />
       )}
     </div>

@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,7 +27,13 @@ interface NavbarProps {
 
 export function Navbar({ user }: NavbarProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const supabase = useMemo(() => createClient(), []);
+  const activeView = searchParams.get("view") === "programs" ? "programs" : "projects";
+  const showDataNav =
+    pathname?.startsWith("/dashboard") &&
+    (user.userType === "unit_coordinator" || user.userType === "college_coordinator");
 
   useEffect(() => {
     router.prefetch("/dashboard");
@@ -71,6 +78,32 @@ export function Navbar({ user }: NavbarProps) {
 
         {/* Right: Profile section */}
         <div className="flex items-center gap-2">
+          {showDataNav && (
+            <div className="inline-flex rounded-md border border-border/60 p-0.5 bg-muted/20 mr-1">
+              <Button
+                size="sm"
+                onClick={() => router.push("/dashboard?view=programs")}
+                className={`h-7 text-[10px] px-2.5 ${
+                  activeView === "programs"
+                    ? "bg-[#159E44] hover:bg-[#128A3B] text-white"
+                    : "bg-transparent text-foreground hover:bg-muted"
+                }`}
+              >
+                Programs
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => router.push("/dashboard?view=projects")}
+                className={`h-7 text-[10px] px-2.5 ${
+                  activeView === "projects"
+                    ? "bg-[#159E44] hover:bg-[#128A3B] text-white"
+                    : "bg-transparent text-foreground hover:bg-muted"
+                }`}
+              >
+                Projects
+              </Button>
+            </div>
+          )}
           <Avatar className="h-7 w-7">
             <AvatarImage
               src={user.avatarUrl || undefined}

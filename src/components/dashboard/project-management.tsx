@@ -11,12 +11,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Card,
   CardContent,
   CardDescription,
@@ -30,17 +24,17 @@ import { useRouter } from "next/navigation";
 interface ProjectManagementProps {
   initialProjects: any[];
   readOnly?: boolean;
+  entityType?: "project" | "program";
 }
 
-export function ProjectManagement({ initialProjects, readOnly }: ProjectManagementProps) {
+export function ProjectManagement({ initialProjects, readOnly, entityType = "project" }: ProjectManagementProps) {
   const [open, setOpen] = React.useState(false);
-  const [createMode, setCreateMode] = React.useState<"project" | "program">("project");
-  const [recordType, setRecordType] = React.useState<"project" | "program">("project");
   const router = useRouter();
   const filteredRecords = React.useMemo(
-    () => initialProjects.filter((record) => (record.entry_type || "project") === recordType),
-    [initialProjects, recordType]
+    () => initialProjects.filter((record) => (record.entry_type || "project") === entityType),
+    [initialProjects, entityType]
   );
+  const recordLabel = entityType === "program" ? "Program" : "Project";
 
   const handleSuccess = () => {
     setOpen(false);
@@ -52,73 +46,24 @@ export function ProjectManagement({ initialProjects, readOnly }: ProjectManageme
       <Card className="border-border/50 shadow-sm">
         <CardHeader className="pb-3 pt-4 px-4 flex-row items-center justify-between space-y-0">
           <div>
-            <CardTitle className="text-xs font-semibold">{recordType === "program" ? "Programs" : "Projects"}</CardTitle>
+            <CardTitle className="text-xs font-semibold">{recordLabel}s</CardTitle>
             <CardDescription className="text-[10px]">
-              Manage your college extension {recordType === "program" ? "programs" : "projects"}
+              Manage your college extension {recordLabel.toLowerCase()}s
             </CardDescription>
           </div>
-          <div className="inline-flex rounded-md border border-border/60 p-0.5 bg-muted/20">
-            <Button
-              size="sm"
-              onClick={() => setRecordType("project")}
-              className={`h-7 text-[10px] px-2.5 ${
-                recordType === "project"
-                  ? "bg-[#159E44] hover:bg-[#128A3B] text-white"
-                  : "bg-transparent text-foreground hover:bg-muted"
-              }`}
-            >
-              Project Tables
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => setRecordType("program")}
-              className={`h-7 text-[10px] px-2.5 ${
-                recordType === "program"
-                  ? "bg-[#159E44] hover:bg-[#128A3B] text-white"
-                  : "bg-transparent text-foreground hover:bg-muted"
-              }`}
-            >
-              Program Tables
-            </Button>
-          </div>
           {!readOnly && (
-            <>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    size="sm"
-                    className="text-xs h-8 bg-[#159E44] hover:bg-[#128A3B] text-white"
-                  >
-                    <Plus className="h-3 w-3 mr-1" />
-                    Create
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-44">
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setCreateMode("project");
-                      setOpen(true);
-                    }}
-                    className="text-xs cursor-pointer"
-                  >
-                    Create Project
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setCreateMode("program");
-                      setOpen(true);
-                    }}
-                    className="text-xs cursor-pointer"
-                  >
-                    Create Program
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </>
+            <Button
+              size="sm"
+              className="text-xs h-8 bg-[#159E44] hover:bg-[#128A3B] text-white"
+              onClick={() => setOpen(true)}
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              Create {recordLabel}
+            </Button>
           )}
         </CardHeader>
         <CardContent className="px-4 pb-4">
-          <ProjectsTable projects={filteredRecords} entityType={recordType} readOnly={readOnly} />
+          <ProjectsTable projects={filteredRecords} entityType={entityType} readOnly={readOnly} />
         </CardContent>
       </Card>
 
@@ -126,12 +71,12 @@ export function ProjectManagement({ initialProjects, readOnly }: ProjectManageme
         <Dialog open={open} onOpenChange={setOpen}>
               <DialogContent className="sm:max-w-[800px] p-6 max-h-[90vh] overflow-hidden">
                 <DialogHeader className="pb-2">
-                  <DialogTitle className="text-sm font-semibold">Create New {createMode === "program" ? "Program" : "Project"}</DialogTitle>
+                  <DialogTitle className="text-sm font-semibold">Create New {recordLabel}</DialogTitle>
                   <DialogDescription className="text-[10px]">
-                    Fill out the form below to register a new college extension {createMode}.
+                    Fill out the form below to register a new college extension {recordLabel.toLowerCase()}.
                   </DialogDescription>
                 </DialogHeader>
-                <ProjectForm mode={createMode} onSuccess={handleSuccess} />
+                <ProjectForm mode={entityType} onSuccess={handleSuccess} />
               </DialogContent>
         </Dialog>
       )}

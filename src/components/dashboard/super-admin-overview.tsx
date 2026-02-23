@@ -304,7 +304,7 @@ export function SuperAdminOverview({
               <TableHeader className="bg-muted/30">
                 <TableRow className="hover:bg-transparent border-border/50">
                   <TableHead className="text-[10px] font-semibold h-9">Project Title</TableHead>
-                  <TableHead className="text-[10px] font-semibold h-9">Project Leader/s (Proponents)</TableHead>
+                  <TableHead className="text-[10px] font-semibold h-9">Project Leader</TableHead>
                   <TableHead className="text-[10px] font-semibold h-9">Co-Project Leaders</TableHead>
                   <TableHead className="text-[10px] font-semibold h-9">Program</TableHead>
                   <TableHead className="text-[10px] font-semibold h-9">Duration (Year)</TableHead>
@@ -367,7 +367,7 @@ export function SuperAdminOverview({
               <TableHeader className="bg-muted/30">
                 <TableRow className="hover:bg-transparent border-border/50">
                   <TableHead className="text-[10px] font-semibold h-9">Program Title</TableHead>
-                  <TableHead className="text-[10px] font-semibold h-9">Project Leader/s (Proponents)</TableHead>
+                  <TableHead className="text-[10px] font-semibold h-9">Project Leader</TableHead>
                   <TableHead className="text-[10px] font-semibold h-9">Co-Project Leaders</TableHead>
                   <TableHead className="text-[10px] font-semibold h-9">Program</TableHead>
                   <TableHead className="text-[10px] font-semibold h-9">Duration (Year)</TableHead>

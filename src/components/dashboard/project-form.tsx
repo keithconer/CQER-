@@ -190,7 +190,10 @@ export function ProjectForm({ onSuccess, project, isViewOnly, mode = "project" }
       sdg_goals: project?.sdg_goals || [],
       academic_program: project?.academic_program || "",
       major: project?.major || "",
-      proponents: project?.proponents || [{ name: "" }],
+      proponents:
+        Array.isArray(project?.proponents) && project.proponents.length > 0
+          ? project.proponents
+          : [{ name: "" }],
       co_project_leaders: project?.co_project_leaders || [],
       college: project?.college || "CEIT",
       collaborating_agencies: project?.collaborating_agencies || "",
@@ -217,11 +220,6 @@ export function ProjectForm({ onSuccess, project, isViewOnly, mode = "project" }
 
   const [showSuccess, setShowSuccess] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-
-  const { fields: proponentFields, append: appendProponent, remove: removeProponent } = useFieldArray({
-    name: "proponents",
-    control: form.control,
-  });
 
   const {
     fields: coProjectLeaderFields,
@@ -514,54 +512,26 @@ export function ProjectForm({ onSuccess, project, isViewOnly, mode = "project" }
               )}
             </div>
 
-            {/* Project Leaders (Required) */}
+            {/* Project Leader (Required) */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <FormLabel className="text-xs">Project Leader/s (Proponents)</FormLabel>
-                {!isViewOnly && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => appendProponent({ name: "" })}
-                    className="h-6 text-[10px] px-2"
-                  >
-                    <Plus className="h-3 w-3 mr-1" /> Add
-                  </Button>
+              <FormLabel className="text-xs">Project Leader</FormLabel>
+              <FormField
+                control={form.control as any}
+                name="proponents.0.name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <Input
+                        placeholder="Firstname MI. Lastname"
+                        {...field}
+                        className="h-8 text-xs"
+                        disabled={isViewOnly}
+                      />
+                    </FormControl>
+                    <FormMessage className="text-[10px]" />
+                  </FormItem>
                 )}
-              </div>
-              {proponentFields.map((field, index) => (
-                <div key={field.id} className="flex gap-2">
-                  <FormField
-                    control={form.control as any}
-                    name={`proponents.${index}.name`}
-                    render={({ field: inputField }) => (
-                      <FormItem className="flex-1">
-                        <FormControl>
-                          <Input
-                            placeholder="Firstname MI. Lastname"
-                            {...inputField}
-                            className="h-8 text-xs"
-                            disabled={isViewOnly}
-                          />
-                        </FormControl>
-                        <FormMessage className="text-[10px]" />
-                      </FormItem>
-                    )}
-                  />
-                  {!isViewOnly && proponentFields.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeProponent(index)}
-                      className="h-8 w-8 text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              ))}
+              />
             </div>
 
             {/* Co-Project Leaders (Optional) */}
