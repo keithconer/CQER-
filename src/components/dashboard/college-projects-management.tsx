@@ -224,7 +224,7 @@ export function CollegeProjectsManagement({
           <ProjectsTable
             projects={isMyProjects ? myRecords : departmentRecords}
             entityType={entityType}
-            readOnly={!isMyProjects}
+            readOnly={false}
             searchTerm={searchTerm}
             onSearchTermChange={setSearchTerm}
             showSearch={false}

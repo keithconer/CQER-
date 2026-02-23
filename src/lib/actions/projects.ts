@@ -216,6 +216,7 @@ export async function getUnitProjects() {
 }
 export async function updateProject(id: string, formData: object) {
     const supabase = await createClient();
+    const adminClient = createAdminClient();
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -224,9 +225,37 @@ export async function updateProject(id: string, formData: object) {
 
     const { data: profile } = await supabase
         .from("profiles")
-        .select("user_type, unit")
+        .select("user_type, unit, department")
         .eq("id", user.id)
         .single();
+    if (!profile) {
+        return { error: "Profile not found" };
+    }
+
+    const { data: existingProject, error: existingProjectError } = await adminClient
+        .from("projects")
+        .select("id, created_by")
+        .eq("id", id)
+        .single();
+    if (existingProjectError || !existingProject) {
+        return { error: "Project not found" };
+    }
+
+    const isOwner = existingProject.created_by === user.id;
+    let canManage = isOwner || profile.user_type === "super_admin";
+
+    if (!canManage && profile.user_type === "college_coordinator" && profile.department) {
+        const { data: creatorProfile } = await adminClient
+            .from("profiles")
+            .select("department")
+            .eq("id", existingProject.created_by)
+            .single();
+        canManage = !!creatorProfile?.department && creatorProfile.department === profile.department;
+    }
+
+    if (!canManage) {
+        return { error: "Insufficient permissions to update this record" };
+    }
 
     const payload = { ...(formData as Record<string, unknown>) };
 
@@ -242,14 +271,13 @@ export async function updateProject(id: string, formData: object) {
                 : [];
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await adminClient
         .from("projects")
         .update({
             ...payload,
             updated_at: new Date().toISOString(),
         })
         .eq("id", id)
-        .eq("created_by", user.id)
         .select();
 
     if (error) {
@@ -263,17 +291,51 @@ export async function updateProject(id: string, formData: object) {
 
 export async function deleteProject(id: string) {
     const supabase = await createClient();
+    const adminClient = createAdminClient();
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
         throw new Error("Unauthorized");
     }
 
-    const { error } = await supabase
+    const { data: profile } = await supabase
+        .from("profiles")
+        .select("user_type, department")
+        .eq("id", user.id)
+        .single();
+    if (!profile) {
+        return { error: "Profile not found" };
+    }
+
+    const { data: existingProject, error: existingProjectError } = await adminClient
+        .from("projects")
+        .select("id, created_by")
+        .eq("id", id)
+        .single();
+    if (existingProjectError || !existingProject) {
+        return { error: "Project not found" };
+    }
+
+    const isOwner = existingProject.created_by === user.id;
+    let canManage = isOwner || profile.user_type === "super_admin";
+
+    if (!canManage && profile.user_type === "college_coordinator" && profile.department) {
+        const { data: creatorProfile } = await adminClient
+            .from("profiles")
+            .select("department")
+            .eq("id", existingProject.created_by)
+            .single();
+        canManage = !!creatorProfile?.department && creatorProfile.department === profile.department;
+    }
+
+    if (!canManage) {
+        return { error: "Insufficient permissions to delete this record" };
+    }
+
+    const { error } = await adminClient
         .from("projects")
         .delete()
-        .eq("id", id)
-        .eq("created_by", user.id);
+        .eq("id", id);
 
     if (error) {
         console.error("Error deleting project:", error);
