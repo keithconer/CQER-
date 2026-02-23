@@ -45,13 +45,25 @@ export async function registerCoordinators(coordinators: { email: string; depart
 
         const { data: profile } = await supabase
             .from("profiles")
-            .select("user_type")
+            .select("user_type, department")
             .eq("id", currentUser.id)
             .single();
 
         if (!profile || (profile.user_type !== "super_admin" && profile.user_type !== "college_coordinator")) {
             if (currentUser.email !== "main.keithbrian.coner@cvsu.edu.ph") {
                 return { error: "Insufficient permissions" };
+            }
+        }
+
+        if (profile?.user_type === "college_coordinator") {
+            if (coordinators.some((coord) => coord.userType !== "unit_coordinator")) {
+                return { error: "College coordinators can only register unit coordinators." };
+            }
+            if (!profile.department) {
+                return { error: "College coordinator department is not configured." };
+            }
+            if (coordinators.some((coord) => coord.department !== profile.department)) {
+                return { error: "You can only register coordinators in your own department." };
             }
         }
 

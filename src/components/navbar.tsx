@@ -35,14 +35,18 @@ export function Navbar({ user }: NavbarProps) {
   const supabase = useMemo(() => createClient(), []);
   const [rolePopoverOpen, setRolePopoverOpen] = useState(false);
   const activeView = searchParams.get("view") === "programs" ? "programs" : "projects";
+  const activePanel = searchParams.get("panel") === "unit-coordinators" ? "unit-coordinators" : "records";
   const showDataNav =
     pathname?.startsWith("/dashboard") &&
     (user.userType === "unit_coordinator" || user.userType === "college_coordinator");
+  const showCoordinatorNav =
+    pathname?.startsWith("/dashboard") && user.userType === "college_coordinator";
 
   useEffect(() => {
     router.prefetch("/dashboard");
     router.prefetch("/dashboard?view=projects");
     router.prefetch("/dashboard?view=programs");
+    router.prefetch("/dashboard?panel=unit-coordinators");
     router.prefetch("/settings");
   }, [router]);
 
@@ -91,7 +95,7 @@ export function Navbar({ user }: NavbarProps) {
                 size="sm"
                 onClick={() => router.push("/dashboard?view=programs")}
                 className={`h-7 text-[10px] px-2.5 ${
-                  activeView === "programs"
+                  activePanel === "records" && activeView === "programs"
                     ? "bg-transparent text-[#159E44] hover:bg-muted"
                     : "bg-transparent text-foreground hover:bg-muted"
                 }`}
@@ -102,13 +106,26 @@ export function Navbar({ user }: NavbarProps) {
                 size="sm"
                 onClick={() => router.push("/dashboard?view=projects")}
                 className={`h-7 text-[10px] px-2.5 ${
-                  activeView === "projects"
+                  activePanel === "records" && activeView === "projects"
                     ? "bg-transparent text-[#159E44] hover:bg-muted"
                     : "bg-transparent text-foreground hover:bg-muted"
                 }`}
               >
                 Projects
               </Button>
+              {showCoordinatorNav && (
+                <Button
+                  size="sm"
+                  onClick={() => router.push("/dashboard?panel=unit-coordinators")}
+                  className={`h-7 text-[10px] px-2.5 ${
+                    activePanel === "unit-coordinators"
+                      ? "bg-transparent text-[#159E44] hover:bg-muted"
+                      : "bg-transparent text-foreground hover:bg-muted"
+                  }`}
+                >
+                  Register Unit Coordinators
+                </Button>
+              )}
             </div>
           )}
           <Avatar className="h-7 w-7">

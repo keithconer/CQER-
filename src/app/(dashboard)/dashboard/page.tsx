@@ -1,21 +1,23 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { ProjectManagement } from "@/components/dashboard/project-management";
 import { UnitProjectsManagement } from "@/components/dashboard/unit-projects-management";
 import { CoordinatorRegistration } from "@/components/dashboard/coordinator-registration";
 import { SuperAdminOverview } from "@/components/dashboard/super-admin-overview";
 import { getCollegeProjects, getProjects, getUnitProjects } from "@/lib/actions/projects";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { UNITS_BY_DEPARTMENT, type DepartmentCode } from "@/lib/departments";
+import { CollegeProjectsManagement } from "@/components/dashboard/college-projects-management";
+import { UnitCoordinatorsPanel } from "@/components/dashboard/unit-coordinators-panel";
 
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ view?: string }>;
+  searchParams?: Promise<{ view?: string; panel?: string }>;
 }) {
   const resolvedSearchParams = (await searchParams) || {};
   const activeEntityType: "project" | "program" =
     resolvedSearchParams.view === "programs" ? "program" : "project";
+  const activePanel = resolvedSearchParams.panel === "unit-coordinators" ? "unit-coordinators" : "records";
 
   const supabase = await createClient();
   const {
@@ -36,16 +38,28 @@ export default async function DashboardPage({
     redirect("/register?step=2");
   }
 
-  const projects =
-    profile.user_type === "college_coordinator"
-      ? (await getCollegeProjects()).data || []
-      : profile.user_type !== "super_admin"
-        ? (await getProjects()).data || []
-        : [];
-  const unitProjects =
-    profile.user_type === "unit_coordinator"
-      ? (await getUnitProjects()).data || []
-      : [];
+  let projects: any[] = [];
+  let unitProjects: any[] = [];
+  let collegeUnitCoordinatorAccounts: {
+    id: string;
+    email: string | null;
+    first_name: string | null;
+    last_name: string | null;
+    department: string | null;
+    unit: string | null;
+    created_at: string | null;
+  }[] = [];
+
+  if (profile.user_type === "unit_coordinator") {
+    const [myProjectsResult, unitProjectsResult] = await Promise.all([
+      getProjects(),
+      getUnitProjects(),
+    ]);
+    projects = myProjectsResult.data || [];
+    unitProjects = unitProjectsResult.data || [];
+  } else if (profile.user_type === "college_coordinator" && activePanel !== "unit-coordinators") {
+    projects = (await getCollegeProjects()).data || [];
+  }
 
   let allAccounts: {
     id: string;
@@ -100,30 +114,24 @@ export default async function DashboardPage({
   }
 
   if (profile.user_type === "college_coordinator" && profile.department) {
-    const adminClient = createAdminClient();
-    const { data: unitsData } = await adminClient
-      .from("profiles")
-      .select("unit")
-      .eq("user_type", "unit_coordinator")
-      .eq("department", profile.department)
-      .not("unit", "is", null);
+    // Always expose all units in the department for visibility selection.
+    availableUnitsForCollege = UNITS_BY_DEPARTMENT[profile.department as DepartmentCode] || [];
 
-    availableUnitsForCollege =
-      Array.from(
-        new Set(
-          (unitsData || [])
-            .map((row) => row.unit)
-            .filter(Boolean) as string[]
-        )
-      ) ||
-      [];
+    if (activePanel === "unit-coordinators") {
+      const adminClient = createAdminClient();
+      const { data: unitAccounts } = await adminClient
+        .from("profiles")
+        .select("id, email, first_name, last_name, department, unit, created_at")
+        .eq("user_type", "unit_coordinator")
+        .eq("department", profile.department)
+        .order("created_at", { ascending: false });
+
+      collegeUnitCoordinatorAccounts = unitAccounts || [];
+    }
   }
 
   const userType = profile.user_type;
   const firstName = profile.first_name || "User";
-  if (availableUnitsForCollege.length === 0 && profile.department) {
-    availableUnitsForCollege = UNITS_BY_DEPARTMENT[profile.department as DepartmentCode] || [];
-  }
 
   return (
     <div className="space-y-4">
@@ -147,21 +155,22 @@ export default async function DashboardPage({
 
       {userType === "college_coordinator" && (
         <div className="space-y-4">
-          <CoordinatorRegistration 
-            userType="unit_coordinator" 
-            title="Unit Coordinators"
-            description="Register emails of Unit coordinators for your department."
-            department={profile.department}
-          />
-          <ProjectManagement
-            initialProjects={projects}
-            readOnly={false}
-            entityType={activeEntityType}
-            userType={userType}
-            department={profile.department}
-            unit={profile.unit}
-            unitOptions={availableUnitsForCollege}
-          />
+          {activePanel === "unit-coordinators" ? (
+            <UnitCoordinatorsPanel
+              accounts={collegeUnitCoordinatorAccounts}
+              department={profile.department}
+            />
+          ) : (
+            <CollegeProjectsManagement
+              initialProjects={projects}
+              entityType={activeEntityType}
+              userType={userType}
+              department={profile.department}
+              unit={profile.unit}
+              unitOptions={availableUnitsForCollege}
+              currentUserId={user.id}
+            />
+          )}
         </div>
       )}
 
