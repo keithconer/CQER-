@@ -18,6 +18,7 @@ import { Loader2 } from "lucide-react";
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const nextPath = searchParams.get("next") || "/dashboard";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -44,7 +45,7 @@ function LoginContent() {
         return;
       }
 
-      router.push("/dashboard");
+      router.replace(`/oauth-loading?next=${encodeURIComponent(nextPath)}`);
       router.refresh();
     } catch {
       setError("An unexpected error occurred.");
@@ -62,7 +63,7 @@ function LoginContent() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${redirectBase}/auth/callback`,
+        redirectTo: `${redirectBase}/auth/callback?next=${encodeURIComponent(nextPath)}`,
         queryParams: {
           hd: "cvsu.edu.ph",
           prompt: "select_account",
@@ -79,6 +80,7 @@ function LoginContent() {
   useEffect(() => {
     const warmRoutes = async () => {
       router.prefetch("/dashboard");
+      router.prefetch("/oauth-loading");
     };
 
     const syncSession = async () => {
@@ -87,13 +89,13 @@ function LoginContent() {
       } = await supabase.auth.getSession();
 
       if (session) {
-        router.replace("/dashboard");
+        router.replace(`/oauth-loading?next=${encodeURIComponent(nextPath)}`);
       }
     };
 
     warmRoutes();
     syncSession();
-  }, [router, supabase]);
+  }, [router, supabase, nextPath]);
 
   const callbackError = searchParams.get("error");
 
