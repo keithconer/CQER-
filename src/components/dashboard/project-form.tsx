@@ -4,7 +4,7 @@ import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useFieldArray } from "react-hook-form";
 import * as z from "zod";
-import { CalendarIcon, Plus, Trash2, Check, ChevronsUpDown } from "lucide-react";
+import { CalendarIcon, Plus, Trash2, Check, ChevronsUpDown, Globe, Building2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -763,7 +763,10 @@ export function ProjectForm({
                               }}
                             />
                             <div>
-                              <p className="text-xs leading-none">Public</p>
+                              <p className="flex items-center gap-1.5 text-xs leading-none">
+                                <Globe className="h-3.5 w-3.5" />
+                                Public
+                              </p>
                               <p className="mt-1 text-[10px] text-muted-foreground">
                                 Visible to the entire college and its units.
                               </p>
@@ -780,7 +783,10 @@ export function ProjectForm({
                               }}
                             />
                             <div>
-                              <p className="text-xs leading-none">Specific Unit</p>
+                              <p className="flex items-center gap-1.5 text-xs leading-none">
+                                <Building2 className="h-3.5 w-3.5" />
+                                Specific Unit
+                              </p>
                               <p className="mt-1 text-[10px] text-muted-foreground">
                                 Only selected unit coordinators can view this post.
                               </p>
