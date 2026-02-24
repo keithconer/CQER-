@@ -563,7 +563,7 @@ export function ProjectForm({
                   <FormItem>
                     <FormControl>
                       <Input
-                        placeholder="Firstname MI. Lastname"
+                        placeholder="Full name"
                         {...field}
                         className="h-8 text-xs"
                         disabled={isViewOnly}
@@ -603,7 +603,7 @@ export function ProjectForm({
                         <FormItem className="flex-1">
                           <FormControl>
                             <Input
-                              placeholder="Firstname MI. Lastname"
+                              placeholder="Full name"
                               {...inputField}
                               className="h-8 text-xs"
                               disabled={isViewOnly}
@@ -638,7 +638,7 @@ export function ProjectForm({
                   <FormItem>
                     <FormLabel className="text-xs">Collaborating Agencies</FormLabel>
                     <FormControl>
-                      <Input placeholder="Agencies" {...field} className="h-8 text-xs" disabled={isViewOnly} />
+                      <Input placeholder="Agency" {...field} className="h-8 text-xs" disabled={isViewOnly} />
                     </FormControl>
                     <FormMessage className="text-[10px]" />
                   </FormItem>
@@ -652,7 +652,7 @@ export function ProjectForm({
                     <FormLabel className="text-xs">Target Beneficiaries</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="Type beneficiaries (separate with commas)"
+                        placeholder="Beneficiaries"
                         value={(field.value || []).join(", ")}
                         onChange={(e) => {
                           const parsed = e.target.value
@@ -750,21 +750,44 @@ export function ProjectForm({
                   name="visibility_scope"
                   render={({ field }) => (
                     <FormItem>
-                      <Select onValueChange={field.onChange} value={field.value} disabled={isViewOnly}>
-                        <FormControl>
-                          <SelectTrigger className="h-8 text-xs">
-                            <SelectValue placeholder="Select visibility" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="public" className="text-xs">
-                            Public (Entire College and Units)
-                          </SelectItem>
-                          <SelectItem value="specific_units" className="text-xs">
-                            Specific Unit
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <div className="space-y-2">
+                          <label className="flex items-start gap-2.5 rounded-md border border-border/50 bg-background px-3 py-2">
+                            <Checkbox
+                              checked={field.value === "public"}
+                              disabled={isViewOnly}
+                              onCheckedChange={(isChecked) => {
+                                if (isChecked) {
+                                  field.onChange("public");
+                                }
+                              }}
+                            />
+                            <div>
+                              <p className="text-xs leading-none">Public</p>
+                              <p className="mt-1 text-[10px] text-muted-foreground">
+                                Visible to the entire college and its units.
+                              </p>
+                            </div>
+                          </label>
+                          <label className="flex items-start gap-2.5 rounded-md border border-border/50 bg-background px-3 py-2">
+                            <Checkbox
+                              checked={field.value === "specific_units"}
+                              disabled={isViewOnly}
+                              onCheckedChange={(isChecked) => {
+                                if (isChecked) {
+                                  field.onChange("specific_units");
+                                }
+                              }}
+                            />
+                            <div>
+                              <p className="text-xs leading-none">Specific Unit</p>
+                              <p className="mt-1 text-[10px] text-muted-foreground">
+                                Only selected unit coordinators can view this post.
+                              </p>
+                            </div>
+                          </label>
+                        </div>
+                      </FormControl>
                       <FormMessage className="text-[10px]" />
                     </FormItem>
                   )}
@@ -935,7 +958,7 @@ export function ProjectForm({
                     render={({ field: inputField }) => (
                       <FormItem className="flex-[2]">
                         <FormControl>
-                          <Input placeholder="Source/Item" {...inputField} className="h-8 text-xs" disabled={isViewOnly} />
+                          <Input placeholder="Item" {...inputField} className="h-8 text-xs" disabled={isViewOnly} />
                         </FormControl>
                         <FormMessage className="text-[10px]" />
                       </FormItem>
