@@ -124,3 +124,10 @@
     @apply bg-background text-foreground;
   }
 }
+
+@media (min-width: 768px) {
+  html[data-dashboard-sidebar="open"] .dashboard-main {
+    margin-left: 16rem;
+    max-width: calc(95rem - 16rem);
+  }
+}

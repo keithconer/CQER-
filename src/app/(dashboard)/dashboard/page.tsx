@@ -16,6 +16,8 @@ export default async function DashboardPage({
 }) {
   const resolvedSearchParams = (await searchParams) || {};
   const panelParam = resolvedSearchParams.panel;
+  const hasEntitySelection =
+    resolvedSearchParams.view === "projects" || resolvedSearchParams.view === "programs";
   const activeEntityType: "project" | "program" =
     resolvedSearchParams.view === "programs" ? "program" : "project";
   const activePanel = panelParam === "unit-coordinators" ? "unit-coordinators" : "records";
@@ -56,13 +58,19 @@ export default async function DashboardPage({
   }[] = [];
 
   if (profile.user_type === "unit_coordinator") {
-    const [myProjectsResult, unitProjectsResult] = await Promise.all([
-      getProjects(),
-      getUnitProjects(),
-    ]);
-    projects = myProjectsResult.data || [];
-    unitProjects = unitProjectsResult.data || [];
-  } else if (profile.user_type === "college_coordinator" && activePanel !== "unit-coordinators") {
+    if (hasEntitySelection) {
+      const [myProjectsResult, unitProjectsResult] = await Promise.all([
+        getProjects(),
+        getUnitProjects(),
+      ]);
+      projects = myProjectsResult.data || [];
+      unitProjects = unitProjectsResult.data || [];
+    }
+  } else if (
+    profile.user_type === "college_coordinator" &&
+    activePanel !== "unit-coordinators" &&
+    hasEntitySelection
+  ) {
     projects = (await getCollegeProjects()).data || [];
   }
 
@@ -107,8 +115,7 @@ export default async function DashboardPage({
 
   if (profile.user_type === "super_admin") {
     const adminClient = createAdminClient();
-
-    const [{ data: accountsData }, { data: projectsData }] = await Promise.all([
+    const [accountsResult, projectsResult] = await Promise.all([
       adminClient
         .from("profiles")
         .select("id, first_name, last_name, user_type, department, unit")
@@ -120,14 +127,14 @@ export default async function DashboardPage({
     ]);
 
     allAccounts =
-      (accountsData as typeof allAccounts | null)?.filter(
+      (accountsResult.data as typeof allAccounts | null)?.filter(
         (account) =>
           account.user_type === "super_admin" ||
           account.user_type === "college_coordinator" ||
           account.user_type === "unit_coordinator"
       ) || [];
 
-    allProjects = (projectsData as typeof allProjects | null) || [];
+    allProjects = (projectsResult.data as typeof allProjects | null) || [];
   }
 
   if (profile.user_type === "college_coordinator" && profile.department) {
@@ -177,6 +184,13 @@ export default async function DashboardPage({
               accounts={collegeUnitCoordinatorAccounts}
               department={profile.department}
             />
+          ) : !hasEntitySelection ? (
+            <div className="rounded-md border border-border/40 bg-white p-4">
+              <p className="text-xs font-medium text-foreground/90">Select what to open</p>
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Use Sidebar &gt; Create &gt; Projects or Programs to display the table.
+              </p>
+            </div>
           ) : (
             <CollegeProjectsManagement
               initialProjects={projects}
@@ -192,15 +206,24 @@ export default async function DashboardPage({
       )}
 
       {userType === "unit_coordinator" && (
-        <UnitProjectsManagement
-          myProjects={projects}
-          unitProjects={unitProjects}
-          entityType={activeEntityType}
-          userType={userType}
-          department={profile.department}
-          unit={profile.unit}
-          unitOptions={[]}
-        />
+        !hasEntitySelection ? (
+          <div className="rounded-md border border-border/40 bg-white p-4">
+            <p className="text-xs font-medium text-foreground/90">Select what to open</p>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              Use Sidebar &gt; Create &gt; Projects or Programs to display the table.
+            </p>
+          </div>
+        ) : (
+          <UnitProjectsManagement
+            myProjects={projects}
+            unitProjects={unitProjects}
+            entityType={activeEntityType}
+            userType={userType}
+            department={profile.department}
+            unit={profile.unit}
+            unitOptions={[]}
+          />
+        )
       )}
     </div>
   );

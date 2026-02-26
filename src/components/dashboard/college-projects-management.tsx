@@ -44,20 +44,32 @@ export function CollegeProjectsManagement({
   );
   const [searchTerm, setSearchTerm] = React.useState("");
   const [selectedUnits, setSelectedUnits] = React.useState<string[]>([]);
+  const refreshTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
 
   React.useEffect(() => {
     const supabase = createClient();
+    const scheduleRefresh = () => {
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+      refreshTimeoutRef.current = setTimeout(() => {
+        router.refresh();
+      }, 500);
+    };
     const channel = supabase
       .channel("college-projects-live")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "projects" },
-        () => router.refresh()
+        scheduleRefresh
       )
       .subscribe();
 
     return () => {
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
       supabase.removeChannel(channel);
     };
   }, [router]);

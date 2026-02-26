@@ -50,7 +50,6 @@ export function Navbar({ user }: NavbarProps) {
 
   const isDashboard = pathname?.startsWith("/dashboard");
   const activeView = searchParams.get("view") === "programs" ? "programs" : "projects";
-  const queryString = searchParams.toString();
   const panelParam = searchParams.get("panel");
   const activePanel =
     panelParam === "unit-coordinators" ||
@@ -72,8 +71,15 @@ export function Navbar({ user }: NavbarProps) {
   }, [router]);
 
   useEffect(() => {
-    setSidebarOpen(false);
-  }, [pathname, queryString]);
+    if (!isDashboard) return;
+    document.documentElement.setAttribute(
+      "data-dashboard-sidebar",
+      sidebarOpen ? "open" : "closed"
+    );
+    return () => {
+      document.documentElement.setAttribute("data-dashboard-sidebar", "closed");
+    };
+  }, [isDashboard, sidebarOpen]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -195,7 +201,7 @@ export function Navbar({ user }: NavbarProps) {
       {isDashboard && sidebarOpen && (
         <button
           type="button"
-          className="fixed inset-0 z-40 bg-black/20"
+          className="fixed inset-0 z-40 bg-black/20 md:hidden"
           onClick={() => setSidebarOpen(false)}
           aria-label="Close sidebar"
         />
