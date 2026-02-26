@@ -15,9 +15,14 @@ export default async function DashboardPage({
   searchParams?: Promise<{ view?: string; panel?: string }>;
 }) {
   const resolvedSearchParams = (await searchParams) || {};
+  const panelParam = resolvedSearchParams.panel;
   const activeEntityType: "project" | "program" =
     resolvedSearchParams.view === "programs" ? "program" : "project";
-  const activePanel = resolvedSearchParams.panel === "unit-coordinators" ? "unit-coordinators" : "records";
+  const activePanel = panelParam === "unit-coordinators" ? "unit-coordinators" : "records";
+  const superAdminTab: "accounts" | "projects" | "programs" =
+    panelParam === "accounts" || panelParam === "programs" || panelParam === "projects"
+      ? panelParam
+      : "projects";
 
   const supabase = await createClient();
   const {
@@ -161,7 +166,7 @@ export default async function DashboardPage({
             title="College Coordinators"
             description="Register emails of College coordinators for their specific departments."
           />
-          <SuperAdminOverview accounts={allAccounts} projects={allProjects} />
+          <SuperAdminOverview accounts={allAccounts} projects={allProjects} initialTab={superAdminTab} />
         </div>
       )}
 

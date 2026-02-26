@@ -69,6 +69,7 @@ interface ExistingProject {
 interface SuperAdminOverviewProps {
   accounts: RegisteredAccount[];
   projects: ExistingProject[];
+  initialTab?: "accounts" | "projects" | "programs";
 }
 
 const ITEMS_PER_PAGE = 6;
@@ -82,9 +83,10 @@ function formatRole(role: RoleType) {
 export function SuperAdminOverview({
   accounts,
   projects,
+  initialTab = "projects",
 }: SuperAdminOverviewProps) {
   const [activeTab, setActiveTab] = React.useState<"accounts" | "projects" | "programs">(
-    "projects"
+    initialTab
   );
   const [searchTerm, setSearchTerm] = React.useState("");
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -115,6 +117,11 @@ export function SuperAdminOverview({
   React.useEffect(() => {
     setCurrentPage(1);
   }, [activeTab, searchTerm]);
+
+  React.useEffect(() => {
+    setActiveTab(initialTab);
+    setSearchTerm("");
+  }, [initialTab]);
 
   const filteredAccounts = React.useMemo(() => {
     const term = searchTerm.toLowerCase();
