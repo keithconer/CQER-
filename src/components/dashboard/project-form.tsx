@@ -131,7 +131,7 @@ interface ProjectFormValues {
   visible_units: string[];
   start_date: Date;
   end_date: Date;
-  budget_requirements: { name: string; amount: number }[];
+  budget_requirements: { name: string; amount: number | string }[];
   budget_total: number;
   gad_score: number;
   documents: { url: string; name: string }[];
@@ -240,7 +240,7 @@ export function ProjectForm({
         (currentUserType === "unit_coordinator" && currentUnit ? [currentUnit] : []),
       start_date: project?.start_date ? new Date(project.start_date) : new Date(),
       end_date: project?.end_date ? new Date(project.end_date) : new Date(),
-      budget_requirements: project?.budget_requirements || [{ name: "", amount: 0 }],
+      budget_requirements: project?.budget_requirements || [{ name: "", amount: "" }],
       budget_total:
         typeof project?.budget_total === "number"
           ? project.budget_total
@@ -1012,7 +1012,7 @@ export function ProjectForm({
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => appendBudget({ name: "", amount: 0 })}
+                    onClick={() => appendBudget({ name: "", amount: "" })}
                     className="h-6 text-[10px] px-2"
                   >
                     <Plus className="h-3 w-3 mr-1" /> Add
@@ -1045,9 +1045,10 @@ export function ProjectForm({
                               type="number" 
                               placeholder="Amount" 
                               {...inputField} 
+                              value={inputField.value === 0 ? "" : (inputField.value ?? "")}
                               onChange={(event) => {
                                 const nextValue = event.target.value;
-                                inputField.onChange(nextValue === "" ? 0 : Number(nextValue));
+                                inputField.onChange(nextValue === "" ? "" : Number(nextValue));
                               }}
                               className="h-8 text-xs pl-5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
                               disabled={isViewOnly} 
