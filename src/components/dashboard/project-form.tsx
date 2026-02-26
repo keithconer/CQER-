@@ -1049,7 +1049,7 @@ export function ProjectForm({
                                 const nextValue = event.target.value;
                                 inputField.onChange(nextValue === "" ? 0 : Number(nextValue));
                               }}
-                              className="h-8 text-xs pl-5" 
+                              className="h-8 text-xs pl-5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
                               disabled={isViewOnly} 
                             />
                           </div>
@@ -1091,7 +1091,7 @@ export function ProjectForm({
                           {...field}
                           value={computedBudgetTotal}
                           readOnly
-                          className="h-8 text-xs pl-5 bg-muted/20"
+                          className="h-8 text-xs pl-5 bg-muted/20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           disabled={isViewOnly}
                         />
                       </div>
@@ -1110,7 +1110,14 @@ export function ProjectForm({
                   <FormItem>
                     <FormLabel className="text-xs">Total GAD Score for project identification and design stages</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" placeholder="0.00" {...field} className="h-8 text-xs" disabled={isViewOnly} />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        {...field}
+                        className="h-8 text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        disabled={isViewOnly}
+                      />
                     </FormControl>
                     <FormMessage className="text-[10px]" />
                   </FormItem>
