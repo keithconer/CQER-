@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
-import { UNITS_BY_DEPARTMENT, type DepartmentCode } from "@/lib/departments";
+import { DEPARTMENTS, UNITS_BY_DEPARTMENT, type DepartmentCode } from "@/lib/departments";
 
 function normalizeLeadUnits(raw: unknown, allowedUnits: string[] = []) {
     if (!Array.isArray(raw)) return [];
@@ -43,7 +43,7 @@ export async function createProject(formData: object) {
         const fallbackUnit = profile.unit ? [profile.unit] : [];
         payload.visibility_scope = "specific_units";
         payload.visible_units = profile.unit ? [profile.unit] : [];
-        payload.lead_units = profile.unit ? [profile.unit] : [];
+        payload.lead_units = profile.department ? [profile.department] : [];
         payload.related_curricular_offerings = normalizeLeadUnits(
             payload.related_curricular_offerings,
             unitOptions.length > 0 ? unitOptions : fallbackUnit
@@ -55,8 +55,8 @@ export async function createProject(formData: object) {
             scope === "specific_units" && Array.isArray(payload.visible_units)
                 ? payload.visible_units
                 : [];
+        payload.lead_units = normalizeLeadUnits(payload.lead_units, [...DEPARTMENTS]);
         const allowedUnits = getDepartmentUnits(profile.department);
-        payload.lead_units = normalizeLeadUnits(payload.lead_units, allowedUnits);
         payload.related_curricular_offerings = normalizeLeadUnits(
             payload.related_curricular_offerings,
             allowedUnits
@@ -297,7 +297,7 @@ export async function updateProject(id: string, formData: object) {
         const fallbackUnit = profile.unit ? [profile.unit] : [];
         payload.visibility_scope = "specific_units";
         payload.visible_units = profile.unit ? [profile.unit] : [];
-        payload.lead_units = profile.unit ? [profile.unit] : [];
+        payload.lead_units = profile.department ? [profile.department] : [];
         payload.related_curricular_offerings = normalizeLeadUnits(
             payload.related_curricular_offerings,
             unitOptions.length > 0 ? unitOptions : fallbackUnit
@@ -309,8 +309,8 @@ export async function updateProject(id: string, formData: object) {
             scope === "specific_units" && Array.isArray(payload.visible_units)
                 ? payload.visible_units
                 : [];
+        payload.lead_units = normalizeLeadUnits(payload.lead_units, [...DEPARTMENTS]);
         const allowedUnits = getDepartmentUnits(profile.department);
-        payload.lead_units = normalizeLeadUnits(payload.lead_units, allowedUnits);
         payload.related_curricular_offerings = normalizeLeadUnits(
             payload.related_curricular_offerings,
             allowedUnits

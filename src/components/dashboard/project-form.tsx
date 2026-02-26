@@ -44,7 +44,7 @@ import {
 } from "@/components/ui/command";
 import { Textarea } from "@/components/ui/textarea";
 import { createProject, updateProject } from "@/lib/actions/projects";
-import { UNITS_BY_DEPARTMENT, type DepartmentCode } from "@/lib/departments";
+import { DEPARTMENTS, UNITS_BY_DEPARTMENT, type DepartmentCode } from "@/lib/departments";
 import { CheckCircle2 } from "lucide-react";
 import {
   Dialog,
@@ -235,7 +235,7 @@ export function ProjectForm({
       funding_source: project?.funding_source || "internally funded",
       lead_units:
         project?.lead_units ||
-        (currentUserType === "unit_coordinator" && currentUnit ? [currentUnit] : []),
+        (currentUserType === "unit_coordinator" && currentDepartment ? [currentDepartment] : []),
       related_curricular_offerings: project?.related_curricular_offerings || [],
       visibility_scope:
         project?.visibility_scope ||
@@ -312,6 +312,12 @@ export function ProjectForm({
     name: "budget_requirements",
   });
   const selectedVisibilityScope = form.watch("visibility_scope");
+  const leadUnitOptions = React.useMemo(() => {
+    if (currentUserType === "college_coordinator") {
+      return [...DEPARTMENTS];
+    }
+    return [];
+  }, [currentUserType]);
 
   const relatedCurricularOptions = React.useMemo(() => {
     if (currentUserType === "college_coordinator") {
@@ -347,9 +353,9 @@ export function ProjectForm({
     if (currentUserType === "unit_coordinator") {
       form.setValue("visibility_scope", "specific_units", { shouldValidate: true });
       form.setValue("visible_units", currentUnit ? [currentUnit] : [], { shouldValidate: true });
-      form.setValue("lead_units", currentUnit ? [currentUnit] : [], { shouldValidate: true });
+      form.setValue("lead_units", currentDepartment ? [currentDepartment] : [], { shouldValidate: true });
     }
-  }, [currentUserType, currentUnit, form]);
+  }, [currentUserType, currentUnit, currentDepartment, form]);
 
   return (
     <Form {...form}>
@@ -776,7 +782,7 @@ export function ProjectForm({
                     {currentUserType === "unit_coordinator" ? (
                       <FormControl>
                         <Input
-                          value={currentUnit || (field.value || []).join(", ")}
+                          value={currentDepartment || (field.value || []).join(", ")}
                           readOnly
                           disabled
                           className="h-8 text-xs bg-muted/20"
@@ -784,12 +790,12 @@ export function ProjectForm({
                       </FormControl>
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {unitOptions.length > 0 ? (
-                          unitOptions.map((unitOption) => {
-                            const checked = (field.value || []).includes(unitOption);
+                        {leadUnitOptions.length > 0 ? (
+                          leadUnitOptions.map((departmentOption) => {
+                            const checked = (field.value || []).includes(departmentOption);
                             return (
                               <label
-                                key={unitOption}
+                                key={departmentOption}
                                 className="flex items-center gap-2 rounded-md border border-border/50 px-2 py-1.5 bg-background"
                               >
                                 <Checkbox
@@ -798,14 +804,14 @@ export function ProjectForm({
                                   onCheckedChange={(isChecked) => {
                                     const current = new Set(field.value || []);
                                     if (isChecked) {
-                                      current.add(unitOption);
+                                      current.add(departmentOption);
                                     } else {
-                                      current.delete(unitOption);
+                                      current.delete(departmentOption);
                                     }
                                     field.onChange(Array.from(current));
                                   }}
                                 />
-                                <span className="text-[10px]">{unitOption}</span>
+                                <span className="text-[10px]">{departmentOption}</span>
                               </label>
                             );
                           })
