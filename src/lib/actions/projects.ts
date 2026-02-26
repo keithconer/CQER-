@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
-import { DEPARTMENTS, UNITS_BY_DEPARTMENT, type DepartmentCode } from "@/lib/departments";
+import { DEPARTMENTS, getUnitsByDepartment } from "@/lib/departments";
 
 function normalizeLeadUnits(raw: unknown, allowedUnits: string[] = []) {
     if (!Array.isArray(raw)) return [];
@@ -18,8 +18,7 @@ function normalizeLeadUnits(raw: unknown, allowedUnits: string[] = []) {
 }
 
 function getDepartmentUnits(department: string | null | undefined) {
-    if (!department) return [];
-    return UNITS_BY_DEPARTMENT[department as DepartmentCode] || [];
+    return getUnitsByDepartment(department);
 }
 
 export async function createProject(formData: object) {

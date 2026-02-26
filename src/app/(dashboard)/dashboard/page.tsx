@@ -5,7 +5,7 @@ import { CoordinatorRegistration } from "@/components/dashboard/coordinator-regi
 import { SuperAdminOverview } from "@/components/dashboard/super-admin-overview";
 import { getCollegeProjects, getProjects, getUnitProjects } from "@/lib/actions/projects";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { UNITS_BY_DEPARTMENT, type DepartmentCode } from "@/lib/departments";
+import { getUnitsByDepartment } from "@/lib/departments";
 import { CollegeProjectsManagement } from "@/components/dashboard/college-projects-management";
 import { UnitCoordinatorsPanel } from "@/components/dashboard/unit-coordinators-panel";
 
@@ -127,7 +127,7 @@ export default async function DashboardPage({
 
   if (profile.user_type === "college_coordinator" && profile.department) {
     // Always expose all units in the department for visibility selection.
-    availableUnitsForCollege = UNITS_BY_DEPARTMENT[profile.department as DepartmentCode] || [];
+    availableUnitsForCollege = getUnitsByDepartment(profile.department);
 
     if (activePanel === "unit-coordinators") {
       const adminClient = createAdminClient();

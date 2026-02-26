@@ -44,7 +44,7 @@ import {
 } from "@/components/ui/command";
 import { Textarea } from "@/components/ui/textarea";
 import { createProject, updateProject } from "@/lib/actions/projects";
-import { DEPARTMENTS, UNITS_BY_DEPARTMENT, type DepartmentCode } from "@/lib/departments";
+import { DEPARTMENTS, getUnitsByDepartment } from "@/lib/departments";
 import { CheckCircle2 } from "lucide-react";
 import {
   Dialog,
@@ -90,9 +90,9 @@ const programOptions = [
 ];
 
 const industrialTechMajors = [
-  "Automotive Technology",
-  "Electrical Technology",
-  "Electronics Technology",
+  "Major in Automotive Technology",
+  "Major in Electrical Engineering",
+  "Major in Electronics Engineering",
 ];
 
 const classificationOptions = [
@@ -326,7 +326,7 @@ export function ProjectForm({
 
     if (currentUserType === "unit_coordinator") {
       if (currentDepartment) {
-        const departmentUnits = UNITS_BY_DEPARTMENT[currentDepartment as DepartmentCode] || [];
+        const departmentUnits = getUnitsByDepartment(currentDepartment);
         if (departmentUnits.length > 0) return departmentUnits;
       }
       return currentUnit ? [currentUnit] : [];

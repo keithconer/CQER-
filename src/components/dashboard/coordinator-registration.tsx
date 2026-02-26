@@ -17,9 +17,12 @@ import { StepIndicator } from "@/components/step-indicator";
 import { registerCoordinators } from "@/lib/actions/auth";
 import {
   BSINDT_TRACKS,
+  BS_INDUSTRIAL_TECHNOLOGY,
   DEPARTMENTS,
-  UNITS_BY_DEPARTMENT,
+  DEPARTMENT_OF_INDUSTRIAL_ENGINEERING_AND_TECHNOLOGY,
   buildUnitValue,
+  getUnitsByDepartment,
+  isIndustrialEngineeringAndTechnologyDepartment,
 } from "@/lib/departments";
 
 interface CoordinatorRegistrationProps {
@@ -83,13 +86,15 @@ export function CoordinatorRegistration({ userType, title, description, departme
         emails.some((e) => {
           const selectedDepartment = fixedDepartment || departments[e];
           return (
-            selectedDepartment === "DIET" &&
-            units[e] === "BSINDT" &&
+            isIndustrialEngineeringAndTechnologyDepartment(selectedDepartment) &&
+            units[e] === BS_INDUSTRIAL_TECHNOLOGY &&
             !dietTracks[e]
           );
         })
       ) {
-        setError("Please select BSINDT track for all BSINDT coordinators.");
+        setError(
+          "Please select BS Industrial Technology major for all BS Industrial Technology coordinators."
+        );
         return;
       }
       setError("");
@@ -239,7 +244,7 @@ export function CoordinatorRegistration({ userType, title, description, departme
                         className="flex h-8 w-full rounded-md border border-border/80 bg-background px-3 py-1 text-[11px] shadow-sm focus:outline-none"
                       >
                         <option value="" disabled>Select Unit</option>
-                        {(UNITS_BY_DEPARTMENT[(fixedDepartment || departments[email]) as keyof typeof UNITS_BY_DEPARTMENT] || []).map(u => (
+                        {getUnitsByDepartment(fixedDepartment || departments[email]).map((u) => (
                           <option key={u} value={u}>{u}</option>
                         ))}
                       </select>
@@ -247,10 +252,13 @@ export function CoordinatorRegistration({ userType, title, description, departme
                   )}
 
                   {userType === "unit_coordinator" &&
-                    (fixedDepartment || departments[email]) === "DIET" &&
-                    units[email] === "BSINDT" && (
+                    (fixedDepartment || departments[email]) ===
+                      DEPARTMENT_OF_INDUSTRIAL_ENGINEERING_AND_TECHNOLOGY &&
+                    units[email] === BS_INDUSTRIAL_TECHNOLOGY && (
                       <div className="space-y-1.5">
-                        <Label className="text-[10px] font-semibold">BSINDT Track</Label>
+                        <Label className="text-[10px] font-semibold">
+                          BS Industrial Technology Major
+                        </Label>
                         <select
                           value={dietTracks[email] || ""}
                           onChange={(e) =>
@@ -258,7 +266,7 @@ export function CoordinatorRegistration({ userType, title, description, departme
                           }
                           className="flex h-8 w-full rounded-md border border-border/80 bg-background px-3 py-1 text-[11px] shadow-sm focus:outline-none"
                         >
-                          <option value="" disabled>Select Track</option>
+                          <option value="" disabled>Select Major</option>
                           {BSINDT_TRACKS.map((track) => (
                             <option key={track} value={track}>
                               {track}

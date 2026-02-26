@@ -8,9 +8,12 @@ import { StepIndicator } from "@/components/step-indicator";
 import { getBaseURL } from "@/lib/utils";
 import {
   BSINDT_TRACKS,
+  BS_INDUSTRIAL_TECHNOLOGY,
   DEPARTMENTS,
-  UNITS_BY_DEPARTMENT,
+  DEPARTMENT_OF_INDUSTRIAL_ENGINEERING_AND_TECHNOLOGY,
   buildUnitValue,
+  getUnitsByDepartment,
+  isIndustrialEngineeringAndTechnologyDepartment,
 } from "@/lib/departments";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -121,11 +124,11 @@ function RegisterForm() {
       }
       if (
         userType === "unit_coordinator" &&
-        department === "DIET" &&
-        unit === "BSINDT" &&
+        isIndustrialEngineeringAndTechnologyDepartment(department) &&
+        unit === BS_INDUSTRIAL_TECHNOLOGY &&
         !dietTrack
       ) {
-        setError("Please select BSINDT track.");
+        setError("Please select BS Industrial Technology major.");
         return;
       }
 
@@ -383,7 +386,7 @@ function RegisterForm() {
                   className="flex h-9 w-full rounded-md border border-border/80 bg-muted/10 px-3 py-1 text-[11px] shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground/70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <option value="" disabled>Select Unit</option>
-                  {(UNITS_BY_DEPARTMENT[department as keyof typeof UNITS_BY_DEPARTMENT] || []).map((opt) => (
+                  {getUnitsByDepartment(department).map((opt) => (
                     <option key={opt} value={opt}>
                       {opt}
                     </option>
@@ -393,11 +396,11 @@ function RegisterForm() {
             )}
 
             {userType === "unit_coordinator" &&
-              department === "DIET" &&
-              unit === "BSINDT" && (
+              department === DEPARTMENT_OF_INDUSTRIAL_ENGINEERING_AND_TECHNOLOGY &&
+              unit === BS_INDUSTRIAL_TECHNOLOGY && (
               <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
                 <Label htmlFor="diet-track" className="text-[11px] font-semibold text-foreground/90 ml-0.5">
-                  BSINDT Track
+                  BS Industrial Technology Major
                 </Label>
                 <select
                   id="diet-track"
@@ -405,7 +408,7 @@ function RegisterForm() {
                   onChange={(e) => setDietTrack(e.target.value)}
                   className="flex h-9 w-full rounded-md border border-border/80 bg-muted/10 px-3 py-1 text-[11px] shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground/70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <option value="" disabled>Select Track</option>
+                  <option value="" disabled>Select Major</option>
                   {BSINDT_TRACKS.map((track) => (
                     <option key={track} value={track}>
                       {track}
