@@ -273,6 +273,25 @@ alter column visible_units set not null;
 -- END COPY: College Coordinator Post Visibility Controls
 -- ============================================================
 
+-- ============================================================
+-- START COPY: Lead Unit Support
+-- ============================================================
+-- Lead units used in project/program forms:
+-- - college coordinators can select one or more units in their department
+-- - unit coordinators are auto-assigned to their own unit
+alter table public.projects
+add column if not exists lead_units jsonb default '[]';
+
+update public.projects
+set lead_units = coalesce(lead_units, '[]'::jsonb);
+
+alter table public.projects
+alter column lead_units set default '[]'::jsonb,
+alter column lead_units set not null;
+-- ============================================================
+-- END COPY: Lead Unit Support
+-- ============================================================
+
 -- ============================================
 -- PDF Upload Enhancement
 -- Run this in Supabase SQL Editor

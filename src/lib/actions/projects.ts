@@ -3,6 +3,19 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
+import { UNITS_BY_DEPARTMENT, type DepartmentCode } from "@/lib/departments";
+
+function normalizeLeadUnits(raw: unknown, allowedUnits: string[] = []) {
+    if (!Array.isArray(raw)) return [];
+    const allowed = new Set(allowedUnits);
+    return Array.from(
+        new Set(
+            raw
+                .map((unit) => String(unit || "").trim())
+                .filter((unit) => unit && (allowed.size === 0 || allowed.has(unit)))
+        )
+    );
+}
 
 export async function createProject(formData: object) {
     const supabase = await createClient();
@@ -14,7 +27,7 @@ export async function createProject(formData: object) {
 
     const { data: profile } = await supabase
         .from("profiles")
-        .select("user_type, unit")
+        .select("user_type, unit, department")
         .eq("id", user.id)
         .single();
 
@@ -23,6 +36,7 @@ export async function createProject(formData: object) {
     if (profile?.user_type === "unit_coordinator") {
         payload.visibility_scope = "specific_units";
         payload.visible_units = profile.unit ? [profile.unit] : [];
+        payload.lead_units = profile.unit ? [profile.unit] : [];
     } else if (profile?.user_type === "college_coordinator") {
         const scope = payload.visibility_scope === "specific_units" ? "specific_units" : "public";
         payload.visibility_scope = scope;
@@ -30,9 +44,14 @@ export async function createProject(formData: object) {
             scope === "specific_units" && Array.isArray(payload.visible_units)
                 ? payload.visible_units
                 : [];
+        const allowedUnits = profile.department
+            ? UNITS_BY_DEPARTMENT[profile.department as DepartmentCode] || []
+            : [];
+        payload.lead_units = normalizeLeadUnits(payload.lead_units, allowedUnits);
     } else {
         payload.visibility_scope = "public";
         payload.visible_units = [];
+        payload.lead_units = [];
     }
 
     const { data, error } = await supabase
@@ -262,6 +281,7 @@ export async function updateProject(id: string, formData: object) {
     if (profile?.user_type === "unit_coordinator") {
         payload.visibility_scope = "specific_units";
         payload.visible_units = profile.unit ? [profile.unit] : [];
+        payload.lead_units = profile.unit ? [profile.unit] : [];
     } else if (profile?.user_type === "college_coordinator") {
         const scope = payload.visibility_scope === "specific_units" ? "specific_units" : "public";
         payload.visibility_scope = scope;
@@ -269,6 +289,10 @@ export async function updateProject(id: string, formData: object) {
             scope === "specific_units" && Array.isArray(payload.visible_units)
                 ? payload.visible_units
                 : [];
+        const allowedUnits = profile.department
+            ? UNITS_BY_DEPARTMENT[profile.department as DepartmentCode] || []
+            : [];
+        payload.lead_units = normalizeLeadUnits(payload.lead_units, allowedUnits);
     }
 
     const { data, error } = await adminClient

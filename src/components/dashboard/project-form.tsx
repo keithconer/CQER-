@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import * as z from "zod";
 import { CalendarIcon, Plus, Trash2, Check, ChevronsUpDown, Globe, Building2 } from "lucide-react";
 import { format } from "date-fns";
@@ -126,6 +126,7 @@ interface ProjectFormValues {
   community_location: string;
   category: "new" | "existing" | "on process";
   funding_source: "internally funded" | "externally funded";
+  lead_units: string[];
   visibility_scope: "public" | "specific_units";
   visible_units: string[];
   start_date: Date;
@@ -159,6 +160,7 @@ const projectSchema = z.object({
   funding_source: z.enum(fundingSourceOptions, {
     message: "Funding source is required",
   }),
+  lead_units: z.array(z.string()).default([]),
   visibility_scope: z.enum(["public", "specific_units"]).default("public"),
   visible_units: z.array(z.string()).default([]),
   start_date: z.date(),
@@ -200,7 +202,6 @@ export function ProjectForm({
   isViewOnly,
   mode = "project",
   currentUserType,
-  currentDepartment,
   currentUnit,
   unitOptions = [],
 }: ProjectFormProps) {
@@ -228,6 +229,9 @@ export function ProjectForm({
       community_location: project?.community_location || "",
       category: project?.category || "new",
       funding_source: project?.funding_source || "internally funded",
+      lead_units:
+        project?.lead_units ||
+        (currentUserType === "unit_coordinator" && currentUnit ? [currentUnit] : []),
       visibility_scope:
         project?.visibility_scope ||
         (currentUserType === "unit_coordinator" ? "specific_units" : "public"),
@@ -284,7 +288,7 @@ export function ProjectForm({
         return;
       }
       setShowSuccess(true);
-    } catch (error) {
+    } catch {
       alert("Something went wrong");
     } finally {
       setIsSubmitting(false);
@@ -298,7 +302,10 @@ export function ProjectForm({
   };
 
   const selectedProgram = form.watch("academic_program");
-  const watchedBudgetRequirements = form.watch("budget_requirements");
+  const watchedBudgetRequirements = useWatch({
+    control: form.control,
+    name: "budget_requirements",
+  });
   const selectedVisibilityScope = form.watch("visibility_scope");
 
   const computedBudgetTotal = React.useMemo(() => {
@@ -319,6 +326,7 @@ export function ProjectForm({
     if (currentUserType === "unit_coordinator") {
       form.setValue("visibility_scope", "specific_units", { shouldValidate: true });
       form.setValue("visible_units", currentUnit ? [currentUnit] : [], { shouldValidate: true });
+      form.setValue("lead_units", currentUnit ? [currentUnit] : [], { shouldValidate: true });
     }
   }, [currentUserType, currentUnit, form]);
 
@@ -736,6 +744,61 @@ export function ProjectForm({
               />
             </div>
 
+            {/* Lead Unit */}
+            {(currentUserType === "college_coordinator" || currentUserType === "unit_coordinator") && (
+              <FormField
+                control={form.control as any}
+                name="lead_units"
+                render={({ field }) => (
+                  <FormItem className="space-y-2">
+                    <FormLabel className="text-xs">Lead Unit</FormLabel>
+                    {currentUserType === "unit_coordinator" ? (
+                      <FormControl>
+                        <Input
+                          value={currentUnit || (field.value || []).join(", ")}
+                          readOnly
+                          disabled
+                          className="h-8 text-xs bg-muted/20"
+                        />
+                      </FormControl>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {unitOptions.length > 0 ? (
+                          unitOptions.map((unitOption) => {
+                            const checked = (field.value || []).includes(unitOption);
+                            return (
+                              <label
+                                key={unitOption}
+                                className="flex items-center gap-2 rounded-md border border-border/50 px-2 py-1.5 bg-background"
+                              >
+                                <Checkbox
+                                  checked={checked}
+                                  disabled={isViewOnly}
+                                  onCheckedChange={(isChecked) => {
+                                    const current = new Set(field.value || []);
+                                    if (isChecked) {
+                                      current.add(unitOption);
+                                    } else {
+                                      current.delete(unitOption);
+                                    }
+                                    field.onChange(Array.from(current));
+                                  }}
+                                />
+                                <span className="text-[10px]">{unitOption}</span>
+                              </label>
+                            );
+                          })
+                        ) : (
+                          <p className="text-[10px] text-muted-foreground">No units available.</p>
+                        )}
+                      </div>
+                    )}
+                    <FormMessage className="text-[10px]" />
+                  </FormItem>
+                )}
+              />
+            )}
+
             {/* Visibility Settings (College Coordinator) */}
             {isCollegeCoordinator && (
               <div className="space-y-3 rounded-md border border-border/50 p-3 bg-muted/10">
@@ -982,6 +1045,10 @@ export function ProjectForm({
                               type="number" 
                               placeholder="Amount" 
                               {...inputField} 
+                              onChange={(event) => {
+                                const nextValue = event.target.value;
+                                inputField.onChange(nextValue === "" ? 0 : Number(nextValue));
+                              }}
                               className="h-8 text-xs pl-5" 
                               disabled={isViewOnly} 
                             />

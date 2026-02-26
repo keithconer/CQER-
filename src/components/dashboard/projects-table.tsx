@@ -47,6 +47,7 @@ export interface Project {
   co_project_leaders: { name: string }[];
   category: "new" | "existing" | "on process" | null;
   funding_source: "internally funded" | "externally funded" | null;
+  lead_units?: string[];
   visibility_scope?: "public" | "specific_units" | null;
   visible_units?: string[];
   budget_total: number | null;
