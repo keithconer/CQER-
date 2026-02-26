@@ -1,11 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Eye, Pencil, Trash2, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { useRouter } from "next/navigation";
+import { deleteProject } from "@/lib/actions/projects";
+import { ProjectForm } from "./project-form";
 import {
   Table,
   TableBody,
@@ -15,6 +18,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { format } from "date-fns";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type RoleType = "super_admin" | "college_coordinator" | "unit_coordinator";
 
@@ -31,15 +42,28 @@ interface ExistingProject {
   id: string;
   entry_type?: "project" | "program" | null;
   title: string;
+  classification?: string[] | null;
+  sdg_goals?: string[] | null;
   academic_program: string | null;
+  major?: string | null;
+  proponents?: { name: string }[] | null;
+  co_project_leaders?: { name: string }[] | null;
+  college?: string | null;
+  collaborating_agencies?: string | null;
+  target_beneficiaries?: string[] | null;
+  community_location?: string | null;
   start_date: string | null;
   end_date: string | null;
-  proponents: { name: string }[] | null;
-  co_project_leaders: { name: string }[] | null;
   category: "new" | "existing" | "on process" | null;
   funding_source: "internally funded" | "externally funded" | null;
+  visibility_scope?: "public" | "specific_units" | null;
+  visible_units?: string[] | null;
+  lead_units?: string[] | null;
+  related_curricular_offerings?: string[] | null;
   budget_total: number | null;
   budget_requirements: { name: string; amount: number }[] | null;
+  gad_score?: number | null;
+  documents?: { url: string; name: string }[] | null;
 }
 
 interface SuperAdminOverviewProps {
@@ -64,6 +88,29 @@ export function SuperAdminOverview({
   );
   const [searchTerm, setSearchTerm] = React.useState("");
   const [currentPage, setCurrentPage] = React.useState(1);
+  const [viewProject, setViewProject] = React.useState<ExistingProject | null>(null);
+  const [editProject, setEditProject] = React.useState<ExistingProject | null>(null);
+  const [deleteId, setDeleteId] = React.useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+  const router = useRouter();
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    setIsDeleting(true);
+    try {
+      const result = await deleteProject(deleteId);
+      if (result.error) {
+        alert("Error: " + result.error);
+      } else {
+        setDeleteId(null);
+        router.refresh();
+      }
+    } catch {
+      alert("Something went wrong");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   React.useEffect(() => {
     setCurrentPage(1);
@@ -312,6 +359,7 @@ export function SuperAdminOverview({
                   <TableHead className="text-[10px] font-semibold h-9">Category</TableHead>
                   <TableHead className="text-[10px] font-semibold h-9">Funding</TableHead>
                   <TableHead className="text-[10px] font-semibold h-9">Budget Total</TableHead>
+                  <TableHead className="text-[10px] font-semibold h-9 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -351,11 +399,39 @@ export function SuperAdminOverview({
                       <TableCell className="text-[10px] py-2.5 px-3 font-medium whitespace-nowrap">
                         {formatBudgetTotal(getBudgetTotal(project))}
                       </TableCell>
+                      <TableCell className="py-2.5 px-3 text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            onClick={() => setViewProject(project)}
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            onClick={() => setEditProject(project)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive hover:text-destructive/80 hover:bg-destructive/10"
+                            onClick={() => setDeleteId(project.id)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center text-xs text-muted-foreground">
+                    <TableCell colSpan={10} className="h-24 text-center text-xs text-muted-foreground">
                       No projects found.
                     </TableCell>
                   </TableRow>
@@ -375,6 +451,7 @@ export function SuperAdminOverview({
                   <TableHead className="text-[10px] font-semibold h-9">Category</TableHead>
                   <TableHead className="text-[10px] font-semibold h-9">Funding</TableHead>
                   <TableHead className="text-[10px] font-semibold h-9">Budget Total</TableHead>
+                  <TableHead className="text-[10px] font-semibold h-9 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -414,11 +491,39 @@ export function SuperAdminOverview({
                       <TableCell className="text-[10px] py-2.5 px-3 font-medium whitespace-nowrap">
                         {formatBudgetTotal(getBudgetTotal(program))}
                       </TableCell>
+                      <TableCell className="py-2.5 px-3 text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            onClick={() => setViewProject(program)}
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            onClick={() => setEditProject(program)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive hover:text-destructive/80 hover:bg-destructive/10"
+                            onClick={() => setDeleteId(program.id)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center text-xs text-muted-foreground">
+                    <TableCell colSpan={10} className="h-24 text-center text-xs text-muted-foreground">
                       No programs found.
                     </TableCell>
                   </TableRow>
@@ -460,6 +565,82 @@ export function SuperAdminOverview({
           </div>
         )}
       </CardContent>
+
+      <Dialog open={!!viewProject} onOpenChange={(open) => !open && setViewProject(null)}>
+        <DialogContent className="sm:max-w-[800px] p-6 max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="text-sm font-semibold">
+              {(viewProject?.entry_type || "project") === "program" ? "Program" : "Project"} Details
+            </DialogTitle>
+            <DialogDescription className="text-[10px]">
+              Viewing complete information for {viewProject?.title}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden">
+            {viewProject && (
+              <ProjectForm
+                project={viewProject}
+                mode={(viewProject.entry_type || "project") as "project" | "program"}
+                isViewOnly
+                currentUserType="super_admin"
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editProject} onOpenChange={(open) => !open && setEditProject(null)}>
+        <DialogContent className="sm:max-w-[800px] p-6 max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="text-sm font-semibold">
+              Edit {(editProject?.entry_type || "project") === "program" ? "Program" : "Project"}
+            </DialogTitle>
+            <DialogDescription className="text-[10px]">
+              Modify record information below.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden">
+            {editProject && (
+              <ProjectForm
+                project={editProject}
+                mode={(editProject.entry_type || "project") as "project" | "program"}
+                currentUserType="super_admin"
+                onSuccess={() => {
+                  setEditProject(null);
+                  router.refresh();
+                }}
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader className="flex flex-col items-center justify-center pt-4">
+            <div className="rounded-full bg-destructive/10 p-3 mb-4">
+              <AlertTriangle className="h-10 w-10 text-destructive" />
+            </div>
+            <DialogTitle className="text-lg font-semibold text-center">Delete record?</DialogTitle>
+            <DialogDescription className="text-xs text-center">
+              This action cannot be undone. This will permanently delete the selected record.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="sm:justify-center gap-2">
+            <Button variant="outline" onClick={() => setDeleteId(null)} className="h-9 text-xs">
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              className="h-9 text-xs px-8"
+              onClick={handleDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

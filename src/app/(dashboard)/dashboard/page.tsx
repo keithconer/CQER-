@@ -73,9 +73,17 @@ export default async function DashboardPage({
 
   let allProjects: {
     id: string;
+    created_by?: string | null;
     entry_type?: "project" | "program" | null;
     title: string;
+    classification?: string[] | null;
+    sdg_goals?: string[] | null;
     academic_program: string | null;
+    major?: string | null;
+    college?: string | null;
+    collaborating_agencies?: string | null;
+    target_beneficiaries?: string[] | null;
+    community_location?: string | null;
     start_date: string | null;
     end_date: string | null;
     proponents: { name: string }[] | null;
@@ -88,6 +96,8 @@ export default async function DashboardPage({
     visible_units?: string[] | null;
     budget_total: number | null;
     budget_requirements: { name: string; amount: number }[] | null;
+    gad_score?: number | null;
+    documents?: { url: string; name: string }[] | null;
   }[] = [];
 
   if (profile.user_type === "super_admin") {
@@ -100,7 +110,7 @@ export default async function DashboardPage({
         .order("created_at", { ascending: false }),
       adminClient
         .from("projects")
-        .select("id, entry_type, title, academic_program, start_date, end_date, proponents, co_project_leaders, category, funding_source, lead_units, related_curricular_offerings, visibility_scope, visible_units, budget_total, budget_requirements")
+        .select("id, created_by, entry_type, title, classification, sdg_goals, academic_program, major, proponents, co_project_leaders, college, collaborating_agencies, target_beneficiaries, community_location, start_date, end_date, category, funding_source, lead_units, related_curricular_offerings, visibility_scope, visible_units, budget_total, budget_requirements, gad_score, documents")
         .order("created_at", { ascending: false }),
     ]);
 
