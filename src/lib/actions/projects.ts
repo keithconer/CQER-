@@ -17,6 +17,11 @@ function normalizeLeadUnits(raw: unknown, allowedUnits: string[] = []) {
     );
 }
 
+function getDepartmentUnits(department: string | null | undefined) {
+    if (!department) return [];
+    return UNITS_BY_DEPARTMENT[department as DepartmentCode] || [];
+}
+
 export async function createProject(formData: object) {
     const supabase = await createClient();
 
@@ -34,9 +39,15 @@ export async function createProject(formData: object) {
     const payload = { ...(formData as Record<string, unknown>) };
 
     if (profile?.user_type === "unit_coordinator") {
+        const unitOptions = getDepartmentUnits(profile.department);
+        const fallbackUnit = profile.unit ? [profile.unit] : [];
         payload.visibility_scope = "specific_units";
         payload.visible_units = profile.unit ? [profile.unit] : [];
         payload.lead_units = profile.unit ? [profile.unit] : [];
+        payload.related_curricular_offerings = normalizeLeadUnits(
+            payload.related_curricular_offerings,
+            unitOptions.length > 0 ? unitOptions : fallbackUnit
+        );
     } else if (profile?.user_type === "college_coordinator") {
         const scope = payload.visibility_scope === "specific_units" ? "specific_units" : "public";
         payload.visibility_scope = scope;
@@ -44,14 +55,17 @@ export async function createProject(formData: object) {
             scope === "specific_units" && Array.isArray(payload.visible_units)
                 ? payload.visible_units
                 : [];
-        const allowedUnits = profile.department
-            ? UNITS_BY_DEPARTMENT[profile.department as DepartmentCode] || []
-            : [];
+        const allowedUnits = getDepartmentUnits(profile.department);
         payload.lead_units = normalizeLeadUnits(payload.lead_units, allowedUnits);
+        payload.related_curricular_offerings = normalizeLeadUnits(
+            payload.related_curricular_offerings,
+            allowedUnits
+        );
     } else {
         payload.visibility_scope = "public";
         payload.visible_units = [];
         payload.lead_units = [];
+        payload.related_curricular_offerings = [];
     }
 
     const { data, error } = await supabase
@@ -279,9 +293,15 @@ export async function updateProject(id: string, formData: object) {
     const payload = { ...(formData as Record<string, unknown>) };
 
     if (profile?.user_type === "unit_coordinator") {
+        const unitOptions = getDepartmentUnits(profile.department);
+        const fallbackUnit = profile.unit ? [profile.unit] : [];
         payload.visibility_scope = "specific_units";
         payload.visible_units = profile.unit ? [profile.unit] : [];
         payload.lead_units = profile.unit ? [profile.unit] : [];
+        payload.related_curricular_offerings = normalizeLeadUnits(
+            payload.related_curricular_offerings,
+            unitOptions.length > 0 ? unitOptions : fallbackUnit
+        );
     } else if (profile?.user_type === "college_coordinator") {
         const scope = payload.visibility_scope === "specific_units" ? "specific_units" : "public";
         payload.visibility_scope = scope;
@@ -289,10 +309,12 @@ export async function updateProject(id: string, formData: object) {
             scope === "specific_units" && Array.isArray(payload.visible_units)
                 ? payload.visible_units
                 : [];
-        const allowedUnits = profile.department
-            ? UNITS_BY_DEPARTMENT[profile.department as DepartmentCode] || []
-            : [];
+        const allowedUnits = getDepartmentUnits(profile.department);
         payload.lead_units = normalizeLeadUnits(payload.lead_units, allowedUnits);
+        payload.related_curricular_offerings = normalizeLeadUnits(
+            payload.related_curricular_offerings,
+            allowedUnits
+        );
     }
 
     const { data, error } = await adminClient

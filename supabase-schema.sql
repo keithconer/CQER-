@@ -292,6 +292,24 @@ alter column lead_units set not null;
 -- END COPY: Lead Unit Support
 -- ============================================================
 
+-- ============================================================
+-- START COPY: Related Curricular Offering Support
+-- ============================================================
+-- Optional related curricular offerings for project/program forms.
+-- Values are selected from units/offering options under the user's department.
+alter table public.projects
+add column if not exists related_curricular_offerings jsonb default '[]';
+
+update public.projects
+set related_curricular_offerings = coalesce(related_curricular_offerings, '[]'::jsonb);
+
+alter table public.projects
+alter column related_curricular_offerings set default '[]'::jsonb,
+alter column related_curricular_offerings set not null;
+-- ============================================================
+-- END COPY: Related Curricular Offering Support
+-- ============================================================
+
 -- ============================================
 -- PDF Upload Enhancement
 -- Run this in Supabase SQL Editor

@@ -48,6 +48,7 @@ export interface Project {
   category: "new" | "existing" | "on process" | null;
   funding_source: "internally funded" | "externally funded" | null;
   lead_units?: string[];
+  related_curricular_offerings?: string[];
   visibility_scope?: "public" | "specific_units" | null;
   visible_units?: string[];
   budget_total: number | null;

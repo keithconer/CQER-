@@ -83,6 +83,7 @@ export default async function DashboardPage({
     category: "new" | "existing" | "on process" | null;
     funding_source: "internally funded" | "externally funded" | null;
     lead_units?: string[] | null;
+    related_curricular_offerings?: string[] | null;
     visibility_scope?: "public" | "specific_units" | null;
     visible_units?: string[] | null;
     budget_total: number | null;
@@ -99,7 +100,7 @@ export default async function DashboardPage({
         .order("created_at", { ascending: false }),
       adminClient
         .from("projects")
-        .select("id, entry_type, title, academic_program, start_date, end_date, proponents, co_project_leaders, category, funding_source, lead_units, visibility_scope, visible_units, budget_total, budget_requirements")
+        .select("id, entry_type, title, academic_program, start_date, end_date, proponents, co_project_leaders, category, funding_source, lead_units, related_curricular_offerings, visibility_scope, visible_units, budget_total, budget_requirements")
         .order("created_at", { ascending: false }),
     ]);
 

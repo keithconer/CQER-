@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/command";
 import { Textarea } from "@/components/ui/textarea";
 import { createProject, updateProject } from "@/lib/actions/projects";
+import { UNITS_BY_DEPARTMENT, type DepartmentCode } from "@/lib/departments";
 import { CheckCircle2 } from "lucide-react";
 import {
   Dialog,
@@ -127,6 +128,7 @@ interface ProjectFormValues {
   category: "new" | "existing" | "on process";
   funding_source: "internally funded" | "externally funded";
   lead_units: string[];
+  related_curricular_offerings: string[];
   visibility_scope: "public" | "specific_units";
   visible_units: string[];
   start_date: Date;
@@ -161,6 +163,7 @@ const projectSchema = z.object({
     message: "Funding source is required",
   }),
   lead_units: z.array(z.string()).default([]),
+  related_curricular_offerings: z.array(z.string()).default([]),
   visibility_scope: z.enum(["public", "specific_units"]).default("public"),
   visible_units: z.array(z.string()).default([]),
   start_date: z.date(),
@@ -202,6 +205,7 @@ export function ProjectForm({
   isViewOnly,
   mode = "project",
   currentUserType,
+  currentDepartment,
   currentUnit,
   unitOptions = [],
 }: ProjectFormProps) {
@@ -232,6 +236,7 @@ export function ProjectForm({
       lead_units:
         project?.lead_units ||
         (currentUserType === "unit_coordinator" && currentUnit ? [currentUnit] : []),
+      related_curricular_offerings: project?.related_curricular_offerings || [],
       visibility_scope:
         project?.visibility_scope ||
         (currentUserType === "unit_coordinator" ? "specific_units" : "public"),
@@ -307,6 +312,22 @@ export function ProjectForm({
     name: "budget_requirements",
   });
   const selectedVisibilityScope = form.watch("visibility_scope");
+
+  const relatedCurricularOptions = React.useMemo(() => {
+    if (currentUserType === "college_coordinator") {
+      return unitOptions;
+    }
+
+    if (currentUserType === "unit_coordinator") {
+      if (currentDepartment) {
+        const departmentUnits = UNITS_BY_DEPARTMENT[currentDepartment as DepartmentCode] || [];
+        if (departmentUnits.length > 0) return departmentUnits;
+      }
+      return currentUnit ? [currentUnit] : [];
+    }
+
+    return [];
+  }, [currentUserType, currentDepartment, currentUnit, unitOptions]);
 
   const computedBudgetTotal = React.useMemo(() => {
     return (watchedBudgetRequirements || []).reduce(
@@ -793,6 +814,91 @@ export function ProjectForm({
                         )}
                       </div>
                     )}
+                    <FormMessage className="text-[10px]" />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {/* Related Curricular Offering */}
+            {(currentUserType === "college_coordinator" || currentUserType === "unit_coordinator") && (
+              <FormField
+                control={form.control as any}
+                name="related_curricular_offerings"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel className="text-xs">Related Curricular Offering (Optional)</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          disabled={isViewOnly || relatedCurricularOptions.length === 0}
+                          className={cn(
+                            "w-full justify-between h-auto min-h-[32px] text-xs px-2 py-1",
+                            !(field.value || []).length && "text-muted-foreground"
+                          )}
+                        >
+                          <div className="flex flex-wrap gap-1 items-center">
+                            <Building2 className="h-3.5 w-3.5" />
+                            {(field.value || []).length > 0 ? (
+                              (field.value || []).map((val: string) => (
+                                <div key={val} className="bg-muted px-1.5 py-0.5 rounded-sm flex items-center gap-1 border">
+                                  <span>{val}</span>
+                                </div>
+                              ))
+                            ) : (
+                              <span>
+                                {relatedCurricularOptions.length > 0
+                                  ? "Select related curricular offerings"
+                                  : "No offerings available"}
+                              </span>
+                            )}
+                          </div>
+                          <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[320px] p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Search offering..." className="h-8 text-xs" />
+                          <CommandEmpty className="text-xs p-2">No offering found.</CommandEmpty>
+                          <CommandGroup className="p-0">
+                            <CommandList className="max-h-64 overflow-y-auto">
+                              {relatedCurricularOptions.map((option) => (
+                                <CommandItem
+                                  key={option}
+                                  value={option}
+                                  onSelect={() => {
+                                    const current = new Set(field.value || []);
+                                    if (current.has(option)) {
+                                      current.delete(option);
+                                    } else {
+                                      current.add(option);
+                                    }
+                                    field.onChange(Array.from(current));
+                                  }}
+                                  className="text-xs"
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-3 w-3",
+                                      (field.value || []).includes(option)
+                                        ? "opacity-100"
+                                        : "opacity-0"
+                                    )}
+                                  />
+                                  <Building2 className="mr-1 h-3.5 w-3.5" />
+                                  {option}
+                                </CommandItem>
+                              ))}
+                            </CommandList>
+                          </CommandGroup>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    <FormDescription className="text-[10px]">
+                      Optional. Select one or more units/offering under your department.
+                    </FormDescription>
                     <FormMessage className="text-[10px]" />
                   </FormItem>
                 )}
