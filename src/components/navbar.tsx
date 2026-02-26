@@ -14,7 +14,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-  Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
   Settings,
   LogOut,
   FolderPlus,
@@ -116,7 +117,11 @@ export function Navbar({ user }: NavbarProps) {
               className="h-8 w-8 border-border/40 bg-white"
               onClick={() => setSidebarOpen((prev) => !prev)}
             >
-              <Menu className="h-3.5 w-3.5" />
+              {sidebarOpen ? (
+                <PanelLeftClose className="h-3.5 w-3.5" />
+              ) : (
+                <PanelLeftOpen className="h-3.5 w-3.5" />
+              )}
             </Button>
           )}
           <button
@@ -214,14 +219,20 @@ export function Navbar({ user }: NavbarProps) {
           }`}
         >
           <div className="flex h-12 items-center justify-between border-b border-border/40 px-3">
-            <span className="text-xs font-semibold">Sidebar</span>
+            <Image
+              src="/CQERFINAL.png"
+              alt="CQER Logo"
+              width={36}
+              height={36}
+              className="object-contain"
+            />
             <Button
               variant="ghost"
               size="icon"
               className="h-7 w-7"
               onClick={() => setSidebarOpen(false)}
             >
-              <Menu className="h-3.5 w-3.5" />
+              <PanelLeftClose className="h-3.5 w-3.5" />
             </Button>
           </div>
 
