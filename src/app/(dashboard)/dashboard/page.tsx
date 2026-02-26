@@ -21,6 +21,8 @@ export default async function DashboardPage({
   const activeEntityType: "project" | "program" =
     resolvedSearchParams.view === "programs" ? "program" : "project";
   const activePanel = panelParam === "unit-coordinators" ? "unit-coordinators" : "records";
+  const hasSuperAdminSelection =
+    panelParam === "accounts" || panelParam === "projects" || panelParam === "programs";
   const superAdminTab: "accounts" | "projects" | "programs" =
     panelParam === "accounts" || panelParam === "programs" || panelParam === "projects"
       ? panelParam
@@ -168,12 +170,16 @@ export default async function DashboardPage({
 
       {userType === "super_admin" && (
         <div className="space-y-4">
-          <CoordinatorRegistration 
-            userType="college_coordinator" 
-            title="College Coordinators"
-            description="Register emails of College coordinators for their specific departments."
-          />
-          <SuperAdminOverview accounts={allAccounts} projects={allProjects} initialTab={superAdminTab} />
+          {hasSuperAdminSelection && (
+            <>
+              <CoordinatorRegistration 
+                userType="college_coordinator" 
+                title="College Coordinators"
+                description="Register emails of College coordinators for their specific departments."
+              />
+              <SuperAdminOverview accounts={allAccounts} projects={allProjects} initialTab={superAdminTab} />
+            </>
+          )}
         </div>
       )}
 
@@ -184,14 +190,7 @@ export default async function DashboardPage({
               accounts={collegeUnitCoordinatorAccounts}
               department={profile.department}
             />
-          ) : !hasEntitySelection ? (
-            <div className="rounded-md border border-border/40 bg-white p-4">
-              <p className="text-xs font-medium text-foreground/90">Select what to open</p>
-              <p className="text-[10px] text-muted-foreground mt-1">
-                Use Sidebar &gt; Create &gt; Projects or Programs to display the table.
-              </p>
-            </div>
-          ) : (
+          ) : hasEntitySelection ? (
             <CollegeProjectsManagement
               initialProjects={projects}
               entityType={activeEntityType}
@@ -201,19 +200,12 @@ export default async function DashboardPage({
               unitOptions={availableUnitsForCollege}
               currentUserId={user.id}
             />
-          )}
+          ) : null}
         </div>
       )}
 
       {userType === "unit_coordinator" && (
-        !hasEntitySelection ? (
-          <div className="rounded-md border border-border/40 bg-white p-4">
-            <p className="text-xs font-medium text-foreground/90">Select what to open</p>
-            <p className="text-[10px] text-muted-foreground mt-1">
-              Use Sidebar &gt; Create &gt; Projects or Programs to display the table.
-            </p>
-          </div>
-        ) : (
+        hasEntitySelection ? (
           <UnitProjectsManagement
             myProjects={projects}
             unitProjects={unitProjects}
@@ -223,7 +215,7 @@ export default async function DashboardPage({
             unit={profile.unit}
             unitOptions={[]}
           />
-        )
+        ) : null
       )}
     </div>
   );
