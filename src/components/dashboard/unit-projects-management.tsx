@@ -157,6 +157,7 @@ export function UnitProjectsManagement({
             projects={isMyProjects ? filteredMyRecords : filteredUnitRecords}
             entityType={entityType}
             readOnly={!isMyProjects}
+            allowViewOnlyAction={!isMyProjects}
             searchTerm={searchTerm}
             onSearchTermChange={setSearchTerm}
             showSearch={false}

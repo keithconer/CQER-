@@ -67,6 +67,7 @@ interface ProjectsTableProps {
   onSearchTermChange?: (value: string) => void;
   showSearch?: boolean;
   paginationAlign?: "between" | "right";
+  allowViewOnlyAction?: boolean;
   formContext?: {
     userType?: "super_admin" | "college_coordinator" | "unit_coordinator";
     department?: string | null;
@@ -83,6 +84,7 @@ export function ProjectsTable({
   onSearchTermChange,
   showSearch = true,
   paginationAlign = "between",
+  allowViewOnlyAction = false,
   formContext,
 }: ProjectsTableProps) {
   const recordLabel = entityType === "program" ? "Program" : "Project";
@@ -93,6 +95,7 @@ export function ProjectsTable({
   const setSearchTerm = onSearchTermChange ?? setInternalSearchTerm;
   const [currentPage, setCurrentPage] = React.useState(1);
   const itemsPerPage = 5;
+  const showActionsColumn = !readOnly || allowViewOnlyAction;
 
   const filteredProjects = React.useMemo(() => {
     return projects.filter((project) =>
@@ -243,7 +246,7 @@ export function ProjectsTable({
               <TableHead className="text-[10px] font-semibold h-9">Category</TableHead>
               <TableHead className="text-[10px] font-semibold h-9">Funding</TableHead>
               <TableHead className="text-[10px] font-semibold h-9">Budget Total</TableHead>
-              {!readOnly && (
+              {showActionsColumn && (
                 <TableHead className="text-[10px] font-semibold h-9 text-right">Actions</TableHead>
               )}
             </TableRow>
@@ -302,7 +305,7 @@ export function ProjectsTable({
                   <TableCell className="text-[10px] py-2.5 px-3 font-medium whitespace-nowrap">
                     {formatBudgetTotal(getBudgetTotal(project))}
                   </TableCell>
-                  {!readOnly && (
+                  {showActionsColumn && (
                     <TableCell className="py-2.5 px-3 text-right">
                     <div className="flex justify-end gap-1">
                       {project.documents && project.documents.length > 0 && (
@@ -381,7 +384,7 @@ export function ProjectsTable({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={readOnly ? 9 : 10} className="h-24 text-center text-xs text-muted-foreground">
+                <TableCell colSpan={showActionsColumn ? 10 : 9} className="h-24 text-center text-xs text-muted-foreground">
                   No matches found for &quot;{searchTerm}&quot;
                 </TableCell>
               </TableRow>
