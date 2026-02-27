@@ -69,7 +69,7 @@ interface ExistingProject {
 interface SuperAdminOverviewProps {
   accounts: RegisteredAccount[];
   projects: ExistingProject[];
-  initialTab?: "accounts" | "projects" | "programs";
+  panel: "accounts" | "projects" | "programs";
 }
 
 const ITEMS_PER_PAGE = 6;
@@ -83,11 +83,8 @@ function formatRole(role: RoleType) {
 export function SuperAdminOverview({
   accounts,
   projects,
-  initialTab = "projects",
+  panel,
 }: SuperAdminOverviewProps) {
-  const [activeTab, setActiveTab] = React.useState<"accounts" | "projects" | "programs">(
-    initialTab
-  );
   const [searchTerm, setSearchTerm] = React.useState("");
   const [currentPage, setCurrentPage] = React.useState(1);
   const [viewProject, setViewProject] = React.useState<ExistingProject | null>(null);
@@ -116,12 +113,11 @@ export function SuperAdminOverview({
 
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [activeTab, searchTerm]);
+  }, [panel, searchTerm]);
 
   React.useEffect(() => {
-    setActiveTab(initialTab);
     setSearchTerm("");
-  }, [initialTab]);
+  }, [panel]);
 
   const filteredAccounts = React.useMemo(() => {
     const term = searchTerm.toLowerCase();
@@ -230,9 +226,9 @@ export function SuperAdminOverview({
     }).format(value);
 
   const activeItems =
-    activeTab === "accounts"
+    panel === "accounts"
       ? filteredAccounts
-      : activeTab === "projects"
+      : panel === "projects"
         ? filteredProjects
         : filteredPrograms;
   const totalPages = Math.max(1, Math.ceil(activeItems.length / ITEMS_PER_PAGE));
@@ -253,48 +249,13 @@ export function SuperAdminOverview({
               View all registered accounts and existing projects.
             </CardDescription>
           </div>
-          <div className="inline-flex rounded-md border border-border/60 p-0.5 bg-muted/20">
-            <Button
-              size="sm"
-              onClick={() => setActiveTab("accounts")}
-              className={`h-7 text-[10px] px-2.5 ${
-                activeTab === "accounts"
-                  ? "bg-[#159E44] hover:bg-[#128A3B] text-white"
-                  : "bg-transparent text-foreground hover:bg-muted"
-              }`}
-            >
-              Registered Accounts
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => setActiveTab("projects")}
-              className={`h-7 text-[10px] px-2.5 ${
-                activeTab === "projects"
-                  ? "bg-[#159E44] hover:bg-[#128A3B] text-white"
-                  : "bg-transparent text-foreground hover:bg-muted"
-              }`}
-            >
-              Project Tables
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => setActiveTab("programs")}
-              className={`h-7 text-[10px] px-2.5 ${
-                activeTab === "programs"
-                  ? "bg-[#159E44] hover:bg-[#128A3B] text-white"
-                  : "bg-transparent text-foreground hover:bg-muted"
-              }`}
-            >
-              Program Tables
-            </Button>
-          </div>
         </div>
 
         <div className="relative max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
           <Input
             placeholder={
-              activeTab === "accounts"
+              panel === "accounts"
                 ? "Search accounts..."
                 : "Search..."
             }
@@ -307,7 +268,7 @@ export function SuperAdminOverview({
 
       <CardContent className="px-4 pb-4 space-y-3">
         <div className="rounded-md border border-border/50 overflow-hidden">
-          {activeTab === "accounts" ? (
+          {panel === "accounts" ? (
             <Table>
               <TableHeader className="bg-muted/30">
                 <TableRow className="hover:bg-transparent border-border/50">
@@ -353,7 +314,7 @@ export function SuperAdminOverview({
                 )}
               </TableBody>
             </Table>
-          ) : activeTab === "projects" ? (
+          ) : panel === "projects" ? (
             <Table>
               <TableHeader className="bg-muted/30">
                 <TableRow className="hover:bg-transparent border-border/50">
@@ -544,7 +505,7 @@ export function SuperAdminOverview({
           <div className="flex items-center justify-between px-2 pt-1">
             <p className="text-[10px] text-muted-foreground">
               Showing {startIndex + 1} to {Math.min(endIndex, activeItems.length)} of{" "}
-              {activeItems.length} {activeTab === "accounts" ? "records" : activeTab === "projects" ? "projects" : "programs"}
+              {activeItems.length} {panel === "accounts" ? "records" : panel === "projects" ? "projects" : "programs"}
             </p>
             <div className="flex items-center gap-1">
               <Button

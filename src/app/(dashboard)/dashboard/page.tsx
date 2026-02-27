@@ -23,7 +23,7 @@ export default async function DashboardPage({
   const activePanel = panelParam === "unit-coordinators" ? "unit-coordinators" : "records";
   const hasSuperAdminSelection =
     panelParam === "accounts" || panelParam === "projects" || panelParam === "programs";
-  const superAdminTab: "accounts" | "projects" | "programs" =
+  const superAdminPanel: "accounts" | "projects" | "programs" =
     panelParam === "accounts" || panelParam === "programs" || panelParam === "projects"
       ? panelParam
       : "projects";
@@ -177,7 +177,7 @@ export default async function DashboardPage({
                 title="College Coordinators"
                 description="Register emails of College coordinators for their specific departments."
               />
-              <SuperAdminOverview accounts={allAccounts} projects={allProjects} initialTab={superAdminTab} />
+              <SuperAdminOverview accounts={allAccounts} projects={allProjects} panel={superAdminPanel} />
             </>
           )}
         </div>
