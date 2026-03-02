@@ -132,6 +132,18 @@
   }
 }
 
-html[data-font-scale="large"] {
+html[data-font-scale="small"] {
+  font-size: 16px;
+}
+
+html[data-font-scale="medium"] {
   font-size: 17px;
+}
+
+html[data-font-scale="large"] {
+  font-size: 18px;
+}
+
+html[data-font-scale="normal"] {
+  font-size: 16px;
 }

@@ -10,6 +10,9 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
@@ -23,6 +26,8 @@ import {
   Settings,
   KeyRound,
   LogOut,
+  Moon,
+  Type,
   FolderPlus,
   FolderKanban,
   FileText,
@@ -58,7 +63,7 @@ export function Navbar({ user }: NavbarProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [createExpanded, setCreateExpanded] = useState(true);
   const [recordsExpanded, setRecordsExpanded] = useState(true);
-  const [largeFontEnabled, setLargeFontEnabled] = useState(false);
+  const [fontScale, setFontScale] = useState<"small" | "medium" | "large">("small");
   const [darkModeEnabled, setDarkModeEnabled] = useState(false);
 
   const isDashboard = pathname?.startsWith("/dashboard");
@@ -106,21 +111,21 @@ export function Navbar({ user }: NavbarProps) {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    setLargeFontEnabled(window.localStorage.getItem("cqer_font_scale") === "large");
+    const savedScale = window.localStorage.getItem("cqer_font_scale");
+    if (savedScale === "medium" || savedScale === "large" || savedScale === "small") {
+      setFontScale(savedScale);
+    } else {
+      setFontScale("small");
+    }
     setDarkModeEnabled(window.localStorage.getItem("cqer_theme") === "dark");
   }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const root = document.documentElement;
-    if (largeFontEnabled) {
-      root.setAttribute("data-font-scale", "large");
-      window.localStorage.setItem("cqer_font_scale", "large");
-    } else {
-      root.setAttribute("data-font-scale", "normal");
-      window.localStorage.setItem("cqer_font_scale", "normal");
-    }
-  }, [largeFontEnabled]);
+    root.setAttribute("data-font-scale", fontScale);
+    window.localStorage.setItem("cqer_font_scale", fontScale);
+  }, [fontScale]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -166,7 +171,7 @@ export function Navbar({ user }: NavbarProps) {
             <Button
               variant="outline"
               size="icon"
-              className="h-8 w-8 border-border/40 bg-white"
+              className="h-8 w-8 border-border/40 bg-background"
               onClick={() => setSidebarOpen((prev) => !prev)}
             >
               {sidebarOpen ? (
@@ -204,7 +209,7 @@ export function Navbar({ user }: NavbarProps) {
                 <span
                   onMouseEnter={() => setRolePopoverOpen(true)}
                   onMouseLeave={() => setRolePopoverOpen(false)}
-                  className="inline-flex w-fit mt-0.5 rounded-full border border-border/40 bg-white px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground/80 cursor-default"
+                  className="inline-flex w-fit mt-0.5 rounded-full border border-border/40 bg-background px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground/80 cursor-default"
                 >
                   {roleLabel}
                 </span>
@@ -241,18 +246,38 @@ export function Navbar({ user }: NavbarProps) {
                   Settings
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent className="w-56">
-                  <DropdownMenuCheckboxItem
-                    checked={largeFontEnabled}
-                    className="text-[11px] cursor-pointer"
-                    onCheckedChange={(checked) => setLargeFontEnabled(!!checked)}
-                  >
-                    Accessibility: Increase Font Size
-                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className="text-[11px] cursor-pointer">
+                      <Type className="mr-2 h-3 w-3" />
+                      Accessibility
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent className="w-48">
+                      <DropdownMenuLabel className="text-[10px]">Font Size</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuRadioGroup
+                        value={fontScale}
+                        onValueChange={(value) =>
+                          setFontScale(value as "small" | "medium" | "large")
+                        }
+                      >
+                        <DropdownMenuRadioItem value="small" className="text-[11px] cursor-pointer">
+                          Default (Small)
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="medium" className="text-[11px] cursor-pointer">
+                          Medium
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="large" className="text-[11px] cursor-pointer">
+                          Large
+                        </DropdownMenuRadioItem>
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
                   <DropdownMenuCheckboxItem
                     checked={darkModeEnabled}
                     className="text-[11px] cursor-pointer"
                     onCheckedChange={(checked) => setDarkModeEnabled(!!checked)}
                   >
+                    <Moon className="mr-2 h-3 w-3" />
                     Dark Mode
                   </DropdownMenuCheckboxItem>
                 </DropdownMenuSubContent>
@@ -289,7 +314,7 @@ export function Navbar({ user }: NavbarProps) {
 
       {isDashboard && (
         <aside
-          className={`fixed top-0 left-0 z-50 h-full w-64 border-r border-border/40 bg-white transition-transform duration-200 ${
+          className={`fixed top-0 left-0 z-50 h-full w-64 border-r border-border/40 bg-background transition-transform duration-200 ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
