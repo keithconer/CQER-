@@ -185,33 +185,36 @@ export function AwardsManagement({ initialAwards, department }: AwardsManagement
                           <Button
                             type="button"
                             variant="outline"
-                            size="sm"
-                            className="h-7 text-[10px] border-border/50"
+                            size="icon"
+                            className="h-7 w-7 border-border/50"
                             onClick={() => setViewAward(award)}
+                            title="View"
+                            aria-label="View award"
                           >
-                            <Eye className="h-3 w-3 mr-1" />
-                            View
+                            <Eye className="h-3 w-3" />
                           </Button>
                           <Button
                             type="button"
                             variant="outline"
-                            size="sm"
-                            className="h-7 text-[10px] border-border/50"
+                            size="icon"
+                            className="h-7 w-7 border-border/50"
                             onClick={() => setEditAward(award)}
+                            title="Update"
+                            aria-label="Update award"
                           >
-                            <Pencil className="h-3 w-3 mr-1" />
-                            Update
+                            <Pencil className="h-3 w-3" />
                           </Button>
                           <Button
                             type="button"
                             variant="outline"
-                            size="sm"
-                            className="h-7 text-[10px] text-destructive border-border/50"
+                            size="icon"
+                            className="h-7 w-7 text-destructive border-border/50"
                             onClick={() => handleDelete(award)}
                             disabled={isDeletingId === award.id}
+                            title="Delete"
+                            aria-label="Delete award"
                           >
-                            <Trash2 className="h-3 w-3 mr-1" />
-                            {isDeletingId === award.id ? "Deleting..." : "Delete"}
+                            <Trash2 className="h-3 w-3" />
                           </Button>
                         </div>
                       </TableCell>
