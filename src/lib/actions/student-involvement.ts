@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface StudentInvolvementPayload {
   college: string;
@@ -53,9 +54,44 @@ export async function createStudentInvolvement(formData: StudentInvolvementPaylo
 
 export async function getStudentInvolvement() {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const adminClient = createAdminClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { error: "Unauthorized" };
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("user_type, department")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile || !profile.department) {
+    return { data: [] };
+  }
+
+  const { data: deptProfiles, error: deptProfilesError } = await adminClient
+    .from("profiles")
+    .select("id")
+    .in("user_type", ["college_coordinator", "unit_coordinator"])
+    .eq("department", profile.department);
+
+  if (deptProfilesError) {
+    console.error("Error fetching department profiles:", deptProfilesError);
+    return { error: deptProfilesError.message };
+  }
+
+  const creatorIds = (deptProfiles || []).map((item) => item.id);
+  if (creatorIds.length === 0) {
+    return { data: [] };
+  }
+
+  const { data, error } = await adminClient
     .from("student_involvement")
     .select("*")
+    .in("created_by", creatorIds)
     .order("created_at", { ascending: false });
 
   if (error) {

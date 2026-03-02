@@ -4,7 +4,7 @@ import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { Eye, Pencil, Plus, Search, Trash2, CalendarIcon } from "lucide-react";
+import { Eye, Pencil, Plus, Search, SlidersHorizontal, Trash2, CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
@@ -58,6 +58,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { FileUpload } from "./file-upload";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const statusOptions = ["Submitted/Endorse", "approved"] as const;
 
@@ -95,6 +103,7 @@ export interface OrdinanceRecord {
   date_approved: string | null;
   remarks: string | null;
   documents: { url: string; name: string }[] | null;
+  created_by?: string | null;
 }
 
 interface OrdinanceResolutionsManagementProps {
@@ -103,6 +112,7 @@ interface OrdinanceResolutionsManagementProps {
   userType?: "super_admin" | "college_coordinator" | "unit_coordinator";
   unit?: string | null;
   unitOptions?: string[];
+  currentUserId: string;
 }
 
 function OrdinanceForm({
@@ -372,12 +382,17 @@ export function OrdinanceResolutionsManagement({
   userType,
   unit,
   unitOptions = [],
+  currentUserId,
 }: OrdinanceResolutionsManagementProps) {
   const [searchTerm, setSearchTerm] = React.useState("");
   const [createOpen, setCreateOpen] = React.useState(false);
   const [editRecord, setEditRecord] = React.useState<OrdinanceRecord | null>(null);
   const [viewRecord, setViewRecord] = React.useState<OrdinanceRecord | null>(null);
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
+  const [selectedScopes, setSelectedScopes] = React.useState<string[]>([
+    "created_by_me",
+    "department_files",
+  ]);
   const refreshTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
 
@@ -401,8 +416,15 @@ export function OrdinanceResolutionsManagement({
 
   const filtered = React.useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
-    if (!term) return initialRecords;
-    return initialRecords.filter((item) =>
+    const scopedRecords = initialRecords.filter((item) => {
+      const isMine = item.created_by === currentUserId;
+      return (
+        (selectedScopes.includes("created_by_me") && isMine) ||
+        (selectedScopes.includes("department_files") && !isMine)
+      );
+    });
+    if (!term) return scopedRecords;
+    return scopedRecords.filter((item) =>
       [
         item.department,
         item.curricular_offering,
@@ -416,7 +438,13 @@ export function OrdinanceResolutionsManagement({
         .toLowerCase()
         .includes(term)
     );
-  }, [initialRecords, searchTerm]);
+  }, [currentUserId, initialRecords, searchTerm, selectedScopes]);
+
+  const toggleScopeFilter = (value: string) => {
+    setSelectedScopes((prev) =>
+      prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]
+    );
+  };
 
   const closeAndRefresh = () => {
     setCreateOpen(false);
@@ -447,9 +475,41 @@ export function OrdinanceResolutionsManagement({
               Create Ordinance/Resolution
             </Button>
           </div>
-          <div className="relative max-w-sm">
-            <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-            <Input placeholder="Search..." className="pl-8 h-8 text-xs placeholder:text-[10px] bg-muted/20 border-border/50" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+          <div className="flex items-center justify-between gap-2">
+            <div className="relative max-w-sm w-full">
+              <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+              <Input placeholder="Search..." className="pl-8 h-8 text-xs placeholder:text-[10px] bg-muted/20 border-border/50" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-[10px] border-border/50 bg-muted/20"
+                >
+                  <SlidersHorizontal className="h-3 w-3 mr-1" />
+                  Filter
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="text-[10px]">Results Filter</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                  className="text-[10px]"
+                  checked={selectedScopes.includes("created_by_me")}
+                  onCheckedChange={() => toggleScopeFilter("created_by_me")}
+                >
+                  Created by me
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  className="text-[10px]"
+                  checked={selectedScopes.includes("department_files")}
+                  onCheckedChange={() => toggleScopeFilter("department_files")}
+                >
+                  All files from the department
+                </DropdownMenuCheckboxItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </CardHeader>
         <CardContent className="px-4 pb-4">

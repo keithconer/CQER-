@@ -4,7 +4,7 @@ import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useFieldArray, useForm } from "react-hook-form";
 import * as z from "zod";
-import { Eye, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Eye, Pencil, Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -57,6 +57,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { FileUpload } from "./file-upload";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const rankOptions = [
   "Associate Professor II",
@@ -83,6 +91,7 @@ export interface FacultyInvolvementRecord {
   total_hours_period: number;
   remarks: string | null;
   documents: { url: string; name: string }[] | null;
+  created_by?: string | null;
 }
 
 export interface PoolExpertRecord {
@@ -97,12 +106,14 @@ export interface PoolExpertRecord {
   other_expertise: string | null;
   remarks: string | null;
   documents: { url: string; name: string }[] | null;
+  created_by?: string | null;
 }
 
 interface FacultyInvolvementManagementProps {
   department: string | null;
   facultyRecords: FacultyInvolvementRecord[];
   poolRecords: PoolExpertRecord[];
+  currentUserId: string;
 }
 
 const facultySchema = z.object({
@@ -713,9 +724,14 @@ export function FacultyInvolvementManagement({
   department,
   facultyRecords,
   poolRecords,
+  currentUserId,
 }: FacultyInvolvementManagementProps) {
   const [activeTab, setActiveTab] = React.useState<"faculty" | "pool">("faculty");
   const [searchTerm, setSearchTerm] = React.useState("");
+  const [selectedScopes, setSelectedScopes] = React.useState<string[]>([
+    "created_by_me",
+    "department_files",
+  ]);
 
   const [createFacultyOpen, setCreateFacultyOpen] = React.useState(false);
   const [editFaculty, setEditFaculty] = React.useState<FacultyInvolvementRecord | null>(null);
@@ -751,8 +767,15 @@ export function FacultyInvolvementManagement({
 
   const filteredFaculty = React.useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
-    if (!term) return facultyRecords;
-    return facultyRecords.filter((item) =>
+    const scopedRecords = facultyRecords.filter((item) => {
+      const isMine = item.created_by === currentUserId;
+      return (
+        (selectedScopes.includes("created_by_me") && isMine) ||
+        (selectedScopes.includes("department_files") && !isMine)
+      );
+    });
+    if (!term) return scopedRecords;
+    return scopedRecords.filter((item) =>
       [
         item.faculty_name,
         item.sex,
@@ -766,12 +789,19 @@ export function FacultyInvolvementManagement({
         .toLowerCase()
         .includes(term)
     );
-  }, [facultyRecords, searchTerm]);
+  }, [currentUserId, facultyRecords, searchTerm, selectedScopes]);
 
   const filteredPool = React.useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
-    if (!term) return poolRecords;
-    return poolRecords.filter((item) =>
+    const scopedRecords = poolRecords.filter((item) => {
+      const isMine = item.created_by === currentUserId;
+      return (
+        (selectedScopes.includes("created_by_me") && isMine) ||
+        (selectedScopes.includes("department_files") && !isMine)
+      );
+    });
+    if (!term) return scopedRecords;
+    return scopedRecords.filter((item) =>
       [
         item.faculty_name,
         item.sex,
@@ -786,7 +816,13 @@ export function FacultyInvolvementManagement({
         .toLowerCase()
         .includes(term)
     );
-  }, [poolRecords, searchTerm]);
+  }, [currentUserId, poolRecords, searchTerm, selectedScopes]);
+
+  const toggleScopeFilter = (value: string) => {
+    setSelectedScopes((prev) =>
+      prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]
+    );
+  };
 
   const closeDialogsAndRefresh = () => {
     setCreateFacultyOpen(false);
@@ -856,14 +892,46 @@ export function FacultyInvolvementManagement({
             </Button>
           </div>
 
-          <div className="relative max-w-sm">
-            <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-            <Input
-              placeholder="Search..."
-              className="pl-8 h-8 text-xs placeholder:text-[10px] bg-muted/20 border-border/50"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+          <div className="flex items-center justify-between gap-2">
+            <div className="relative max-w-sm w-full">
+              <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Search..."
+                className="pl-8 h-8 text-xs placeholder:text-[10px] bg-muted/20 border-border/50"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-[10px] border-border/50 bg-muted/20"
+                >
+                  <SlidersHorizontal className="h-3 w-3 mr-1" />
+                  Filter
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="text-[10px]">Results Filter</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                  className="text-[10px]"
+                  checked={selectedScopes.includes("created_by_me")}
+                  onCheckedChange={() => toggleScopeFilter("created_by_me")}
+                >
+                  Created by me
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  className="text-[10px]"
+                  checked={selectedScopes.includes("department_files")}
+                  onCheckedChange={() => toggleScopeFilter("department_files")}
+                >
+                  All files from the department
+                </DropdownMenuCheckboxItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </CardHeader>
 

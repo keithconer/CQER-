@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface FacultyInvolvementPayload {
   faculty_name: string;
@@ -43,10 +44,39 @@ async function getCurrentUserWithDepartment() {
 }
 
 export async function getFacultyModuleData() {
-  const { supabase } = await getCurrentUserWithDepartment();
+  const { supabase, department } = await getCurrentUserWithDepartment();
+  const adminClient = createAdminClient();
+  if (!department) {
+    return { data: { faculty: [], pool: [] } };
+  }
+
+  const { data: deptProfiles, error: deptProfilesError } = await adminClient
+    .from("profiles")
+    .select("id")
+    .in("user_type", ["college_coordinator", "unit_coordinator"])
+    .eq("department", department);
+
+  if (deptProfilesError) {
+    console.error("Error fetching department profiles:", deptProfilesError);
+    return { error: deptProfilesError.message };
+  }
+
+  const creatorIds = (deptProfiles || []).map((item) => item.id);
+  if (creatorIds.length === 0) {
+    return { data: { faculty: [], pool: [] } };
+  }
+
   const [facultyResult, poolResult] = await Promise.all([
-    supabase.from("faculty_involvement").select("*").order("created_at", { ascending: false }),
-    supabase.from("pool_of_experts").select("*").order("created_at", { ascending: false }),
+    adminClient
+      .from("faculty_involvement")
+      .select("*")
+      .in("created_by", creatorIds)
+      .order("created_at", { ascending: false }),
+    adminClient
+      .from("pool_of_experts")
+      .select("*")
+      .in("created_by", creatorIds)
+      .order("created_at", { ascending: false }),
   ]);
 
   if (facultyResult.error) {

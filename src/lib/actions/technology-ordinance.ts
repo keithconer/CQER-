@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface TechnologyPayload {
   college: string;
@@ -44,10 +45,32 @@ async function getCurrentContext() {
 }
 
 export async function getTechnologies() {
-  const { supabase } = await getCurrentContext();
-  const { data, error } = await supabase
+  const { department } = await getCurrentContext();
+  const adminClient = createAdminClient();
+  if (!department) {
+    return { data: [] };
+  }
+
+  const { data: deptProfiles, error: deptProfilesError } = await adminClient
+    .from("profiles")
+    .select("id")
+    .in("user_type", ["college_coordinator", "unit_coordinator"])
+    .eq("department", department);
+
+  if (deptProfilesError) {
+    console.error("Error fetching department profiles:", deptProfilesError);
+    return { error: deptProfilesError.message };
+  }
+
+  const creatorIds = (deptProfiles || []).map((item) => item.id);
+  if (creatorIds.length === 0) {
+    return { data: [] };
+  }
+
+  const { data, error } = await adminClient
     .from("technologies_innovations")
     .select("*")
+    .in("created_by", creatorIds)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -122,10 +145,32 @@ export async function deleteTechnology(id: string) {
 }
 
 export async function getOrdinances() {
-  const { supabase } = await getCurrentContext();
-  const { data, error } = await supabase
+  const { department } = await getCurrentContext();
+  const adminClient = createAdminClient();
+  if (!department) {
+    return { data: [] };
+  }
+
+  const { data: deptProfiles, error: deptProfilesError } = await adminClient
+    .from("profiles")
+    .select("id")
+    .in("user_type", ["college_coordinator", "unit_coordinator"])
+    .eq("department", department);
+
+  if (deptProfilesError) {
+    console.error("Error fetching department profiles:", deptProfilesError);
+    return { error: deptProfilesError.message };
+  }
+
+  const creatorIds = (deptProfiles || []).map((item) => item.id);
+  if (creatorIds.length === 0) {
+    return { data: [] };
+  }
+
+  const { data, error } = await adminClient
     .from("ordinance_resolutions")
     .select("*")
+    .in("created_by", creatorIds)
     .order("created_at", { ascending: false });
 
   if (error) {

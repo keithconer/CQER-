@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Eye, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Eye, Pencil, Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { deleteStudentInvolvement } from "@/lib/actions/student-involvement";
@@ -11,6 +11,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StudentInvolvementForm } from "./student-involvement-form";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export interface StudentInvolvementRecord {
   id: string;
@@ -22,6 +30,7 @@ export interface StudentInvolvementRecord {
   percentage: number;
   remarks: string | null;
   documents: { url: string; name: string }[] | null;
+  created_by?: string | null;
 }
 
 interface StudentInvolvementManagementProps {
@@ -30,6 +39,7 @@ interface StudentInvolvementManagementProps {
   userType?: "super_admin" | "college_coordinator" | "unit_coordinator";
   unit?: string | null;
   unitOptions?: string[];
+  currentUserId: string;
 }
 
 export function StudentInvolvementManagement({
@@ -38,12 +48,17 @@ export function StudentInvolvementManagement({
   userType,
   unit,
   unitOptions = [],
+  currentUserId,
 }: StudentInvolvementManagementProps) {
   const [searchTerm, setSearchTerm] = React.useState("");
   const [createOpen, setCreateOpen] = React.useState(false);
   const [editRecord, setEditRecord] = React.useState<StudentInvolvementRecord | null>(null);
   const [viewRecord, setViewRecord] = React.useState<StudentInvolvementRecord | null>(null);
   const [isDeletingId, setIsDeletingId] = React.useState<string | null>(null);
+  const [selectedScopes, setSelectedScopes] = React.useState<string[]>([
+    "created_by_me",
+    "department_files",
+  ]);
   const refreshTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
 
@@ -71,9 +86,16 @@ export function StudentInvolvementManagement({
 
   const filteredRecords = React.useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
-    if (!term) return initialRecords;
+    const scopedRecords = initialRecords.filter((record) => {
+      const isMine = record.created_by === currentUserId;
+      return (
+        (selectedScopes.includes("created_by_me") && isMine) ||
+        (selectedScopes.includes("department_files") && !isMine)
+      );
+    });
+    if (!term) return scopedRecords;
 
-    return initialRecords.filter((record) =>
+    return scopedRecords.filter((record) =>
       [
         record.college,
         record.department,
@@ -87,7 +109,13 @@ export function StudentInvolvementManagement({
         .toLowerCase()
         .includes(term)
     );
-  }, [initialRecords, searchTerm]);
+  }, [currentUserId, initialRecords, searchTerm, selectedScopes]);
+
+  const toggleScopeFilter = (value: string) => {
+    setSelectedScopes((prev) =>
+      prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]
+    );
+  };
 
   const handleSuccess = () => {
     setCreateOpen(false);
@@ -132,14 +160,46 @@ export function StudentInvolvementManagement({
             </Button>
           </div>
 
-          <div className="relative max-w-sm">
-            <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-            <Input
-              placeholder="Search..."
-              className="pl-8 h-8 text-xs placeholder:text-[10px] bg-muted/20 border-border/50"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+          <div className="flex items-center justify-between gap-2">
+            <div className="relative max-w-sm w-full">
+              <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Search..."
+                className="pl-8 h-8 text-xs placeholder:text-[10px] bg-muted/20 border-border/50"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-[10px] border-border/50 bg-muted/20"
+                >
+                  <SlidersHorizontal className="h-3 w-3 mr-1" />
+                  Filter
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="text-[10px]">Results Filter</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                  className="text-[10px]"
+                  checked={selectedScopes.includes("created_by_me")}
+                  onCheckedChange={() => toggleScopeFilter("created_by_me")}
+                >
+                  Created by me
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  className="text-[10px]"
+                  checked={selectedScopes.includes("department_files")}
+                  onCheckedChange={() => toggleScopeFilter("department_files")}
+                >
+                  All files from the department
+                </DropdownMenuCheckboxItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </CardHeader>
 

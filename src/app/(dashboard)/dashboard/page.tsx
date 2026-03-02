@@ -253,7 +253,11 @@ export default async function DashboardPage({
               department={profile.department}
             />
           ) : activePanel === "awards" ? (
-            <AwardsManagement initialAwards={awards} department={profile.department} />
+            <AwardsManagement
+              initialAwards={awards}
+              department={profile.department}
+              currentUserId={user.id}
+            />
           ) : activePanel === "student-involvement" ? (
             <StudentInvolvementManagement
               initialRecords={studentInvolvementRecords}
@@ -261,12 +265,14 @@ export default async function DashboardPage({
               userType={userType}
               unit={profile.unit}
               unitOptions={availableUnitsForCollege}
+              currentUserId={user.id}
             />
           ) : activePanel === "faculty-involvement" ? (
             <FacultyInvolvementManagement
               department={profile.department}
               facultyRecords={facultyInvolvementRecords}
               poolRecords={poolExpertRecords}
+              currentUserId={user.id}
             />
           ) : activePanel === "technologies-innovation" ? (
             <TechnologiesManagement
@@ -275,6 +281,7 @@ export default async function DashboardPage({
               userType={userType}
               unit={profile.unit}
               unitOptions={availableUnitsForCollege}
+              currentUserId={user.id}
             />
           ) : activePanel === "ordinance-resolutions" ? (
             <OrdinanceResolutionsManagement
@@ -283,6 +290,7 @@ export default async function DashboardPage({
               userType={userType}
               unit={profile.unit}
               unitOptions={availableUnitsForCollege}
+              currentUserId={user.id}
             />
           ) : hasEntitySelection ? (
             <CollegeProjectsManagement
@@ -300,7 +308,11 @@ export default async function DashboardPage({
 
       {userType === "unit_coordinator" && (
         activePanel === "awards" ? (
-          <AwardsManagement initialAwards={awards} department={profile.department} />
+          <AwardsManagement
+            initialAwards={awards}
+            department={profile.department}
+            currentUserId={user.id}
+          />
         ) : activePanel === "student-involvement" ? (
           <StudentInvolvementManagement
             initialRecords={studentInvolvementRecords}
@@ -308,12 +320,14 @@ export default async function DashboardPage({
             userType={userType}
             unit={profile.unit}
             unitOptions={[]}
+            currentUserId={user.id}
           />
         ) : activePanel === "faculty-involvement" ? (
           <FacultyInvolvementManagement
             department={profile.department}
             facultyRecords={facultyInvolvementRecords}
             poolRecords={poolExpertRecords}
+            currentUserId={user.id}
           />
         ) : activePanel === "technologies-innovation" ? (
           <TechnologiesManagement
@@ -322,6 +336,7 @@ export default async function DashboardPage({
             userType={userType}
             unit={profile.unit}
             unitOptions={[]}
+            currentUserId={user.id}
           />
         ) : activePanel === "ordinance-resolutions" ? (
           <OrdinanceResolutionsManagement
@@ -330,6 +345,7 @@ export default async function DashboardPage({
             userType={userType}
             unit={profile.unit}
             unitOptions={[]}
+            currentUserId={user.id}
           />
         ) : hasEntitySelection ? (
           <UnitProjectsManagement

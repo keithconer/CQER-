@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Eye, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Eye, Pencil, Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -12,6 +12,14 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AwardsForm } from "./awards-form";
 import { deleteAward } from "@/lib/actions/awards";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export interface AwardRecord {
   id: string;
@@ -23,19 +31,25 @@ export interface AwardRecord {
   date_received: string;
   remarks: string | null;
   documents: { url: string; name: string }[] | null;
+  created_by?: string | null;
 }
 
 interface AwardsManagementProps {
   initialAwards: AwardRecord[];
   department: string | null;
+  currentUserId: string;
 }
 
-export function AwardsManagement({ initialAwards, department }: AwardsManagementProps) {
+export function AwardsManagement({ initialAwards, department, currentUserId }: AwardsManagementProps) {
   const [createOpen, setCreateOpen] = React.useState(false);
   const [editAward, setEditAward] = React.useState<AwardRecord | null>(null);
   const [viewAward, setViewAward] = React.useState<AwardRecord | null>(null);
   const [isDeletingId, setIsDeletingId] = React.useState<string | null>(null);
   const [searchTerm, setSearchTerm] = React.useState("");
+  const [selectedScopes, setSelectedScopes] = React.useState<string[]>([
+    "created_by_me",
+    "department_files",
+  ]);
   const refreshTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
 
@@ -65,9 +79,16 @@ export function AwardsManagement({ initialAwards, department }: AwardsManagement
 
   const filteredAwards = React.useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
-    if (!term) return initialAwards;
+    const scopedAwards = initialAwards.filter((award) => {
+      const isMine = award.created_by === currentUserId;
+      return (
+        (selectedScopes.includes("created_by_me") && isMine) ||
+        (selectedScopes.includes("department_files") && !isMine)
+      );
+    });
+    if (!term) return scopedAwards;
 
-    return initialAwards.filter((award) => {
+    return scopedAwards.filter((award) => {
       const ppaText = Array.isArray(award.extension_ppa) ? award.extension_ppa.join(" ") : "";
       return (
         award.department?.toLowerCase().includes(term) ||
@@ -78,7 +99,13 @@ export function AwardsManagement({ initialAwards, department }: AwardsManagement
         ppaText.toLowerCase().includes(term)
       );
     });
-  }, [initialAwards, searchTerm]);
+  }, [currentUserId, initialAwards, searchTerm, selectedScopes]);
+
+  const toggleScopeFilter = (value: string) => {
+    setSelectedScopes((prev) =>
+      prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]
+    );
+  };
 
   const handleSuccess = () => {
     setCreateOpen(false);
@@ -123,14 +150,46 @@ export function AwardsManagement({ initialAwards, department }: AwardsManagement
             </Button>
           </div>
 
-          <div className="relative max-w-sm">
-            <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-            <Input
-              placeholder="Search..."
-              className="pl-8 h-8 text-xs placeholder:text-[10px] bg-muted/20 border-border/50"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+          <div className="flex items-center justify-between gap-2">
+            <div className="relative max-w-sm w-full">
+              <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Search..."
+                className="pl-8 h-8 text-xs placeholder:text-[10px] bg-muted/20 border-border/50"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-[10px] border-border/50 bg-muted/20"
+                >
+                  <SlidersHorizontal className="h-3 w-3 mr-1" />
+                  Filter
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="text-[10px]">Results Filter</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                  className="text-[10px]"
+                  checked={selectedScopes.includes("created_by_me")}
+                  onCheckedChange={() => toggleScopeFilter("created_by_me")}
+                >
+                  Created by me
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  className="text-[10px]"
+                  checked={selectedScopes.includes("department_files")}
+                  onCheckedChange={() => toggleScopeFilter("department_files")}
+                >
+                  All files from the department
+                </DropdownMenuCheckboxItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </CardHeader>
 
