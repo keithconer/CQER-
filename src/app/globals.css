@@ -131,3 +131,7 @@
     max-width: calc(95rem - 16rem);
   }
 }
+
+html[data-font-scale="large"] {
+  font-size: 17px;
+}

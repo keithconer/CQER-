@@ -7,9 +7,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -17,6 +21,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Settings,
+  KeyRound,
   LogOut,
   FolderPlus,
   FolderKanban,
@@ -53,6 +58,8 @@ export function Navbar({ user }: NavbarProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [createExpanded, setCreateExpanded] = useState(true);
   const [recordsExpanded, setRecordsExpanded] = useState(true);
+  const [largeFontEnabled, setLargeFontEnabled] = useState(false);
+  const [darkModeEnabled, setDarkModeEnabled] = useState(false);
 
   const isDashboard = pathname?.startsWith("/dashboard");
   const activeView = searchParams.get("view") === "programs" ? "programs" : "projects";
@@ -96,6 +103,36 @@ export function Navbar({ user }: NavbarProps) {
       document.documentElement.setAttribute("data-dashboard-sidebar", "closed");
     };
   }, [isDashboard, sidebarOpen]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setLargeFontEnabled(window.localStorage.getItem("cqer_font_scale") === "large");
+    setDarkModeEnabled(window.localStorage.getItem("cqer_theme") === "dark");
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const root = document.documentElement;
+    if (largeFontEnabled) {
+      root.setAttribute("data-font-scale", "large");
+      window.localStorage.setItem("cqer_font_scale", "large");
+    } else {
+      root.setAttribute("data-font-scale", "normal");
+      window.localStorage.setItem("cqer_font_scale", "normal");
+    }
+  }, [largeFontEnabled]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const root = document.documentElement;
+    if (darkModeEnabled) {
+      root.classList.add("dark");
+      window.localStorage.setItem("cqer_theme", "dark");
+    } else {
+      root.classList.remove("dark");
+      window.localStorage.setItem("cqer_theme", "light");
+    }
+  }, [darkModeEnabled]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -190,7 +227,7 @@ export function Navbar({ user }: NavbarProps) {
                 <Settings className="h-3.5 w-3.5 text-muted-foreground" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuContent align="end" className="w-48">
               <div className="px-2 py-1.5">
                 <p className="text-xs font-medium">
                   {user.firstName} {user.lastName}
@@ -198,17 +235,40 @@ export function Navbar({ user }: NavbarProps) {
                 <p className="text-[10px] text-muted-foreground truncate">{user.email}</p>
               </div>
               <DropdownMenuSeparator />
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className="text-[11px] cursor-pointer">
+                  <Settings className="mr-2 h-3 w-3" />
+                  Settings
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="w-56">
+                  <DropdownMenuCheckboxItem
+                    checked={largeFontEnabled}
+                    className="text-[11px] cursor-pointer"
+                    onCheckedChange={(checked) => setLargeFontEnabled(!!checked)}
+                  >
+                    Accessibility: Increase Font Size
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={darkModeEnabled}
+                    className="text-[11px] cursor-pointer"
+                    onCheckedChange={(checked) => setDarkModeEnabled(!!checked)}
+                  >
+                    Dark Mode
+                  </DropdownMenuCheckboxItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+              <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => router.push("/settings")}
-                className="text-xs cursor-pointer"
+                className="text-[11px] cursor-pointer"
               >
-                <Settings className="mr-2 h-3 w-3" />
+                <KeyRound className="mr-2 h-3 w-3" />
                 Change Password
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={handleLogout}
-                className="text-xs cursor-pointer text-destructive focus:text-destructive"
+                className="text-[11px] cursor-pointer"
               >
                 <LogOut className="mr-2 h-3 w-3" />
                 Log out
