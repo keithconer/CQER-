@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Plus, Search } from "lucide-react";
+import { Eye, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AwardsForm } from "./awards-form";
+import { deleteAward } from "@/lib/actions/awards";
 
 export interface AwardRecord {
   id: string;
@@ -30,7 +31,10 @@ interface AwardsManagementProps {
 }
 
 export function AwardsManagement({ initialAwards, department }: AwardsManagementProps) {
-  const [open, setOpen] = React.useState(false);
+  const [createOpen, setCreateOpen] = React.useState(false);
+  const [editAward, setEditAward] = React.useState<AwardRecord | null>(null);
+  const [viewAward, setViewAward] = React.useState<AwardRecord | null>(null);
+  const [isDeletingId, setIsDeletingId] = React.useState<string | null>(null);
   const [searchTerm, setSearchTerm] = React.useState("");
   const refreshTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
@@ -77,7 +81,24 @@ export function AwardsManagement({ initialAwards, department }: AwardsManagement
   }, [initialAwards, searchTerm]);
 
   const handleSuccess = () => {
-    setOpen(false);
+    setCreateOpen(false);
+    setEditAward(null);
+    router.refresh();
+  };
+
+  const handleDelete = async (award: AwardRecord) => {
+    const confirmed = window.confirm("Delete this award record?");
+    if (!confirmed) return;
+
+    setIsDeletingId(award.id);
+    const result = await deleteAward(award.id);
+    setIsDeletingId(null);
+
+    if (result.error) {
+      alert(`Error: ${result.error}`);
+      return;
+    }
+
     router.refresh();
   };
 
@@ -95,7 +116,7 @@ export function AwardsManagement({ initialAwards, department }: AwardsManagement
             <Button
               size="sm"
               className="h-8 text-xs bg-[#159E44] hover:bg-[#128A3B] text-white"
-              onClick={() => setOpen(true)}
+              onClick={() => setCreateOpen(true)}
             >
               <Plus className="h-3 w-3 mr-1" />
               Create Awards
@@ -126,6 +147,7 @@ export function AwardsManagement({ initialAwards, department }: AwardsManagement
                   <TableHead className="text-[10px] font-semibold h-9">Date Received</TableHead>
                   <TableHead className="text-[10px] font-semibold h-9">Remarks</TableHead>
                   <TableHead className="text-[10px] font-semibold h-9">Documents</TableHead>
+                  <TableHead className="text-[10px] font-semibold h-9 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -146,13 +168,58 @@ export function AwardsManagement({ initialAwards, department }: AwardsManagement
                       </TableCell>
                       <TableCell className="text-[10px] py-2.5 px-3">{award.remarks || "-"}</TableCell>
                       <TableCell className="text-[10px] py-2.5 px-3">
-                        {Array.isArray(award.documents) ? award.documents.length : 0}
+                        {Array.isArray(award.documents) && award.documents.length > 0 ? (
+                          <div className="max-w-[240px] space-y-1">
+                            {award.documents.map((doc) => (
+                              <p key={`${award.id}-${doc.url}`} className="truncate" title={doc.name}>
+                                {doc.name}
+                              </p>
+                            ))}
+                          </div>
+                        ) : (
+                          "-"
+                        )}
+                      </TableCell>
+                      <TableCell className="text-[10px] py-2.5 px-3">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-[10px] border-border/50"
+                            onClick={() => setViewAward(award)}
+                          >
+                            <Eye className="h-3 w-3 mr-1" />
+                            View
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-[10px] border-border/50"
+                            onClick={() => setEditAward(award)}
+                          >
+                            <Pencil className="h-3 w-3 mr-1" />
+                            Update
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-[10px] text-destructive border-border/50"
+                            onClick={() => handleDelete(award)}
+                            disabled={isDeletingId === award.id}
+                          >
+                            <Trash2 className="h-3 w-3 mr-1" />
+                            {isDeletingId === award.id ? "Deleting..." : "Delete"}
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} className="h-24 text-center text-xs text-muted-foreground">
+                    <TableCell colSpan={9} className="h-24 text-center text-xs text-muted-foreground">
                       No awards found.
                     </TableCell>
                   </TableRow>
@@ -163,7 +230,7 @@ export function AwardsManagement({ initialAwards, department }: AwardsManagement
         </CardContent>
       </Card>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="sm:max-w-[760px] p-6 max-h-[90vh] overflow-y-auto">
           <DialogHeader className="pb-2">
             <DialogTitle className="text-sm font-semibold">Create Awards</DialogTitle>
@@ -172,6 +239,39 @@ export function AwardsManagement({ initialAwards, department }: AwardsManagement
             </DialogDescription>
           </DialogHeader>
           <AwardsForm department={department || ""} onSuccess={handleSuccess} />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editAward} onOpenChange={(open) => !open && setEditAward(null)}>
+        <DialogContent className="sm:max-w-[760px] p-6 max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="text-sm font-semibold">Update Award</DialogTitle>
+            <DialogDescription className="text-[10px]">
+              Update the details for this award record.
+            </DialogDescription>
+          </DialogHeader>
+          {editAward && (
+            <AwardsForm department={department || ""} award={editAward} onSuccess={handleSuccess} />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!viewAward} onOpenChange={(open) => !open && setViewAward(null)}>
+        <DialogContent className="sm:max-w-[760px] p-6 max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="text-sm font-semibold">View Award</DialogTitle>
+            <DialogDescription className="text-[10px]">
+              View the award details.
+            </DialogDescription>
+          </DialogHeader>
+          {viewAward && (
+            <AwardsForm
+              department={department || ""}
+              award={viewAward}
+              isViewOnly
+              onSuccess={() => setViewAward(null)}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>

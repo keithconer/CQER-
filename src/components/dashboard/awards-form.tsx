@@ -7,7 +7,7 @@ import * as z from "zod";
 import { CalendarIcon, Plus, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { createAward } from "@/lib/actions/awards";
+import { createAward, updateAward } from "@/lib/actions/awards";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -55,23 +55,39 @@ type AwardsFormOutput = z.output<typeof awardsSchema>;
 
 interface AwardsFormProps {
   department: string;
+  award?: {
+    id: string;
+    department: string;
+    extension_ppa: string[] | null;
+    award_recognition_received: string;
+    donor: string;
+    level: "local" | "regional" | "national" | "international";
+    date_received: string;
+    remarks: string | null;
+    documents: { url: string; name: string }[] | null;
+  };
+  isViewOnly?: boolean;
   onSuccess?: () => void;
 }
 
-export function AwardsForm({ department, onSuccess }: AwardsFormProps) {
+export function AwardsForm({ department, award, isViewOnly = false, onSuccess }: AwardsFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const defaultDate = award?.date_received ? new Date(award.date_received) : new Date();
 
   const form = useForm<AwardsFormInput, unknown, AwardsFormOutput>({
     resolver: zodResolver(awardsSchema),
     defaultValues: {
       department: department || "",
-      extension_ppa: [{ value: "" }],
-      award_recognition_received: "",
-      donor: "",
-      level: "local",
-      date_received: new Date(),
-      remarks: "",
-      documents: [],
+      extension_ppa:
+        Array.isArray(award?.extension_ppa) && award.extension_ppa.length > 0
+          ? award.extension_ppa.map((value) => ({ value }))
+          : [{ value: "" }],
+      award_recognition_received: award?.award_recognition_received || "",
+      donor: award?.donor || "",
+      level: award?.level || "local",
+      date_received: defaultDate,
+      remarks: award?.remarks || "",
+      documents: award?.documents || [],
     },
   });
 
@@ -81,13 +97,25 @@ export function AwardsForm({ department, onSuccess }: AwardsFormProps) {
   });
 
   React.useEffect(() => {
-    form.setValue("department", department || "", { shouldValidate: true });
-  }, [department, form]);
+    form.reset({
+      department: department || "",
+      extension_ppa:
+        Array.isArray(award?.extension_ppa) && award.extension_ppa.length > 0
+          ? award.extension_ppa.map((value) => ({ value }))
+          : [{ value: "" }],
+      award_recognition_received: award?.award_recognition_received || "",
+      donor: award?.donor || "",
+      level: award?.level || "local",
+      date_received: award?.date_received ? new Date(award.date_received) : new Date(),
+      remarks: award?.remarks || "",
+      documents: award?.documents || [],
+    });
+  }, [award, department, form]);
 
   const onSubmit = async (values: AwardsFormOutput) => {
     setIsSubmitting(true);
     try {
-      const result = await createAward({
+      const payload = {
         department: values.department,
         extension_ppa: values.extension_ppa.map((item) => item.value.trim()).filter(Boolean),
         award_recognition_received: values.award_recognition_received.trim(),
@@ -96,7 +124,8 @@ export function AwardsForm({ department, onSuccess }: AwardsFormProps) {
         date_received: values.date_received.toISOString().slice(0, 10),
         remarks: values.remarks?.trim() || "",
         documents: values.documents || [],
-      });
+      };
+      const result = award?.id ? await updateAward(award.id, payload) : await createAward(payload);
 
       if (result.error) {
         alert(`Error: ${result.error}`);
@@ -147,7 +176,7 @@ export function AwardsForm({ department, onSuccess }: AwardsFormProps) {
                 <FormLabel className="text-xs">Level</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
-                    <SelectTrigger className="h-8 text-xs">
+                    <SelectTrigger className="h-8 text-xs" disabled={isViewOnly}>
                       <SelectValue placeholder="Select level" />
                     </SelectTrigger>
                   </FormControl>
@@ -173,6 +202,7 @@ export function AwardsForm({ department, onSuccess }: AwardsFormProps) {
               variant="outline"
               size="sm"
               className="h-7 text-[10px]"
+              disabled={isViewOnly}
               onClick={() => append({ value: "" })}
             >
               <Plus className="h-3 w-3 mr-1" />
@@ -191,6 +221,7 @@ export function AwardsForm({ department, onSuccess }: AwardsFormProps) {
                         {...inputField}
                         placeholder="Enter person/individual"
                         className="h-8 text-xs"
+                        disabled={isViewOnly}
                       />
                     </FormControl>
                     <FormMessage className="text-[10px]" />
@@ -203,6 +234,7 @@ export function AwardsForm({ department, onSuccess }: AwardsFormProps) {
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 text-destructive"
+                  disabled={isViewOnly}
                   onClick={() => remove(index)}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -220,7 +252,12 @@ export function AwardsForm({ department, onSuccess }: AwardsFormProps) {
               <FormItem>
                 <FormLabel className="text-xs">Award/Recognition Received</FormLabel>
                 <FormControl>
-                  <Input {...field} className="h-8 text-xs" placeholder="Enter award/recognition" />
+                  <Input
+                    {...field}
+                    className="h-8 text-xs"
+                    placeholder="Enter award/recognition"
+                    disabled={isViewOnly}
+                  />
                 </FormControl>
                 <FormMessage className="text-[10px]" />
               </FormItem>
@@ -233,7 +270,7 @@ export function AwardsForm({ department, onSuccess }: AwardsFormProps) {
               <FormItem>
                 <FormLabel className="text-xs">Donor</FormLabel>
                 <FormControl>
-                  <Input {...field} className="h-8 text-xs" placeholder="Enter donor" />
+                  <Input {...field} className="h-8 text-xs" placeholder="Enter donor" disabled={isViewOnly} />
                 </FormControl>
                 <FormMessage className="text-[10px]" />
               </FormItem>
@@ -249,7 +286,7 @@ export function AwardsForm({ department, onSuccess }: AwardsFormProps) {
               <FormItem className="flex flex-col">
                 <FormLabel className="text-xs">Date Received</FormLabel>
                 <Popover>
-                  <PopoverTrigger asChild>
+                  <PopoverTrigger asChild disabled={isViewOnly}>
                     <FormControl>
                       <Button
                         variant="outline"
@@ -264,7 +301,13 @@ export function AwardsForm({ department, onSuccess }: AwardsFormProps) {
                     </FormControl>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                    <Calendar
+                      mode="single"
+                      selected={field.value}
+                      onSelect={field.onChange}
+                      initialFocus
+                      disabled={isViewOnly}
+                    />
                   </PopoverContent>
                 </Popover>
                 <FormMessage className="text-[10px]" />
@@ -285,6 +328,7 @@ export function AwardsForm({ department, onSuccess }: AwardsFormProps) {
                   value={field.value || ""}
                   className="min-h-[80px] text-xs resize-none"
                   placeholder="Additional remarks"
+                  disabled={isViewOnly}
                 />
               </FormControl>
               <FormMessage className="text-[10px]" />
@@ -302,7 +346,7 @@ export function AwardsForm({ department, onSuccess }: AwardsFormProps) {
                 <FileUpload
                   value={field.value || []}
                   onChange={field.onChange}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isViewOnly}
                   maxFiles={10}
                 />
               </FormControl>
@@ -311,15 +355,17 @@ export function AwardsForm({ department, onSuccess }: AwardsFormProps) {
           )}
         />
 
-        <div className="flex justify-end">
-          <Button
-            type="submit"
-            className="h-8 text-xs bg-[#159E44] hover:bg-[#128A3B] text-white"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? "Creating..." : "Create Award"}
-          </Button>
-        </div>
+        {!isViewOnly && (
+          <div className="flex justify-end">
+            <Button
+              type="submit"
+              className="h-8 text-xs bg-[#159E44] hover:bg-[#128A3B] text-white"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Saving..." : award?.id ? "Update Award" : "Create Award"}
+            </Button>
+          </div>
+        )}
       </form>
     </Form>
   );

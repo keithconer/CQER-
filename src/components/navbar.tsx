@@ -268,14 +268,6 @@ export function Navbar({ user }: NavbarProps) {
                       <FileText className="mr-2 h-3.5 w-3.5" />
                       Programs
                     </Button>
-                    <Button
-                      variant="ghost"
-                      className={navItemClass(activePanel === "awards")}
-                      onClick={() => goTo("/dashboard?panel=awards")}
-                    >
-                      <Award className="mr-2 h-3.5 w-3.5" />
-                      Awards
-                    </Button>
                   </div>
                 )}
               </>
@@ -289,6 +281,17 @@ export function Navbar({ user }: NavbarProps) {
               >
                 <Users className="mr-2 h-3.5 w-3.5" />
                 Register Unit Coordinators
+              </Button>
+            )}
+
+            {(user.userType === "college_coordinator" || user.userType === "unit_coordinator") && (
+              <Button
+                variant="ghost"
+                className={navItemClass(activePanel === "awards")}
+                onClick={() => goTo("/dashboard?panel=awards")}
+              >
+                <Award className="mr-2 h-3.5 w-3.5" />
+                Awards
               </Button>
             )}
 
