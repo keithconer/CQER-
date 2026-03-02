@@ -530,3 +530,160 @@ $$;
 -- ============================================================
 -- END COPY: Student Involvement Module
 -- ============================================================
+
+-- ============================================================
+-- START COPY: Faculty Involvement in ESCE + Pool of Experts
+-- ============================================================
+create table if not exists public.faculty_involvement (
+  id uuid default gen_random_uuid() primary key,
+  department text not null,
+  faculty_name text not null,
+  sex text not null,
+  rank text not null,
+  employment_status text not null,
+  avg_hours_per_week numeric(10,2) not null default 0,
+  total_hours_period numeric(10,2) not null default 0,
+  remarks text,
+  documents jsonb not null default '[]'::jsonb,
+  created_by uuid references public.profiles(id) on delete cascade not null,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'faculty_involvement_sex_check'
+  ) then
+    alter table public.faculty_involvement
+      add constraint faculty_involvement_sex_check
+      check (sex in ('male', 'female'));
+  end if;
+end
+$$;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'faculty_involvement_employment_check'
+  ) then
+    alter table public.faculty_involvement
+      add constraint faculty_involvement_employment_check
+      check (employment_status in ('permanent', 'COS', 'JO'));
+  end if;
+end
+$$;
+
+alter table public.faculty_involvement enable row level security;
+
+drop policy if exists "Users can view own faculty involvement" on public.faculty_involvement;
+create policy "Users can view own faculty involvement" on public.faculty_involvement
+  for select using (auth.uid() = created_by);
+
+drop policy if exists "Users can create own faculty involvement" on public.faculty_involvement;
+create policy "Users can create own faculty involvement" on public.faculty_involvement
+  for insert with check (auth.uid() = created_by);
+
+drop policy if exists "Users can update own faculty involvement" on public.faculty_involvement;
+create policy "Users can update own faculty involvement" on public.faculty_involvement
+  for update using (auth.uid() = created_by);
+
+drop policy if exists "Users can delete own faculty involvement" on public.faculty_involvement;
+create policy "Users can delete own faculty involvement" on public.faculty_involvement
+  for delete using (auth.uid() = created_by);
+
+create index if not exists idx_faculty_involvement_created_by on public.faculty_involvement (created_by);
+create index if not exists idx_faculty_involvement_name on public.faculty_involvement (faculty_name);
+
+create table if not exists public.pool_of_experts (
+  id uuid default gen_random_uuid() primary key,
+  department text not null,
+  faculty_name text not null,
+  sex text not null,
+  rank text not null,
+  employment_status text not null,
+  educational_qualifications jsonb not null default '[]'::jsonb,
+  specialization jsonb not null default '[]'::jsonb,
+  other_expertise text,
+  remarks text,
+  documents jsonb not null default '[]'::jsonb,
+  created_by uuid references public.profiles(id) on delete cascade not null,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'pool_of_experts_sex_check'
+  ) then
+    alter table public.pool_of_experts
+      add constraint pool_of_experts_sex_check
+      check (sex in ('male', 'female'));
+  end if;
+end
+$$;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'pool_of_experts_employment_check'
+  ) then
+    alter table public.pool_of_experts
+      add constraint pool_of_experts_employment_check
+      check (employment_status in ('permanent', 'COS', 'JO'));
+  end if;
+end
+$$;
+
+alter table public.pool_of_experts enable row level security;
+
+drop policy if exists "Users can view own pool experts" on public.pool_of_experts;
+create policy "Users can view own pool experts" on public.pool_of_experts
+  for select using (auth.uid() = created_by);
+
+drop policy if exists "Users can create own pool experts" on public.pool_of_experts;
+create policy "Users can create own pool experts" on public.pool_of_experts
+  for insert with check (auth.uid() = created_by);
+
+drop policy if exists "Users can update own pool experts" on public.pool_of_experts;
+create policy "Users can update own pool experts" on public.pool_of_experts
+  for update using (auth.uid() = created_by);
+
+drop policy if exists "Users can delete own pool experts" on public.pool_of_experts;
+create policy "Users can delete own pool experts" on public.pool_of_experts
+  for delete using (auth.uid() = created_by);
+
+create index if not exists idx_pool_of_experts_created_by on public.pool_of_experts (created_by);
+create index if not exists idx_pool_of_experts_name on public.pool_of_experts (faculty_name);
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'faculty_involvement'
+  ) then
+    alter publication supabase_realtime add table public.faculty_involvement;
+  end if;
+end
+$$;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'pool_of_experts'
+  ) then
+    alter publication supabase_realtime add table public.pool_of_experts;
+  end if;
+end
+$$;
+-- ============================================================
+-- END COPY: Faculty Involvement in ESCE + Pool of Experts
+-- ============================================================

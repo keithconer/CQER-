@@ -6,6 +6,7 @@ import { SuperAdminOverview } from "@/components/dashboard/super-admin-overview"
 import { getCollegeProjects, getProjects, getUnitProjects } from "@/lib/actions/projects";
 import { getAwards } from "@/lib/actions/awards";
 import { getStudentInvolvement } from "@/lib/actions/student-involvement";
+import { getFacultyModuleData } from "@/lib/actions/faculty-involvement";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getUnitsByDepartment } from "@/lib/departments";
 import { CollegeProjectsManagement } from "@/components/dashboard/college-projects-management";
@@ -16,6 +17,11 @@ import {
   StudentInvolvementManagement,
   type StudentInvolvementRecord,
 } from "@/components/dashboard/student-involvement-management";
+import {
+  FacultyInvolvementManagement,
+  type FacultyInvolvementRecord,
+  type PoolExpertRecord,
+} from "@/components/dashboard/faculty-involvement-management";
 
 export default async function DashboardPage({
   searchParams,
@@ -31,7 +37,8 @@ export default async function DashboardPage({
   const activePanel =
     panelParam === "unit-coordinators" ||
     panelParam === "awards" ||
-    panelParam === "student-involvement"
+    panelParam === "student-involvement" ||
+    panelParam === "faculty-involvement"
       ? panelParam
       : "records";
   const hasSuperAdminSelection =
@@ -64,6 +71,8 @@ export default async function DashboardPage({
   let unitProjects: Project[] = [];
   let awards: AwardRecord[] = [];
   let studentInvolvementRecords: StudentInvolvementRecord[] = [];
+  let facultyInvolvementRecords: FacultyInvolvementRecord[] = [];
+  let poolExpertRecords: PoolExpertRecord[] = [];
   let collegeUnitCoordinatorAccounts: {
     id: string;
     email: string | null;
@@ -79,6 +88,10 @@ export default async function DashboardPage({
       awards = (await getAwards()).data || [];
     } else if (activePanel === "student-involvement") {
       studentInvolvementRecords = (await getStudentInvolvement()).data || [];
+    } else if (activePanel === "faculty-involvement") {
+      const moduleData = await getFacultyModuleData();
+      facultyInvolvementRecords = moduleData.data?.faculty || [];
+      poolExpertRecords = moduleData.data?.pool || [];
     } else if (hasEntitySelection) {
       const [myProjectsResult, unitProjectsResult] = await Promise.all([
         getProjects(),
@@ -95,6 +108,10 @@ export default async function DashboardPage({
       awards = (await getAwards()).data || [];
     } else if (activePanel === "student-involvement") {
       studentInvolvementRecords = (await getStudentInvolvement()).data || [];
+    } else if (activePanel === "faculty-involvement") {
+      const moduleData = await getFacultyModuleData();
+      facultyInvolvementRecords = moduleData.data?.faculty || [];
+      poolExpertRecords = moduleData.data?.pool || [];
     } else if (hasEntitySelection) {
       projects = (await getCollegeProjects()).data || [];
     }
@@ -224,6 +241,12 @@ export default async function DashboardPage({
               unit={profile.unit}
               unitOptions={availableUnitsForCollege}
             />
+          ) : activePanel === "faculty-involvement" ? (
+            <FacultyInvolvementManagement
+              department={profile.department}
+              facultyRecords={facultyInvolvementRecords}
+              poolRecords={poolExpertRecords}
+            />
           ) : hasEntitySelection ? (
             <CollegeProjectsManagement
               initialProjects={projects}
@@ -248,6 +271,12 @@ export default async function DashboardPage({
             userType={userType}
             unit={profile.unit}
             unitOptions={[]}
+          />
+        ) : activePanel === "faculty-involvement" ? (
+          <FacultyInvolvementManagement
+            department={profile.department}
+            facultyRecords={facultyInvolvementRecords}
+            poolRecords={poolExpertRecords}
           />
         ) : hasEntitySelection ? (
           <UnitProjectsManagement
