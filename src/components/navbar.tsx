@@ -7,7 +7,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -161,7 +160,7 @@ export function Navbar({ user }: NavbarProps) {
     : null;
 
   const navItemClass = (active: boolean) =>
-    `h-7 w-full justify-start text-[10px] border ${active ? "border-border/40 bg-muted/30" : "border-transparent"}`;
+    `dashboard-nav-item h-7 w-full justify-start text-[10px] border ${active ? "border-border/40 bg-muted/30" : "border-transparent"}`;
 
   return (
     <header className="border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -241,13 +240,13 @@ export function Navbar({ user }: NavbarProps) {
               </div>
               <DropdownMenuSeparator />
               <DropdownMenuSub>
-                <DropdownMenuSubTrigger className="text-[11px] cursor-pointer">
+                <DropdownMenuSubTrigger className="text-[10px] cursor-pointer">
                   <Settings className="mr-2 h-3 w-3" />
                   Settings
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent className="w-56">
                   <DropdownMenuSub>
-                    <DropdownMenuSubTrigger className="text-[11px] cursor-pointer">
+                    <DropdownMenuSubTrigger className="text-[10px] cursor-pointer">
                       <Type className="mr-2 h-3 w-3" />
                       Accessibility
                     </DropdownMenuSubTrigger>
@@ -260,32 +259,34 @@ export function Navbar({ user }: NavbarProps) {
                           setFontScale(value as "small" | "medium" | "large")
                         }
                       >
-                        <DropdownMenuRadioItem value="small" className="text-[11px] cursor-pointer">
+                        <DropdownMenuRadioItem value="small" className="text-[10px] cursor-pointer">
                           Default (Small)
                         </DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="medium" className="text-[11px] cursor-pointer">
+                        <DropdownMenuRadioItem value="medium" className="text-[10px] cursor-pointer">
                           Medium
                         </DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="large" className="text-[11px] cursor-pointer">
+                        <DropdownMenuRadioItem value="large" className="text-[10px] cursor-pointer">
                           Large
                         </DropdownMenuRadioItem>
                       </DropdownMenuRadioGroup>
                     </DropdownMenuSubContent>
                   </DropdownMenuSub>
-                  <DropdownMenuCheckboxItem
-                    checked={darkModeEnabled}
-                    className="text-[11px] cursor-pointer"
-                    onCheckedChange={(checked) => setDarkModeEnabled(!!checked)}
+                  <DropdownMenuItem
+                    className="text-[10px] cursor-pointer"
+                    onSelect={(event) => {
+                      event.preventDefault();
+                      setDarkModeEnabled((prev) => !prev);
+                    }}
                   >
                     <Moon className="mr-2 h-3 w-3" />
                     Dark Mode
-                  </DropdownMenuCheckboxItem>
+                  </DropdownMenuItem>
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => router.push("/settings")}
-                className="text-[11px] cursor-pointer"
+                className="text-[10px] cursor-pointer"
               >
                 <KeyRound className="mr-2 h-3 w-3" />
                 Change Password
@@ -293,7 +294,7 @@ export function Navbar({ user }: NavbarProps) {
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={handleLogout}
-                className="text-[11px] cursor-pointer"
+                className="text-[10px] cursor-pointer"
               >
                 <LogOut className="mr-2 h-3 w-3" />
                 Log out
@@ -341,7 +342,7 @@ export function Navbar({ user }: NavbarProps) {
               <>
                 <Button
                   variant="ghost"
-                  className="h-8 w-full justify-start text-[10px] font-medium"
+                  className="dashboard-nav-item h-8 w-full justify-start text-[10px] font-medium"
                   onClick={() => setCreateExpanded((prev) => !prev)}
                 >
                   <FolderPlus className="mr-2 h-3.5 w-3.5" />
@@ -440,7 +441,7 @@ export function Navbar({ user }: NavbarProps) {
               <>
                 <Button
                   variant="ghost"
-                  className="h-8 w-full justify-start text-[10px] font-medium"
+                  className="dashboard-nav-item h-8 w-full justify-start text-[10px] font-medium"
                   onClick={() => setRecordsExpanded((prev) => !prev)}
                 >
                   <Database className="mr-2 h-3.5 w-3.5" />

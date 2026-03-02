@@ -134,16 +134,33 @@
 
 html[data-font-scale="small"] {
   font-size: 16px;
+  --dashboard-nav-text-size: 10px;
+  --dashboard-table-text-size: 10px;
 }
 
 html[data-font-scale="medium"] {
   font-size: 17px;
+  --dashboard-nav-text-size: 11px;
+  --dashboard-table-text-size: 11px;
 }
 
 html[data-font-scale="large"] {
   font-size: 18px;
+  --dashboard-nav-text-size: 12px;
+  --dashboard-table-text-size: 12px;
 }
 
 html[data-font-scale="normal"] {
   font-size: 16px;
+  --dashboard-nav-text-size: 10px;
+  --dashboard-table-text-size: 10px;
+}
+
+.dashboard-nav-item {
+  font-size: var(--dashboard-nav-text-size, 10px) !important;
+}
+
+.dashboard-main table thead th,
+.dashboard-main table tbody td {
+  font-size: var(--dashboard-table-text-size, 10px) !important;
 }
