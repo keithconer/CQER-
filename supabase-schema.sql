@@ -687,3 +687,169 @@ $$;
 -- ============================================================
 -- END COPY: Faculty Involvement in ESCE + Pool of Experts
 -- ============================================================
+
+-- ============================================================
+-- START COPY: Technologies/Innovation Adapted and Commercialized
+-- ============================================================
+create table if not exists public.technologies_innovations (
+  id uuid default gen_random_uuid() primary key,
+  college text not null default 'CEIT',
+  department text not null,
+  curricular_offering text not null,
+  technology_title text not null,
+  year_develop integer not null,
+  end_users_clientele jsonb not null default '[]'::jsonb,
+  technology_generators text not null,
+  status text not null,
+  remarks text,
+  documents jsonb not null default '[]'::jsonb,
+  created_by uuid references public.profiles(id) on delete cascade not null,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'technologies_innovations_year_check'
+  ) then
+    alter table public.technologies_innovations
+      add constraint technologies_innovations_year_check
+      check (year_develop between 1000 and 9999);
+  end if;
+end
+$$;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'technologies_innovations_status_check'
+  ) then
+    alter table public.technologies_innovations
+      add constraint technologies_innovations_status_check
+      check (status in ('Commercialized', 'Multi-Modal Deployment', 'Pre-launch activities completed'));
+  end if;
+end
+$$;
+
+alter table public.technologies_innovations enable row level security;
+
+drop policy if exists "Users can view own technologies innovations" on public.technologies_innovations;
+create policy "Users can view own technologies innovations" on public.technologies_innovations
+  for select using (auth.uid() = created_by);
+
+drop policy if exists "Users can create own technologies innovations" on public.technologies_innovations;
+create policy "Users can create own technologies innovations" on public.technologies_innovations
+  for insert with check (auth.uid() = created_by);
+
+drop policy if exists "Users can update own technologies innovations" on public.technologies_innovations;
+create policy "Users can update own technologies innovations" on public.technologies_innovations
+  for update using (auth.uid() = created_by);
+
+drop policy if exists "Users can delete own technologies innovations" on public.technologies_innovations;
+create policy "Users can delete own technologies innovations" on public.technologies_innovations
+  for delete using (auth.uid() = created_by);
+
+create index if not exists idx_technologies_innovations_created_by on public.technologies_innovations (created_by);
+create index if not exists idx_technologies_innovations_department on public.technologies_innovations (department);
+create index if not exists idx_technologies_innovations_year on public.technologies_innovations (year_develop);
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'technologies_innovations'
+  ) then
+    alter publication supabase_realtime add table public.technologies_innovations;
+  end if;
+end
+$$;
+-- ============================================================
+-- END COPY: Technologies/Innovation Adapted and Commercialized
+-- ============================================================
+
+-- ============================================================
+-- START COPY: Ordinance or Resolutions
+-- ============================================================
+create table if not exists public.ordinance_resolutions (
+  id uuid default gen_random_uuid() primary key,
+  department text not null,
+  curricular_offering text not null,
+  extension_project_activity text not null,
+  ordinance_resolution text not null,
+  status text not null,
+  date_approved date,
+  remarks text,
+  documents jsonb not null default '[]'::jsonb,
+  created_by uuid references public.profiles(id) on delete cascade not null,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'ordinance_resolutions_status_check'
+  ) then
+    alter table public.ordinance_resolutions
+      add constraint ordinance_resolutions_status_check
+      check (status in ('Submitted/Endorse', 'approved'));
+  end if;
+end
+$$;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'ordinance_resolutions_date_check'
+  ) then
+    alter table public.ordinance_resolutions
+      add constraint ordinance_resolutions_date_check
+      check (
+        (status = 'approved' and date_approved is not null)
+        or (status <> 'approved')
+      );
+  end if;
+end
+$$;
+
+alter table public.ordinance_resolutions enable row level security;
+
+drop policy if exists "Users can view own ordinance resolutions" on public.ordinance_resolutions;
+create policy "Users can view own ordinance resolutions" on public.ordinance_resolutions
+  for select using (auth.uid() = created_by);
+
+drop policy if exists "Users can create own ordinance resolutions" on public.ordinance_resolutions;
+create policy "Users can create own ordinance resolutions" on public.ordinance_resolutions
+  for insert with check (auth.uid() = created_by);
+
+drop policy if exists "Users can update own ordinance resolutions" on public.ordinance_resolutions;
+create policy "Users can update own ordinance resolutions" on public.ordinance_resolutions
+  for update using (auth.uid() = created_by);
+
+drop policy if exists "Users can delete own ordinance resolutions" on public.ordinance_resolutions;
+create policy "Users can delete own ordinance resolutions" on public.ordinance_resolutions
+  for delete using (auth.uid() = created_by);
+
+create index if not exists idx_ordinance_resolutions_created_by on public.ordinance_resolutions (created_by);
+create index if not exists idx_ordinance_resolutions_department on public.ordinance_resolutions (department);
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'ordinance_resolutions'
+  ) then
+    alter publication supabase_realtime add table public.ordinance_resolutions;
+  end if;
+end
+$$;
+-- ============================================================
+-- END COPY: Ordinance or Resolutions
+-- ============================================================

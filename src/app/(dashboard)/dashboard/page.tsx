@@ -7,6 +7,7 @@ import { getCollegeProjects, getProjects, getUnitProjects } from "@/lib/actions/
 import { getAwards } from "@/lib/actions/awards";
 import { getStudentInvolvement } from "@/lib/actions/student-involvement";
 import { getFacultyModuleData } from "@/lib/actions/faculty-involvement";
+import { getOrdinances, getTechnologies } from "@/lib/actions/technology-ordinance";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getUnitsByDepartment } from "@/lib/departments";
 import { CollegeProjectsManagement } from "@/components/dashboard/college-projects-management";
@@ -22,6 +23,14 @@ import {
   type FacultyInvolvementRecord,
   type PoolExpertRecord,
 } from "@/components/dashboard/faculty-involvement-management";
+import {
+  OrdinanceResolutionsManagement,
+  type OrdinanceRecord,
+} from "@/components/dashboard/ordinance-resolutions-management";
+import {
+  TechnologiesManagement,
+  type TechnologyRecord,
+} from "@/components/dashboard/technologies-management";
 
 export default async function DashboardPage({
   searchParams,
@@ -38,7 +47,9 @@ export default async function DashboardPage({
     panelParam === "unit-coordinators" ||
     panelParam === "awards" ||
     panelParam === "student-involvement" ||
-    panelParam === "faculty-involvement"
+    panelParam === "faculty-involvement" ||
+    panelParam === "technologies-innovation" ||
+    panelParam === "ordinance-resolutions"
       ? panelParam
       : "records";
   const hasSuperAdminSelection =
@@ -73,6 +84,8 @@ export default async function DashboardPage({
   let studentInvolvementRecords: StudentInvolvementRecord[] = [];
   let facultyInvolvementRecords: FacultyInvolvementRecord[] = [];
   let poolExpertRecords: PoolExpertRecord[] = [];
+  let technologyRecords: TechnologyRecord[] = [];
+  let ordinanceRecords: OrdinanceRecord[] = [];
   let collegeUnitCoordinatorAccounts: {
     id: string;
     email: string | null;
@@ -92,6 +105,10 @@ export default async function DashboardPage({
       const moduleData = await getFacultyModuleData();
       facultyInvolvementRecords = moduleData.data?.faculty || [];
       poolExpertRecords = moduleData.data?.pool || [];
+    } else if (activePanel === "technologies-innovation") {
+      technologyRecords = (await getTechnologies()).data || [];
+    } else if (activePanel === "ordinance-resolutions") {
+      ordinanceRecords = (await getOrdinances()).data || [];
     } else if (hasEntitySelection) {
       const [myProjectsResult, unitProjectsResult] = await Promise.all([
         getProjects(),
@@ -112,6 +129,10 @@ export default async function DashboardPage({
       const moduleData = await getFacultyModuleData();
       facultyInvolvementRecords = moduleData.data?.faculty || [];
       poolExpertRecords = moduleData.data?.pool || [];
+    } else if (activePanel === "technologies-innovation") {
+      technologyRecords = (await getTechnologies()).data || [];
+    } else if (activePanel === "ordinance-resolutions") {
+      ordinanceRecords = (await getOrdinances()).data || [];
     } else if (hasEntitySelection) {
       projects = (await getCollegeProjects()).data || [];
     }
@@ -247,6 +268,22 @@ export default async function DashboardPage({
               facultyRecords={facultyInvolvementRecords}
               poolRecords={poolExpertRecords}
             />
+          ) : activePanel === "technologies-innovation" ? (
+            <TechnologiesManagement
+              initialRecords={technologyRecords}
+              department={profile.department}
+              userType={userType}
+              unit={profile.unit}
+              unitOptions={availableUnitsForCollege}
+            />
+          ) : activePanel === "ordinance-resolutions" ? (
+            <OrdinanceResolutionsManagement
+              initialRecords={ordinanceRecords}
+              department={profile.department}
+              userType={userType}
+              unit={profile.unit}
+              unitOptions={availableUnitsForCollege}
+            />
           ) : hasEntitySelection ? (
             <CollegeProjectsManagement
               initialProjects={projects}
@@ -277,6 +314,22 @@ export default async function DashboardPage({
             department={profile.department}
             facultyRecords={facultyInvolvementRecords}
             poolRecords={poolExpertRecords}
+          />
+        ) : activePanel === "technologies-innovation" ? (
+          <TechnologiesManagement
+            initialRecords={technologyRecords}
+            department={profile.department}
+            userType={userType}
+            unit={profile.unit}
+            unitOptions={[]}
+          />
+        ) : activePanel === "ordinance-resolutions" ? (
+          <OrdinanceResolutionsManagement
+            initialRecords={ordinanceRecords}
+            department={profile.department}
+            userType={userType}
+            unit={profile.unit}
+            unitOptions={[]}
           />
         ) : hasEntitySelection ? (
           <UnitProjectsManagement

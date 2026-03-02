@@ -26,6 +26,8 @@ import {
   Award,
   UserRoundCheck,
   GraduationCap,
+  Cpu,
+  ScrollText,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -60,6 +62,8 @@ export function Navbar({ user }: NavbarProps) {
     panelParam === "awards" ||
     panelParam === "student-involvement" ||
     panelParam === "faculty-involvement" ||
+    panelParam === "technologies-innovation" ||
+    panelParam === "ordinance-resolutions" ||
     panelParam === "accounts" ||
     panelParam === "projects" ||
     panelParam === "programs"
@@ -74,6 +78,8 @@ export function Navbar({ user }: NavbarProps) {
     router.prefetch("/dashboard?panel=awards");
     router.prefetch("/dashboard?panel=student-involvement");
     router.prefetch("/dashboard?panel=faculty-involvement");
+    router.prefetch("/dashboard?panel=technologies-innovation");
+    router.prefetch("/dashboard?panel=ordinance-resolutions");
     router.prefetch("/dashboard?panel=accounts");
     router.prefetch("/dashboard?panel=projects");
     router.prefetch("/dashboard?panel=programs");
@@ -320,6 +326,28 @@ export function Navbar({ user }: NavbarProps) {
               >
                 <GraduationCap className="mr-2 h-3.5 w-3.5" />
                 Faculty Involvement in ESCE
+              </Button>
+            )}
+
+            {(user.userType === "college_coordinator" || user.userType === "unit_coordinator") && (
+              <Button
+                variant="ghost"
+                className={navItemClass(activePanel === "technologies-innovation")}
+                onClick={() => goTo("/dashboard?panel=technologies-innovation")}
+              >
+                <Cpu className="mr-2 h-3.5 w-3.5" />
+                Technologies/Innovation Adapted
+              </Button>
+            )}
+
+            {(user.userType === "college_coordinator" || user.userType === "unit_coordinator") && (
+              <Button
+                variant="ghost"
+                className={navItemClass(activePanel === "ordinance-resolutions")}
+                onClick={() => goTo("/dashboard?panel=ordinance-resolutions")}
+              >
+                <ScrollText className="mr-2 h-3.5 w-3.5" />
+                Ordinance or Resolutions
               </Button>
             )}
 
