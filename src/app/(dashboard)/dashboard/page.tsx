@@ -5,12 +5,17 @@ import { CoordinatorRegistration } from "@/components/dashboard/coordinator-regi
 import { SuperAdminOverview } from "@/components/dashboard/super-admin-overview";
 import { getCollegeProjects, getProjects, getUnitProjects } from "@/lib/actions/projects";
 import { getAwards } from "@/lib/actions/awards";
+import { getStudentInvolvement } from "@/lib/actions/student-involvement";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getUnitsByDepartment } from "@/lib/departments";
 import { CollegeProjectsManagement } from "@/components/dashboard/college-projects-management";
 import { UnitCoordinatorsPanel } from "@/components/dashboard/unit-coordinators-panel";
 import { AwardsManagement, type AwardRecord } from "@/components/dashboard/awards-management";
 import { type Project } from "@/components/dashboard/projects-table";
+import {
+  StudentInvolvementManagement,
+  type StudentInvolvementRecord,
+} from "@/components/dashboard/student-involvement-management";
 
 export default async function DashboardPage({
   searchParams,
@@ -24,7 +29,11 @@ export default async function DashboardPage({
   const activeEntityType: "project" | "program" =
     resolvedSearchParams.view === "programs" ? "program" : "project";
   const activePanel =
-    panelParam === "unit-coordinators" || panelParam === "awards" ? panelParam : "records";
+    panelParam === "unit-coordinators" ||
+    panelParam === "awards" ||
+    panelParam === "student-involvement"
+      ? panelParam
+      : "records";
   const hasSuperAdminSelection =
     panelParam === "accounts" || panelParam === "projects" || panelParam === "programs";
   const superAdminPanel: "accounts" | "projects" | "programs" =
@@ -54,6 +63,7 @@ export default async function DashboardPage({
   let projects: Project[] = [];
   let unitProjects: Project[] = [];
   let awards: AwardRecord[] = [];
+  let studentInvolvementRecords: StudentInvolvementRecord[] = [];
   let collegeUnitCoordinatorAccounts: {
     id: string;
     email: string | null;
@@ -67,6 +77,8 @@ export default async function DashboardPage({
   if (profile.user_type === "unit_coordinator") {
     if (activePanel === "awards") {
       awards = (await getAwards()).data || [];
+    } else if (activePanel === "student-involvement") {
+      studentInvolvementRecords = (await getStudentInvolvement()).data || [];
     } else if (hasEntitySelection) {
       const [myProjectsResult, unitProjectsResult] = await Promise.all([
         getProjects(),
@@ -81,6 +93,8 @@ export default async function DashboardPage({
   ) {
     if (activePanel === "awards") {
       awards = (await getAwards()).data || [];
+    } else if (activePanel === "student-involvement") {
+      studentInvolvementRecords = (await getStudentInvolvement()).data || [];
     } else if (hasEntitySelection) {
       projects = (await getCollegeProjects()).data || [];
     }
@@ -202,6 +216,14 @@ export default async function DashboardPage({
             />
           ) : activePanel === "awards" ? (
             <AwardsManagement initialAwards={awards} department={profile.department} />
+          ) : activePanel === "student-involvement" ? (
+            <StudentInvolvementManagement
+              initialRecords={studentInvolvementRecords}
+              department={profile.department}
+              userType={userType}
+              unit={profile.unit}
+              unitOptions={availableUnitsForCollege}
+            />
           ) : hasEntitySelection ? (
             <CollegeProjectsManagement
               initialProjects={projects}
@@ -219,6 +241,14 @@ export default async function DashboardPage({
       {userType === "unit_coordinator" && (
         activePanel === "awards" ? (
           <AwardsManagement initialAwards={awards} department={profile.department} />
+        ) : activePanel === "student-involvement" ? (
+          <StudentInvolvementManagement
+            initialRecords={studentInvolvementRecords}
+            department={profile.department}
+            userType={userType}
+            unit={profile.unit}
+            unitOptions={[]}
+          />
         ) : hasEntitySelection ? (
           <UnitProjectsManagement
             myProjects={projects}

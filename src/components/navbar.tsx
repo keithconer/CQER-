@@ -24,6 +24,7 @@ import {
   Users,
   Database,
   Award,
+  UserRoundCheck,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -56,6 +57,7 @@ export function Navbar({ user }: NavbarProps) {
   const activePanel =
     panelParam === "unit-coordinators" ||
     panelParam === "awards" ||
+    panelParam === "student-involvement" ||
     panelParam === "accounts" ||
     panelParam === "projects" ||
     panelParam === "programs"
@@ -68,6 +70,7 @@ export function Navbar({ user }: NavbarProps) {
     router.prefetch("/dashboard?panel=records&view=programs");
     router.prefetch("/dashboard?panel=unit-coordinators");
     router.prefetch("/dashboard?panel=awards");
+    router.prefetch("/dashboard?panel=student-involvement");
     router.prefetch("/dashboard?panel=accounts");
     router.prefetch("/dashboard?panel=projects");
     router.prefetch("/dashboard?panel=programs");
@@ -292,6 +295,17 @@ export function Navbar({ user }: NavbarProps) {
               >
                 <Award className="mr-2 h-3.5 w-3.5" />
                 Awards
+              </Button>
+            )}
+
+            {(user.userType === "college_coordinator" || user.userType === "unit_coordinator") && (
+              <Button
+                variant="ghost"
+                className={navItemClass(activePanel === "student-involvement")}
+                onClick={() => goTo("/dashboard?panel=student-involvement")}
+              >
+                <UserRoundCheck className="mr-2 h-3.5 w-3.5" />
+                Student Involvement
               </Button>
             )}
 

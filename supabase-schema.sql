@@ -437,3 +437,96 @@ $$;
 -- ============================================================
 -- END COPY: Awards Module (College and Unit Coordinators)
 -- ============================================================
+
+-- ============================================================
+-- START COPY: Student Involvement Module
+-- ============================================================
+create table if not exists public.student_involvement (
+  id uuid default gen_random_uuid() primary key,
+  college text not null default 'CEIT',
+  department text not null,
+  curricular_offering text not null,
+  total_students integer not null,
+  involved_students integer not null,
+  percentage numeric(6,2) not null default 0,
+  remarks text,
+  documents jsonb not null default '[]'::jsonb,
+  created_by uuid references public.profiles(id) on delete cascade not null,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'student_involvement_total_students_check'
+  ) then
+    alter table public.student_involvement
+      add constraint student_involvement_total_students_check
+      check (total_students > 0);
+  end if;
+end
+$$;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'student_involvement_involved_students_check'
+  ) then
+    alter table public.student_involvement
+      add constraint student_involvement_involved_students_check
+      check (involved_students >= 0 and involved_students <= total_students);
+  end if;
+end
+$$;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'student_involvement_percentage_check'
+  ) then
+    alter table public.student_involvement
+      add constraint student_involvement_percentage_check
+      check (percentage >= 0 and percentage <= 100);
+  end if;
+end
+$$;
+
+alter table public.student_involvement enable row level security;
+
+drop policy if exists "Users can view own student involvement" on public.student_involvement;
+create policy "Users can view own student involvement" on public.student_involvement
+  for select using (auth.uid() = created_by);
+
+drop policy if exists "Users can create own student involvement" on public.student_involvement;
+create policy "Users can create own student involvement" on public.student_involvement
+  for insert with check (auth.uid() = created_by);
+
+drop policy if exists "Users can update own student involvement" on public.student_involvement;
+create policy "Users can update own student involvement" on public.student_involvement
+  for update using (auth.uid() = created_by);
+
+drop policy if exists "Users can delete own student involvement" on public.student_involvement;
+create policy "Users can delete own student involvement" on public.student_involvement
+  for delete using (auth.uid() = created_by);
+
+create index if not exists idx_student_involvement_created_by on public.student_involvement (created_by);
+create index if not exists idx_student_involvement_department on public.student_involvement (department);
+create index if not exists idx_student_involvement_curricular on public.student_involvement (curricular_offering);
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'student_involvement'
+  ) then
+    alter publication supabase_realtime add table public.student_involvement;
+  end if;
+end
+$$;
+-- ============================================================
+-- END COPY: Student Involvement Module
+-- ============================================================
