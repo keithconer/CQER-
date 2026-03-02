@@ -23,6 +23,7 @@ import {
   FileText,
   Users,
   Database,
+  Award,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -54,6 +55,7 @@ export function Navbar({ user }: NavbarProps) {
   const panelParam = searchParams.get("panel");
   const activePanel =
     panelParam === "unit-coordinators" ||
+    panelParam === "awards" ||
     panelParam === "accounts" ||
     panelParam === "projects" ||
     panelParam === "programs"
@@ -65,6 +67,7 @@ export function Navbar({ user }: NavbarProps) {
     router.prefetch("/dashboard?panel=records&view=projects");
     router.prefetch("/dashboard?panel=records&view=programs");
     router.prefetch("/dashboard?panel=unit-coordinators");
+    router.prefetch("/dashboard?panel=awards");
     router.prefetch("/dashboard?panel=accounts");
     router.prefetch("/dashboard?panel=projects");
     router.prefetch("/dashboard?panel=programs");
@@ -264,6 +267,14 @@ export function Navbar({ user }: NavbarProps) {
                     >
                       <FileText className="mr-2 h-3.5 w-3.5" />
                       Programs
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className={navItemClass(activePanel === "awards")}
+                      onClick={() => goTo("/dashboard?panel=awards")}
+                    >
+                      <Award className="mr-2 h-3.5 w-3.5" />
+                      Awards
                     </Button>
                   </div>
                 )}

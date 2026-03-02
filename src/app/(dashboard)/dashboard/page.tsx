@@ -4,10 +4,13 @@ import { UnitProjectsManagement } from "@/components/dashboard/unit-projects-man
 import { CoordinatorRegistration } from "@/components/dashboard/coordinator-registration";
 import { SuperAdminOverview } from "@/components/dashboard/super-admin-overview";
 import { getCollegeProjects, getProjects, getUnitProjects } from "@/lib/actions/projects";
+import { getAwards } from "@/lib/actions/awards";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getUnitsByDepartment } from "@/lib/departments";
 import { CollegeProjectsManagement } from "@/components/dashboard/college-projects-management";
 import { UnitCoordinatorsPanel } from "@/components/dashboard/unit-coordinators-panel";
+import { AwardsManagement, type AwardRecord } from "@/components/dashboard/awards-management";
+import { type Project } from "@/components/dashboard/projects-table";
 
 export default async function DashboardPage({
   searchParams,
@@ -20,7 +23,8 @@ export default async function DashboardPage({
     resolvedSearchParams.view === "projects" || resolvedSearchParams.view === "programs";
   const activeEntityType: "project" | "program" =
     resolvedSearchParams.view === "programs" ? "program" : "project";
-  const activePanel = panelParam === "unit-coordinators" ? "unit-coordinators" : "records";
+  const activePanel =
+    panelParam === "unit-coordinators" || panelParam === "awards" ? panelParam : "records";
   const hasSuperAdminSelection =
     panelParam === "accounts" || panelParam === "projects" || panelParam === "programs";
   const superAdminPanel: "accounts" | "projects" | "programs" =
@@ -47,8 +51,9 @@ export default async function DashboardPage({
     redirect("/register?step=2");
   }
 
-  let projects: any[] = [];
-  let unitProjects: any[] = [];
+  let projects: Project[] = [];
+  let unitProjects: Project[] = [];
+  let awards: AwardRecord[] = [];
   let collegeUnitCoordinatorAccounts: {
     id: string;
     email: string | null;
@@ -60,7 +65,9 @@ export default async function DashboardPage({
   }[] = [];
 
   if (profile.user_type === "unit_coordinator") {
-    if (hasEntitySelection) {
+    if (activePanel === "awards") {
+      awards = (await getAwards()).data || [];
+    } else if (hasEntitySelection) {
       const [myProjectsResult, unitProjectsResult] = await Promise.all([
         getProjects(),
         getUnitProjects(),
@@ -70,10 +77,13 @@ export default async function DashboardPage({
     }
   } else if (
     profile.user_type === "college_coordinator" &&
-    activePanel !== "unit-coordinators" &&
-    hasEntitySelection
+    activePanel !== "unit-coordinators"
   ) {
-    projects = (await getCollegeProjects()).data || [];
+    if (activePanel === "awards") {
+      awards = (await getAwards()).data || [];
+    } else if (hasEntitySelection) {
+      projects = (await getCollegeProjects()).data || [];
+    }
   }
 
   let allAccounts: {
@@ -190,6 +200,8 @@ export default async function DashboardPage({
               accounts={collegeUnitCoordinatorAccounts}
               department={profile.department}
             />
+          ) : activePanel === "awards" ? (
+            <AwardsManagement initialAwards={awards} department={profile.department} />
           ) : hasEntitySelection ? (
             <CollegeProjectsManagement
               initialProjects={projects}
@@ -205,7 +217,9 @@ export default async function DashboardPage({
       )}
 
       {userType === "unit_coordinator" && (
-        hasEntitySelection ? (
+        activePanel === "awards" ? (
+          <AwardsManagement initialAwards={awards} department={profile.department} />
+        ) : hasEntitySelection ? (
           <UnitProjectsManagement
             myProjects={projects}
             unitProjects={unitProjects}

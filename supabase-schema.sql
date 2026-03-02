@@ -366,3 +366,74 @@ using (
   bucket_id = 'cqer-projects_pdfs' AND
   (storage.foldername(name))[1] = auth.uid()::text
 );
+
+-- ============================================================
+-- START COPY: Awards Module (College and Unit Coordinators)
+-- ============================================================
+create table if not exists public.awards (
+  id uuid default gen_random_uuid() primary key,
+  department text not null,
+  extension_ppa jsonb not null default '[]'::jsonb,
+  award_recognition_received text not null,
+  donor text not null,
+  level text not null,
+  date_received date not null,
+  remarks text,
+  documents jsonb not null default '[]'::jsonb,
+  created_by uuid references public.profiles(id) on delete cascade not null,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'awards_level_check'
+  ) then
+    alter table public.awards
+      add constraint awards_level_check
+      check (level in ('local', 'regional', 'national', 'international'));
+  end if;
+end
+$$;
+
+alter table public.awards enable row level security;
+
+drop policy if exists "Users can view own awards" on public.awards;
+create policy "Users can view own awards" on public.awards
+  for select using (auth.uid() = created_by);
+
+drop policy if exists "Users can create own awards" on public.awards;
+create policy "Users can create own awards" on public.awards
+  for insert with check (auth.uid() = created_by);
+
+drop policy if exists "Users can update own awards" on public.awards;
+create policy "Users can update own awards" on public.awards
+  for update using (auth.uid() = created_by);
+
+drop policy if exists "Users can delete own awards" on public.awards;
+create policy "Users can delete own awards" on public.awards
+  for delete using (auth.uid() = created_by);
+
+create index if not exists idx_awards_created_by on public.awards (created_by);
+create index if not exists idx_awards_department on public.awards (department);
+create index if not exists idx_awards_date_received on public.awards (date_received desc);
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'awards'
+  ) then
+    alter publication supabase_realtime add table public.awards;
+  end if;
+end
+$$;
+-- ============================================================
+-- END COPY: Awards Module (College and Unit Coordinators)
+-- ============================================================
