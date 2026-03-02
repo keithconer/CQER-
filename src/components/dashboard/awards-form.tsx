@@ -50,6 +50,8 @@ const awardsSchema = z.object({
 });
 
 type AwardsFormValues = z.infer<typeof awardsSchema>;
+type AwardsFormInput = z.input<typeof awardsSchema>;
+type AwardsFormOutput = z.output<typeof awardsSchema>;
 
 interface AwardsFormProps {
   department: string;
@@ -59,7 +61,7 @@ interface AwardsFormProps {
 export function AwardsForm({ department, onSuccess }: AwardsFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  const form = useForm<AwardsFormValues>({
+  const form = useForm<AwardsFormInput, unknown, AwardsFormOutput>({
     resolver: zodResolver(awardsSchema),
     defaultValues: {
       department: department || "",
@@ -82,7 +84,7 @@ export function AwardsForm({ department, onSuccess }: AwardsFormProps) {
     form.setValue("department", department || "", { shouldValidate: true });
   }, [department, form]);
 
-  const onSubmit = async (values: AwardsFormValues) => {
+  const onSubmit = async (values: AwardsFormOutput) => {
     setIsSubmitting(true);
     try {
       const result = await createAward({
