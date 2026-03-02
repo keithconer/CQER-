@@ -39,10 +39,11 @@ export function CollegeProjectsManagement({
   currentUserId,
 }: CollegeProjectsManagementProps) {
   const [open, setOpen] = React.useState(false);
-  const [activeTab, setActiveTab] = React.useState<"my_projects" | "department_projects">(
-    "my_projects"
-  );
   const [searchTerm, setSearchTerm] = React.useState("");
+  const [selectedScopes, setSelectedScopes] = React.useState<string[]>([
+    "created_by_me",
+    "department_files",
+  ]);
   const [selectedUnits, setSelectedUnits] = React.useState<string[]>([]);
   const refreshTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
@@ -81,7 +82,6 @@ export function CollegeProjectsManagement({
 
   const isProgramsView = entityType === "program";
   const recordLabel = isProgramsView ? "Program" : "Project";
-  const isMyProjects = activeTab === "my_projects";
 
   const filteredByEntity = React.useMemo(
     () => initialProjects.filter((record) => (record.entry_type || "project") === entityType),
@@ -113,14 +113,30 @@ export function CollegeProjectsManagement({
     [departmentUnitRecords, selectedUnits]
   );
 
-  React.useEffect(() => {
-    setSearchTerm("");
-    setSelectedUnits([]);
-  }, [activeTab]);
+  const scopedRecords = React.useMemo(() => {
+    const records: Project[] = [];
+    const seenIds = new Set<string>();
+    const addRecords = (items: Project[]) => {
+      items.forEach((record) => {
+        if (seenIds.has(record.id)) return;
+        seenIds.add(record.id);
+        records.push(record);
+      });
+    };
+
+    if (selectedScopes.includes("created_by_me")) {
+      addRecords(myRecords);
+    }
+    if (selectedScopes.includes("department_files")) {
+      addRecords(departmentRecords);
+    }
+
+    return records;
+  }, [departmentRecords, myRecords, selectedScopes]);
 
   React.useEffect(() => {
-    setActiveTab("my_projects");
     setSearchTerm("");
+    setSelectedScopes(["created_by_me", "department_files"]);
     setSelectedUnits([]);
   }, [entityType]);
 
@@ -132,6 +148,12 @@ export function CollegeProjectsManagement({
     );
   };
 
+  const toggleScopeFilter = (value: string) => {
+    setSelectedScopes((prev) =>
+      prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]
+    );
+  };
+
   return (
     <div className="space-y-4">
       <Card className="border-border/50 shadow-sm">
@@ -140,13 +162,9 @@ export function CollegeProjectsManagement({
             <div>
               <CardTitle className="text-xs font-semibold">{isProgramsView ? "Programs" : "Projects"}</CardTitle>
               <CardDescription className="text-[10px]">
-                {isMyProjects
-                  ? isProgramsView
-                    ? "Programs that you've created."
-                    : "Projects that you've created."
-                  : isProgramsView
-                    ? "Programs from units under your department."
-                    : "Projects from units under your department."}
+                {isProgramsView
+                  ? "Manage your programs and records from units under your department."
+                  : "Manage your projects and records from units under your department."}
               </CardDescription>
             </div>
             <Button
@@ -156,30 +174,6 @@ export function CollegeProjectsManagement({
             >
               <Plus className="h-3 w-3 mr-1" />
               Create {recordLabel}
-            </Button>
-          </div>
-          <div className="inline-flex rounded-md border border-border/60 p-0.5 bg-muted/20">
-            <Button
-              size="sm"
-              onClick={() => setActiveTab("my_projects")}
-              className={`h-7 text-[10px] px-2.5 ${
-                isMyProjects
-                  ? "bg-[#159E44] hover:bg-[#128A3B] text-white"
-                  : "bg-transparent text-foreground hover:bg-muted"
-              }`}
-            >
-              {isProgramsView ? "My Programs" : "My Projects"}
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => setActiveTab("department_projects")}
-              className={`h-7 text-[10px] px-2.5 ${
-                !isMyProjects
-                  ? "bg-[#159E44] hover:bg-[#128A3B] text-white"
-                  : "bg-transparent text-foreground hover:bg-muted"
-              }`}
-            >
-              {isProgramsView ? "Department Programs" : "Department Projects"}
             </Button>
           </div>
           <div className="flex items-center justify-between gap-2">
@@ -192,51 +186,65 @@ export function CollegeProjectsManagement({
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            {!isMyProjects && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 text-[10px] border-border/50 bg-muted/20"
-                  >
-                    <SlidersHorizontal className="h-3 w-3 mr-1" />
-                    Filter
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-52">
-                  <DropdownMenuLabel className="text-[10px]">Scope</DropdownMenuLabel>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-[10px] border-border/50 bg-muted/20"
+                >
+                  <SlidersHorizontal className="h-3 w-3 mr-1" />
+                  Filter
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="text-[10px]">Results Filter</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                  className="text-[10px]"
+                  checked={selectedScopes.includes("created_by_me")}
+                  onCheckedChange={() => toggleScopeFilter("created_by_me")}
+                >
+                  Created by me
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  className="text-[10px]"
+                  checked={selectedScopes.includes("department_files")}
+                  onCheckedChange={() => toggleScopeFilter("department_files")}
+                >
+                  All files from the department
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-[10px]">Department Units</DropdownMenuLabel>
+                <DropdownMenuCheckboxItem
+                  className="text-[10px]"
+                  checked={selectedUnits.length === 0}
+                  onCheckedChange={(checked) => {
+                    if (checked) setSelectedUnits([]);
+                  }}
+                >
+                  All Units
+                </DropdownMenuCheckboxItem>
+                {unitOptions.map((unitOption) => (
                   <DropdownMenuCheckboxItem
+                    key={unitOption}
                     className="text-[10px]"
-                    checked={selectedUnits.length === 0}
-                    onCheckedChange={(checked) => {
-                      if (checked) setSelectedUnits([]);
-                    }}
+                    checked={selectedUnits.includes(unitOption)}
+                    onCheckedChange={() => toggleUnitFilter(unitOption)}
                   >
-                    All Projects
+                    {unitOption}
                   </DropdownMenuCheckboxItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel className="text-[10px]">Unit Projects</DropdownMenuLabel>
-                  {unitOptions.map((unitOption) => (
-                    <DropdownMenuCheckboxItem
-                      key={unitOption}
-                      className="text-[10px]"
-                      checked={selectedUnits.includes(unitOption)}
-                      onCheckedChange={() => toggleUnitFilter(unitOption)}
-                    >
-                      {unitOption}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </CardHeader>
         <CardContent className="px-4 pb-4">
           <ProjectsTable
-            projects={isMyProjects ? myRecords : departmentRecords}
+            projects={scopedRecords}
             entityType={entityType}
             readOnly={false}
+            currentUserId={currentUserId}
             searchTerm={searchTerm}
             onSearchTermChange={setSearchTerm}
             showSearch={false}

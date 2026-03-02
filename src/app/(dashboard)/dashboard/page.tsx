@@ -239,7 +239,12 @@ export default async function DashboardPage({
                 title="College Coordinators"
                 description="Register emails of College coordinators for their specific departments."
               />
-              <SuperAdminOverview accounts={allAccounts} projects={allProjects} panel={superAdminPanel} />
+              <SuperAdminOverview
+                accounts={allAccounts}
+                projects={allProjects}
+                panel={superAdminPanel}
+                currentUserId={user.id}
+              />
             </>
           )}
         </div>
@@ -356,6 +361,7 @@ export default async function DashboardPage({
             department={profile.department}
             unit={profile.unit}
             unitOptions={[]}
+            currentUserId={user.id}
           />
         ) : null
       )}

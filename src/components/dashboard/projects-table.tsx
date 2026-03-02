@@ -63,6 +63,7 @@ interface ProjectsTableProps {
   projects: Project[];
   entityType?: "project" | "program";
   readOnly?: boolean;
+  currentUserId?: string;
   searchTerm?: string;
   onSearchTermChange?: (value: string) => void;
   showSearch?: boolean;
@@ -80,6 +81,7 @@ export function ProjectsTable({
   projects,
   entityType = "project",
   readOnly = false,
+  currentUserId,
   searchTerm: controlledSearchTerm,
   onSearchTermChange,
   showSearch = true,
@@ -357,7 +359,7 @@ export function ProjectsTable({
                       >
                         <Eye className="h-3.5 w-3.5" />
                       </Button>
-                      {!readOnly && (
+                      {!readOnly && (!currentUserId || project.created_by === currentUserId) && (
                         <>
                           <Button 
                             variant="ghost" 

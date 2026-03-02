@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, SlidersHorizontal } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ProjectForm } from "./project-form";
 import { ProjectsTable, type Project } from "./projects-table";
 
@@ -31,6 +39,7 @@ interface UnitProjectsManagementProps {
   department?: string | null;
   unit?: string | null;
   unitOptions?: string[];
+  currentUserId: string;
 }
 
 export function UnitProjectsManagement({
@@ -41,12 +50,14 @@ export function UnitProjectsManagement({
   department,
   unit,
   unitOptions = [],
+  currentUserId,
 }: UnitProjectsManagementProps) {
   const [open, setOpen] = React.useState(false);
-  const [activeTab, setActiveTab] = React.useState<"my_projects" | "existing_projects">(
-    "my_projects"
-  );
   const [searchTerm, setSearchTerm] = React.useState("");
+  const [selectedScopes, setSelectedScopes] = React.useState<string[]>([
+    "created_by_me",
+    "unit_files",
+  ]);
   const refreshTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
 
@@ -82,7 +93,6 @@ export function UnitProjectsManagement({
     router.refresh();
   };
 
-  const isMyProjects = activeTab === "my_projects";
   const isProgramsView = entityType === "program";
   const recordLabel = isProgramsView ? "Program" : "Project";
 
@@ -95,14 +105,37 @@ export function UnitProjectsManagement({
     [unitProjects, entityType]
   );
 
-  React.useEffect(() => {
-    setSearchTerm("");
-  }, [activeTab]);
+  const scopedRecords = React.useMemo(() => {
+    const records: Project[] = [];
+    const seenIds = new Set<string>();
+    const addRecords = (items: Project[]) => {
+      items.forEach((record) => {
+        if (seenIds.has(record.id)) return;
+        seenIds.add(record.id);
+        records.push(record);
+      });
+    };
+
+    if (selectedScopes.includes("created_by_me")) {
+      addRecords(filteredMyRecords);
+    }
+    if (selectedScopes.includes("unit_files")) {
+      addRecords(filteredUnitRecords);
+    }
+
+    return records;
+  }, [filteredMyRecords, filteredUnitRecords, selectedScopes]);
 
   React.useEffect(() => {
-    setActiveTab("my_projects");
     setSearchTerm("");
+    setSelectedScopes(["created_by_me", "unit_files"]);
   }, [entityType]);
+
+  const toggleScopeFilter = (value: string) => {
+    setSelectedScopes((prev) =>
+      prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]
+    );
+  };
 
   return (
     <div className="space-y-4">
@@ -112,13 +145,9 @@ export function UnitProjectsManagement({
             <div>
               <CardTitle className="text-xs font-semibold">{isProgramsView ? "Programs" : "Projects"}</CardTitle>
               <CardDescription className="text-[10px]">
-                {isMyProjects
-                  ? isProgramsView
-                    ? "Programs that you've created."
-                    : "Projects that you've created."
-                  : isProgramsView
-                    ? "Programs under your unit."
-                    : "Projects under your unit."}
+                {isProgramsView
+                  ? "Manage programs from your unit, including ones you've created."
+                  : "Manage projects from your unit, including ones you've created."}
               </CardDescription>
             </div>
             <Button
@@ -130,46 +159,54 @@ export function UnitProjectsManagement({
               Create {recordLabel}
             </Button>
           </div>
-          <div className="inline-flex rounded-md border border-border/60 p-0.5 bg-muted/20">
-              <Button
-                size="sm"
-                onClick={() => setActiveTab("my_projects")}
-                className={`h-7 text-[10px] px-2.5 ${
-                  isMyProjects
-                    ? "bg-[#159E44] hover:bg-[#128A3B] text-white"
-                    : "bg-transparent text-foreground hover:bg-muted"
-                }`}
-              >
-                {isProgramsView ? "My Programs" : "My Projects"}
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => setActiveTab("existing_projects")}
-                className={`h-7 text-[10px] px-2.5 ${
-                  !isMyProjects
-                    ? "bg-[#159E44] hover:bg-[#128A3B] text-white"
-                    : "bg-transparent text-foreground hover:bg-muted"
-                }`}
-              >
-                {isProgramsView ? "Unit Existing Programs" : "Unit Existing Projects"}
-              </Button>
+          <div className="flex items-center justify-between gap-2">
+            <div className="relative max-w-sm w-full">
+              <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Search..."
+                className="pl-8 h-8 text-xs placeholder:text-[10px] bg-muted/20 border-border/50"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
-          <div className="relative max-w-sm">
-            <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-            <Input
-              placeholder="Search..."
-              className="pl-8 h-8 text-xs placeholder:text-[10px] bg-muted/20 border-border/50"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-[10px] border-border/50 bg-muted/20"
+                >
+                  <SlidersHorizontal className="h-3 w-3 mr-1" />
+                  Filter
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="text-[10px]">Results Filter</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                  className="text-[10px]"
+                  checked={selectedScopes.includes("created_by_me")}
+                  onCheckedChange={() => toggleScopeFilter("created_by_me")}
+                >
+                  Created by me
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  className="text-[10px]"
+                  checked={selectedScopes.includes("unit_files")}
+                  onCheckedChange={() => toggleScopeFilter("unit_files")}
+                >
+                  All files from the unit
+                </DropdownMenuCheckboxItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </CardHeader>
         <CardContent className="px-4 pb-4">
           <ProjectsTable
-            projects={isMyProjects ? filteredMyRecords : filteredUnitRecords}
+            projects={scopedRecords}
             entityType={entityType}
-            readOnly={!isMyProjects}
-            allowViewOnlyAction={!isMyProjects}
+            readOnly={false}
+            currentUserId={currentUserId}
             searchTerm={searchTerm}
             onSearchTermChange={setSearchTerm}
             showSearch={false}

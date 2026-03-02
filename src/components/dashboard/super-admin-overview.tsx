@@ -1,7 +1,16 @@
 "use client";
 
 import * as React from "react";
-import { Search, ChevronLeft, ChevronRight, Eye, Pencil, Trash2, AlertTriangle } from "lucide-react";
+import {
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  Pencil,
+  Trash2,
+  AlertTriangle,
+  SlidersHorizontal,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +35,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type RoleType = "super_admin" | "college_coordinator" | "unit_coordinator";
 
@@ -40,6 +57,7 @@ interface RegisteredAccount {
 
 interface ExistingProject {
   id: string;
+  created_by?: string | null;
   entry_type?: "project" | "program" | null;
   title: string;
   classification?: string[] | null;
@@ -70,6 +88,7 @@ interface SuperAdminOverviewProps {
   accounts: RegisteredAccount[];
   projects: ExistingProject[];
   panel: "accounts" | "projects" | "programs";
+  currentUserId: string;
 }
 
 const ITEMS_PER_PAGE = 6;
@@ -84,9 +103,17 @@ export function SuperAdminOverview({
   accounts,
   projects,
   panel,
+  currentUserId,
 }: SuperAdminOverviewProps) {
   const [searchTerm, setSearchTerm] = React.useState("");
   const [currentPage, setCurrentPage] = React.useState(1);
+  const [selectedScopes, setSelectedScopes] = React.useState<string[]>([
+    "created_by_me",
+    "all_records",
+  ]);
+  const [selectedEntryTypes, setSelectedEntryTypes] = React.useState<Array<"project" | "program">>(
+    panel === "programs" ? ["program"] : ["project"]
+  );
   const [viewProject, setViewProject] = React.useState<ExistingProject | null>(null);
   const [editProject, setEditProject] = React.useState<ExistingProject | null>(null);
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
@@ -113,10 +140,12 @@ export function SuperAdminOverview({
 
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [panel, searchTerm]);
+  }, [panel, searchTerm, selectedScopes, selectedEntryTypes]);
 
   React.useEffect(() => {
     setSearchTerm("");
+    setSelectedScopes(["created_by_me", "all_records"]);
+    setSelectedEntryTypes(panel === "programs" ? ["program"] : ["project"]);
   }, [panel]);
 
   const filteredAccounts = React.useMemo(() => {
@@ -133,10 +162,16 @@ export function SuperAdminOverview({
     });
   }, [accounts, searchTerm]);
 
-  const filteredProjects = React.useMemo(() => {
+  const filteredProjectRecords = React.useMemo(() => {
     const term = searchTerm.toLowerCase();
     return projects.filter((project) => {
-      if ((project.entry_type || "project") !== "project") return false;
+      const isMine = project.created_by === currentUserId;
+      const matchesScope =
+        (selectedScopes.includes("created_by_me") && isMine) ||
+        (selectedScopes.includes("all_records") && !isMine);
+      const entryType = (project.entry_type || "project") as "project" | "program";
+      if (!matchesScope) return false;
+      if (!selectedEntryTypes.includes(entryType)) return false;
       return (
         project.title.toLowerCase().includes(term) ||
         (project.academic_program || "").toLowerCase().includes(term) ||
@@ -154,30 +189,7 @@ export function SuperAdminOverview({
         (project.funding_source || "").toLowerCase().includes(term)
       );
     });
-  }, [projects, searchTerm]);
-
-  const filteredPrograms = React.useMemo(() => {
-    const term = searchTerm.toLowerCase();
-    return projects.filter((project) => {
-      if ((project.entry_type || "project") !== "program") return false;
-      return (
-        project.title.toLowerCase().includes(term) ||
-        (project.academic_program || "").toLowerCase().includes(term) ||
-        (project.proponents || [])
-          .map((person) => person?.name || "")
-          .join(", ")
-          .toLowerCase()
-          .includes(term) ||
-        (project.co_project_leaders || [])
-          .map((person) => person?.name || "")
-          .join(", ")
-          .toLowerCase()
-          .includes(term) ||
-        (project.category || "").toLowerCase().includes(term) ||
-        (project.funding_source || "").toLowerCase().includes(term)
-      );
-    });
-  }, [projects, searchTerm]);
+  }, [currentUserId, projects, searchTerm, selectedEntryTypes, selectedScopes]);
 
   const formatProjectLeaders = (proponents: ExistingProject["proponents"]) => {
     if (!Array.isArray(proponents) || proponents.length === 0) return "-";
@@ -228,16 +240,25 @@ export function SuperAdminOverview({
   const activeItems =
     panel === "accounts"
       ? filteredAccounts
-      : panel === "projects"
-        ? filteredProjects
-        : filteredPrograms;
+      : filteredProjectRecords;
   const totalPages = Math.max(1, Math.ceil(activeItems.length / ITEMS_PER_PAGE));
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
 
   const paginatedAccounts = filteredAccounts.slice(startIndex, endIndex);
-  const paginatedProjects = filteredProjects.slice(startIndex, endIndex);
-  const paginatedPrograms = filteredPrograms.slice(startIndex, endIndex);
+  const paginatedProjectRecords = filteredProjectRecords.slice(startIndex, endIndex);
+
+  const toggleScopeFilter = (value: string) => {
+    setSelectedScopes((prev) =>
+      prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]
+    );
+  };
+
+  const toggleEntryTypeFilter = (value: "project" | "program") => {
+    setSelectedEntryTypes((prev) =>
+      prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]
+    );
+  };
 
   return (
     <Card className="border-border/50 shadow-sm">
@@ -251,18 +272,64 @@ export function SuperAdminOverview({
           </div>
         </div>
 
-        <div className="relative max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-          <Input
-            placeholder={
-              panel === "accounts"
-                ? "Search accounts..."
-                : "Search..."
-            }
-            className="pl-8 h-8 text-xs placeholder:text-[10px] bg-muted/20 border-border/50"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        <div className="flex items-center justify-between gap-2">
+          <div className="relative max-w-sm w-full">
+            <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              placeholder={panel === "accounts" ? "Search accounts..." : "Search..."}
+              className="pl-8 h-8 text-xs placeholder:text-[10px] bg-muted/20 border-border/50"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          {panel !== "accounts" && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-[10px] border-border/50 bg-muted/20"
+                >
+                  <SlidersHorizontal className="h-3 w-3 mr-1" />
+                  Filter
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="text-[10px]">Results Filter</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                  className="text-[10px]"
+                  checked={selectedScopes.includes("created_by_me")}
+                  onCheckedChange={() => toggleScopeFilter("created_by_me")}
+                >
+                  Created by me
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  className="text-[10px]"
+                  checked={selectedScopes.includes("all_records")}
+                  onCheckedChange={() => toggleScopeFilter("all_records")}
+                >
+                  All records
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-[10px]">Entry Type</DropdownMenuLabel>
+                <DropdownMenuCheckboxItem
+                  className="text-[10px]"
+                  checked={selectedEntryTypes.includes("project")}
+                  onCheckedChange={() => toggleEntryTypeFilter("project")}
+                >
+                  Projects
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  className="text-[10px]"
+                  checked={selectedEntryTypes.includes("program")}
+                  onCheckedChange={() => toggleEntryTypeFilter("program")}
+                >
+                  Programs
+                </DropdownMenuCheckboxItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </CardHeader>
 
@@ -314,103 +381,11 @@ export function SuperAdminOverview({
                 )}
               </TableBody>
             </Table>
-          ) : panel === "projects" ? (
-            <Table>
-              <TableHeader className="bg-muted/30">
-                <TableRow className="hover:bg-transparent border-border/50">
-                  <TableHead className="text-[10px] font-semibold h-9">Project Title</TableHead>
-                  <TableHead className="text-[10px] font-semibold h-9">Project Leader</TableHead>
-                  <TableHead className="text-[10px] font-semibold h-9">Co-Project Leaders</TableHead>
-                  <TableHead className="text-[10px] font-semibold h-9">Program</TableHead>
-                  <TableHead className="text-[10px] font-semibold h-9">Duration (Year)</TableHead>
-                  <TableHead className="text-[10px] font-semibold h-9">Period (Date)</TableHead>
-                  <TableHead className="text-[10px] font-semibold h-9">Category</TableHead>
-                  <TableHead className="text-[10px] font-semibold h-9">Funding</TableHead>
-                  <TableHead className="text-[10px] font-semibold h-9">Budget Total</TableHead>
-                  <TableHead className="text-[10px] font-semibold h-9 text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedProjects.length > 0 ? (
-                  paginatedProjects.map((project) => (
-                    <TableRow key={project.id} className="hover:bg-muted/10 border-border/30">
-                      <TableCell className="text-[10px] py-2.5 px-3 font-medium max-w-[260px] truncate" title={project.title}>
-                        {project.title}
-                      </TableCell>
-                      <TableCell className="text-[10px] py-2.5 px-3 max-w-[220px]">
-                        <span className="line-clamp-2" title={formatProjectLeaders(project.proponents)}>
-                          {formatProjectLeaders(project.proponents)}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-[10px] py-2.5 px-3 max-w-[220px]">
-                        <span className="line-clamp-2" title={formatCoProjectLeaders(project.co_project_leaders)}>
-                          {formatCoProjectLeaders(project.co_project_leaders)}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-[10px] py-2.5 px-3">
-                        {project.academic_program || "-"}
-                      </TableCell>
-                      <TableCell className="text-[10px] py-2.5 px-3">
-                        {formatDurationYears(project.start_date, project.end_date)}
-                      </TableCell>
-                      <TableCell className="text-[10px] py-2.5 px-3">
-                        {project.start_date && project.end_date
-                          ? `${format(new Date(project.start_date), "MMM d, yyyy")} - ${format(new Date(project.end_date), "MMM d, yyyy")}`
-                          : "-"}
-                      </TableCell>
-                      <TableCell className="text-[10px] py-2.5 px-3">
-                        {project.category ? toTitleCase(project.category) : "-"}
-                      </TableCell>
-                      <TableCell className="text-[10px] py-2.5 px-3">
-                        {project.funding_source || "-"}
-                      </TableCell>
-                      <TableCell className="text-[10px] py-2.5 px-3 font-medium whitespace-nowrap">
-                        {formatBudgetTotal(getBudgetTotal(project))}
-                      </TableCell>
-                      <TableCell className="py-2.5 px-3 text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                            onClick={() => setViewProject(project)}
-                          >
-                            <Eye className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                            onClick={() => setEditProject(project)}
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-destructive hover:text-destructive/80 hover:bg-destructive/10"
-                            onClick={() => setDeleteId(project.id)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={10} className="h-24 text-center text-xs text-muted-foreground">
-                      No projects found.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
           ) : (
             <Table>
               <TableHeader className="bg-muted/30">
                 <TableRow className="hover:bg-transparent border-border/50">
-                  <TableHead className="text-[10px] font-semibold h-9">Program Title</TableHead>
+                  <TableHead className="text-[10px] font-semibold h-9">Title</TableHead>
                   <TableHead className="text-[10px] font-semibold h-9">Project Leader</TableHead>
                   <TableHead className="text-[10px] font-semibold h-9">Co-Project Leaders</TableHead>
                   <TableHead className="text-[10px] font-semibold h-9">Program</TableHead>
@@ -423,41 +398,41 @@ export function SuperAdminOverview({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedPrograms.length > 0 ? (
-                  paginatedPrograms.map((program) => (
-                    <TableRow key={program.id} className="hover:bg-muted/10 border-border/30">
-                      <TableCell className="text-[10px] py-2.5 px-3 font-medium max-w-[260px] truncate" title={program.title}>
-                        {program.title}
+                {paginatedProjectRecords.length > 0 ? (
+                  paginatedProjectRecords.map((record) => (
+                    <TableRow key={record.id} className="hover:bg-muted/10 border-border/30">
+                      <TableCell className="text-[10px] py-2.5 px-3 font-medium max-w-[260px] truncate" title={record.title}>
+                        {record.title}
                       </TableCell>
                       <TableCell className="text-[10px] py-2.5 px-3 max-w-[220px]">
-                        <span className="line-clamp-2" title={formatProjectLeaders(program.proponents)}>
-                          {formatProjectLeaders(program.proponents)}
+                        <span className="line-clamp-2" title={formatProjectLeaders(record.proponents)}>
+                          {formatProjectLeaders(record.proponents)}
                         </span>
                       </TableCell>
                       <TableCell className="text-[10px] py-2.5 px-3 max-w-[220px]">
-                        <span className="line-clamp-2" title={formatCoProjectLeaders(program.co_project_leaders)}>
-                          {formatCoProjectLeaders(program.co_project_leaders)}
+                        <span className="line-clamp-2" title={formatCoProjectLeaders(record.co_project_leaders)}>
+                          {formatCoProjectLeaders(record.co_project_leaders)}
                         </span>
                       </TableCell>
                       <TableCell className="text-[10px] py-2.5 px-3">
-                        {program.academic_program || "-"}
+                        {record.academic_program || "-"}
                       </TableCell>
                       <TableCell className="text-[10px] py-2.5 px-3">
-                        {formatDurationYears(program.start_date, program.end_date)}
+                        {formatDurationYears(record.start_date, record.end_date)}
                       </TableCell>
                       <TableCell className="text-[10px] py-2.5 px-3">
-                        {program.start_date && program.end_date
-                          ? `${format(new Date(program.start_date), "MMM d, yyyy")} - ${format(new Date(program.end_date), "MMM d, yyyy")}`
+                        {record.start_date && record.end_date
+                          ? `${format(new Date(record.start_date), "MMM d, yyyy")} - ${format(new Date(record.end_date), "MMM d, yyyy")}`
                           : "-"}
                       </TableCell>
                       <TableCell className="text-[10px] py-2.5 px-3">
-                        {program.category ? toTitleCase(program.category) : "-"}
+                        {record.category ? toTitleCase(record.category) : "-"}
                       </TableCell>
                       <TableCell className="text-[10px] py-2.5 px-3">
-                        {program.funding_source || "-"}
+                        {record.funding_source || "-"}
                       </TableCell>
                       <TableCell className="text-[10px] py-2.5 px-3 font-medium whitespace-nowrap">
-                        {formatBudgetTotal(getBudgetTotal(program))}
+                        {formatBudgetTotal(getBudgetTotal(record))}
                       </TableCell>
                       <TableCell className="py-2.5 px-3 text-right">
                         <div className="flex justify-end gap-1">
@@ -465,7 +440,7 @@ export function SuperAdminOverview({
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                            onClick={() => setViewProject(program)}
+                            onClick={() => setViewProject(record)}
                           >
                             <Eye className="h-3.5 w-3.5" />
                           </Button>
@@ -473,7 +448,7 @@ export function SuperAdminOverview({
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                            onClick={() => setEditProject(program)}
+                            onClick={() => setEditProject(record)}
                           >
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
@@ -481,7 +456,7 @@ export function SuperAdminOverview({
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7 text-destructive hover:text-destructive/80 hover:bg-destructive/10"
-                            onClick={() => setDeleteId(program.id)}
+                            onClick={() => setDeleteId(record.id)}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
@@ -492,7 +467,7 @@ export function SuperAdminOverview({
                 ) : (
                   <TableRow>
                     <TableCell colSpan={10} className="h-24 text-center text-xs text-muted-foreground">
-                      No programs found.
+                      No records found.
                     </TableCell>
                   </TableRow>
                 )}
@@ -505,7 +480,7 @@ export function SuperAdminOverview({
           <div className="flex items-center justify-between px-2 pt-1">
             <p className="text-[10px] text-muted-foreground">
               Showing {startIndex + 1} to {Math.min(endIndex, activeItems.length)} of{" "}
-              {activeItems.length} {panel === "accounts" ? "records" : panel === "projects" ? "projects" : "programs"}
+              {activeItems.length} records
             </p>
             <div className="flex items-center gap-1">
               <Button
