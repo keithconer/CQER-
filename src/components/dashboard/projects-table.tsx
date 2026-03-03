@@ -168,10 +168,12 @@ export function ProjectsTable({
   const [manageInternalOpen, setManageInternalOpen] = React.useState(false);
   const [internalProjectId, setInternalProjectId] = React.useState("");
   const [internalDates, setInternalDates] = React.useState<Date[]>([]);
+  const [internalProjectDates, setInternalProjectDates] = React.useState<Date[]>([]);
   const [internalSdg, setInternalSdg] = React.useState<string[]>([]);
   const [internalThematic, setInternalThematic] = React.useState<string[]>([]);
   const [awardDate, setAwardDate] = React.useState<Date | null>(null);
   const [awardUpload, setAwardUpload] = React.useState<{ url: string; name: string }[]>([]);
+  const [isSavingInternal, setIsSavingInternal] = React.useState(false);
 
   const [formData, setFormData] = React.useState({
     leadUnit: "",
@@ -410,6 +412,100 @@ export function ProjectsTable({
   const projectApprovedBudgetNumber = Number(formData.projectApprovedBudget || 0);
   const projectCounterpartNumber = Number(formData.projectCounterpartFund || 0);
   const computedProjectTotal = projectApprovedBudgetNumber + projectCounterpartNumber;
+
+  const toIsoDates = (dates: Date[]) =>
+    [...dates]
+      .sort((a, b) => a.getTime() - b.getTime())
+      .map((date) => format(date, "yyyy-MM-dd"));
+
+  const handleSaveInternalFunding = async () => {
+    if (!internalProjectId) {
+      alert("Please select a Project No. first.");
+      return;
+    }
+
+    setIsSavingInternal(true);
+    try {
+      const selected = internalFundingProjects.find((project) => project.id === internalProjectId);
+      const projectNo = selected?.project_no || selected?.program_no || null;
+
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        alert("You must be logged in to save.");
+        return;
+      }
+
+      const payload = {
+        project_id: internalProjectId,
+        project_no: projectNo,
+        lead_unit: formData.leadUnit || null,
+        contact_person: formData.contactPerson || null,
+        contact_details: formData.contactDetails || null,
+        related_curricular_offering: formData.relatedCurricular || null,
+        collaborating_agencies: formData.collaboratingAgencies || null,
+        part_of_program: !!formData.partOfProgram,
+        program_title: formData.programTitle || null,
+        program_objectives: formData.programObjectives || null,
+        program_implementing_strategies: formData.programStrategies || null,
+        program_locale: formData.programLocale || null,
+        program_type_of_clientele: formData.programClienteleType || null,
+        program_number_of_clientele: formData.programClienteleNumber || null,
+        program_implementers_team_role: formData.programImplementersRole || null,
+        program_approved_budget_cvsu: approvedBudgetNumber || 0,
+        program_counterpart_fund: counterpartNumber || 0,
+        program_total_budget: computedTotal || 0,
+        program_inclusive_dates: toIsoDates(internalDates),
+        program_moa_no: formData.moaNo || null,
+        program_team_members: programTeamRows,
+        project_title: formData.projectTitle || null,
+        project_objectives: formData.projectObjectives || null,
+        project_implementing_strategies: formData.projectStrategies || null,
+        project_locale: formData.projectLocale || null,
+        project_type_of_clientele: formData.projectClienteleType || null,
+        project_number_of_clientele: formData.projectClienteleNumber || null,
+        project_implementers_team_role: formData.projectImplementersRole || null,
+        project_approved_budget_cvsu: projectApprovedBudgetNumber || 0,
+        project_counterpart_fund: projectCounterpartNumber || 0,
+        project_total_budget: computedProjectTotal || 0,
+        project_inclusive_dates: toIsoDates(internalProjectDates),
+        project_moa_no: formData.projectMoaNo || null,
+        re_council_approved_date: formData.reCouncilDate ? format(formData.reCouncilDate, "yyyy-MM-dd") : null,
+        bor_op_approved_date: formData.borOpDate ? format(formData.borOpDate, "yyyy-MM-dd") : null,
+        inception_meeting_date: formData.inceptionDate ? format(formData.inceptionDate, "yyyy-MM-dd") : null,
+        beneficiaries_text: formData.beneficiaries || null,
+        beneficiaries_count: formData.beneficiariesCount ? Number(formData.beneficiariesCount) : null,
+        sdg_goals: internalSdg,
+        thematic_areas: internalThematic,
+        awards: [
+          {
+            title: formData.awardTitle,
+            conferring_agency_body: formData.conferringAgency,
+            date: awardDate ? format(awardDate, "yyyy-MM-dd") : null,
+            remarks: formData.awardRemarks,
+            documents: awardUpload,
+          },
+        ].filter((item) => item.title || item.conferring_agency_body || item.date || item.remarks || item.documents.length > 0),
+        award_documents: awardUpload,
+        created_by: user.id,
+      };
+
+      const { error } = await supabase.from("internal_funding_projects").insert([payload]);
+      if (error) {
+        alert(`Error: ${error.message}`);
+        return;
+      }
+
+      alert("Internal funding project saved.");
+      setManageInternalOpen(false);
+      router.refresh();
+    } finally {
+      setIsSavingInternal(false);
+    }
+  };
 
   if (!projects || projects.length === 0) {
     return (
@@ -760,6 +856,37 @@ export function ProjectsTable({
                     <Input placeholder="Counterpart Fund (optional)" value={formData.projectCounterpartFund} onChange={(e) => setFormData((p) => ({ ...p, projectCounterpartFund: e.target.value }))} className="h-8 text-xs" />
                     <Input value={computedProjectTotal || 0} readOnly disabled className="h-8 bg-muted/20 text-xs" />
                   </div>
+                  <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-medium">Project Duration Inclusive Dates</p>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className="h-8 w-full justify-start text-xs font-normal">
+                            {internalProjectDates.length > 0
+                              ? `${format(new Date(Math.min(...internalProjectDates.map((d) => d.getTime()))), "MMM d, yyyy")} - ${format(new Date(Math.max(...internalProjectDates.map((d) => d.getTime()))), "MMM d, yyyy")}`
+                              : "Select dates"}
+                            <CalendarIcon className="ml-auto h-3 w-3 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar mode="multiple" selected={internalProjectDates} onSelect={(d) => setInternalProjectDates(d || [])} />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-medium">Project MOA No.</p>
+                      <Select value={formData.projectMoaNo} onValueChange={(value) => setFormData((p) => ({ ...p, projectMoaNo: value }))}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Select MOA No." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {existingMoaNos.map((moaNo) => (
+                            <SelectItem key={`project-moa-${moaNo}`} value={moaNo} className="text-xs">{moaNo}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -849,7 +976,13 @@ export function ProjectsTable({
           </ScrollArea>
           <DialogFooter className="pt-2">
             <Button variant="outline" className="h-8 text-xs" onClick={() => setManageInternalOpen(false)}>Close</Button>
-            <Button className="h-8 text-xs bg-[#159E44] hover:bg-[#128A3B]" onClick={() => alert("Internal funding project draft captured in UI.")}>Save</Button>
+            <Button
+              className="h-8 text-xs bg-[#159E44] hover:bg-[#128A3B]"
+              onClick={handleSaveInternalFunding}
+              disabled={isSavingInternal}
+            >
+              {isSavingInternal ? "Saving..." : "Save"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
