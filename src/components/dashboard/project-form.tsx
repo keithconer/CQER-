@@ -116,7 +116,7 @@ const partnerAgencySchema = z.object({
 
 const schema = z.object({
   entry_type: z.enum(["project", "program"]),
-  project_no: z.string().min(1),
+  record_no: z.string().min(1),
   project_leader: z.string().min(1),
   co_project_leaders: z.array(z.object({ name: z.string().min(1) })).default([]),
   moa_no: z.string().optional().refine((v) => !v || /^\d+$/.test(v), "Numbers only"),
@@ -140,6 +140,7 @@ type FormOutput = z.output<typeof schema>;
 interface LooseProject {
   id?: string;
   project_no?: string | null;
+  program_no?: string | null;
   entry_type?: "project" | "program" | null;
   category?: string | null;
   moa_no?: string | null;
@@ -277,7 +278,7 @@ function buildPayload(values: FormValues, mode: "project" | "program") {
     .filter((agency) => Number(agency.amount_involved || 0) > 0)
     .map((agency) => ({ name: agency.agency_name, amount: Number(agency.amount_involved || 0) }));
 
-  return {
+  const payload: Record<string, unknown> = {
     entry_type: mode,
     title: firstAgency?.extension_title || `${mode === "program" ? "Program" : "Project"} Registration`,
     classification: thematicAreas,
@@ -309,8 +310,13 @@ function buildPayload(values: FormValues, mode: "project" | "program") {
     visibility_scope: values.visibility_scope,
     visible_units: values.visible_units,
     documents: values.documents,
-    project_no: values.project_no,
   };
+  if (mode === "program") {
+    payload.program_no = values.record_no;
+  } else {
+    payload.project_no = values.record_no;
+  }
+  return payload;
 }
 
 export function ProjectForm({
@@ -350,14 +356,14 @@ export function ProjectForm({
     const mm = String(now.getMonth() + 1).padStart(2, "0");
     const dd = String(now.getDate()).padStart(2, "0");
     const suffix = Math.floor(Math.random() * 9000 + 1000);
-    return `PRJ-${yyyy}${mm}${dd}-${suffix}`;
-  }, []);
+    return `${resolvedMode === "program" ? "PRG" : "PRJ"}-${yyyy}${mm}${dd}-${suffix}`;
+  }, [resolvedMode]);
 
   const form = useForm<FormInput, unknown, FormOutput>({
     resolver: zodResolver(schema),
     defaultValues: {
       entry_type: resolvedMode,
-      project_no: project?.project_no || autoProjectNo,
+      record_no: resolvedMode === "program" ? (project?.program_no || autoProjectNo) : (project?.project_no || autoProjectNo),
       project_leader: project?.proponents?.[0]?.name || "",
       co_project_leaders: Array.isArray(project?.co_project_leaders)
         ? project.co_project_leaders.map((item) => ({ name: item?.name || "" }))
@@ -452,9 +458,9 @@ export function ProjectForm({
         <ScrollArea className="h-[72vh] pr-4">
           <div className="space-y-5 pb-3">
             <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-              <FormField control={form.control} name="project_no" render={({ field }) => (
+              <FormField control={form.control} name="record_no" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs">Project No.</FormLabel>
+                  <FormLabel className="text-xs">{resolvedMode === "program" ? "Program No." : "Project No."}</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <Hash className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />

@@ -386,6 +386,21 @@ where project_no is not null;
 -- END COPY: Project Number Auto Field
 -- ============================================================
 
+-- ============================================================
+-- START COPY: Program Number Auto Field
+-- ============================================================
+-- Program No. used by the program registration form as an auto-generated reference.
+alter table public.projects
+add column if not exists program_no text;
+
+-- Optional uniqueness safeguard for generated program numbers.
+create unique index if not exists idx_projects_program_no_unique
+on public.projects (program_no)
+where program_no is not null;
+-- ============================================================
+-- END COPY: Program Number Auto Field
+-- ============================================================
+
 -- ============================================
 -- PDF Upload Enhancement
 -- Run this in Supabase SQL Editor
