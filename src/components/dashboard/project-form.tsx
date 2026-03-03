@@ -115,7 +115,7 @@ const partnerAgencySchema = z.object({
 });
 
 const schema = z.object({
-  entry_type: z.enum(["project", "program"]),
+  entry_type: z.literal("project"),
   record_no: z.string().min(1),
   project_leader: z.string().min(1),
   co_project_leaders: z.array(z.object({ name: z.string().min(1) })).default([]),
@@ -140,8 +140,7 @@ type FormOutput = z.output<typeof schema>;
 interface LooseProject {
   id?: string;
   project_no?: string | null;
-  program_no?: string | null;
-  entry_type?: "project" | "program" | null;
+  entry_type?: "project" | null;
   category?: string | null;
   moa_no?: string | null;
   moa_category?: string | null;
@@ -162,7 +161,6 @@ interface ProjectFormProps {
   onSuccess?: () => void;
   project?: LooseProject;
   isViewOnly?: boolean;
-  mode?: "project" | "program";
   currentUserType?: "super_admin" | "college_coordinator" | "unit_coordinator";
   currentDepartment?: string | null;
   currentUnit?: string | null;
@@ -265,7 +263,7 @@ function DatePickerField({
   );
 }
 
-function buildPayload(values: FormValues, mode: "project" | "program") {
+function buildPayload(values: FormValues) {
   const firstAgency = values.partner_agencies[0];
   const sdgs = Array.from(new Set(values.partner_agencies.flatMap((a) => a.sdg_goals || [])));
   const firstAgencyDates = sortDates(firstAgency?.inclusive_dates || []);
@@ -279,8 +277,8 @@ function buildPayload(values: FormValues, mode: "project" | "program") {
     .map((agency) => ({ name: agency.agency_name, amount: Number(agency.amount_involved || 0) }));
 
   const payload: Record<string, unknown> = {
-    entry_type: mode,
-    title: firstAgency?.extension_title || `${mode === "program" ? "Program" : "Project"} Registration`,
+    entry_type: "project",
+    title: firstAgency?.extension_title || "Project Registration",
     classification: thematicAreas,
     sdg_goals: sdgs,
     academic_program: values.related_curricular_offerings[0] || "N/A",
@@ -311,11 +309,7 @@ function buildPayload(values: FormValues, mode: "project" | "program") {
     visible_units: values.visible_units,
     documents: values.documents,
   };
-  if (mode === "program") {
-    payload.program_no = values.record_no;
-  } else {
-    payload.project_no = values.record_no;
-  }
+  payload.project_no = values.record_no;
   return payload;
 }
 
@@ -323,14 +317,12 @@ export function ProjectForm({
   onSuccess,
   project,
   isViewOnly,
-  mode = "project",
   currentUserType,
   currentDepartment,
   currentUnit,
   unitOptions = [],
 }: ProjectFormProps) {
-  const resolvedMode = (project?.entry_type as "project" | "program" | undefined) || mode;
-  const recordLabel = resolvedMode === "program" ? "Program" : "Project";
+  const recordLabel = "Project";
   const isCollegeCoordinator = currentUserType === "college_coordinator";
 
   const relatedOptions = React.useMemo(() => {
@@ -356,14 +348,14 @@ export function ProjectForm({
     const mm = String(now.getMonth() + 1).padStart(2, "0");
     const dd = String(now.getDate()).padStart(2, "0");
     const suffix = Math.floor(Math.random() * 9000 + 1000);
-    return `${resolvedMode === "program" ? "PRG" : "PRJ"}-${yyyy}${mm}${dd}-${suffix}`;
-  }, [resolvedMode]);
+    return `PRJ-${yyyy}${mm}${dd}-${suffix}`;
+  }, []);
 
   const form = useForm<FormInput, unknown, FormOutput>({
     resolver: zodResolver(schema),
     defaultValues: {
-      entry_type: resolvedMode,
-      record_no: resolvedMode === "program" ? (project?.program_no || autoProjectNo) : (project?.project_no || autoProjectNo),
+      entry_type: "project",
+      record_no: project?.project_no || autoProjectNo,
       project_leader: project?.proponents?.[0]?.name || "",
       co_project_leaders: Array.isArray(project?.co_project_leaders)
         ? project.co_project_leaders.map((item) => ({ name: item?.name || "" }))
@@ -431,7 +423,7 @@ export function ProjectForm({
     if (isViewOnly) return;
     setIsSubmitting(true);
     try {
-      const payload = buildPayload(values, resolvedMode);
+      const payload = buildPayload(values);
       const result = project?.id ? await updateProject(project.id, payload) : await createProject(payload);
       if (result.error) {
         alert(`Error: ${result.error}`);
@@ -460,7 +452,7 @@ export function ProjectForm({
             <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
               <FormField control={form.control} name="record_no" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs">{resolvedMode === "program" ? "Program No." : "Project No."}</FormLabel>
+                  <FormLabel className="text-xs">Project No.</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <Hash className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />

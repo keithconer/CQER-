@@ -18,13 +18,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ProjectForm } from "./project-form";
-import { ProjectsTable } from "./projects-table";
+import { ProjectsTable, type Project } from "./projects-table";
 import { useRouter } from "next/navigation";
 
 interface ProjectManagementProps {
-  initialProjects: any[];
+  initialProjects: Project[];
   readOnly?: boolean;
-  entityType?: "project" | "program";
   userType?: "super_admin" | "college_coordinator" | "unit_coordinator";
   department?: string | null;
   unit?: string | null;
@@ -34,7 +33,6 @@ interface ProjectManagementProps {
 export function ProjectManagement({
   initialProjects,
   readOnly,
-  entityType = "project",
   userType,
   department,
   unit,
@@ -43,10 +41,10 @@ export function ProjectManagement({
   const [open, setOpen] = React.useState(false);
   const router = useRouter();
   const filteredRecords = React.useMemo(
-    () => initialProjects.filter((record) => (record.entry_type || "project") === entityType),
-    [initialProjects, entityType]
+    () => initialProjects.filter((record) => (record.entry_type || "project") === "project"),
+    [initialProjects]
   );
-  const recordLabel = entityType === "program" ? "Program" : "Project";
+  const recordLabel = "Project";
 
   const handleSuccess = () => {
     setOpen(false);
@@ -77,7 +75,6 @@ export function ProjectManagement({
         <CardContent className="px-4 pb-4">
           <ProjectsTable
             projects={filteredRecords}
-            entityType={entityType}
             readOnly={readOnly}
             formContext={{ userType, department, unit, unitOptions }}
           />
@@ -94,7 +91,6 @@ export function ProjectManagement({
                   </DialogDescription>
                 </DialogHeader>
                 <ProjectForm
-                  mode={entityType}
                   onSuccess={handleSuccess}
                   currentUserType={userType}
                   currentDepartment={department}

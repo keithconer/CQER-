@@ -29,7 +29,6 @@ import {
   Type,
   FolderPlus,
   FolderKanban,
-  FileText,
   Users,
   Database,
   Award,
@@ -66,7 +65,7 @@ export function Navbar({ user }: NavbarProps) {
   const [darkModeEnabled, setDarkModeEnabled] = useState(false);
 
   const isDashboard = pathname?.startsWith("/dashboard");
-  const activeView = searchParams.get("view") === "programs" ? "programs" : "projects";
+  const activeView = "projects";
   const panelParam = searchParams.get("panel");
   const activePanel =
     panelParam === "unit-coordinators" ||
@@ -76,15 +75,13 @@ export function Navbar({ user }: NavbarProps) {
     panelParam === "technologies-innovation" ||
     panelParam === "ordinance-resolutions" ||
     panelParam === "accounts" ||
-    panelParam === "projects" ||
-    panelParam === "programs"
+    panelParam === "projects"
       ? panelParam
       : "records";
 
   useEffect(() => {
     router.prefetch("/dashboard");
     router.prefetch("/dashboard?panel=records&view=projects");
-    router.prefetch("/dashboard?panel=records&view=programs");
     router.prefetch("/dashboard?panel=unit-coordinators");
     router.prefetch("/dashboard?panel=awards");
     router.prefetch("/dashboard?panel=student-involvement");
@@ -93,7 +90,6 @@ export function Navbar({ user }: NavbarProps) {
     router.prefetch("/dashboard?panel=ordinance-resolutions");
     router.prefetch("/dashboard?panel=accounts");
     router.prefetch("/dashboard?panel=projects");
-    router.prefetch("/dashboard?panel=programs");
     router.prefetch("/settings");
   }, [router]);
 
@@ -358,14 +354,6 @@ export function Navbar({ user }: NavbarProps) {
                       <FolderKanban className="mr-2 h-3.5 w-3.5" />
                       Projects
                     </Button>
-                    <Button
-                      variant="ghost"
-                      className={navItemClass(activePanel === "records" && activeView === "programs")}
-                      onClick={() => goTo("/dashboard?panel=records&view=programs")}
-                    >
-                      <FileText className="mr-2 h-3.5 w-3.5" />
-                      Programs
-                    </Button>
                   </div>
                 )}
               </>
@@ -464,14 +452,6 @@ export function Navbar({ user }: NavbarProps) {
                     >
                       <FolderKanban className="mr-2 h-3.5 w-3.5" />
                       Projects
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className={navItemClass(activePanel === "programs")}
-                      onClick={() => goTo("/dashboard?panel=programs")}
-                    >
-                      <FileText className="mr-2 h-3.5 w-3.5" />
-                      Programs
                     </Button>
                   </div>
                 )}

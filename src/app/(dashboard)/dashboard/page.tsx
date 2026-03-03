@@ -39,10 +39,7 @@ export default async function DashboardPage({
 }) {
   const resolvedSearchParams = (await searchParams) || {};
   const panelParam = resolvedSearchParams.panel;
-  const hasEntitySelection =
-    resolvedSearchParams.view === "projects" || resolvedSearchParams.view === "programs";
-  const activeEntityType: "project" | "program" =
-    resolvedSearchParams.view === "programs" ? "program" : "project";
+  const hasEntitySelection = resolvedSearchParams.view === "projects";
   const activePanel =
     panelParam === "unit-coordinators" ||
     panelParam === "awards" ||
@@ -52,10 +49,9 @@ export default async function DashboardPage({
     panelParam === "ordinance-resolutions"
       ? panelParam
       : "records";
-  const hasSuperAdminSelection =
-    panelParam === "accounts" || panelParam === "projects" || panelParam === "programs";
-  const superAdminPanel: "accounts" | "projects" | "programs" =
-    panelParam === "accounts" || panelParam === "programs" || panelParam === "projects"
+  const hasSuperAdminSelection = panelParam === "accounts" || panelParam === "projects";
+  const superAdminPanel: "accounts" | "projects" =
+    panelParam === "accounts" || panelParam === "projects"
       ? panelParam
       : "projects";
 
@@ -151,7 +147,7 @@ export default async function DashboardPage({
   let allProjects: {
     id: string;
     created_by?: string | null;
-    entry_type?: "project" | "program" | null;
+    entry_type?: "project" | null;
     title: string;
     classification?: string[] | null;
     sdg_goals?: string[] | null;
@@ -300,7 +296,6 @@ export default async function DashboardPage({
           ) : hasEntitySelection ? (
             <CollegeProjectsManagement
               initialProjects={projects}
-              entityType={activeEntityType}
               userType={userType}
               department={profile.department}
               unit={profile.unit}
@@ -356,7 +351,6 @@ export default async function DashboardPage({
           <UnitProjectsManagement
             myProjects={projects}
             unitProjects={unitProjects}
-            entityType={activeEntityType}
             userType={userType}
             department={profile.department}
             unit={profile.unit}

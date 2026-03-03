@@ -58,7 +58,7 @@ interface RegisteredAccount {
 interface ExistingProject {
   id: string;
   created_by?: string | null;
-  entry_type?: "project" | "program" | null;
+  entry_type?: "project" | null;
   title: string;
   classification?: string[] | null;
   sdg_goals?: string[] | null;
@@ -87,7 +87,7 @@ interface ExistingProject {
 interface SuperAdminOverviewProps {
   accounts: RegisteredAccount[];
   projects: ExistingProject[];
-  panel: "accounts" | "projects" | "programs";
+  panel: "accounts" | "projects";
   currentUserId: string;
 }
 
@@ -111,9 +111,6 @@ export function SuperAdminOverview({
     "created_by_me",
     "all_records",
   ]);
-  const [selectedEntryTypes, setSelectedEntryTypes] = React.useState<Array<"project" | "program">>(
-    panel === "programs" ? ["program"] : ["project"]
-  );
   const [viewProject, setViewProject] = React.useState<ExistingProject | null>(null);
   const [editProject, setEditProject] = React.useState<ExistingProject | null>(null);
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
@@ -140,12 +137,11 @@ export function SuperAdminOverview({
 
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [panel, searchTerm, selectedScopes, selectedEntryTypes]);
+  }, [panel, searchTerm, selectedScopes]);
 
   React.useEffect(() => {
     setSearchTerm("");
     setSelectedScopes(["created_by_me", "all_records"]);
-    setSelectedEntryTypes(panel === "programs" ? ["program"] : ["project"]);
   }, [panel]);
 
   const filteredAccounts = React.useMemo(() => {
@@ -169,9 +165,8 @@ export function SuperAdminOverview({
       const matchesScope =
         (selectedScopes.includes("created_by_me") && isMine) ||
         (selectedScopes.includes("all_records") && !isMine);
-      const entryType = (project.entry_type || "project") as "project" | "program";
       if (!matchesScope) return false;
-      if (!selectedEntryTypes.includes(entryType)) return false;
+      if ((project.entry_type || "project") !== "project") return false;
       return (
         project.title.toLowerCase().includes(term) ||
         (project.academic_program || "").toLowerCase().includes(term) ||
@@ -189,7 +184,7 @@ export function SuperAdminOverview({
         (project.funding_source || "").toLowerCase().includes(term)
       );
     });
-  }, [currentUserId, projects, searchTerm, selectedEntryTypes, selectedScopes]);
+  }, [currentUserId, projects, searchTerm, selectedScopes]);
 
   const formatProjectLeaders = (proponents: ExistingProject["proponents"]) => {
     if (!Array.isArray(proponents) || proponents.length === 0) return "-";
@@ -254,12 +249,6 @@ export function SuperAdminOverview({
     );
   };
 
-  const toggleEntryTypeFilter = (value: "project" | "program") => {
-    setSelectedEntryTypes((prev) =>
-      prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]
-    );
-  };
-
   return (
     <Card className="border-border/50 shadow-sm">
       <CardHeader className="pb-3 pt-4 px-4 space-y-3">
@@ -310,22 +299,6 @@ export function SuperAdminOverview({
                   onCheckedChange={() => toggleScopeFilter("all_records")}
                 >
                   All records
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel className="text-[10px]">Entry Type</DropdownMenuLabel>
-                <DropdownMenuCheckboxItem
-                  className="text-[10px]"
-                  checked={selectedEntryTypes.includes("project")}
-                  onCheckedChange={() => toggleEntryTypeFilter("project")}
-                >
-                  Projects
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  className="text-[10px]"
-                  checked={selectedEntryTypes.includes("program")}
-                  onCheckedChange={() => toggleEntryTypeFilter("program")}
-                >
-                  Programs
                 </DropdownMenuCheckboxItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -513,7 +486,7 @@ export function SuperAdminOverview({
         <DialogContent className="sm:max-w-[800px] p-6 max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader className="pb-2">
             <DialogTitle className="text-sm font-semibold">
-              {(viewProject?.entry_type || "project") === "program" ? "Program" : "Project"} Details
+              Project Details
             </DialogTitle>
             <DialogDescription className="text-[10px]">
               Viewing complete information for {viewProject?.title}
@@ -523,7 +496,6 @@ export function SuperAdminOverview({
             {viewProject && (
               <ProjectForm
                 project={viewProject}
-                mode={(viewProject.entry_type || "project") as "project" | "program"}
                 isViewOnly
                 currentUserType="super_admin"
               />
@@ -536,7 +508,7 @@ export function SuperAdminOverview({
         <DialogContent className="sm:max-w-[800px] p-6 max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader className="pb-2">
             <DialogTitle className="text-sm font-semibold">
-              Edit {(editProject?.entry_type || "project") === "program" ? "Program" : "Project"}
+              Edit Project
             </DialogTitle>
             <DialogDescription className="text-[10px]">
               Modify record information below.
@@ -546,7 +518,6 @@ export function SuperAdminOverview({
             {editProject && (
               <ProjectForm
                 project={editProject}
-                mode={(editProject.entry_type || "project") as "project" | "program"}
                 currentUserType="super_admin"
                 onSuccess={() => {
                   setEditProject(null);

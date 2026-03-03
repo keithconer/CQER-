@@ -26,7 +26,7 @@ function normalizePartnerAgencyCount(payload: Record<string, unknown>) {
     payload.partner_agency_count = partnerAgencies.length;
 }
 
-function generateRecordNo(prefix: "PRJ" | "PRG") {
+function generateRecordNo(prefix: "PRJ") {
     const now = new Date();
     const yyyy = now.getFullYear();
     const mm = String(now.getMonth() + 1).padStart(2, "0");
@@ -51,10 +51,9 @@ export async function createProject(formData: object) {
 
     const payload = { ...(formData as Record<string, unknown>) };
     normalizePartnerAgencyCount(payload);
-    const isProgram = payload.entry_type === "program";
-    const numberColumn = isProgram ? "program_no" : "project_no";
-    if (!payload[numberColumn] || String(payload[numberColumn]).trim() === "") {
-        payload[numberColumn] = generateRecordNo(isProgram ? "PRG" : "PRJ");
+    payload.entry_type = "project";
+    if (!payload.project_no || String(payload.project_no).trim() === "") {
+        payload.project_no = generateRecordNo("PRJ");
     }
 
     if (profile?.user_type === "unit_coordinator") {
@@ -311,10 +310,9 @@ export async function updateProject(id: string, formData: object) {
 
     const payload = { ...(formData as Record<string, unknown>) };
     normalizePartnerAgencyCount(payload);
-    const isProgram = payload.entry_type === "program";
-    const numberColumn = isProgram ? "program_no" : "project_no";
-    if (!payload[numberColumn] || String(payload[numberColumn]).trim() === "") {
-        delete payload[numberColumn];
+    payload.entry_type = "project";
+    if (!payload.project_no || String(payload.project_no).trim() === "") {
+        delete payload.project_no;
     }
 
     if (profile?.user_type === "unit_coordinator") {

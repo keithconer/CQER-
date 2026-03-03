@@ -34,7 +34,6 @@ import { ProjectsTable, type Project } from "./projects-table";
 interface UnitProjectsManagementProps {
   myProjects: Project[];
   unitProjects: Project[];
-  entityType?: "project" | "program";
   userType?: "super_admin" | "college_coordinator" | "unit_coordinator";
   department?: string | null;
   unit?: string | null;
@@ -45,7 +44,6 @@ interface UnitProjectsManagementProps {
 export function UnitProjectsManagement({
   myProjects,
   unitProjects,
-  entityType = "project",
   userType,
   department,
   unit,
@@ -93,16 +91,15 @@ export function UnitProjectsManagement({
     router.refresh();
   };
 
-  const isProgramsView = entityType === "program";
-  const recordLabel = isProgramsView ? "Program" : "Project";
+  const recordLabel = "Project";
 
   const filteredMyRecords = React.useMemo(
-    () => myProjects.filter((record) => (record.entry_type || "project") === entityType),
-    [myProjects, entityType]
+    () => myProjects.filter((record) => (record.entry_type || "project") === "project"),
+    [myProjects]
   );
   const filteredUnitRecords = React.useMemo(
-    () => unitProjects.filter((record) => (record.entry_type || "project") === entityType),
-    [unitProjects, entityType]
+    () => unitProjects.filter((record) => (record.entry_type || "project") === "project"),
+    [unitProjects]
   );
 
   const scopedRecords = React.useMemo(() => {
@@ -129,7 +126,7 @@ export function UnitProjectsManagement({
   React.useEffect(() => {
     setSearchTerm("");
     setSelectedScopes(["created_by_me", "unit_files"]);
-  }, [entityType]);
+  }, []);
 
   const toggleScopeFilter = (value: string) => {
     setSelectedScopes((prev) =>
@@ -143,11 +140,9 @@ export function UnitProjectsManagement({
         <CardHeader className="pb-3 pt-4 px-4 space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div>
-              <CardTitle className="text-xs font-semibold">{isProgramsView ? "Programs" : "Projects"}</CardTitle>
+              <CardTitle className="text-xs font-semibold">Projects</CardTitle>
               <CardDescription className="text-[10px]">
-                {isProgramsView
-                  ? "Manage programs from your unit, including ones you've created."
-                  : "Manage projects from your unit, including ones you've created."}
+                Manage projects from your unit, including ones you&apos;ve created.
               </CardDescription>
             </div>
             <Button
@@ -204,7 +199,6 @@ export function UnitProjectsManagement({
         <CardContent className="px-4 pb-4">
           <ProjectsTable
             projects={scopedRecords}
-            entityType={entityType}
             readOnly={false}
             currentUserId={currentUserId}
             searchTerm={searchTerm}
@@ -227,7 +221,6 @@ export function UnitProjectsManagement({
             </DialogDescription>
           </DialogHeader>
           <ProjectForm
-            mode={entityType}
             onSuccess={handleSuccess}
             currentUserType={userType}
             currentDepartment={department}

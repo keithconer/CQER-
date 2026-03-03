@@ -21,7 +21,6 @@ import { ProjectsTable, type Project } from "./projects-table";
 
 interface CollegeProjectsManagementProps {
   initialProjects: Project[];
-  entityType?: "project" | "program";
   userType?: "super_admin" | "college_coordinator" | "unit_coordinator";
   department?: string | null;
   unit?: string | null;
@@ -31,7 +30,6 @@ interface CollegeProjectsManagementProps {
 
 export function CollegeProjectsManagement({
   initialProjects,
-  entityType = "project",
   userType,
   department,
   unit,
@@ -80,12 +78,11 @@ export function CollegeProjectsManagement({
     router.refresh();
   };
 
-  const isProgramsView = entityType === "program";
-  const recordLabel = isProgramsView ? "Program" : "Project";
+  const recordLabel = "Project";
 
   const filteredByEntity = React.useMemo(
-    () => initialProjects.filter((record) => (record.entry_type || "project") === entityType),
-    [initialProjects, entityType]
+    () => initialProjects.filter((record) => (record.entry_type || "project") === "project"),
+    [initialProjects]
   );
 
   const myRecords = React.useMemo(
@@ -138,7 +135,7 @@ export function CollegeProjectsManagement({
     setSearchTerm("");
     setSelectedScopes(["created_by_me", "department_files"]);
     setSelectedUnits([]);
-  }, [entityType]);
+  }, []);
 
   const toggleUnitFilter = (unitValue: string) => {
     setSelectedUnits((prev) =>
@@ -160,11 +157,9 @@ export function CollegeProjectsManagement({
         <CardHeader className="pb-3 pt-4 px-4 space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div>
-              <CardTitle className="text-xs font-semibold">{isProgramsView ? "Programs" : "Projects"}</CardTitle>
+              <CardTitle className="text-xs font-semibold">Projects</CardTitle>
               <CardDescription className="text-[10px]">
-                {isProgramsView
-                  ? "Manage your programs and records from units under your department."
-                  : "Manage your projects and records from units under your department."}
+                Manage your projects and records from units under your department.
               </CardDescription>
             </div>
             <Button
@@ -242,7 +237,6 @@ export function CollegeProjectsManagement({
         <CardContent className="px-4 pb-4">
           <ProjectsTable
             projects={scopedRecords}
-            entityType={entityType}
             readOnly={false}
             currentUserId={currentUserId}
             searchTerm={searchTerm}
@@ -265,7 +259,6 @@ export function CollegeProjectsManagement({
             </DialogDescription>
           </DialogHeader>
           <ProjectForm
-            mode={entityType}
             onSuccess={handleSuccess}
             currentUserType={userType}
             currentDepartment={department}
