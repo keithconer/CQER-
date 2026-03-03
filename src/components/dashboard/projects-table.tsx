@@ -160,7 +160,7 @@ export function ProjectsTable({
   const [internalSearchTerm, setInternalSearchTerm] = React.useState("");
   const searchTerm = controlledSearchTerm ?? internalSearchTerm;
   const setSearchTerm = onSearchTermChange ?? setInternalSearchTerm;
-  const [fundingView, setFundingView] = React.useState<"internal" | "external">("internal");
+  const [fundingView, setFundingView] = React.useState<"all" | "internal" | "external">("all");
   const [currentPage, setCurrentPage] = React.useState(1);
   const itemsPerPage = 5;
   const showActionsColumn = !readOnly || allowViewOnlyAction;
@@ -250,6 +250,7 @@ export function ProjectsTable({
   );
 
   const fundingFilteredProjects = React.useMemo(() => {
+    if (fundingView === "all") return projects;
     const targetFunding = fundingView === "internal" ? "internally funded" : "externally funded";
     return projects.filter((project) => (project.funding_source || "").toLowerCase() === targetFunding);
   }, [fundingView, projects]);
@@ -523,6 +524,18 @@ export function ProjectsTable({
             <Button
               type="button"
               size="sm"
+              onClick={() => setFundingView("all")}
+              className={`h-7 px-2.5 text-[10px] ${
+                fundingView === "all"
+                  ? "bg-[#159E44] text-white hover:bg-[#128A3B]"
+                  : "bg-transparent text-foreground hover:bg-muted"
+              }`}
+            >
+              Projects
+            </Button>
+            <Button
+              type="button"
+              size="sm"
               onClick={() => setFundingView("internal")}
               className={`h-7 px-2.5 text-[10px] ${
                 fundingView === "internal"
@@ -530,7 +543,7 @@ export function ProjectsTable({
                   : "bg-transparent text-foreground hover:bg-muted"
               }`}
             >
-              Internal
+              Internal Funding
             </Button>
             <Button
               type="button"
@@ -542,7 +555,7 @@ export function ProjectsTable({
                   : "bg-transparent text-foreground hover:bg-muted"
               }`}
             >
-              External
+              External Funding
             </Button>
           </div>
           <div className="flex items-center gap-2">
