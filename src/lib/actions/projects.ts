@@ -26,6 +26,15 @@ function normalizePartnerAgencyCount(payload: Record<string, unknown>) {
     payload.partner_agency_count = partnerAgencies.length;
 }
 
+function generateProjectNo() {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const dd = String(now.getDate()).padStart(2, "0");
+    const random = Math.floor(Math.random() * 9000 + 1000);
+    return `PRJ-${yyyy}${mm}${dd}-${random}`;
+}
+
 export async function createProject(formData: object) {
     const supabase = await createClient();
 
@@ -42,6 +51,9 @@ export async function createProject(formData: object) {
 
     const payload = { ...(formData as Record<string, unknown>) };
     normalizePartnerAgencyCount(payload);
+    if (!payload.project_no || String(payload.project_no).trim() === "") {
+        payload.project_no = generateProjectNo();
+    }
 
     if (profile?.user_type === "unit_coordinator") {
         const unitOptions = getDepartmentUnits(profile.department);
@@ -297,6 +309,9 @@ export async function updateProject(id: string, formData: object) {
 
     const payload = { ...(formData as Record<string, unknown>) };
     normalizePartnerAgencyCount(payload);
+    if (!payload.project_no || String(payload.project_no).trim() === "") {
+        delete payload.project_no;
+    }
 
     if (profile?.user_type === "unit_coordinator") {
         const unitOptions = getDepartmentUnits(profile.department);

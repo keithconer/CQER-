@@ -10,6 +10,7 @@ import {
   FileText,
   Globe,
   Handshake,
+  Hash,
   Landmark,
   Mail,
   Plus,
@@ -115,6 +116,7 @@ const partnerAgencySchema = z.object({
 
 const schema = z.object({
   entry_type: z.enum(["project", "program"]),
+  project_no: z.string().min(1),
   project_leader: z.string().min(1),
   co_project_leaders: z.array(z.object({ name: z.string().min(1) })).default([]),
   moa_no: z.string().optional().refine((v) => !v || /^\d+$/.test(v), "Numbers only"),
@@ -137,6 +139,7 @@ type FormOutput = z.output<typeof schema>;
 
 interface LooseProject {
   id?: string;
+  project_no?: string | null;
   entry_type?: "project" | "program" | null;
   category?: string | null;
   moa_no?: string | null;
@@ -306,6 +309,7 @@ function buildPayload(values: FormValues, mode: "project" | "program") {
     visibility_scope: values.visibility_scope,
     visible_units: values.visible_units,
     documents: values.documents,
+    project_no: values.project_no,
   };
 }
 
@@ -340,11 +344,20 @@ export function ProjectForm({
     : isMoaCategory(categoryCandidateText)
       ? categoryCandidateText
       : "new";
+  const autoProjectNo = React.useMemo(() => {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const dd = String(now.getDate()).padStart(2, "0");
+    const suffix = Math.floor(Math.random() * 9000 + 1000);
+    return `PRJ-${yyyy}${mm}${dd}-${suffix}`;
+  }, []);
 
   const form = useForm<FormInput, unknown, FormOutput>({
     resolver: zodResolver(schema),
     defaultValues: {
       entry_type: resolvedMode,
+      project_no: project?.project_no || autoProjectNo,
       project_leader: project?.proponents?.[0]?.name || "",
       co_project_leaders: Array.isArray(project?.co_project_leaders)
         ? project.co_project_leaders.map((item) => ({ name: item?.name || "" }))
@@ -438,7 +451,18 @@ export function ProjectForm({
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
         <ScrollArea className="h-[72vh] pr-4">
           <div className="space-y-5 pb-3">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+              <FormField control={form.control} name="project_no" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">Project No.</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Hash className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input {...field} readOnly disabled className="h-8 pl-7 text-xs bg-muted/20" />
+                    </div>
+                  </FormControl>
+                </FormItem>
+              )} />
               <FormField control={form.control} name="moa_no" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-xs">MOA No. (Optional)</FormLabel>

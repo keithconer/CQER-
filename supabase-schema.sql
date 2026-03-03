@@ -371,6 +371,21 @@ set project_leader = coalesce(
 -- END COPY: Project Leader Compatibility Column
 -- ============================================================
 
+-- ============================================================
+-- START COPY: Project Number Auto Field
+-- ============================================================
+-- Project No. used by the registration form as an auto-generated reference.
+alter table public.projects
+add column if not exists project_no text;
+
+-- Optional uniqueness safeguard for generated project numbers.
+create unique index if not exists idx_projects_project_no_unique
+on public.projects (project_no)
+where project_no is not null;
+-- ============================================================
+-- END COPY: Project Number Auto Field
+-- ============================================================
+
 -- ============================================
 -- PDF Upload Enhancement
 -- Run this in Supabase SQL Editor
