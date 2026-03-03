@@ -5,7 +5,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import * as z from "zod";
 import {
-  Building2,
   CalendarIcon,
   CheckCircle2,
   FileText,
@@ -91,13 +90,7 @@ const agencyCategoryOptions = ["government", "ngo", "private", "msme"] as const;
 const natureOptions = ["internally", "externally"] as const;
 const partnershipTypeOptions = ["MOA", "MOU", "LOA"] as const;
 
-const inclusiveDateSchema = z.object({
-  start_date: z.date(),
-  end_date: z.date(),
-}).refine((v) => v.end_date >= v.start_date, {
-  path: ["end_date"],
-  message: "End date must be after start date",
-});
+const inclusiveDateSchema = z.array(z.date()).min(1, "Select at least one date");
 
 const partnerAgencySchema = z.object({
   agency_name: z.string().min(1),
@@ -113,7 +106,7 @@ const partnerAgencySchema = z.object({
   inclusive_dates: inclusiveDateSchema,
   amount_involved: z.coerce.number().min(0).nullable(),
   sdg_goals: z.array(z.string()).min(1),
-  thematic_area: z.string().min(1),
+  thematic_area: z.array(z.string()).min(1),
   extension_title: z.string().min(1),
   date_conducted: z.date(),
   extension_activities: z.string().min(1),
@@ -183,15 +176,58 @@ const emptyAgency: FormValues["partner_agencies"][number] = {
   partnership_type: "MOA",
   bor_approved_date: null,
   duration_text: "",
-  inclusive_dates: { start_date: new Date(), end_date: new Date() },
+  inclusive_dates: [],
   amount_involved: null,
   sdg_goals: [],
-  thematic_area: "",
+  thematic_area: [],
   extension_title: "",
   date_conducted: new Date(),
   extension_activities: "",
   remarks: "",
 };
+
+function sortDates(values: Date[]) {
+  return [...values].sort((a, b) => a.getTime() - b.getTime());
+}
+
+function toDateArray(value: unknown): Date[] {
+  if (Array.isArray(value)) {
+    if (value.length > 0 && typeof value[0] === "string") {
+      return (value as string[])
+        .map((item) => new Date(item))
+        .filter((date) => !Number.isNaN(date.getTime()));
+    }
+    if (value.length > 0 && typeof value[0] === "object") {
+      const first = value[0] as { start_date?: unknown; end_date?: unknown };
+      const start = typeof first?.start_date === "string" ? new Date(first.start_date) : null;
+      const end = typeof first?.end_date === "string" ? new Date(first.end_date) : null;
+      const dates: Date[] = [];
+      if (start && end && !Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime())) {
+        const d = new Date(start);
+        while (d <= end) {
+          dates.push(new Date(d));
+          d.setDate(d.getDate() + 1);
+        }
+      }
+      return dates;
+    }
+  }
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const range = value as { start_date?: unknown; end_date?: unknown };
+    const start = typeof range.start_date === "string" ? new Date(range.start_date) : null;
+    const end = typeof range.end_date === "string" ? new Date(range.end_date) : null;
+    const dates: Date[] = [];
+    if (start && end && !Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime())) {
+      const d = new Date(start);
+      while (d <= end) {
+        dates.push(new Date(d));
+        d.setDate(d.getDate() + 1);
+      }
+    }
+    return dates;
+  }
+  return [];
+}
 
 const isMoaCategory = (value: string): value is FormValues["moa_category"] =>
   value === "new" || value === "existing" || value === "processing";
@@ -228,16 +264,20 @@ function DatePickerField({
 function buildPayload(values: FormValues, mode: "project" | "program") {
   const firstAgency = values.partner_agencies[0];
   const sdgs = Array.from(new Set(values.partner_agencies.flatMap((a) => a.sdg_goals || [])));
-  const firstRange = firstAgency?.inclusive_dates;
+  const firstAgencyDates = sortDates(firstAgency?.inclusive_dates || []);
+  const firstStart = firstAgencyDates[0];
+  const firstEnd = firstAgencyDates[firstAgencyDates.length - 1];
+  const thematicAreas = Array.from(
+    new Set(values.partner_agencies.flatMap((agency) => agency.thematic_area || []))
+  );
   const budgetRequirements = values.partner_agencies
     .filter((agency) => Number(agency.amount_involved || 0) > 0)
     .map((agency) => ({ name: agency.agency_name, amount: Number(agency.amount_involved || 0) }));
 
   return {
-    ...values,
     entry_type: mode,
     title: firstAgency?.extension_title || `${mode === "program" ? "Program" : "Project"} Registration`,
-    classification: firstAgency?.thematic_area ? [firstAgency.thematic_area] : [],
+    classification: thematicAreas,
     sdg_goals: sdgs,
     academic_program: values.related_curricular_offerings[0] || "N/A",
     major: "",
@@ -249,11 +289,23 @@ function buildPayload(values: FormValues, mode: "project" | "program") {
     community_location: "",
     category: values.moa_category,
     funding_source: firstAgency?.nature_of_partnership === "internally" ? "internally funded" : "externally funded",
-    start_date: firstRange?.start_date || values.date_approved,
-    end_date: firstRange?.end_date || values.date_approved,
+    start_date: firstStart || values.date_approved,
+    end_date: firstEnd || values.date_approved,
     budget_requirements: budgetRequirements,
     budget_total: budgetRequirements.reduce((sum, item) => sum + item.amount, 0),
     gad_score: 0,
+    moa_no: values.moa_no,
+    moa_category: values.moa_category,
+    date_approved: values.date_approved,
+    lead_units: values.lead_units,
+    contact_person: values.contact_person,
+    contact_details: values.contact_details,
+    related_curricular_offerings: values.related_curricular_offerings,
+    partner_agencies: values.partner_agencies,
+    partner_agency_count: values.partner_agency_count,
+    visibility_scope: values.visibility_scope,
+    visible_units: values.visible_units,
+    documents: values.documents,
   };
 }
 
@@ -310,30 +362,12 @@ export function ProjectForm({
               ...agency,
               bor_approved_date: typeof agency?.bor_approved_date === "string" ? new Date(agency.bor_approved_date) : null,
               date_conducted: typeof agency?.date_conducted === "string" ? new Date(agency.date_conducted) : new Date(),
-              inclusive_dates:
-                agency?.inclusive_dates && typeof agency.inclusive_dates === "object" && !Array.isArray(agency.inclusive_dates)
-                  ? {
-                      start_date:
-                        typeof (agency.inclusive_dates as { start_date?: unknown }).start_date === "string"
-                          ? new Date((agency.inclusive_dates as { start_date: string }).start_date)
-                          : new Date(),
-                      end_date:
-                        typeof (agency.inclusive_dates as { end_date?: unknown }).end_date === "string"
-                          ? new Date((agency.inclusive_dates as { end_date: string }).end_date)
-                          : new Date(),
-                    }
-                  : Array.isArray(agency?.inclusive_dates) && agency.inclusive_dates.length > 0
-                    ? {
-                        start_date:
-                          typeof agency.inclusive_dates[0]?.start_date === "string"
-                            ? new Date(agency.inclusive_dates[0].start_date)
-                            : new Date(),
-                        end_date:
-                          typeof agency.inclusive_dates[0]?.end_date === "string"
-                            ? new Date(agency.inclusive_dates[0].end_date)
-                            : new Date(),
-                      }
-                    : { start_date: new Date(), end_date: new Date() },
+              inclusive_dates: toDateArray(agency?.inclusive_dates),
+              thematic_area: Array.isArray(agency?.thematic_area)
+                ? agency.thematic_area.filter((item): item is string => typeof item === "string")
+                : typeof agency?.thematic_area === "string"
+                  ? [agency.thematic_area]
+                  : [],
             }))
         : [emptyAgency],
       partner_agency_count: Array.isArray(project?.partner_agencies) ? project.partner_agencies.length : 1,
@@ -613,14 +647,45 @@ export function ProjectForm({
 
                     <div className="space-y-2">
                       <FormLabel className="text-xs">Inclusive dates</FormLabel>
-                      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                        <FormField control={form.control} name={`partner_agencies.${index}.inclusive_dates.start_date`} render={({ field }) => (
-                          <FormItem><FormLabel className="text-[10px]">Start</FormLabel><DatePickerField value={field.value} onChange={(d) => d && field.onChange(d)} disabled={isViewOnly} /></FormItem>
-                        )} />
-                        <FormField control={form.control} name={`partner_agencies.${index}.inclusive_dates.end_date`} render={({ field }) => (
-                          <FormItem><FormLabel className="text-[10px]">End</FormLabel><DatePickerField value={field.value} onChange={(d) => d && field.onChange(d)} disabled={isViewOnly} /></FormItem>
-                        )} />
-                      </div>
+                      <FormField control={form.control} name={`partner_agencies.${index}.inclusive_dates`} render={({ field }) => {
+                        const selectedDates = sortDates((field.value || []) as Date[]);
+                        const start = selectedDates[0];
+                        const end = selectedDates[selectedDates.length - 1];
+                        return (
+                          <FormItem>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <FormControl>
+                                  <Button
+                                    variant="outline"
+                                    className={cn("h-8 w-full justify-start px-2 text-left text-xs font-normal", selectedDates.length === 0 && "text-muted-foreground")}
+                                    disabled={isViewOnly}
+                                  >
+                                    {selectedDates.length > 0
+                                      ? `${format(start, "MMM d, yyyy")} to ${format(end, "MMM d, yyyy")}`
+                                      : "Select one or more dates"}
+                                    <CalendarIcon className="ml-auto h-3 w-3 opacity-50" />
+                                  </Button>
+                                </FormControl>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                  mode="multiple"
+                                  selected={selectedDates}
+                                  onSelect={(dates) => field.onChange(dates || [])}
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
+                            {selectedDates.length > 0 && (
+                              <p className="text-[10px] text-muted-foreground">
+                                Start: {format(start, "MMM d, yyyy")} | End: {format(end, "MMM d, yyyy")} | Selected days: {selectedDates.length}
+                              </p>
+                            )}
+                            <FormMessage className="text-[10px]" />
+                          </FormItem>
+                        );
+                      }} />
                     </div>
 
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -628,7 +693,21 @@ export function ProjectForm({
                         <FormItem><FormLabel className="text-xs">Amount involved</FormLabel><FormControl><Input type="number" value={typeof field.value === "number" ? field.value : ""} onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))} className="h-8 text-xs" disabled={isViewOnly} /></FormControl></FormItem>
                       )} />
                       <FormField control={form.control} name={`partner_agencies.${index}.thematic_area`} render={({ field }) => (
-                        <FormItem><FormLabel className="text-xs">Thematic area</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isViewOnly}><FormControl><SelectTrigger className="h-8 text-xs"><Building2 className="mr-1 h-3.5 w-3.5" /><SelectValue placeholder="Select thematic area" /></SelectTrigger></FormControl><SelectContent>{thematicAreaOptions.map((v) => <SelectItem key={v} value={v} className="text-xs">{v}</SelectItem>)}</SelectContent></Select></FormItem>
+                        <FormItem>
+                          <FormLabel className="text-xs">Thematic area</FormLabel>
+                          <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+                            {thematicAreaOptions.map((option) => (
+                              <label key={option} className="flex items-center gap-2 rounded-md border border-border/50 px-2 py-1.5">
+                                <Checkbox
+                                  checked={(field.value || []).includes(option)}
+                                  disabled={isViewOnly}
+                                  onCheckedChange={() => field.onChange(toggleArrayItem(field.value || [], option))}
+                                />
+                                <span className="text-[10px]">{option}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </FormItem>
                       )} />
                     </div>
                     <FormField control={form.control} name={`partner_agencies.${index}.date_conducted`} render={({ field }) => (

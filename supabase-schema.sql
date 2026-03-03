@@ -354,6 +354,23 @@ $$;
 -- END COPY: Project Registration Form Fields (MOA + Partner Agencies)
 -- ============================================================
 
+-- ============================================================
+-- START COPY: Project Leader Compatibility Column
+-- ============================================================
+-- Compatibility column so schema cache includes project_leader when older clients send it.
+alter table public.projects
+add column if not exists project_leader text;
+
+-- Optional backfill from proponents JSON for existing rows.
+update public.projects
+set project_leader = coalesce(
+  project_leader,
+  nullif(trim(coalesce((proponents->0->>'name'), '')), '')
+);
+-- ============================================================
+-- END COPY: Project Leader Compatibility Column
+-- ============================================================
+
 -- ============================================
 -- PDF Upload Enhancement
 -- Run this in Supabase SQL Editor
