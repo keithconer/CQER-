@@ -58,8 +58,23 @@ import {
 import { FileUpload } from "./file-upload";
 
 const sdgOptions = [
-  "Goal 1", "Goal 2", "Goal 3", "Goal 4", "Goal 5", "Goal 6", "Goal 7", "Goal 8", "Goal 9",
-  "Goal 10", "Goal 11", "Goal 12", "Goal 13", "Goal 14", "Goal 15", "Goal 16", "Goal 17",
+  { id: "Goal 1", label: "Goal 1 - No Poverty" },
+  { id: "Goal 2", label: "Goal 2 - Zero Hunger" },
+  { id: "Goal 3", label: "Goal 3 - Good Health and Well-being" },
+  { id: "Goal 4", label: "Goal 4 - Quality Education" },
+  { id: "Goal 5", label: "Goal 5 - Gender Equality" },
+  { id: "Goal 6", label: "Goal 6 - Clean Water and Sanitation" },
+  { id: "Goal 7", label: "Goal 7 - Affordable and Clean Energy" },
+  { id: "Goal 8", label: "Goal 8 - Decent Work and Economic Growth" },
+  { id: "Goal 9", label: "Goal 9 - Industry, Innovation and Infrastructure" },
+  { id: "Goal 10", label: "Goal 10 - Reduced Inequality" },
+  { id: "Goal 11", label: "Goal 11 - Sustainable Cities and Communities" },
+  { id: "Goal 12", label: "Goal 12 - Responsible Consumption and Production" },
+  { id: "Goal 13", label: "Goal 13 - Climate Action" },
+  { id: "Goal 14", label: "Goal 14 - Life Below Water" },
+  { id: "Goal 15", label: "Goal 15 - Life on Land" },
+  { id: "Goal 16", label: "Goal 16 - Peace, Justice and Strong Institutions" },
+  { id: "Goal 17", label: "Goal 17 - Partnerships for the Goals" },
 ];
 
 const thematicAreaOptions = [
@@ -95,7 +110,7 @@ const partnerAgencySchema = z.object({
   partnership_type: z.enum(partnershipTypeOptions),
   bor_approved_date: z.date().nullable(),
   duration_text: z.string().min(1),
-  inclusive_dates: z.array(inclusiveDateSchema).min(1),
+  inclusive_dates: inclusiveDateSchema,
   amount_involved: z.coerce.number().min(0).nullable(),
   sdg_goals: z.array(z.string()).min(1),
   thematic_area: z.string().min(1),
@@ -107,6 +122,8 @@ const partnerAgencySchema = z.object({
 
 const schema = z.object({
   entry_type: z.enum(["project", "program"]),
+  project_leader: z.string().min(1),
+  co_project_leaders: z.array(z.object({ name: z.string().min(1) })).default([]),
   moa_no: z.string().optional().refine((v) => !v || /^\d+$/.test(v), "Numbers only"),
   moa_category: z.enum(moaCategoryOptions),
   date_approved: z.date(),
@@ -136,6 +153,7 @@ interface LooseProject {
   contact_person?: string | null;
   contact_details?: string | null;
   proponents?: { name?: string | null }[] | null;
+  co_project_leaders?: { name?: string | null }[] | null;
   related_curricular_offerings?: string[] | null;
   partner_agencies?: Array<Record<string, unknown>> | null;
   visibility_scope?: "public" | "specific_units" | null;
@@ -165,7 +183,7 @@ const emptyAgency: FormValues["partner_agencies"][number] = {
   partnership_type: "MOA",
   bor_approved_date: null,
   duration_text: "",
-  inclusive_dates: [{ start_date: new Date(), end_date: new Date() }],
+  inclusive_dates: { start_date: new Date(), end_date: new Date() },
   amount_involved: null,
   sdg_goals: [],
   thematic_area: "",
@@ -210,7 +228,7 @@ function DatePickerField({
 function buildPayload(values: FormValues, mode: "project" | "program") {
   const firstAgency = values.partner_agencies[0];
   const sdgs = Array.from(new Set(values.partner_agencies.flatMap((a) => a.sdg_goals || [])));
-  const firstRange = firstAgency?.inclusive_dates?.[0];
+  const firstRange = firstAgency?.inclusive_dates;
   const budgetRequirements = values.partner_agencies
     .filter((agency) => Number(agency.amount_involved || 0) > 0)
     .map((agency) => ({ name: agency.agency_name, amount: Number(agency.amount_involved || 0) }));
@@ -223,8 +241,8 @@ function buildPayload(values: FormValues, mode: "project" | "program") {
     sdg_goals: sdgs,
     academic_program: values.related_curricular_offerings[0] || "N/A",
     major: "",
-    proponents: [{ name: values.contact_person }],
-    co_project_leaders: [],
+    proponents: [{ name: values.project_leader }],
+    co_project_leaders: values.co_project_leaders,
     college: "CEIT",
     collaborating_agencies: values.partner_agencies.map((a) => a.agency_name).join(", "),
     target_beneficiaries: [],
@@ -275,11 +293,15 @@ export function ProjectForm({
     resolver: zodResolver(schema),
     defaultValues: {
       entry_type: resolvedMode,
+      project_leader: project?.proponents?.[0]?.name || "",
+      co_project_leaders: Array.isArray(project?.co_project_leaders)
+        ? project.co_project_leaders.map((item) => ({ name: item?.name || "" }))
+        : [],
       moa_no: project?.moa_no || "",
       moa_category: initialMoaCategory,
       date_approved: project?.date_approved ? new Date(project.date_approved) : new Date(),
       lead_units: project?.lead_units || (currentUserType === "unit_coordinator" && currentDepartment ? [currentDepartment] : []),
-      contact_person: project?.contact_person || (project?.proponents?.[0]?.name || ""),
+      contact_person: project?.contact_person || "",
       contact_details: project?.contact_details || "",
       related_curricular_offerings: project?.related_curricular_offerings || [],
       partner_agencies: Array.isArray(project?.partner_agencies) && project.partner_agencies.length > 0
@@ -288,12 +310,30 @@ export function ProjectForm({
               ...agency,
               bor_approved_date: typeof agency?.bor_approved_date === "string" ? new Date(agency.bor_approved_date) : null,
               date_conducted: typeof agency?.date_conducted === "string" ? new Date(agency.date_conducted) : new Date(),
-              inclusive_dates: Array.isArray(agency?.inclusive_dates) && agency.inclusive_dates.length > 0
-                ? agency.inclusive_dates.map((range) => ({
-                    start_date: typeof range?.start_date === "string" ? new Date(range.start_date) : new Date(),
-                    end_date: typeof range?.end_date === "string" ? new Date(range.end_date) : new Date(),
-                  }))
-                : [{ start_date: new Date(), end_date: new Date() }],
+              inclusive_dates:
+                agency?.inclusive_dates && typeof agency.inclusive_dates === "object" && !Array.isArray(agency.inclusive_dates)
+                  ? {
+                      start_date:
+                        typeof (agency.inclusive_dates as { start_date?: unknown }).start_date === "string"
+                          ? new Date((agency.inclusive_dates as { start_date: string }).start_date)
+                          : new Date(),
+                      end_date:
+                        typeof (agency.inclusive_dates as { end_date?: unknown }).end_date === "string"
+                          ? new Date((agency.inclusive_dates as { end_date: string }).end_date)
+                          : new Date(),
+                    }
+                  : Array.isArray(agency?.inclusive_dates) && agency.inclusive_dates.length > 0
+                    ? {
+                        start_date:
+                          typeof agency.inclusive_dates[0]?.start_date === "string"
+                            ? new Date(agency.inclusive_dates[0].start_date)
+                            : new Date(),
+                        end_date:
+                          typeof agency.inclusive_dates[0]?.end_date === "string"
+                            ? new Date(agency.inclusive_dates[0].end_date)
+                            : new Date(),
+                      }
+                    : { start_date: new Date(), end_date: new Date() },
             }))
         : [emptyAgency],
       partner_agency_count: Array.isArray(project?.partner_agencies) ? project.partner_agencies.length : 1,
@@ -309,6 +349,14 @@ export function ProjectForm({
   const { fields: partnerFields, append, remove } = useFieldArray({
     control: form.control,
     name: "partner_agencies",
+  });
+  const {
+    fields: coLeaderFields,
+    append: appendCoLeader,
+    remove: removeCoLeader,
+  } = useFieldArray({
+    control: form.control,
+    name: "co_project_leaders",
   });
 
   const partners = useWatch({ control: form.control, name: "partner_agencies" });
@@ -407,6 +455,45 @@ export function ProjectForm({
               )} />
             )}
 
+            <div className="space-y-3 rounded-md border border-border/50 p-3">
+              <FormField control={form.control} name="project_leader" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">Project Leader</FormLabel>
+                  <FormControl><Input {...field} className="h-8 text-xs placeholder:text-[10px]" placeholder="Full name" disabled={isViewOnly} /></FormControl>
+                  <FormMessage className="text-[10px]" />
+                </FormItem>
+              )} />
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <FormLabel className="text-xs">Co-Project Leader(s)</FormLabel>
+                  {!isViewOnly && (
+                    <Button type="button" variant="outline" size="sm" className="h-7 text-[10px]" onClick={() => appendCoLeader({ name: "" })}>
+                      <Plus className="mr-1 h-3 w-3" /> Add
+                    </Button>
+                  )}
+                </div>
+                {coLeaderFields.length === 0 ? (
+                  <p className="text-[10px] text-muted-foreground">No co-project leaders added.</p>
+                ) : (
+                  coLeaderFields.map((leader, idx) => (
+                    <div key={leader.id} className="flex items-center gap-2">
+                      <FormField control={form.control} name={`co_project_leaders.${idx}.name`} render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormControl><Input {...field} className="h-8 text-xs placeholder:text-[10px]" placeholder="Full name" disabled={isViewOnly} /></FormControl>
+                          <FormMessage className="text-[10px]" />
+                        </FormItem>
+                      )} />
+                      {!isViewOnly && (
+                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeCoLeader(idx)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <FormField control={form.control} name="contact_person" render={({ field }) => (
                 <FormItem>
@@ -472,7 +559,6 @@ export function ProjectForm({
               </div>
 
               {partnerFields.map((partnerField, index) => {
-                const ranges = form.watch(`partner_agencies.${index}.inclusive_dates`) || [];
                 return (
                   <div key={partnerField.id} className="space-y-3 rounded-md border border-border/50 bg-muted/10 p-3">
                     <div className="flex items-center justify-between">
@@ -526,43 +612,37 @@ export function ProjectForm({
                     )} />
 
                     <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <FormLabel className="text-xs">Inclusive dates</FormLabel>
-                        {!isViewOnly && <Button type="button" variant="outline" size="sm" className="h-6 text-[10px]" onClick={() => form.setValue(`partner_agencies.${index}.inclusive_dates`, [...ranges, { start_date: new Date(), end_date: new Date() }], { shouldDirty: true })}><Plus className="mr-1 h-3 w-3" />Add range</Button>}
+                      <FormLabel className="text-xs">Inclusive dates</FormLabel>
+                      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                        <FormField control={form.control} name={`partner_agencies.${index}.inclusive_dates.start_date`} render={({ field }) => (
+                          <FormItem><FormLabel className="text-[10px]">Start</FormLabel><DatePickerField value={field.value} onChange={(d) => d && field.onChange(d)} disabled={isViewOnly} /></FormItem>
+                        )} />
+                        <FormField control={form.control} name={`partner_agencies.${index}.inclusive_dates.end_date`} render={({ field }) => (
+                          <FormItem><FormLabel className="text-[10px]">End</FormLabel><DatePickerField value={field.value} onChange={(d) => d && field.onChange(d)} disabled={isViewOnly} /></FormItem>
+                        )} />
                       </div>
-                      {ranges.map((_, rIndex) => (
-                        <div key={rIndex} className="grid grid-cols-1 gap-2 md:grid-cols-[1fr_1fr_auto]">
-                          <FormField control={form.control} name={`partner_agencies.${index}.inclusive_dates.${rIndex}.start_date`} render={({ field }) => (
-                            <FormItem><FormLabel className="text-[10px]">Start</FormLabel><DatePickerField value={field.value} onChange={(d) => d && field.onChange(d)} disabled={isViewOnly} /></FormItem>
-                          )} />
-                          <FormField control={form.control} name={`partner_agencies.${index}.inclusive_dates.${rIndex}.end_date`} render={({ field }) => (
-                            <FormItem><FormLabel className="text-[10px]">End</FormLabel><DatePickerField value={field.value} onChange={(d) => d && field.onChange(d)} disabled={isViewOnly} /></FormItem>
-                          )} />
-                          {!isViewOnly && ranges.length > 1 && <Button type="button" variant="ghost" size="icon" className="mt-5 h-8 w-8 text-destructive" onClick={() => form.setValue(`partner_agencies.${index}.inclusive_dates`, ranges.filter((__, i) => i !== rIndex), { shouldDirty: true })}><Trash2 className="h-3.5 w-3.5" /></Button>}
-                        </div>
-                      ))}
                     </div>
 
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                       <FormField control={form.control} name={`partner_agencies.${index}.amount_involved`} render={({ field }) => (
                         <FormItem><FormLabel className="text-xs">Amount involved</FormLabel><FormControl><Input type="number" value={typeof field.value === "number" ? field.value : ""} onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))} className="h-8 text-xs" disabled={isViewOnly} /></FormControl></FormItem>
                       )} />
                       <FormField control={form.control} name={`partner_agencies.${index}.thematic_area`} render={({ field }) => (
-                        <FormItem><FormLabel className="text-xs">Thematic area</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isViewOnly}><FormControl><SelectTrigger className="h-8 text-xs"><Building2 className="mr-1 h-3.5 w-3.5" /><SelectValue /></SelectTrigger></FormControl><SelectContent>{thematicAreaOptions.map((v) => <SelectItem key={v} value={v} className="text-xs">{v}</SelectItem>)}</SelectContent></Select></FormItem>
-                      )} />
-                      <FormField control={form.control} name={`partner_agencies.${index}.date_conducted`} render={({ field }) => (
-                        <FormItem><FormLabel className="text-xs">Date conducted</FormLabel><DatePickerField value={field.value} onChange={(d) => d && field.onChange(d)} disabled={isViewOnly} /></FormItem>
+                        <FormItem><FormLabel className="text-xs">Thematic area</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isViewOnly}><FormControl><SelectTrigger className="h-8 text-xs"><Building2 className="mr-1 h-3.5 w-3.5" /><SelectValue placeholder="Select thematic area" /></SelectTrigger></FormControl><SelectContent>{thematicAreaOptions.map((v) => <SelectItem key={v} value={v} className="text-xs">{v}</SelectItem>)}</SelectContent></Select></FormItem>
                       )} />
                     </div>
+                    <FormField control={form.control} name={`partner_agencies.${index}.date_conducted`} render={({ field }) => (
+                      <FormItem className="max-w-sm"><FormLabel className="text-xs">Date conducted</FormLabel><DatePickerField value={field.value} onChange={(d) => d && field.onChange(d)} disabled={isViewOnly} /></FormItem>
+                    )} />
 
                     <FormField control={form.control} name={`partner_agencies.${index}.sdg_goals`} render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-xs">SDGs</FormLabel>
                         <div className="grid grid-cols-2 gap-1 md:grid-cols-4">
                           {sdgOptions.map((goal) => (
-                            <label key={goal} className="flex items-center gap-1 rounded-md border border-border/50 px-2 py-1">
-                              <Checkbox checked={(field.value || []).includes(goal)} disabled={isViewOnly} onCheckedChange={() => field.onChange(toggleArrayItem(field.value || [], goal))} />
-                              <span className="text-[10px]">{goal}</span>
+                            <label key={goal.id} className="flex items-center gap-1 rounded-md border border-border/50 px-2 py-1">
+                              <Checkbox checked={(field.value || []).includes(goal.id)} disabled={isViewOnly} onCheckedChange={() => field.onChange(toggleArrayItem(field.value || [], goal.id))} />
+                              <span className="text-[10px]">{goal.label}</span>
                             </label>
                           ))}
                         </div>
