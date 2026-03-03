@@ -310,6 +310,50 @@ alter column related_curricular_offerings set not null;
 -- END COPY: Related Curricular Offering Support
 -- ============================================================
 
+-- ============================================================
+-- START COPY: Project Registration Form Fields (MOA + Partner Agencies)
+-- ============================================================
+-- Additional fields used by the updated Project Registration Form.
+alter table public.projects
+add column if not exists moa_no text,
+add column if not exists moa_category text,
+add column if not exists date_approved date,
+add column if not exists contact_person text,
+add column if not exists contact_details text,
+add column if not exists partner_agencies jsonb default '[]',
+add column if not exists partner_agency_count integer default 0;
+
+update public.projects
+set
+  partner_agencies = coalesce(partner_agencies, '[]'::jsonb),
+  partner_agency_count = coalesce(partner_agency_count, 0);
+
+alter table public.projects
+alter column partner_agencies set default '[]'::jsonb,
+alter column partner_agency_count set default 0;
+
+-- Normalize legacy MOA category values and support "processing".
+update public.projects
+set category = 'processing'
+where category = 'on process';
+
+do $$
+begin
+  if exists (
+    select 1 from pg_constraint where conname = 'projects_category_check'
+  ) then
+    alter table public.projects drop constraint projects_category_check;
+  end if;
+
+  alter table public.projects
+    add constraint projects_category_check
+    check (category in ('new', 'existing', 'processing') or category is null);
+end
+$$;
+-- ============================================================
+-- END COPY: Project Registration Form Fields (MOA + Partner Agencies)
+-- ============================================================
+
 -- ============================================
 -- PDF Upload Enhancement
 -- Run this in Supabase SQL Editor

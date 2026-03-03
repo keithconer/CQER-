@@ -258,10 +258,10 @@ export function CollegeProjectsManagement({
         <DialogContent className="sm:max-w-[800px] p-6 max-h-[90vh] overflow-hidden">
           <DialogHeader className="pb-2">
             <DialogTitle className="text-sm font-semibold">
-              Create New {recordLabel}
+              {recordLabel} Registration Form
             </DialogTitle>
             <DialogDescription className="text-[10px]">
-              Fill out the form below to register a new college extension {recordLabel.toLowerCase()}.
+              Fill out the registration form below.
             </DialogDescription>
           </DialogHeader>
           <ProjectForm

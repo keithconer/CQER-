@@ -21,6 +21,11 @@ function getDepartmentUnits(department: string | null | undefined) {
     return getUnitsByDepartment(department);
 }
 
+function normalizePartnerAgencyCount(payload: Record<string, unknown>) {
+    const partnerAgencies = Array.isArray(payload.partner_agencies) ? payload.partner_agencies : [];
+    payload.partner_agency_count = partnerAgencies.length;
+}
+
 export async function createProject(formData: object) {
     const supabase = await createClient();
 
@@ -36,6 +41,7 @@ export async function createProject(formData: object) {
         .single();
 
     const payload = { ...(formData as Record<string, unknown>) };
+    normalizePartnerAgencyCount(payload);
 
     if (profile?.user_type === "unit_coordinator") {
         const unitOptions = getDepartmentUnits(profile.department);
@@ -290,6 +296,7 @@ export async function updateProject(id: string, formData: object) {
     }
 
     const payload = { ...(formData as Record<string, unknown>) };
+    normalizePartnerAgencyCount(payload);
 
     if (profile?.user_type === "unit_coordinator") {
         const unitOptions = getDepartmentUnits(profile.department);

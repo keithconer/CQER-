@@ -2,12 +2,22 @@
 
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, useFieldArray, useWatch } from "react-hook-form";
+import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import * as z from "zod";
-import { CalendarIcon, Plus, Trash2, Check, ChevronsUpDown, Globe, Building2 } from "lucide-react";
+import {
+  Building2,
+  CalendarIcon,
+  CheckCircle2,
+  FileText,
+  Globe,
+  Handshake,
+  Landmark,
+  Mail,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -34,68 +44,25 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
 import { Textarea } from "@/components/ui/textarea";
 import { createProject, updateProject } from "@/lib/actions/projects";
 import { DEPARTMENTS, getUnitsByDepartment } from "@/lib/departments";
-import { CheckCircle2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { FileUpload } from "./file-upload";
 
 const sdgOptions = [
-  { id: "Goal 1", label: "Goal 1 - No Poverty" },
-  { id: "Goal 2", label: "Goal 2 - Zero Hunger" },
-  { id: "Goal 3", label: "Goal 3 - Good Health and Well-being" },
-  { id: "Goal 4", label: "Goal 4 - Quality Education" },
-  { id: "Goal 5", label: "Goal 5 - Gender Equality" },
-  { id: "Goal 6", label: "Goal 6 - Clean Water and Sanitation" },
-  { id: "Goal 7", label: "Goal 7 - Affordable and Clean Energy" },
-  { id: "Goal 8", label: "Goal 8 - Decent Work and Economic Growth" },
-  { id: "Goal 9", label: "Goal 9 - Industry, Innovation and Infrastructure" },
-  { id: "Goal 10", label: "Goal 10 - Reduced Inequality" },
-  { id: "Goal 11", label: "Goal 11 - Sustainable Cities and Communities" },
-  { id: "Goal 12", label: "Goal 12 - Responsible Consumption and Production" },
-  { id: "Goal 13", label: "Goal 13 - Climate Action" },
-  { id: "Goal 14", label: "Goal 14 - Life Below Water" },
-  { id: "Goal 15", label: "Goal 15 - Life on Land" },
-  { id: "Goal 16", label: "Goal 16 - Peace, Justice and Strong Institutions" },
-  { id: "Goal 17", label: "Goal 17 - Partnerships for the Goals" },
+  "Goal 1", "Goal 2", "Goal 3", "Goal 4", "Goal 5", "Goal 6", "Goal 7", "Goal 8", "Goal 9",
+  "Goal 10", "Goal 11", "Goal 12", "Goal 13", "Goal 14", "Goal 15", "Goal 16", "Goal 17",
 ];
 
-const programOptions = [
-  "BS Agricultural and Biosystems Engineering",
-  "BS Architecture",
-  "BS Civil Engineering",
-  "BS Computer Engineering",
-  "BS Computer Science",
-  "BS Electrical Engineering",
-  "BS Electronics Engineering",
-  "BS Industrial Engineering",
-  "BS Industrial Technology",
-  "BS Information Technology",
-];
-
-const industrialTechMajors = [
-  "Major in Automotive Technology",
-  "Major in Electrical Engineering",
-  "Major in Electronics Engineering",
-];
-
-const classificationOptions = [
+const thematicAreaOptions = [
   "Agri-Fisheries and Food Security",
   "Biodiversity and Environmental Conservation",
   "Smart Engineering, ICT, and Industrial Competitiveness",
@@ -103,100 +70,173 @@ const classificationOptions = [
   "Societal Development and Equality",
 ];
 
-const categoryOptions = ["new", "existing", "on process"] as const;
-const fundingSourceOptions = ["internally funded", "externally funded"] as const;
+const moaCategoryOptions = ["new", "existing", "processing"] as const;
+const levelOptions = ["local", "regional", "national", "international"] as const;
+const agencyCategoryOptions = ["government", "ngo", "private", "msme"] as const;
+const natureOptions = ["internally", "externally"] as const;
+const partnershipTypeOptions = ["MOA", "MOU", "LOA"] as const;
 
-const toTitleCase = (value: string) =>
-  value
-    .split(" ")
-    .map((word) => (word ? word[0].toUpperCase() + word.slice(1).toLowerCase() : ""))
-    .join(" ");
-
-interface ProjectFormValues {
-  entry_type: "project" | "program";
-  title: string;
-  classification: string[];
-  sdg_goals: string[];
-  academic_program: string;
-  major: string;
-  proponents: { name: string }[];
-  co_project_leaders: { name: string }[];
-  college: string;
-  collaborating_agencies: string;
-  target_beneficiaries: string[];
-  community_location: string;
-  category: "new" | "existing" | "on process";
-  funding_source: "internally funded" | "externally funded";
-  lead_units: string[];
-  related_curricular_offerings: string[];
-  visibility_scope: "public" | "specific_units";
-  visible_units: string[];
-  start_date: Date;
-  end_date: Date;
-  budget_requirements: { name: string; amount: number | string }[];
-  budget_total: number;
-  gad_score: number;
-  documents: { url: string; name: string }[];
-}
-
-const projectSchema = z.object({
-  entry_type: z.enum(["project", "program"]),
-  title: z.string().min(1, "Title is required"),
-  classification: z.array(z.string()).min(1, "Select at least one classification"),
-  sdg_goals: z.array(z.string()).min(1, "Select at least one SDG"),
-  academic_program: z.string().min(1, "Academic program is required"),
-  major: z.string(),
-  proponents: z.array(z.object({
-    name: z.string().min(1, "Name is required")
-  })).min(1, "At least one proponent is required"),
-  co_project_leaders: z.array(z.object({
-    name: z.string().min(1, "Name is required")
-  })).default([]),
-  college: z.string(),
-  collaborating_agencies: z.string(),
-  target_beneficiaries: z.array(z.string()).min(1, "Select at least one beneficiary"),
-  community_location: z.string(),
-  category: z.enum(categoryOptions, {
-    message: "Category is required",
-  }),
-  funding_source: z.enum(fundingSourceOptions, {
-    message: "Funding source is required",
-  }),
-  lead_units: z.array(z.string()).default([]),
-  related_curricular_offerings: z.array(z.string()).default([]),
-  visibility_scope: z.enum(["public", "specific_units"]).default("public"),
-  visible_units: z.array(z.string()).default([]),
+const inclusiveDateSchema = z.object({
   start_date: z.date(),
   end_date: z.date(),
-  budget_requirements: z.array(z.object({
-    name: z.string().min(1, "Budget name is required"),
-    amount: z.coerce.number().min(0, "Amount must be positive")
-  })),
-  budget_total: z.coerce.number().min(0, "Budget total must be positive"),
-  gad_score: z.coerce.number().min(0).max(100),
-  documents: z.array(z.object({
-    url: z.string(),
-    name: z.string()
-  })).default([]),
-}).superRefine((values, ctx) => {
-  if (values.visibility_scope === "specific_units" && values.visible_units.length === 0) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["visible_units"],
-      message: "Select at least one unit.",
-    });
-  }
+}).refine((v) => v.end_date >= v.start_date, {
+  path: ["end_date"],
+  message: "End date must be after start date",
 });
+
+const partnerAgencySchema = z.object({
+  agency_name: z.string().min(1),
+  head_of_agency: z.string().min(1),
+  email_or_number: z.string().min(1),
+  level: z.enum(levelOptions),
+  agency_category: z.enum(agencyCategoryOptions),
+  nature_of_partnership: z.enum(natureOptions),
+  approved_title: z.string().min(1),
+  partnership_type: z.enum(partnershipTypeOptions),
+  bor_approved_date: z.date().nullable(),
+  duration_text: z.string().min(1),
+  inclusive_dates: z.array(inclusiveDateSchema).min(1),
+  amount_involved: z.coerce.number().min(0).nullable(),
+  sdg_goals: z.array(z.string()).min(1),
+  thematic_area: z.string().min(1),
+  extension_title: z.string().min(1),
+  date_conducted: z.date(),
+  extension_activities: z.string().min(1),
+  remarks: z.string().optional(),
+});
+
+const schema = z.object({
+  entry_type: z.enum(["project", "program"]),
+  moa_no: z.string().optional().refine((v) => !v || /^\d+$/.test(v), "Numbers only"),
+  moa_category: z.enum(moaCategoryOptions),
+  date_approved: z.date(),
+  lead_units: z.array(z.string()).default([]),
+  contact_person: z.string().min(1),
+  contact_details: z.string().min(1),
+  related_curricular_offerings: z.array(z.string()).default([]),
+  partner_agencies: z.array(partnerAgencySchema).min(1),
+  partner_agency_count: z.coerce.number().min(0),
+  visibility_scope: z.enum(["public", "specific_units"]).default("public"),
+  visible_units: z.array(z.string()).default([]),
+  documents: z.array(z.object({ url: z.string(), name: z.string() })).default([]),
+});
+
+type FormValues = z.infer<typeof schema>;
+type FormInput = z.input<typeof schema>;
+type FormOutput = z.output<typeof schema>;
+
+interface LooseProject {
+  id?: string;
+  entry_type?: "project" | "program" | null;
+  category?: string | null;
+  moa_no?: string | null;
+  moa_category?: string | null;
+  date_approved?: string | null;
+  lead_units?: string[] | null;
+  contact_person?: string | null;
+  contact_details?: string | null;
+  proponents?: { name?: string | null }[] | null;
+  related_curricular_offerings?: string[] | null;
+  partner_agencies?: Array<Record<string, unknown>> | null;
+  visibility_scope?: "public" | "specific_units" | null;
+  visible_units?: string[] | null;
+  documents?: { url: string; name: string }[] | null;
+}
 
 interface ProjectFormProps {
   onSuccess?: () => void;
-  project?: any;
+  project?: LooseProject;
   isViewOnly?: boolean;
   mode?: "project" | "program";
   currentUserType?: "super_admin" | "college_coordinator" | "unit_coordinator";
   currentDepartment?: string | null;
   currentUnit?: string | null;
   unitOptions?: string[];
+}
+
+const emptyAgency: FormValues["partner_agencies"][number] = {
+  agency_name: "",
+  head_of_agency: "",
+  email_or_number: "",
+  level: "local",
+  agency_category: "government",
+  nature_of_partnership: "externally",
+  approved_title: "",
+  partnership_type: "MOA",
+  bor_approved_date: null,
+  duration_text: "",
+  inclusive_dates: [{ start_date: new Date(), end_date: new Date() }],
+  amount_involved: null,
+  sdg_goals: [],
+  thematic_area: "",
+  extension_title: "",
+  date_conducted: new Date(),
+  extension_activities: "",
+  remarks: "",
+};
+
+const isMoaCategory = (value: string): value is FormValues["moa_category"] =>
+  value === "new" || value === "existing" || value === "processing";
+function DatePickerField({
+  value,
+  onChange,
+  placeholder = "Pick a date",
+  disabled,
+}: {
+  value?: Date | null;
+  onChange: (date: Date | null) => void;
+  placeholder?: string;
+  disabled?: boolean;
+}) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          className={cn("h-8 w-full justify-start px-2 text-left text-xs font-normal", !value && "text-muted-foreground")}
+          disabled={disabled}
+        >
+          {value ? format(value, "PPP") : placeholder}
+          <CalendarIcon className="ml-auto h-3 w-3 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar mode="single" selected={value || undefined} onSelect={(d) => onChange(d || null)} initialFocus />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function buildPayload(values: FormValues, mode: "project" | "program") {
+  const firstAgency = values.partner_agencies[0];
+  const sdgs = Array.from(new Set(values.partner_agencies.flatMap((a) => a.sdg_goals || [])));
+  const firstRange = firstAgency?.inclusive_dates?.[0];
+  const budgetRequirements = values.partner_agencies
+    .filter((agency) => Number(agency.amount_involved || 0) > 0)
+    .map((agency) => ({ name: agency.agency_name, amount: Number(agency.amount_involved || 0) }));
+
+  return {
+    ...values,
+    entry_type: mode,
+    title: firstAgency?.extension_title || `${mode === "program" ? "Program" : "Project"} Registration`,
+    classification: firstAgency?.thematic_area ? [firstAgency.thematic_area] : [],
+    sdg_goals: sdgs,
+    academic_program: values.related_curricular_offerings[0] || "N/A",
+    major: "",
+    proponents: [{ name: values.contact_person }],
+    co_project_leaders: [],
+    college: "CEIT",
+    collaborating_agencies: values.partner_agencies.map((a) => a.agency_name).join(", "),
+    target_beneficiaries: [],
+    community_location: "",
+    category: values.moa_category,
+    funding_source: firstAgency?.nature_of_partnership === "internally" ? "internally funded" : "externally funded",
+    start_date: firstRange?.start_date || values.date_approved,
+    end_date: firstRange?.end_date || values.date_approved,
+    budget_requirements: budgetRequirements,
+    budget_total: budgetRequirements.reduce((sum, item) => sum + item.amount, 0),
+    gad_score: 0,
+  };
 }
 
 export function ProjectForm({
@@ -213,49 +253,52 @@ export function ProjectForm({
   const recordLabel = resolvedMode === "program" ? "Program" : "Project";
   const isCollegeCoordinator = currentUserType === "college_coordinator";
 
-  const form = useForm<ProjectFormValues>({
-    resolver: zodResolver(projectSchema) as any,
+  const relatedOptions = React.useMemo(() => {
+    if (currentUserType === "college_coordinator") return unitOptions;
+    if (currentUserType === "unit_coordinator" && currentDepartment) {
+      const units = getUnitsByDepartment(currentDepartment);
+      return units.length > 0 ? units : currentUnit ? [currentUnit] : [];
+    }
+    return [] as string[];
+  }, [currentUserType, unitOptions, currentDepartment, currentUnit]);
+
+  const categoryCandidate = project?.category === "on process" ? "processing" : project?.category;
+  const moaCandidate = typeof project?.moa_category === "string" ? project.moa_category : "";
+  const categoryCandidateText = typeof categoryCandidate === "string" ? categoryCandidate : "";
+  const initialMoaCategory: FormValues["moa_category"] = isMoaCategory(moaCandidate)
+    ? moaCandidate
+    : isMoaCategory(categoryCandidateText)
+      ? categoryCandidateText
+      : "new";
+
+  const form = useForm<FormInput, unknown, FormOutput>({
+    resolver: zodResolver(schema),
     defaultValues: {
       entry_type: resolvedMode,
-      title: project?.title || "",
-      classification: Array.isArray(project?.classification) ? project.classification : project?.classification ? [project.classification] : [],
-      sdg_goals: project?.sdg_goals || [],
-      academic_program: project?.academic_program || "",
-      major: project?.major || "",
-      proponents:
-        Array.isArray(project?.proponents) && project.proponents.length > 0
-          ? project.proponents
-          : [{ name: "" }],
-      co_project_leaders: project?.co_project_leaders || [],
-      college: project?.college || "CEIT",
-      collaborating_agencies: project?.collaborating_agencies || "",
-      target_beneficiaries: Array.isArray(project?.target_beneficiaries) ? project.target_beneficiaries : project?.target_beneficiaries ? [project.target_beneficiaries] : [],
-      community_location: project?.community_location || "",
-      category: project?.category || "new",
-      funding_source: project?.funding_source || "internally funded",
-      lead_units:
-        project?.lead_units ||
-        (currentUserType === "unit_coordinator" && currentDepartment ? [currentDepartment] : []),
+      moa_no: project?.moa_no || "",
+      moa_category: initialMoaCategory,
+      date_approved: project?.date_approved ? new Date(project.date_approved) : new Date(),
+      lead_units: project?.lead_units || (currentUserType === "unit_coordinator" && currentDepartment ? [currentDepartment] : []),
+      contact_person: project?.contact_person || (project?.proponents?.[0]?.name || ""),
+      contact_details: project?.contact_details || "",
       related_curricular_offerings: project?.related_curricular_offerings || [],
-      visibility_scope:
-        project?.visibility_scope ||
-        (currentUserType === "unit_coordinator" ? "specific_units" : "public"),
-      visible_units:
-        project?.visible_units ||
-        (currentUserType === "unit_coordinator" && currentUnit ? [currentUnit] : []),
-      start_date: project?.start_date ? new Date(project.start_date) : new Date(),
-      end_date: project?.end_date ? new Date(project.end_date) : new Date(),
-      budget_requirements: project?.budget_requirements || [{ name: "", amount: "" }],
-      budget_total:
-        typeof project?.budget_total === "number"
-          ? project.budget_total
-          : Array.isArray(project?.budget_requirements)
-            ? project.budget_requirements.reduce(
-                (sum: number, item: { amount?: number }) => sum + (Number(item?.amount) || 0),
-                0
-              )
-            : 0,
-      gad_score: project?.gad_score || 0,
+      partner_agencies: Array.isArray(project?.partner_agencies) && project.partner_agencies.length > 0
+        ? project.partner_agencies.map((agency) => ({
+              ...emptyAgency,
+              ...agency,
+              bor_approved_date: typeof agency?.bor_approved_date === "string" ? new Date(agency.bor_approved_date) : null,
+              date_conducted: typeof agency?.date_conducted === "string" ? new Date(agency.date_conducted) : new Date(),
+              inclusive_dates: Array.isArray(agency?.inclusive_dates) && agency.inclusive_dates.length > 0
+                ? agency.inclusive_dates.map((range) => ({
+                    start_date: typeof range?.start_date === "string" ? new Date(range.start_date) : new Date(),
+                    end_date: typeof range?.end_date === "string" ? new Date(range.end_date) : new Date(),
+                  }))
+                : [{ start_date: new Date(), end_date: new Date() }],
+            }))
+        : [emptyAgency],
+      partner_agency_count: Array.isArray(project?.partner_agencies) ? project.partner_agencies.length : 1,
+      visibility_scope: project?.visibility_scope || (currentUserType === "unit_coordinator" ? "specific_units" : "public"),
+      visible_units: project?.visible_units || (currentUserType === "unit_coordinator" && currentUnit ? [currentUnit] : []),
       documents: project?.documents || [],
     },
   });
@@ -263,33 +306,34 @@ export function ProjectForm({
   const [showSuccess, setShowSuccess] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  const {
-    fields: coProjectLeaderFields,
-    append: appendCoProjectLeader,
-    remove: removeCoProjectLeader,
-  } = useFieldArray({
-    name: "co_project_leaders",
+  const { fields: partnerFields, append, remove } = useFieldArray({
     control: form.control,
+    name: "partner_agencies",
   });
 
-  const { fields: budgetFields, append: appendBudget, remove: removeBudget } = useFieldArray({
-    name: "budget_requirements",
-    control: form.control,
-  });
+  const partners = useWatch({ control: form.control, name: "partner_agencies" });
+  const visibilityScope = form.watch("visibility_scope");
 
-  async function onSubmit(data: ProjectFormValues) {
+  React.useEffect(() => {
+    form.setValue("partner_agency_count", partners?.length || 0, { shouldDirty: false, shouldValidate: true });
+  }, [partners, form]);
+
+  React.useEffect(() => {
+    if (currentUserType === "unit_coordinator") {
+      form.setValue("visibility_scope", "specific_units", { shouldValidate: true });
+      form.setValue("visible_units", currentUnit ? [currentUnit] : [], { shouldValidate: true });
+      form.setValue("lead_units", currentDepartment ? [currentDepartment] : [], { shouldValidate: true });
+    }
+  }, [currentUserType, currentUnit, currentDepartment, form]);
+
+  async function onSubmit(values: FormOutput) {
     if (isViewOnly) return;
     setIsSubmitting(true);
     try {
-      let result;
-      if (project?.id) {
-        result = await updateProject(project.id, data);
-      } else {
-        result = await createProject(data);
-      }
-      
+      const payload = buildPayload(values, resolvedMode);
+      const result = project?.id ? await updateProject(project.id, payload) : await createProject(payload);
       if (result.error) {
-        alert("Error: " + result.error);
+        alert(`Error: ${result.error}`);
         return;
       }
       setShowSuccess(true);
@@ -300,980 +344,278 @@ export function ProjectForm({
     }
   }
 
+  const toggleArrayItem = (arr: string[], value: string) =>
+    arr.includes(value) ? arr.filter((entry) => entry !== value) : [...arr, value];
+
   const handleSuccessClose = () => {
     setShowSuccess(false);
-    form.reset();
     onSuccess?.();
   };
-
-  const selectedProgram = form.watch("academic_program");
-  const watchedBudgetRequirements = useWatch({
-    control: form.control,
-    name: "budget_requirements",
-  });
-  const selectedVisibilityScope = form.watch("visibility_scope");
-  const leadUnitOptions = React.useMemo(() => {
-    if (currentUserType === "college_coordinator") {
-      return [...DEPARTMENTS];
-    }
-    return [];
-  }, [currentUserType]);
-
-  const relatedCurricularOptions = React.useMemo(() => {
-    if (currentUserType === "college_coordinator") {
-      return unitOptions;
-    }
-
-    if (currentUserType === "unit_coordinator") {
-      if (currentDepartment) {
-        const departmentUnits = getUnitsByDepartment(currentDepartment);
-        if (departmentUnits.length > 0) return departmentUnits;
-      }
-      return currentUnit ? [currentUnit] : [];
-    }
-
-    return [];
-  }, [currentUserType, currentDepartment, currentUnit, unitOptions]);
-
-  const computedBudgetTotal = React.useMemo(() => {
-    return (watchedBudgetRequirements || []).reduce(
-      (sum, item) => sum + (Number(item?.amount) || 0),
-      0
-    );
-  }, [watchedBudgetRequirements]);
-
-  React.useEffect(() => {
-    form.setValue("budget_total", computedBudgetTotal, {
-      shouldValidate: true,
-      shouldDirty: false,
-    });
-  }, [computedBudgetTotal, form]);
-
-  React.useEffect(() => {
-    if (currentUserType === "unit_coordinator") {
-      form.setValue("visibility_scope", "specific_units", { shouldValidate: true });
-      form.setValue("visible_units", currentUnit ? [currentUnit] : [], { shouldValidate: true });
-      form.setValue("lead_units", currentDepartment ? [currentDepartment] : [], { shouldValidate: true });
-    }
-  }, [currentUserType, currentUnit, currentDepartment, form]);
-
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-6">
-        <ScrollArea className="h-[70vh] pr-4">
-          <div className="space-y-6 pb-4">
-            {/* Title & Classification */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control as any}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs">{recordLabel} Title</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Enter title"
-                        {...field}
-                        className="min-h-[80px] text-xs resize-none"
-                        disabled={isViewOnly}
-                      />
-                    </FormControl>
-                    <FormMessage className="text-[10px]" />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control as any}
-                name="classification"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel className="text-xs">University Extension Agenda Classification</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          disabled={isViewOnly}
-                          className={cn(
-                            "w-full justify-between h-auto min-h-[32px] text-xs px-2 py-1",
-                            !field.value?.length && "text-muted-foreground"
-                          )}
-                        >
-                          <div className="flex flex-wrap gap-1">
-                            {field.value?.length > 0 ? (
-                              field.value.map((val: string) => (
-                                <div key={val} className="bg-muted px-1.5 py-0.5 rounded-sm flex items-center gap-1 border">
-                                  <span>{val}</span>
-                                </div>
-                              ))
-                            ) : (
-                              <span>Select classification</span>
-                            )}
-                          </div>
-                          <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[400px] p-0" align="start">
-                        <Command>
-                          <CommandInput placeholder="Search classification..." className="h-8 text-xs" />
-                          <CommandEmpty className="text-xs p-2">No classification found.</CommandEmpty>
-                          <CommandGroup className="p-0">
-                            <CommandList className="max-h-64 overflow-y-auto">
-                              {classificationOptions.map((option) => (
-                                <CommandItem
-                                  key={option}
-                                  value={option}
-                                  onSelect={() => {
-                                    const current = new Set(field.value || []);
-                                    if (current.has(option)) {
-                                      current.delete(option);
-                                    } else {
-                                      current.add(option);
-                                    }
-                                    field.onChange(Array.from(current));
-                                  }}
-                                  className="text-xs"
-                                >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-3 w-3",
-                                      (field.value || []).includes(option)
-                                        ? "opacity-100"
-                                        : "opacity-0"
-                                    )}
-                                  />
-                                  {option}
-                                </CommandItem>
-                              ))}
-                            </CommandList>
-                          </CommandGroup>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage className="text-[10px]" />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* SDG Goals Multi-select */}
-            <FormField
-              control={form.control}
-              name="sdg_goals"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel className="text-xs">Sustainable Development Goals (SDGs)</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          disabled={isViewOnly}
-                          className={cn(
-                            "w-full justify-between h-auto min-h-[32px] text-xs px-2 py-1",
-                            !field.value.length && "text-muted-foreground"
-                          )}
-                        >
-                          <div className="flex flex-wrap gap-1">
-                            {field.value.length > 0 ? (
-                              field.value.map((val: string) => {
-                                const option = sdgOptions.find(o => o.id === val);
-                                return (
-                                  <div key={val} className="bg-[#159E44]/10 text-[#159E44] px-1.5 py-0.5 rounded-sm flex items-center gap-1 border border-[#159E44]/20 text-[9px]">
-                                    <span>{option?.label || option?.id}</span>
-                                  </div>
-                                );
-                              })
-                            ) : (
-                              <span>Select SDGs</span>
-                            )}
-                          </div>
-                          <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[300px] p-0">
-                      <Command>
-                        <CommandInput placeholder="Search SDG..." className="h-8 text-xs" />
-                        <CommandEmpty className="text-xs p-2">No SDG found.</CommandEmpty>
-                        <CommandGroup className="p-0">
-                          <CommandList className="max-h-64 overflow-y-auto">
-                              {sdgOptions.map((option) => (
-                                <CommandItem
-                                  key={option.id}
-                                  value={option.label}
-                                  onSelect={() => {
-                                    const current = new Set(field.value);
-                                    if (current.has(option.id)) {
-                                      current.delete(option.id);
-                                    } else {
-                                      current.add(option.id);
-                                    }
-                                    field.onChange(Array.from(current));
-                                  }}
-                                  className="text-xs"
-                                >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-3 w-3",
-                                      field.value.includes(option.id)
-                                        ? "opacity-100"
-                                        : "opacity-0"
-                                    )}
-                                  />
-                                  {option.label}
-                                </CommandItem>
-                              ))}
-                            </CommandList>
-                        </CommandGroup>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+        <ScrollArea className="h-[72vh] pr-4">
+          <div className="space-y-5 pb-3">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <FormField control={form.control} name="moa_no" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">MOA No. (Optional)</FormLabel>
+                  <FormControl><Input {...field} placeholder="Numbers only" className="h-8 text-xs placeholder:text-[10px]" disabled={isViewOnly} /></FormControl>
                   <FormMessage className="text-[10px]" />
                 </FormItem>
-              )}
-            />
-
-            {/* Academic Program & Major */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control as any}
-                name="academic_program"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs">Academic Program</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isViewOnly}>
-                      <FormControl>
-                        <SelectTrigger className="h-8 text-xs">
-                          <SelectValue placeholder="Select program" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {programOptions.map((program) => (
-                          <SelectItem key={program} value={program} className="text-xs">
-                            {program}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage className="text-[10px]" />
-                  </FormItem>
-                )}
-              />
-
-              {selectedProgram === "BS Industrial Technology" && (
-                <FormField
-                  control={form.control as any}
-                  name="major"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs">Major</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isViewOnly}>
-                        <FormControl>
-                          <SelectTrigger className="h-8 text-xs">
-                            <SelectValue placeholder="Select major" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {industrialTechMajors.map((major) => (
-                            <SelectItem key={major} value={major} className="text-xs">
-                              {major}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage className="text-[10px]" />
-                    </FormItem>
-                  )}
-                />
-              )}
+              )} />
+              <FormField control={form.control} name="moa_category" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">Category of MOA</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isViewOnly}>
+                    <FormControl><SelectTrigger className="h-8 text-xs capitalize"><FileText className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /><SelectValue placeholder="Select category" /></SelectTrigger></FormControl>
+                    <SelectContent>{moaCategoryOptions.map((option) => <SelectItem key={option} value={option} className="text-xs capitalize">{option}</SelectItem>)}</SelectContent>
+                  </Select>
+                  <FormMessage className="text-[10px]" />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="date_approved" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">Date approved</FormLabel>
+                  <FormControl><DatePickerField value={field.value} onChange={(d) => d && field.onChange(d)} disabled={isViewOnly} /></FormControl>
+                  <FormMessage className="text-[10px]" />
+                </FormItem>
+              )} />
             </div>
 
-            {/* Project Leader (Required) */}
-            <div className="space-y-2">
-              <FormLabel className="text-xs">Project Leader</FormLabel>
-              <FormField
-                control={form.control as any}
-                name="proponents.0.name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <Input
-                        placeholder="Full name"
-                        {...field}
-                        className="h-8 text-xs"
-                        disabled={isViewOnly}
-                      />
-                    </FormControl>
-                    <FormMessage className="text-[10px]" />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* Co-Project Leaders (Optional) */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <FormLabel className="text-xs">Co-Project Leaders (Optional)</FormLabel>
-                {!isViewOnly && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => appendCoProjectLeader({ name: "" })}
-                    className="h-6 text-[10px] px-2"
-                  >
-                    <Plus className="h-3 w-3 mr-1" /> Add
-                  </Button>
-                )}
-              </div>
-              {coProjectLeaderFields.length === 0 ? (
-                <p className="text-[10px] text-muted-foreground">No co-project leaders added.</p>
-              ) : (
-                coProjectLeaderFields.map((field, index) => (
-                  <div key={field.id} className="flex gap-2">
-                    <FormField
-                      control={form.control as any}
-                      name={`co_project_leaders.${index}.name`}
-                      render={({ field: inputField }) => (
-                        <FormItem className="flex-1">
-                          <FormControl>
-                            <Input
-                              placeholder="Full name"
-                              {...inputField}
-                              className="h-8 text-xs"
-                              disabled={isViewOnly}
-                            />
-                          </FormControl>
-                          <FormMessage className="text-[10px]" />
-                        </FormItem>
-                      )}
-                    />
-                    {!isViewOnly && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeCoProjectLeader(index)}
-                        className="h-8 w-8 text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-
-            {/* Agencies & Beneficiaries & Location */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <FormField
-                control={form.control as any}
-                name="collaborating_agencies"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs">Collaborating Agencies</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Agency" {...field} className="h-8 text-xs" disabled={isViewOnly} />
-                    </FormControl>
-                    <FormMessage className="text-[10px]" />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control as any}
-                name="target_beneficiaries"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs">Target Beneficiaries</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Beneficiaries"
-                        value={(field.value || []).join(", ")}
-                        onChange={(e) => {
-                          const parsed = e.target.value
-                            .split(",")
-                            .map((item) => item.trim())
-                            .filter(Boolean);
-                          field.onChange(parsed);
-                        }}
-                        className="h-8 text-xs"
-                        disabled={isViewOnly}
-                      />
-                    </FormControl>
-                    <FormMessage className="text-[10px]" />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control as any}
-                name="community_location"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs">Community Location</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Location" {...field} className="h-8 text-xs" disabled={isViewOnly} />
-                    </FormControl>
-                    <FormMessage className="text-[10px]" />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* Category & Funding Source */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control as any}
-                name="category"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs">Category</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isViewOnly}>
-                      <FormControl>
-                        <SelectTrigger className="h-8 text-xs capitalize">
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {categoryOptions.map((category) => (
-                          <SelectItem key={category} value={category} className="text-xs capitalize">
-                            {toTitleCase(category)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage className="text-[10px]" />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control as any}
-                name="funding_source"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs">Funding Source</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isViewOnly}>
-                      <FormControl>
-                        <SelectTrigger className="h-8 text-xs capitalize">
-                          <SelectValue placeholder="Select funding source" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {fundingSourceOptions.map((source) => (
-                          <SelectItem key={source} value={source} className="text-xs capitalize">
-                            {source}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage className="text-[10px]" />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* Lead Unit */}
             {(currentUserType === "college_coordinator" || currentUserType === "unit_coordinator") && (
-              <FormField
-                control={form.control as any}
-                name="lead_units"
-                render={({ field }) => (
-                  <FormItem className="space-y-2">
-                    <FormLabel className="text-xs">Lead Unit</FormLabel>
-                    {currentUserType === "unit_coordinator" ? (
-                      <FormControl>
-                        <Input
-                          value={currentDepartment || (field.value || []).join(", ")}
-                          readOnly
-                          disabled
-                          className="h-8 text-xs bg-muted/20"
-                        />
-                      </FormControl>
-                    ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {leadUnitOptions.length > 0 ? (
-                          leadUnitOptions.map((departmentOption) => {
-                            const checked = (field.value || []).includes(departmentOption);
-                            return (
-                              <label
-                                key={departmentOption}
-                                className="flex items-center gap-2 rounded-md border border-border/50 px-2 py-1.5 bg-background"
-                              >
-                                <Checkbox
-                                  checked={checked}
-                                  disabled={isViewOnly}
-                                  onCheckedChange={(isChecked) => {
-                                    const current = new Set(field.value || []);
-                                    if (isChecked) {
-                                      current.add(departmentOption);
-                                    } else {
-                                      current.delete(departmentOption);
-                                    }
-                                    field.onChange(Array.from(current));
-                                  }}
-                                />
-                                <span className="text-[10px]">{departmentOption}</span>
-                              </label>
-                            );
-                          })
-                        ) : (
-                          <p className="text-[10px] text-muted-foreground">No units available.</p>
-                        )}
-                      </div>
-                    )}
-                    <FormMessage className="text-[10px]" />
-                  </FormItem>
-                )}
-              />
+              <FormField control={form.control} name="lead_units" render={({ field }) => (
+                <FormItem className="space-y-2">
+                  <FormLabel className="text-xs">Lead unit</FormLabel>
+                  {currentUserType === "unit_coordinator" ? (
+                    <FormControl><Input value={currentDepartment || (field.value || []).join(", ")} readOnly disabled className="h-8 text-xs bg-muted/20" /></FormControl>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                      {DEPARTMENTS.map((option) => (
+                        <label key={option} className="flex items-center gap-2 rounded-md border border-border/50 px-2 py-1.5">
+                          <Checkbox
+                            checked={(field.value || []).includes(option)}
+                            disabled={isViewOnly}
+                            onCheckedChange={() => field.onChange(toggleArrayItem(field.value || [], option))}
+                          />
+                          <span className="text-[10px]">{option}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </FormItem>
+              )} />
             )}
 
-            {/* Related Curricular Offering */}
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <FormField control={form.control} name="contact_person" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">Contact person</FormLabel>
+                  <FormControl><Input {...field} className="h-8 text-xs placeholder:text-[10px]" placeholder="Full name" disabled={isViewOnly} /></FormControl>
+                  <FormMessage className="text-[10px]" />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="contact_details" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">Number / Email</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Mail className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input {...field} className="h-8 pl-7 text-xs placeholder:text-[10px]" placeholder="Contact details" disabled={isViewOnly} />
+                    </div>
+                  </FormControl>
+                  <FormMessage className="text-[10px]" />
+                </FormItem>
+              )} />
+            </div>
+
             {(currentUserType === "college_coordinator" || currentUserType === "unit_coordinator") && (
-              <FormField
-                control={form.control as any}
-                name="related_curricular_offerings"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel className="text-xs">Related Curricular Offering (Optional)</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          disabled={isViewOnly || relatedCurricularOptions.length === 0}
-                          className={cn(
-                            "w-full justify-between h-auto min-h-[32px] text-xs px-2 py-1",
-                            !(field.value || []).length && "text-muted-foreground"
-                          )}
-                        >
-                          <div className="flex flex-wrap gap-1 items-center">
-                            <Building2 className="h-3.5 w-3.5" />
-                            {(field.value || []).length > 0 ? (
-                              (field.value || []).map((val: string) => (
-                                <div key={val} className="bg-muted px-1.5 py-0.5 rounded-sm flex items-center gap-1 border">
-                                  <span>{val}</span>
-                                </div>
-                              ))
-                            ) : (
-                              <span>
-                                {relatedCurricularOptions.length > 0
-                                  ? "Select related curricular offerings"
-                                  : "No offerings available"}
-                              </span>
-                            )}
-                          </div>
-                          <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[320px] p-0" align="start">
-                        <Command>
-                          <CommandInput placeholder="Search offering..." className="h-8 text-xs" />
-                          <CommandEmpty className="text-xs p-2">No offering found.</CommandEmpty>
-                          <CommandGroup className="p-0">
-                            <CommandList className="max-h-64 overflow-y-auto">
-                              {relatedCurricularOptions.map((option) => (
-                                <CommandItem
-                                  key={option}
-                                  value={option}
-                                  onSelect={() => {
-                                    const current = new Set(field.value || []);
-                                    if (current.has(option)) {
-                                      current.delete(option);
-                                    } else {
-                                      current.add(option);
-                                    }
-                                    field.onChange(Array.from(current));
-                                  }}
-                                  className="text-xs"
-                                >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-3 w-3",
-                                      (field.value || []).includes(option)
-                                        ? "opacity-100"
-                                        : "opacity-0"
-                                    )}
-                                  />
-                                  <Building2 className="mr-1 h-3.5 w-3.5" />
-                                  {option}
-                                </CommandItem>
-                              ))}
-                            </CommandList>
-                          </CommandGroup>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                    <FormDescription className="text-[10px]">
-                      Optional. Select one or more units/offering under your department.
-                    </FormDescription>
-                    <FormMessage className="text-[10px]" />
-                  </FormItem>
-                )}
-              />
-            )}
-
-            {/* Visibility Settings (College Coordinator) */}
-            {isCollegeCoordinator && (
-              <div className="space-y-3 rounded-md border border-border/50 p-3 bg-muted/10">
-                <div>
-                  <FormLabel className="text-xs">Who can see this post?</FormLabel>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                    Control visibility for unit coordinators in your department.
-                  </p>
-                </div>
-                <FormField
-                  control={form.control as any}
-                  name="visibility_scope"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <div className="space-y-2">
-                          <label className="flex items-start gap-2.5 rounded-md border border-border/50 bg-background px-3 py-2">
-                            <Checkbox
-                              checked={field.value === "public"}
-                              disabled={isViewOnly}
-                              onCheckedChange={(isChecked) => {
-                                if (isChecked) {
-                                  field.onChange("public");
-                                }
-                              }}
-                            />
-                            <div>
-                              <p className="flex items-center gap-1.5 text-xs leading-none">
-                                <Globe className="h-3.5 w-3.5" />
-                                Public
-                              </p>
-                              <p className="mt-1 text-[10px] text-muted-foreground">
-                                Visible to the entire college and its units.
-                              </p>
-                            </div>
-                          </label>
-                          <label className="flex items-start gap-2.5 rounded-md border border-border/50 bg-background px-3 py-2">
-                            <Checkbox
-                              checked={field.value === "specific_units"}
-                              disabled={isViewOnly}
-                              onCheckedChange={(isChecked) => {
-                                if (isChecked) {
-                                  field.onChange("specific_units");
-                                }
-                              }}
-                            />
-                            <div>
-                              <p className="flex items-center gap-1.5 text-xs leading-none">
-                                <Building2 className="h-3.5 w-3.5" />
-                                Specific Unit
-                              </p>
-                              <p className="mt-1 text-[10px] text-muted-foreground">
-                                Only selected unit coordinators can view this post.
-                              </p>
-                            </div>
-                          </label>
-                        </div>
-                      </FormControl>
-                      <FormMessage className="text-[10px]" />
-                    </FormItem>
-                  )}
-                />
-
-                {selectedVisibilityScope === "specific_units" && (
-                  <FormField
-                    control={form.control as any}
-                    name="visible_units"
-                    render={({ field }) => (
-                      <FormItem className="space-y-2">
-                        <FormLabel className="text-xs">Select Unit(s)</FormLabel>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          {unitOptions.length > 0 ? (
-                            unitOptions.map((unitOption) => {
-                              const checked = (field.value || []).includes(unitOption);
-                              return (
-                                <label
-                                  key={unitOption}
-                                  className="flex items-center gap-2 rounded-md border border-border/50 px-2 py-1.5 bg-background"
-                                >
-                                  <Checkbox
-                                    checked={checked}
-                                    disabled={isViewOnly}
-                                    onCheckedChange={(isChecked) => {
-                                      const current = new Set(field.value || []);
-                                      if (isChecked) {
-                                        current.add(unitOption);
-                                      } else {
-                                        current.delete(unitOption);
-                                      }
-                                      field.onChange(Array.from(current));
-                                    }}
-                                  />
-                                  <span className="text-[10px]">{unitOption}</span>
-                                </label>
-                              );
-                            })
-                          ) : (
-                            <p className="text-[10px] text-muted-foreground">No units available.</p>
-                          )}
-                        </div>
-                        <FormMessage className="text-[10px]" />
-                      </FormItem>
-                    )}
-                  />
-                )}
-              </div>
-            )}
-
-            {/* Dates */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control as any}
-                name="start_date"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel className="text-xs">Start Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full h-8 px-2 text-left font-normal text-xs",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-3 w-3 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={(date) => {
-                            if (!date) return;
-                            field.onChange(date);
-                            const currentEndDate = form.getValues("end_date");
-                            if (currentEndDate && currentEndDate < date) {
-                              form.setValue("end_date", date, { shouldValidate: true });
-                            }
-                          }}
-                          initialFocus
-                          className="text-xs"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage className="text-[10px]" />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control as any}
-                name="end_date"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel className="text-xs">End Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full h-8 px-2 text-left font-normal text-xs",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-3 w-3 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) => {
-                            const startDate = form.getValues("start_date");
-                            if (!startDate) return false;
-                            const d1 = new Date(startDate);
-                            d1.setHours(0, 0, 0, 0);
-                            return date < d1;
-                          }}
-                          initialFocus
-                          className="text-xs"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage className="text-[10px]" />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* Budget Requirements */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <FormLabel className="text-xs">Budgetary Requirement (Php)</FormLabel>
-                {!isViewOnly && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => appendBudget({ name: "", amount: "" })}
-                    className="h-6 text-[10px] px-2"
-                  >
-                    <Plus className="h-3 w-3 mr-1" /> Add
-                  </Button>
-                )}
-              </div>
-              {budgetFields.map((field, index) => (
-                <div key={field.id} className="flex gap-2">
-                  <FormField
-                    control={form.control as any}
-                    name={`budget_requirements.${index}.name`}
-                    render={({ field: inputField }) => (
-                      <FormItem className="flex-[2]">
-                        <FormControl>
-                          <Input placeholder="Item" {...inputField} className="h-8 text-xs" disabled={isViewOnly} />
-                        </FormControl>
-                        <FormMessage className="text-[10px]" />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control as any}
-                    name={`budget_requirements.${index}.amount`}
-                    render={({ field: inputField }) => (
-                      <FormItem className="flex-1">
-                        <FormControl>
-                          <div className="relative">
-                            <span className="absolute left-2 top-2.5 text-xs text-muted-foreground">₱</span>
-                            <Input 
-                              type="number" 
-                              placeholder="Amount" 
-                              {...inputField} 
-                              value={inputField.value === 0 ? "" : (inputField.value ?? "")}
-                              onChange={(event) => {
-                                const nextValue = event.target.value;
-                                inputField.onChange(nextValue === "" ? "" : Number(nextValue));
-                              }}
-                              className="h-8 text-xs pl-5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
-                              disabled={isViewOnly} 
-                            />
-                          </div>
-                        </FormControl>
-                        <FormMessage className="text-[10px]" />
-                      </FormItem>
-                    )}
-                  />
-                  {!isViewOnly && budgetFields.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeBudget(index)}
-                      className="h-8 w-8 text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* GAD Score */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control as any}
-                name="budget_total"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs">Budget Total (Php, Auto Computed)</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <span className="absolute left-2 top-2.5 text-xs text-muted-foreground">₱</span>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="0.00"
-                          {...field}
-                          value={computedBudgetTotal}
-                          readOnly
-                          className="h-8 text-xs pl-5 bg-muted/20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              <FormField control={form.control} name="related_curricular_offerings" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">Related curricular offering</FormLabel>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {relatedOptions.length === 0 ? (
+                      <p className="text-[10px] text-muted-foreground">No options available</p>
+                    ) : relatedOptions.map((option) => (
+                      <label key={option} className="flex items-center gap-2 rounded-md border border-border/50 px-2 py-1.5">
+                        <Checkbox
+                          checked={(field.value || []).includes(option)}
                           disabled={isViewOnly}
+                          onCheckedChange={() => field.onChange(toggleArrayItem(field.value || [], option))}
                         />
-                      </div>
-                    </FormControl>
-                    <FormDescription className="text-[10px]">
-                      This is automatically computed from Budgetary Requirement entries.
-                    </FormDescription>
-                    <FormMessage className="text-[10px]" />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control as any}
-                name="gad_score"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs">Total GAD Score for project identification and design stages</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="0.00"
-                        {...field}
-                        className="h-8 text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        disabled={isViewOnly}
-                      />
-                    </FormControl>
-                    <FormMessage className="text-[10px]" />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* Document Copies (PDF) */}
-            <div className="space-y-3 pt-2">
-              <FormLabel className="text-xs">Document Copies (Optional)</FormLabel>
-              <FormDescription className="text-[10px] -mt-2 mb-2">
-                Upload signed and scanned copies of the project documents (PDF format).
-              </FormDescription>
-              <FormField
-                control={form.control as any}
-                name="documents"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <FileUpload
-                        value={field.value || []}
-                        onChange={field.onChange}
-                        disabled={isViewOnly || isSubmitting}
-                        maxFiles={10}
-                      />
-                    </FormControl>
-                    <FormMessage className="text-[10px]" />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {!isViewOnly && (
-              <div className="flex justify-end gap-3 pt-6">
-                <Button 
-                  type="submit" 
-                  className="h-8 text-xs px-6 bg-[#159E44] hover:bg-[#128A3B]"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? "Submitting..." : project?.id ? `Update ${recordLabel}` : `Submit ${recordLabel}`}
-                </Button>
-              </div>
+                        <span className="text-[10px]">{option}</span>
+                      </label>
+                    ))}
+                  </div>
+                </FormItem>
+              )} />
             )}
+
+            <FormField control={form.control} name="partner_agency_count" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs">No. of partner agencies (signatory/ies)</FormLabel>
+                <FormControl><Input value={String(field.value || 0)} readOnly disabled className="h-8 text-xs bg-muted/20" /></FormControl>
+              </FormItem>
+            )} />
+
+            <div className="space-y-3 rounded-md border border-border/50 p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xs font-semibold">Partner Agency/ies</h3>
+                  <p className="text-[10px] text-muted-foreground">Fill one or more partner records.</p>
+                </div>
+                {!isViewOnly && (
+                  <Button type="button" variant="outline" size="sm" className="h-7 text-[10px]" onClick={() => append({ ...emptyAgency })}>
+                    <Plus className="mr-1 h-3 w-3" /> Add agency
+                  </Button>
+                )}
+              </div>
+
+              {partnerFields.map((partnerField, index) => {
+                const ranges = form.watch(`partner_agencies.${index}.inclusive_dates`) || [];
+                return (
+                  <div key={partnerField.id} className="space-y-3 rounded-md border border-border/50 bg-muted/10 p-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-medium text-muted-foreground">Agency #{index + 1}</p>
+                      {!isViewOnly && partnerFields.length > 1 && (
+                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => remove(index)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                      <FormField control={form.control} name={`partner_agencies.${index}.agency_name`} render={({ field }) => (
+                        <FormItem><FormLabel className="text-xs">Name of agency</FormLabel><FormControl><Input {...field} className="h-8 text-xs placeholder:text-[10px]" disabled={isViewOnly} /></FormControl></FormItem>
+                      )} />
+                      <FormField control={form.control} name={`partner_agencies.${index}.head_of_agency`} render={({ field }) => (
+                        <FormItem><FormLabel className="text-xs">Head of agency</FormLabel><FormControl><Input {...field} className="h-8 text-xs placeholder:text-[10px]" disabled={isViewOnly} /></FormControl></FormItem>
+                      )} />
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                      <FormField control={form.control} name={`partner_agencies.${index}.email_or_number`} render={({ field }) => (
+                        <FormItem><FormLabel className="text-xs">Email / Number</FormLabel><FormControl><Input {...field} className="h-8 text-xs" disabled={isViewOnly} /></FormControl></FormItem>
+                      )} />
+                      <FormField control={form.control} name={`partner_agencies.${index}.level`} render={({ field }) => (
+                        <FormItem><FormLabel className="text-xs">Level</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isViewOnly}><FormControl><SelectTrigger className="h-8 text-xs"><Globe className="mr-1 h-3.5 w-3.5" /><SelectValue /></SelectTrigger></FormControl><SelectContent>{levelOptions.map((v) => <SelectItem key={v} value={v} className="text-xs capitalize">{v}</SelectItem>)}</SelectContent></Select></FormItem>
+                      )} />
+                      <FormField control={form.control} name={`partner_agencies.${index}.agency_category`} render={({ field }) => (
+                        <FormItem><FormLabel className="text-xs">Category of agency</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isViewOnly}><FormControl><SelectTrigger className="h-8 text-xs"><Landmark className="mr-1 h-3.5 w-3.5" /><SelectValue /></SelectTrigger></FormControl><SelectContent>{agencyCategoryOptions.map((v) => <SelectItem key={v} value={v} className="text-xs uppercase">{v}</SelectItem>)}</SelectContent></Select></FormItem>
+                      )} />
+                      <FormField control={form.control} name={`partner_agencies.${index}.nature_of_partnership`} render={({ field }) => (
+                        <FormItem><FormLabel className="text-xs">Nature</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isViewOnly}><FormControl><SelectTrigger className="h-8 text-xs"><Handshake className="mr-1 h-3.5 w-3.5" /><SelectValue /></SelectTrigger></FormControl><SelectContent>{natureOptions.map((v) => <SelectItem key={v} value={v} className="text-xs capitalize">{v}</SelectItem>)}</SelectContent></Select></FormItem>
+                      )} />
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                      <FormField control={form.control} name={`partner_agencies.${index}.approved_title`} render={({ field }) => (
+                        <FormItem className="md:col-span-2"><FormLabel className="text-xs">Title of approved extension/program/project/activity</FormLabel><FormControl><Textarea {...field} className="min-h-[56px] text-xs" disabled={isViewOnly} /></FormControl></FormItem>
+                      )} />
+                      <div className="space-y-3">
+                        <FormField control={form.control} name={`partner_agencies.${index}.partnership_type`} render={({ field }) => (
+                          <FormItem><FormLabel className="text-xs">Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isViewOnly}><FormControl><SelectTrigger className="h-8 text-xs"><FileText className="mr-1 h-3.5 w-3.5" /><SelectValue /></SelectTrigger></FormControl><SelectContent>{partnershipTypeOptions.map((v) => <SelectItem key={v} value={v} className="text-xs">{v}</SelectItem>)}</SelectContent></Select></FormItem>
+                        )} />
+                        <FormField control={form.control} name={`partner_agencies.${index}.bor_approved_date`} render={({ field }) => (
+                          <FormItem><FormLabel className="text-xs">BOR Approved Date</FormLabel><DatePickerField value={field.value || null} onChange={(d) => field.onChange(d)} disabled={isViewOnly} /></FormItem>
+                        )} />
+                      </div>
+                    </div>
+
+                    <FormField control={form.control} name={`partner_agencies.${index}.duration_text`} render={({ field }) => (
+                      <FormItem><FormLabel className="text-xs">Duration (years / months)</FormLabel><FormControl><Input {...field} className="h-8 text-xs placeholder:text-[10px]" placeholder="e.g. 2 years" disabled={isViewOnly} /></FormControl></FormItem>
+                    )} />
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <FormLabel className="text-xs">Inclusive dates</FormLabel>
+                        {!isViewOnly && <Button type="button" variant="outline" size="sm" className="h-6 text-[10px]" onClick={() => form.setValue(`partner_agencies.${index}.inclusive_dates`, [...ranges, { start_date: new Date(), end_date: new Date() }], { shouldDirty: true })}><Plus className="mr-1 h-3 w-3" />Add range</Button>}
+                      </div>
+                      {ranges.map((_, rIndex) => (
+                        <div key={rIndex} className="grid grid-cols-1 gap-2 md:grid-cols-[1fr_1fr_auto]">
+                          <FormField control={form.control} name={`partner_agencies.${index}.inclusive_dates.${rIndex}.start_date`} render={({ field }) => (
+                            <FormItem><FormLabel className="text-[10px]">Start</FormLabel><DatePickerField value={field.value} onChange={(d) => d && field.onChange(d)} disabled={isViewOnly} /></FormItem>
+                          )} />
+                          <FormField control={form.control} name={`partner_agencies.${index}.inclusive_dates.${rIndex}.end_date`} render={({ field }) => (
+                            <FormItem><FormLabel className="text-[10px]">End</FormLabel><DatePickerField value={field.value} onChange={(d) => d && field.onChange(d)} disabled={isViewOnly} /></FormItem>
+                          )} />
+                          {!isViewOnly && ranges.length > 1 && <Button type="button" variant="ghost" size="icon" className="mt-5 h-8 w-8 text-destructive" onClick={() => form.setValue(`partner_agencies.${index}.inclusive_dates`, ranges.filter((__, i) => i !== rIndex), { shouldDirty: true })}><Trash2 className="h-3.5 w-3.5" /></Button>}
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                      <FormField control={form.control} name={`partner_agencies.${index}.amount_involved`} render={({ field }) => (
+                        <FormItem><FormLabel className="text-xs">Amount involved</FormLabel><FormControl><Input type="number" value={typeof field.value === "number" ? field.value : ""} onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))} className="h-8 text-xs" disabled={isViewOnly} /></FormControl></FormItem>
+                      )} />
+                      <FormField control={form.control} name={`partner_agencies.${index}.thematic_area`} render={({ field }) => (
+                        <FormItem><FormLabel className="text-xs">Thematic area</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isViewOnly}><FormControl><SelectTrigger className="h-8 text-xs"><Building2 className="mr-1 h-3.5 w-3.5" /><SelectValue /></SelectTrigger></FormControl><SelectContent>{thematicAreaOptions.map((v) => <SelectItem key={v} value={v} className="text-xs">{v}</SelectItem>)}</SelectContent></Select></FormItem>
+                      )} />
+                      <FormField control={form.control} name={`partner_agencies.${index}.date_conducted`} render={({ field }) => (
+                        <FormItem><FormLabel className="text-xs">Date conducted</FormLabel><DatePickerField value={field.value} onChange={(d) => d && field.onChange(d)} disabled={isViewOnly} /></FormItem>
+                      )} />
+                    </div>
+
+                    <FormField control={form.control} name={`partner_agencies.${index}.sdg_goals`} render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">SDGs</FormLabel>
+                        <div className="grid grid-cols-2 gap-1 md:grid-cols-4">
+                          {sdgOptions.map((goal) => (
+                            <label key={goal} className="flex items-center gap-1 rounded-md border border-border/50 px-2 py-1">
+                              <Checkbox checked={(field.value || []).includes(goal)} disabled={isViewOnly} onCheckedChange={() => field.onChange(toggleArrayItem(field.value || [], goal))} />
+                              <span className="text-[10px]">{goal}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </FormItem>
+                    )} />
+
+                    <FormField control={form.control} name={`partner_agencies.${index}.extension_title`} render={({ field }) => (
+                      <FormItem><FormLabel className="text-xs">Title of extension program / project</FormLabel><FormControl><Input {...field} className="h-8 text-xs" disabled={isViewOnly} /></FormControl></FormItem>
+                    )} />
+                    <FormField control={form.control} name={`partner_agencies.${index}.extension_activities`} render={({ field }) => (
+                      <FormItem><FormLabel className="text-xs">Extension activities conducted within the period</FormLabel><FormControl><Textarea {...field} className="min-h-[60px] text-xs" disabled={isViewOnly} /></FormControl></FormItem>
+                    )} />
+                    <FormField control={form.control} name={`partner_agencies.${index}.remarks`} render={({ field }) => (
+                      <FormItem><FormLabel className="text-xs">Remarks</FormLabel><FormControl><Textarea {...field} value={typeof field.value === "string" ? field.value : ""} className="min-h-[56px] text-xs" disabled={isViewOnly} /></FormControl></FormItem>
+                    )} />
+                  </div>
+                );
+              })}
+            </div>
+
+            {isCollegeCoordinator && (
+              <FormField control={form.control} name="visibility_scope" render={({ field }) => (
+                <FormItem className="space-y-2 rounded-md border border-border/50 p-3">
+                  <FormLabel className="text-xs">Visibility</FormLabel>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 text-xs"><Checkbox checked={field.value === "public"} disabled={isViewOnly} onCheckedChange={(c) => c && field.onChange("public")} /> Public</label>
+                    <label className="flex items-center gap-2 text-xs"><Checkbox checked={field.value === "specific_units"} disabled={isViewOnly} onCheckedChange={(c) => c && field.onChange("specific_units")} /> Specific units</label>
+                  </div>
+                  {visibilityScope === "specific_units" && (
+                    <FormField control={form.control} name="visible_units" render={({ field: visField }) => (
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        {unitOptions.map((unitName) => (
+                          <label key={unitName} className="flex items-center gap-2 rounded-md border border-border/50 px-2 py-1.5">
+                            <Checkbox checked={(visField.value || []).includes(unitName)} disabled={isViewOnly} onCheckedChange={() => visField.onChange(toggleArrayItem(visField.value || [], unitName))} />
+                            <span className="text-[10px]">{unitName}</span>
+                          </label>
+                        ))}
+                      </div>
+                    )} />
+                  )}
+                </FormItem>
+              )} />
+            )}
+
+            <FormField control={form.control} name="documents" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs">Upload documents</FormLabel>
+                <FormDescription className="text-[10px]">Attach supporting files.</FormDescription>
+                <FormControl><FileUpload value={field.value || []} onChange={field.onChange} disabled={isViewOnly || isSubmitting} maxFiles={10} /></FormControl>
+              </FormItem>
+            )} />
+
+            {!isViewOnly && <div className="flex justify-end"><Button type="submit" className="h-8 text-xs bg-[#159E44] hover:bg-[#128A3B]" disabled={isSubmitting}>{isSubmitting ? "Submitting..." : project?.id ? `Update ${recordLabel}` : `Submit ${recordLabel} Registration`}</Button></div>}
           </div>
         </ScrollArea>
       </form>
@@ -1281,27 +623,11 @@ export function ProjectForm({
       <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader className="flex flex-col items-center justify-center pt-4">
-            <div className="rounded-full bg-[#159E44]/10 p-3 mb-4">
-              <CheckCircle2 className="h-10 w-10 text-[#159E44]" />
-            </div>
-            <DialogTitle className="text-lg font-semibold text-center">
-              {project?.id ? `${recordLabel} Updated!` : `${recordLabel} Created!`}
-            </DialogTitle>
-            <DialogDescription className="text-xs text-center">
-              {project?.id 
-                ? `The ${recordLabel.toLowerCase()} information has been successfully updated.` 
-                : `The ${recordLabel.toLowerCase()} has been successfully registered.`}
-            </DialogDescription>
+            <div className="rounded-full bg-[#159E44]/10 p-3 mb-4"><CheckCircle2 className="h-10 w-10 text-[#159E44]" /></div>
+            <DialogTitle className="text-lg font-semibold text-center">{project?.id ? `${recordLabel} Updated!` : `${recordLabel} Registered!`}</DialogTitle>
+            <DialogDescription className="text-xs text-center">{project?.id ? `The ${recordLabel.toLowerCase()} registration has been updated.` : `The ${recordLabel.toLowerCase()} registration has been submitted.`}</DialogDescription>
           </DialogHeader>
-          <DialogFooter className="sm:justify-center">
-            <Button 
-              type="button" 
-              className="bg-[#159E44] hover:bg-[#128A3B] px-8 h-9 text-xs"
-              onClick={handleSuccessClose}
-            >
-              Continue
-            </Button>
-          </DialogFooter>
+          <DialogFooter className="sm:justify-center"><Button type="button" className="bg-[#159E44] hover:bg-[#128A3B] px-8 h-9 text-xs" onClick={handleSuccessClose}>Continue</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </Form>
