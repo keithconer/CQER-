@@ -99,7 +99,11 @@ const schema = z
     target_beneficiaries: z.array(z.string()).min(1, "Select at least one"),
     target_beneficiary_others: z.string().optional(),
     community_location: z.string().min(1, "Required"),
-    target_budget: z.coerce.number().min(0, "Must be 0 or above"),
+    target_budget: z
+      .string()
+      .trim()
+      .min(1, "Required")
+      .refine((value) => /^\d+(\.\d+)?$/.test(value), "Numbers only"),
     sdg_goals: z.array(z.string()).min(1, "Select at least one"),
     faculty_involved: z.array(z.object({ name: z.string().min(1) })).min(1, "Add at least one faculty"),
     documents: z.array(z.object({ url: z.string(), name: z.string() })).default([]),
@@ -180,7 +184,7 @@ export function ProjectProposalForm({
       target_beneficiaries: proposal?.target_beneficiaries || [],
       target_beneficiary_others: proposal?.target_beneficiary_others || "",
       community_location: proposal?.community_location || "",
-      target_budget: Number(proposal?.budget_total || 0),
+      target_budget: proposal?.budget_total != null ? String(proposal.budget_total) : "",
       sdg_goals: proposal?.sdg_goals || [],
       faculty_involved: Array.isArray(proposal?.faculty_involved) && proposal.faculty_involved.length > 0
         ? proposal.faculty_involved.map((item) => ({ name: item?.name || "" }))
@@ -227,7 +231,7 @@ export function ProjectProposalForm({
         target_beneficiaries: values.target_beneficiaries,
         target_beneficiary_others: values.target_beneficiary_others?.trim() || null,
         community_location: values.community_location,
-        budget_total: values.target_budget,
+        budget_total: Number(values.target_budget),
         sdg_goals: values.sdg_goals,
         faculty_involved: values.faculty_involved,
         academic_program: "N/A",
@@ -495,10 +499,12 @@ export function ProjectProposalForm({
                     <FormLabel className="text-[10px]">Target Budget</FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
-                        value={typeof field.value === "number" ? field.value : 0}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                        className="h-8 text-[10px]"
+                        type="text"
+                        inputMode="decimal"
+                        value={typeof field.value === "string" ? field.value : ""}
+                        onChange={(e) => field.onChange(e.target.value)}
+                        placeholder="₱ Enter amount"
+                        className="h-8 text-[10px] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                         disabled={isViewOnly}
                       />
                     </FormControl>
