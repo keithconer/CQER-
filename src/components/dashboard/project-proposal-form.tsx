@@ -114,6 +114,8 @@ const schema = z
   });
 
 type FormValues = z.infer<typeof schema>;
+type FormInput = z.input<typeof schema>;
+type FormOutput = z.output<typeof schema>;
 
 interface LooseProposal {
   id?: string;
@@ -157,7 +159,7 @@ export function ProjectProposalForm({
   currentUnit,
 }: ProjectProposalFormProps) {
   const departmentLabel = `${currentDepartment || "N/A"}${currentUnit ? ` / ${currentUnit}` : ""}`;
-  const form = useForm<FormValues>({
+  const form = useForm<FormInput, unknown, FormOutput>({
     resolver: zodResolver(schema),
     defaultValues: {
       entry_type: "project_proposal",

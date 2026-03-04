@@ -58,7 +58,7 @@ interface RegisteredAccount {
 interface ExistingProject {
   id: string;
   created_by?: string | null;
-  entry_type?: "project" | null;
+  entry_type?: "project" | "project_proposal" | null;
   title: string;
   classification?: string[] | null;
   sdg_goals?: string[] | null;

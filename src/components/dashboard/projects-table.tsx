@@ -43,10 +43,10 @@ import { useRouter } from "next/navigation";
 
 export interface Project {
   id: string;
-  created_by?: string;
+  created_by?: string | null;
   created_by_user_type?: "super_admin" | "college_coordinator" | "unit_coordinator" | null;
   created_by_unit?: string | null;
-  entry_type?: "project" | null;
+  entry_type?: "project" | "project_proposal" | null;
   project_no?: string | null;
   moa_no?: string | null;
   contact_person?: string | null;

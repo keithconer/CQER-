@@ -34,7 +34,7 @@ import { ProjectProposalForm } from "./project-proposal-form";
 
 export interface ProjectProposal {
   id: string;
-  created_by?: string;
+  created_by?: string | null;
   created_by_user_type?: "super_admin" | "college_coordinator" | "unit_coordinator" | null;
   created_by_unit?: string | null;
   entry_type?: "project_proposal" | string | null;
@@ -314,4 +314,3 @@ export function ProjectProposalsTable({
     </div>
   );
 }
-

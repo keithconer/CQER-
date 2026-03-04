@@ -15,6 +15,7 @@ import { CollegeProjectProposalsManagement } from "@/components/dashboard/colleg
 import { UnitProjectProposalsManagement } from "@/components/dashboard/unit-project-proposals-management";
 import { ProjectProposalManagement } from "@/components/dashboard/project-proposal-management";
 import { ProjectManagement } from "@/components/dashboard/project-management";
+import { type ProjectProposal } from "@/components/dashboard/project-proposals-table";
 import { UnitCoordinatorsPanel } from "@/components/dashboard/unit-coordinators-panel";
 import { AwardsManagement, type AwardRecord } from "@/components/dashboard/awards-management";
 import { type Project } from "@/components/dashboard/projects-table";
@@ -151,34 +152,7 @@ export default async function DashboardPage({
   }[] = [];
   let availableUnitsForCollege: string[] = [];
 
-  let allProjects: {
-    id: string;
-    created_by?: string | null;
-    entry_type?: "project" | "project_proposal" | null;
-    title: string;
-    classification?: string[] | null;
-    sdg_goals?: string[] | null;
-    academic_program: string | null;
-    major?: string | null;
-    college?: string | null;
-    collaborating_agencies?: string | null;
-    target_beneficiaries?: string[] | null;
-    community_location?: string | null;
-    start_date: string | null;
-    end_date: string | null;
-    proponents: { name: string }[] | null;
-    co_project_leaders: { name: string }[] | null;
-    category: "new" | "existing" | "on process" | null;
-    funding_source: "internally funded" | "externally funded" | null;
-    lead_units?: string[] | null;
-    related_curricular_offerings?: string[] | null;
-    visibility_scope?: "public" | "specific_units" | null;
-    visible_units?: string[] | null;
-    budget_total: number | null;
-    budget_requirements: { name: string; amount: number }[] | null;
-    gad_score?: number | null;
-    documents?: { url: string; name: string }[] | null;
-  }[] = [];
+  let allProjects: Project[] = [];
 
   if (profile.user_type === "super_admin") {
     const adminClient = createAdminClient();
@@ -201,7 +175,7 @@ export default async function DashboardPage({
           account.user_type === "unit_coordinator"
       ) || [];
 
-    allProjects = (projectsResult.data as typeof allProjects | null) || [];
+    allProjects = (projectsResult.data as Project[] | null) || [];
   }
 
   if (profile.user_type === "college_coordinator" && profile.department) {
@@ -253,7 +227,7 @@ export default async function DashboardPage({
                 </>
               ) : activeProjectView === "project-proposal" ? (
                 <ProjectProposalManagement
-                  initialProjects={allProjects}
+                  initialProjects={allProjects as ProjectProposal[]}
                   userType={userType}
                   department={profile.department}
                   unit={profile.unit}

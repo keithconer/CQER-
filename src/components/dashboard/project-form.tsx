@@ -138,7 +138,7 @@ interface LooseProject {
   title?: string | null;
   project_title?: string | null;
   project_no?: string | null;
-  entry_type?: "project" | null;
+  entry_type?: "project" | "project_proposal" | null;
   category?: string | null;
   moa_no?: string | null;
   moa_category?: string | null;
