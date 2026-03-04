@@ -504,7 +504,7 @@ export function ProjectProposalForm({
                         value={typeof field.value === "string" ? field.value : ""}
                         onChange={(e) => field.onChange(e.target.value)}
                         placeholder="₱ Enter amount"
-                        className="h-8 text-[10px] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                        className="h-8 text-[10px] placeholder:text-[10px] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                         disabled={isViewOnly}
                       />
                     </FormControl>
