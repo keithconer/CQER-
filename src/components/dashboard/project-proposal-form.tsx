@@ -153,6 +153,44 @@ interface ProjectProposalFormProps {
 
 const emptyFaculty = { name: "" };
 
+function normalizeStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    const arr = value.filter((item): item is string => typeof item === "string");
+    const maybeChars = arr.length > 0 && arr.every((item) => item.length <= 2);
+    if (maybeChars) {
+      const rebuilt = arr.join("");
+      try {
+        const parsed = JSON.parse(rebuilt);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((item): item is string => typeof item === "string");
+        }
+      } catch {
+        // Keep fallback array if not valid JSON.
+      }
+    }
+    return arr;
+  }
+  if (typeof value === "string") {
+    const raw = value.trim();
+    if (!raw) return [];
+    if (raw.startsWith("[")) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((item): item is string => typeof item === "string");
+        }
+      } catch {
+        // Fall through to CSV parsing.
+      }
+    }
+    return raw
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
 function toggleArrayItem(arr: string[], value: string) {
   return arr.includes(value) ? arr.filter((entry) => entry !== value) : [...arr, value];
 }
@@ -170,7 +208,7 @@ export function ProjectProposalForm({
     defaultValues: {
       entry_type: "project_proposal",
       project_title: proposal?.project_title || proposal?.title || "",
-      agenda_classification: proposal?.classification || [],
+      agenda_classification: normalizeStringArray(proposal?.classification),
       project_leader: proposal?.proponents?.[0]?.name || "",
       co_project_leaders: Array.isArray(proposal?.co_project_leaders)
         ? proposal.co_project_leaders.map((item) => ({ name: item?.name || "" }))
@@ -181,11 +219,11 @@ export function ProjectProposalForm({
       department_label:
         `${proposal?.proposal_department || currentDepartment || "N/A"}${proposal?.proposal_unit || currentUnit ? ` / ${proposal?.proposal_unit || currentUnit}` : ""}`,
       collaborating_agency: proposal?.collaborating_agencies || "",
-      target_beneficiaries: proposal?.target_beneficiaries || [],
+      target_beneficiaries: normalizeStringArray(proposal?.target_beneficiaries),
       target_beneficiary_others: proposal?.target_beneficiary_others || "",
       community_location: proposal?.community_location || "",
       target_budget: proposal?.budget_total != null ? String(proposal.budget_total) : "",
-      sdg_goals: proposal?.sdg_goals || [],
+      sdg_goals: normalizeStringArray(proposal?.sdg_goals),
       faculty_involved: Array.isArray(proposal?.faculty_involved) && proposal.faculty_involved.length > 0
         ? proposal.faculty_involved.map((item) => ({ name: item?.name || "" }))
         : [emptyFaculty],

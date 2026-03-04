@@ -72,13 +72,35 @@ interface ProjectProposalsTableProps {
 
 function toStringArray(value: unknown): string[] {
   if (Array.isArray(value)) {
-    return value.filter((item): item is string => typeof item === "string");
+    const arr = value.filter((item): item is string => typeof item === "string");
+    const maybeChars = arr.length > 0 && arr.every((item) => item.length <= 2);
+    if (maybeChars) {
+      const rebuilt = arr.join("");
+      try {
+        const parsed = JSON.parse(rebuilt);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((item): item is string => typeof item === "string");
+        }
+      } catch {
+        // Keep fallback array if not valid JSON.
+      }
+    }
+    return arr;
   }
   if (typeof value === "string") {
-    return value
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean);
+    const raw = value.trim();
+    if (!raw) return [];
+    if (raw.startsWith("[")) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((item): item is string => typeof item === "string");
+        }
+      } catch {
+        // Fall through to CSV parsing.
+      }
+    }
+    return raw.split(",").map((item) => item.trim()).filter(Boolean);
   }
   return [];
 }
