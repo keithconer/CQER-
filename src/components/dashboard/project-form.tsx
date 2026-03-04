@@ -448,6 +448,7 @@ export function ProjectForm({
             )} />
 
             <div className="space-y-3 rounded-md border border-border/50 p-3">
+              <h3 className="text-xs font-semibold">Proponents</h3>
               <FormField control={form.control} name="project_leader" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-xs">Project Leader</FormLabel>
