@@ -434,69 +434,18 @@ export function ProjectForm({
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
         <ScrollArea className="h-[72vh] pr-4">
           <div className="space-y-5 pb-3">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-              <FormField control={form.control} name="project_title" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs">Project Title</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <FileText className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-                      <Input {...field} className="h-8 pl-7 text-xs placeholder:text-[10px]" placeholder="Enter project title" disabled={isViewOnly} />
-                    </div>
-                  </FormControl>
-                  <FormDescription className="text-[10px] flex items-center gap-1"><FileText className="h-3 w-3" />Use the official project title.</FormDescription>
-                  <FormMessage className="text-[10px]" />
-                </FormItem>
-              )} />
-              <FormField control={form.control} name="moa_no" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs">MOA No. (Optional)</FormLabel>
-                  <FormControl><Input {...field} placeholder="Numbers only" className="h-8 text-xs placeholder:text-[10px]" disabled={isViewOnly} /></FormControl>
-                  <FormMessage className="text-[10px]" />
-                </FormItem>
-              )} />
-              <FormField control={form.control} name="moa_category" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs">Category of MOA</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isViewOnly}>
-                    <FormControl><SelectTrigger className="h-8 text-xs capitalize"><FileText className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /><SelectValue placeholder="Select category" /></SelectTrigger></FormControl>
-                    <SelectContent>{moaCategoryOptions.map((option) => <SelectItem key={option} value={option} className="text-xs capitalize">{option}</SelectItem>)}</SelectContent>
-                  </Select>
-                  <FormMessage className="text-[10px]" />
-                </FormItem>
-              )} />
-              <FormField control={form.control} name="date_approved" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs">Date approved</FormLabel>
-                  <FormControl><DatePickerField value={field.value} onChange={(d) => d && field.onChange(d)} disabled={isViewOnly} /></FormControl>
-                  <FormMessage className="text-[10px]" />
-                </FormItem>
-              )} />
-            </div>
-
-            {(currentUserType === "college_coordinator" || currentUserType === "unit_coordinator") && (
-              <FormField control={form.control} name="lead_units" render={({ field }) => (
-                <FormItem className="space-y-2">
-                  <FormLabel className="text-xs">Lead unit</FormLabel>
-                  {currentUserType === "unit_coordinator" ? (
-                    <FormControl><Input value={currentDepartment || (field.value || []).join(", ")} readOnly disabled className="h-8 text-xs bg-muted/20" /></FormControl>
-                  ) : (
-                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                      {DEPARTMENTS.map((option) => (
-                        <label key={option} className="flex items-center gap-2 rounded-md border border-border/50 px-2 py-1.5">
-                          <Checkbox
-                            checked={(field.value || []).includes(option)}
-                            disabled={isViewOnly}
-                            onCheckedChange={() => field.onChange(toggleArrayItem(field.value || [], option))}
-                          />
-                          <span className="text-[10px]">{option}</span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </FormItem>
-              )} />
-            )}
+            <FormField control={form.control} name="project_title" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs">Project Title</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <FileText className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input {...field} className="h-8 pl-7 text-xs placeholder:text-[10px]" placeholder="Enter project title" disabled={isViewOnly} />
+                  </div>
+                </FormControl>
+                <FormMessage className="text-[10px]" />
+              </FormItem>
+            )} />
 
             <div className="space-y-3 rounded-md border border-border/50 p-3">
               <FormField control={form.control} name="project_leader" render={({ field }) => (
@@ -536,6 +485,57 @@ export function ProjectForm({
                 )}
               </div>
             </div>
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <FormField control={form.control} name="moa_no" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">MOA No. (Optional)</FormLabel>
+                  <FormControl><Input {...field} placeholder="Numbers only" className="h-8 text-xs placeholder:text-[10px]" disabled={isViewOnly} /></FormControl>
+                  <FormMessage className="text-[10px]" />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="moa_category" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">Category of MOA</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isViewOnly}>
+                    <FormControl><SelectTrigger className="h-8 text-xs capitalize"><FileText className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /><SelectValue placeholder="Select category" /></SelectTrigger></FormControl>
+                    <SelectContent>{moaCategoryOptions.map((option) => <SelectItem key={option} value={option} className="text-xs capitalize">{option}</SelectItem>)}</SelectContent>
+                  </Select>
+                  <FormMessage className="text-[10px]" />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="date_approved" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">MOA Date Approved</FormLabel>
+                  <FormControl><DatePickerField value={field.value} onChange={(d) => d && field.onChange(d)} disabled={isViewOnly} /></FormControl>
+                  <FormMessage className="text-[10px]" />
+                </FormItem>
+              )} />
+            </div>
+
+            {(currentUserType === "college_coordinator" || currentUserType === "unit_coordinator") && (
+              <FormField control={form.control} name="lead_units" render={({ field }) => (
+                <FormItem className="space-y-2">
+                  <FormLabel className="text-xs">Lead unit</FormLabel>
+                  {currentUserType === "unit_coordinator" ? (
+                    <FormControl><Input value={currentDepartment || (field.value || []).join(", ")} readOnly disabled className="h-8 text-xs bg-muted/20" /></FormControl>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                      {DEPARTMENTS.map((option) => (
+                        <label key={option} className="flex items-center gap-2 rounded-md border border-border/50 px-2 py-1.5">
+                          <Checkbox
+                            checked={(field.value || []).includes(option)}
+                            disabled={isViewOnly}
+                            onCheckedChange={() => field.onChange(toggleArrayItem(field.value || [], option))}
+                          />
+                          <span className="text-[10px]">{option}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </FormItem>
+              )} />
+            )}
 
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <FormField control={form.control} name="contact_person" render={({ field }) => (
