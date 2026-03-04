@@ -154,35 +154,40 @@ interface ProjectProposalFormProps {
 const emptyFaculty = { name: "" };
 
 function normalizeStringArray(value: unknown): string[] {
+  const parseSerializedArray = (rawValue: string): string[] | null => {
+    try {
+      const parsed = JSON.parse(rawValue);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((item): item is string => typeof item === "string");
+      }
+    } catch {
+      // Not valid JSON array.
+    }
+    if (rawValue.startsWith("{") && rawValue.endsWith("}")) {
+      return rawValue
+        .slice(1, -1)
+        .split(",")
+        .map((item) => item.replace(/^"+|"+$/g, "").trim())
+        .filter(Boolean);
+    }
+    return null;
+  };
+
   if (Array.isArray(value)) {
     const arr = value.filter((item): item is string => typeof item === "string");
     const maybeChars = arr.length > 0 && arr.every((item) => item.length <= 2);
     if (maybeChars) {
       const rebuilt = arr.join("");
-      try {
-        const parsed = JSON.parse(rebuilt);
-        if (Array.isArray(parsed)) {
-          return parsed.filter((item): item is string => typeof item === "string");
-        }
-      } catch {
-        // Keep fallback array if not valid JSON.
-      }
+      const parsed = parseSerializedArray(rebuilt);
+      if (parsed) return parsed;
     }
     return arr;
   }
   if (typeof value === "string") {
     const raw = value.trim();
     if (!raw) return [];
-    if (raw.startsWith("[")) {
-      try {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          return parsed.filter((item): item is string => typeof item === "string");
-        }
-      } catch {
-        // Fall through to CSV parsing.
-      }
-    }
+    const parsed = parseSerializedArray(raw);
+    if (parsed) return parsed;
     return raw
       .split(",")
       .map((item) => item.trim())
@@ -326,17 +331,17 @@ export function ProjectProposalForm({
               control={form.control}
               name="agenda_classification"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-[10px]">University Extension Agenda Classification</FormLabel>
+                <FormItem className="space-y-1">
+                  <FormLabel className="text-[10px] leading-none">University Extension Agenda Classification</FormLabel>
                   <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
                     {agendaOptions.map((option) => (
-                      <label key={option} className="flex items-center gap-2 rounded-md border border-border/50 px-2 py-1.5">
+                      <label key={option} className="flex items-start gap-2 rounded-md border border-border/50 px-2 py-1.5">
                         <Checkbox
                           checked={(field.value || []).includes(option)}
                           disabled={isViewOnly}
                           onCheckedChange={() => field.onChange(toggleArrayItem(field.value || [], option))}
                         />
-                        <span className="text-[10px]">{option}</span>
+                        <span className="text-[10px] leading-snug">{option}</span>
                       </label>
                     ))}
                   </div>

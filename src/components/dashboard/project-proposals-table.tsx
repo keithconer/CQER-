@@ -71,35 +71,40 @@ interface ProjectProposalsTableProps {
 }
 
 function toStringArray(value: unknown): string[] {
+  const parseSerializedArray = (rawValue: string): string[] | null => {
+    try {
+      const parsed = JSON.parse(rawValue);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((item): item is string => typeof item === "string");
+      }
+    } catch {
+      // Not valid JSON array.
+    }
+    if (rawValue.startsWith("{") && rawValue.endsWith("}")) {
+      return rawValue
+        .slice(1, -1)
+        .split(",")
+        .map((item) => item.replace(/^"+|"+$/g, "").trim())
+        .filter(Boolean);
+    }
+    return null;
+  };
+
   if (Array.isArray(value)) {
     const arr = value.filter((item): item is string => typeof item === "string");
     const maybeChars = arr.length > 0 && arr.every((item) => item.length <= 2);
     if (maybeChars) {
       const rebuilt = arr.join("");
-      try {
-        const parsed = JSON.parse(rebuilt);
-        if (Array.isArray(parsed)) {
-          return parsed.filter((item): item is string => typeof item === "string");
-        }
-      } catch {
-        // Keep fallback array if not valid JSON.
-      }
+      const parsed = parseSerializedArray(rebuilt);
+      if (parsed) return parsed;
     }
     return arr;
   }
   if (typeof value === "string") {
     const raw = value.trim();
     if (!raw) return [];
-    if (raw.startsWith("[")) {
-      try {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          return parsed.filter((item): item is string => typeof item === "string");
-        }
-      } catch {
-        // Fall through to CSV parsing.
-      }
-    }
+    const parsed = parseSerializedArray(raw);
+    if (parsed) return parsed;
     return raw.split(",").map((item) => item.trim()).filter(Boolean);
   }
   return [];

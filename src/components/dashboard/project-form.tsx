@@ -1090,13 +1090,13 @@ export function ProjectForm({
                   </FormItem>
                 )} />
                 <FormField control={form.control} name="funding_thematic_area" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-[10px]">Thematic area</FormLabel>
+                  <FormItem className="space-y-1">
+                    <FormLabel className="text-[10px] leading-none">Thematic area</FormLabel>
                     <div className="grid grid-cols-1 gap-1">
                       {thematicAreaOptions.map((option) => (
-                        <label key={option} className="flex items-center gap-2 rounded-md border border-border/50 px-2 py-1.5">
+                        <label key={option} className="flex items-start gap-2 rounded-md border border-border/50 px-2 py-1.5">
                           <Checkbox checked={(field.value || []).includes(option)} disabled={isViewOnly} onCheckedChange={() => field.onChange(toggleArrayItem(field.value || [], option))} />
-                          <span className="text-[10px]">{option}</span>
+                          <span className="text-[10px] leading-snug">{option}</span>
                         </label>
                       ))}
                     </div>
