@@ -83,6 +83,7 @@ export function Navbar({ user }: NavbarProps) {
   const panelParam = searchParams.get("panel");
   const activePanel =
     panelParam === "unit-coordinators" ||
+    panelParam === "funding" ||
     panelParam === "awards" ||
     panelParam === "student-involvement" ||
     panelParam === "faculty-involvement" ||
@@ -98,6 +99,7 @@ export function Navbar({ user }: NavbarProps) {
     router.prefetch("/dashboard?panel=records&view=project-registration");
     router.prefetch("/dashboard?panel=records&view=project-proposal");
     router.prefetch("/dashboard?panel=unit-coordinators");
+    router.prefetch("/dashboard?panel=funding");
     router.prefetch("/dashboard?panel=awards");
     router.prefetch("/dashboard?panel=student-involvement");
     router.prefetch("/dashboard?panel=faculty-involvement");
@@ -380,6 +382,17 @@ export function Navbar({ user }: NavbarProps) {
               >
                 <Users className="mr-2 h-3.5 w-3.5" />
                 Register Unit Coordinators
+              </Button>
+            )}
+
+            {(user.userType === "college_coordinator" || user.userType === "unit_coordinator") && (
+              <Button
+                variant="ghost"
+                className={navItemClass(activePanel === "funding")}
+                onClick={() => goTo("/dashboard?panel=funding")}
+              >
+                <Database className="mr-2 h-3.5 w-3.5" />
+                Funding
               </Button>
             )}
 

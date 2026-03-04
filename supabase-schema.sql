@@ -492,6 +492,45 @@ alter column project_assistants set default '[]'::jsonb;
 -- END COPY: Project Assistant Field (Registration + Proposal)
 -- ============================================================
 
+-- ============================================================
+-- START COPY: Funding Report Fields + MOA Category Update
+-- ============================================================
+-- Funding reporting fields saved in a single JSONB payload for AB/B reporting.
+alter table public.projects
+add column if not exists funding_data jsonb default '{}'::jsonb;
+
+update public.projects
+set funding_data = coalesce(funding_data, '{}'::jsonb);
+
+alter table public.projects
+alter column funding_data set default '{}'::jsonb;
+
+-- Restore project_no for report/use in project registration funding fields.
+alter table public.projects
+add column if not exists project_no text;
+
+create unique index if not exists idx_projects_project_no_unique
+on public.projects (project_no)
+where project_no is not null;
+
+-- Update allowed MOA categories used by the form.
+do $$
+begin
+  if exists (
+    select 1 from pg_constraint where conname = 'projects_category_check'
+  ) then
+    alter table public.projects drop constraint projects_category_check;
+  end if;
+
+  alter table public.projects
+    add constraint projects_category_check
+    check (category in ('new', 'existing/ongoing', 'completed', 'terminated', 'proposal') or category is null);
+end
+$$;
+-- ============================================================
+-- END COPY: Funding Report Fields + MOA Category Update
+-- ============================================================
+
 -- ============================================
 -- PDF Upload Enhancement
 -- Run this in Supabase SQL Editor

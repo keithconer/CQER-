@@ -49,6 +49,8 @@ export interface Project {
   entry_type?: "project" | "project_proposal" | null;
   project_no?: string | null;
   moa_no?: string | null;
+  collaborating_agencies?: string | null;
+  funding_data?: Record<string, unknown> | null;
   contact_person?: string | null;
   contact_details?: string | null;
   title: string;
@@ -58,7 +60,7 @@ export interface Project {
   end_date: string | null;
   proponents: { name: string }[];
   co_project_leaders: { name: string }[];
-  category: "new" | "existing" | "on process" | null;
+  category: "new" | "existing" | "on process" | "existing/ongoing" | "completed" | "terminated" | "proposal" | null;
   funding_source: "internally funded" | "externally funded" | null;
   lead_units?: string[];
   related_curricular_offerings?: string[];

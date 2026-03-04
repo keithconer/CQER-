@@ -26,6 +26,15 @@ function normalizePartnerAgencyCount(payload: Record<string, unknown>) {
     payload.partner_agency_count = partnerAgencies.length;
 }
 
+function generateRecordNo(prefix: "PRJ") {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const dd = String(now.getDate()).padStart(2, "0");
+    const random = Math.floor(Math.random() * 9000 + 1000);
+    return `${prefix}-${yyyy}${mm}${dd}-${random}`;
+}
+
 export async function createProject(formData: object) {
     const supabase = await createClient();
 
@@ -48,7 +57,9 @@ export async function createProject(formData: object) {
     if (!payload.title && typeof payload.project_title === "string" && payload.project_title.trim()) {
         payload.title = payload.project_title.trim();
     }
-    delete payload.project_no;
+    if (payload.entry_type === "project" && (!payload.project_no || String(payload.project_no).trim() === "")) {
+        payload.project_no = generateRecordNo("PRJ");
+    }
 
     if (profile?.user_type === "unit_coordinator") {
         const unitOptions = getDepartmentUnits(profile.department);
@@ -310,7 +321,9 @@ export async function updateProject(id: string, formData: object) {
     if (!payload.title && typeof payload.project_title === "string" && payload.project_title.trim()) {
         payload.title = payload.project_title.trim();
     }
-    delete payload.project_no;
+    if (payload.entry_type === "project" && (!payload.project_no || String(payload.project_no).trim() === "")) {
+        delete payload.project_no;
+    }
 
     if (profile?.user_type === "unit_coordinator") {
         const unitOptions = getDepartmentUnits(profile.department);

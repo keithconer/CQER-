@@ -16,6 +16,7 @@ import { UnitProjectProposalsManagement } from "@/components/dashboard/unit-proj
 import { ProjectProposalManagement } from "@/components/dashboard/project-proposal-management";
 import { ProjectManagement } from "@/components/dashboard/project-management";
 import { type ProjectProposal } from "@/components/dashboard/project-proposals-table";
+import { FundingManagement } from "@/components/dashboard/funding-management";
 import { UnitCoordinatorsPanel } from "@/components/dashboard/unit-coordinators-panel";
 import { AwardsManagement, type AwardRecord } from "@/components/dashboard/awards-management";
 import { type Project } from "@/components/dashboard/projects-table";
@@ -50,6 +51,7 @@ export default async function DashboardPage({
     activeProjectView === "project-registration" || activeProjectView === "project-proposal";
   const activePanel =
     panelParam === "unit-coordinators" ||
+    panelParam === "funding" ||
     panelParam === "awards" ||
     panelParam === "student-involvement" ||
     panelParam === "faculty-involvement" ||
@@ -113,7 +115,7 @@ export default async function DashboardPage({
       technologyRecords = (await getTechnologies()).data || [];
     } else if (activePanel === "ordinance-resolutions") {
       ordinanceRecords = (await getOrdinances()).data || [];
-    } else if (hasEntitySelection) {
+    } else if (activePanel === "funding" || hasEntitySelection) {
       const [myProjectsResult, unitProjectsResult] = await Promise.all([
         getProjects(),
         getUnitProjects(),
@@ -137,7 +139,7 @@ export default async function DashboardPage({
       technologyRecords = (await getTechnologies()).data || [];
     } else if (activePanel === "ordinance-resolutions") {
       ordinanceRecords = (await getOrdinances()).data || [];
-    } else if (hasEntitySelection) {
+    } else if (activePanel === "funding" || hasEntitySelection) {
       projects = (await getCollegeProjects()).data || [];
     }
   }
@@ -258,6 +260,12 @@ export default async function DashboardPage({
               department={profile.department}
               currentUserId={user.id}
             />
+          ) : activePanel === "funding" ? (
+            <FundingManagement
+              projects={projects}
+              title="Funding"
+              description="Filter funding rows by Internal (AB) or External (AB + B)."
+            />
           ) : activePanel === "student-involvement" ? (
             <StudentInvolvementManagement
               initialRecords={studentInvolvementRecords}
@@ -322,6 +330,12 @@ export default async function DashboardPage({
             initialAwards={awards}
             department={profile.department}
             currentUserId={user.id}
+          />
+        ) : activePanel === "funding" ? (
+          <FundingManagement
+            projects={unitProjects}
+            title="Funding"
+            description="Filter funding rows by Internal (AB) or External (AB + B)."
           />
         ) : activePanel === "student-involvement" ? (
           <StudentInvolvementManagement
