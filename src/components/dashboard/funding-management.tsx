@@ -276,28 +276,30 @@ export function FundingManagement({
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 text-[10px] border-border/50 bg-muted/20">
-                  <SlidersHorizontal className="h-3 w-3 mr-1" />
-                  Filter
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-52">
-                <DropdownMenuLabel className="text-[10px]">Funding Type</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuCheckboxItem className="text-[10px]" checked={filter === "internal"} onCheckedChange={() => setFilter("internal")}>
-                  Internal
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem className="text-[10px]" checked={filter === "external"} onCheckedChange={() => setFilter("external")}>
-                  External
-                </DropdownMenuCheckboxItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Button variant="outline" size="sm" className="h-8 text-[10px] border-border/50 bg-muted/20" onClick={handleOpenExportDialog}>
-              <FileSpreadsheet className="mr-1 h-3.5 w-3.5" />
-              Export
-            </Button>
+            <div className="flex items-center gap-2 shrink-0">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 text-[10px] border-border/50 bg-muted/20">
+                    <SlidersHorizontal className="h-3 w-3 mr-1" />
+                    Filter
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  <DropdownMenuLabel className="text-[10px]">Funding Type</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuCheckboxItem className="text-[10px]" checked={filter === "internal"} onCheckedChange={() => setFilter("internal")}>
+                    Internal
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem className="text-[10px]" checked={filter === "external"} onCheckedChange={() => setFilter("external")}>
+                    External
+                  </DropdownMenuCheckboxItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button variant="outline" size="sm" className="h-8 text-[10px] border-border/50 bg-muted/20" onClick={handleOpenExportDialog}>
+                <FileSpreadsheet className="mr-1 h-3.5 w-3.5" />
+                Export
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="px-4 pb-4">

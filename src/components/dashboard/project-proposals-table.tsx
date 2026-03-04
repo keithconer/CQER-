@@ -71,41 +71,70 @@ interface ProjectProposalsTableProps {
 }
 
 function toStringArray(value: unknown): string[] {
+  const normalizePieces = (items: string[]) =>
+    items.map((item) => item.trim().replace(/^"+|"+$/g, "")).filter(Boolean);
+
+  const parsePostgresArray = (rawValue: string): string[] | null => {
+    if (!(rawValue.startsWith("{") && rawValue.endsWith("}"))) return null;
+    const inner = rawValue.slice(1, -1);
+    const matches = inner.match(/"([^"]*)"|([^,]+)/g);
+    if (!matches) return [];
+    return normalizePieces(
+      matches.map((item) => {
+        const trimmed = item.trim();
+        if (trimmed.startsWith('"') && trimmed.endsWith('"')) return trimmed.slice(1, -1);
+        return trimmed;
+      })
+    );
+  };
+
   const parseSerializedArray = (rawValue: string): string[] | null => {
+    const pgParsed = parsePostgresArray(rawValue);
+    if (pgParsed) return pgParsed;
+
     try {
       const parsed = JSON.parse(rawValue);
       if (Array.isArray(parsed)) {
-        return parsed.filter((item): item is string => typeof item === "string");
+        return normalizePieces(parsed.filter((item): item is string => typeof item === "string"));
       }
+      if (typeof parsed === "string") return parseSerializedArray(parsed);
     } catch {
       // Not valid JSON array.
     }
-    if (rawValue.startsWith("{") && rawValue.endsWith("}")) {
-      return rawValue
-        .slice(1, -1)
-        .split(",")
-        .map((item) => item.replace(/^"+|"+$/g, "").trim())
-        .filter(Boolean);
+
+    const csvTokens = rawValue.split(",").map((item) => item.trim()).filter(Boolean);
+    const looksLikeChars = csvTokens.length > 8 && csvTokens.filter((item) => item.length <= 2).length / csvTokens.length > 0.6;
+    if (looksLikeChars) {
+      const rebuilt = csvTokens.join("");
+      const reparsed = parseSerializedArray(rebuilt);
+      if (reparsed) return reparsed;
+      const cleaned = rebuilt.replace(/^\[+|]+$/g, "").replace(/^"+|"+$/g, "").trim();
+      return cleaned ? [cleaned] : [];
     }
+
     return null;
   };
 
   if (Array.isArray(value)) {
     const arr = value.filter((item): item is string => typeof item === "string");
+    if (arr.length === 1) {
+      const parsedSingle = parseSerializedArray(arr[0].trim());
+      if (parsedSingle) return parsedSingle;
+    }
     const maybeChars = arr.length > 0 && arr.every((item) => item.length <= 2);
     if (maybeChars) {
       const rebuilt = arr.join("");
       const parsed = parseSerializedArray(rebuilt);
       if (parsed) return parsed;
     }
-    return arr;
+    return normalizePieces(arr);
   }
   if (typeof value === "string") {
     const raw = value.trim();
     if (!raw) return [];
     const parsed = parseSerializedArray(raw);
     if (parsed) return parsed;
-    return raw.split(",").map((item) => item.trim()).filter(Boolean);
+    return normalizePieces(raw.split(","));
   }
   return [];
 }

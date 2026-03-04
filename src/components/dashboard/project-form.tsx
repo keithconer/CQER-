@@ -1089,8 +1089,10 @@ export function ProjectForm({
                     </div>
                   </FormItem>
                 )} />
+              </div>
+              <div className="grid grid-cols-1">
                 <FormField control={form.control} name="funding_thematic_area" render={({ field }) => (
-                  <FormItem className="space-y-1">
+                  <FormItem className="space-y-0.5">
                     <FormLabel className="text-[10px] leading-none">Thematic area</FormLabel>
                     <div className="grid grid-cols-1 gap-1">
                       {thematicAreaOptions.map((option) => (
