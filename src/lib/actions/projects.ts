@@ -26,6 +26,18 @@ function normalizePartnerAgencyCount(payload: Record<string, unknown>) {
     payload.partner_agency_count = partnerAgencies.length;
 }
 
+function stripMissingSchemaCacheColumn(payload: Record<string, unknown>, message?: string) {
+    if (!message) return false;
+    const match = message.match(/could not find the '([^']+)' column of 'projects' in the schema cache/i);
+    if (!match?.[1]) return false;
+    const missingColumn = match[1];
+    if (missingColumn in payload) {
+        delete payload[missingColumn];
+        return true;
+    }
+    return false;
+}
+
 function generateRecordNo(prefix: "PRJ") {
     const now = new Date();
     const yyyy = now.getFullYear();
@@ -102,6 +114,25 @@ export async function createProject(formData: object) {
         .select();
 
     if (error) {
+        const fallbackPayload = { ...payload };
+        const stripped = stripMissingSchemaCacheColumn(fallbackPayload, error.message);
+        if (stripped) {
+            const { data: fallbackData, error: fallbackError } = await supabase
+                .from("projects")
+                .insert([
+                    {
+                        ...fallbackPayload,
+                        created_by: user.id,
+                    },
+                ])
+                .select();
+            if (fallbackError) {
+                console.error("Error creating project (schema-cache fallback):", fallbackError);
+                return { error: fallbackError.message };
+            }
+            revalidatePath("/dashboard");
+            return { data: fallbackData };
+        }
         if (error.message?.toLowerCase().includes("funding_data") && error.message?.toLowerCase().includes("schema cache")) {
             const fallbackPayload = { ...payload };
             delete fallbackPayload.funding_data;
@@ -379,6 +410,24 @@ export async function updateProject(id: string, formData: object) {
         .select();
 
     if (error) {
+        const fallbackPayload = { ...payload };
+        const stripped = stripMissingSchemaCacheColumn(fallbackPayload, error.message);
+        if (stripped) {
+            const { data: fallbackData, error: fallbackError } = await adminClient
+                .from("projects")
+                .update({
+                    ...fallbackPayload,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq("id", id)
+                .select();
+            if (fallbackError) {
+                console.error("Error updating project (schema-cache fallback):", fallbackError);
+                return { error: fallbackError.message };
+            }
+            revalidatePath("/dashboard");
+            return { data: fallbackData };
+        }
         if (error.message?.toLowerCase().includes("funding_data") && error.message?.toLowerCase().includes("schema cache")) {
             const fallbackPayload = { ...payload };
             delete fallbackPayload.funding_data;

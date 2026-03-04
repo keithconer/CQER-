@@ -540,6 +540,23 @@ notify pgrst, 'reload schema';
 -- END COPY: Supabase Schema Cache Reload (Funding Data)
 -- ============================================================
 
+-- ============================================================
+-- START COPY: Project No Cache Fix
+-- ============================================================
+-- If PostgREST schema cache is stale and project_no is reported missing, run this block.
+alter table public.projects
+add column if not exists project_no text;
+
+create unique index if not exists idx_projects_project_no_unique
+on public.projects (project_no)
+where project_no is not null;
+
+-- Force PostgREST to reload schema cache after adding/confirming project_no.
+notify pgrst, 'reload schema';
+-- ============================================================
+-- END COPY: Project No Cache Fix
+-- ============================================================
+
 -- ============================================
 -- PDF Upload Enhancement
 -- Run this in Supabase SQL Editor
