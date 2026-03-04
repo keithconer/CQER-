@@ -70,6 +70,19 @@ interface ProjectProposalsTableProps {
   };
 }
 
+function toStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === "string");
+  }
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
 export function ProjectProposalsTable({
   proposals,
   readOnly = false,
@@ -96,12 +109,12 @@ export function ProjectProposalsTable({
     return proposals.filter((proposal) =>
       [
         proposal.project_title || proposal.title || "",
-        (proposal.classification || []).join(", "),
+        toStringArray(proposal.classification).join(", "),
         (proposal.proponents || []).map((p) => p?.name || "").join(", "),
         proposal.proposal_department || "",
         proposal.proposal_unit || "",
         proposal.collaborating_agencies || "",
-        (proposal.target_beneficiaries || []).join(", "),
+        toStringArray(proposal.target_beneficiaries).join(", "),
         proposal.community_location || "",
       ]
         .join(" ")
@@ -187,7 +200,7 @@ export function ProjectProposalsTable({
                     {proposal.project_title || proposal.title || "-"}
                   </TableCell>
                   <TableCell className="text-[10px] py-2.5 px-3 max-w-[220px]">
-                    <span className="line-clamp-2">{(proposal.classification || []).join(", ") || "-"}</span>
+                    <span className="line-clamp-2">{toStringArray(proposal.classification).join(", ") || "-"}</span>
                   </TableCell>
                   <TableCell className="text-[10px] py-2.5 px-3 max-w-[220px]">
                     <span className="line-clamp-2">{formatNames(proposal.proponents)}</span>
@@ -198,7 +211,7 @@ export function ProjectProposalsTable({
                   <TableCell className="text-[10px] py-2.5 px-3">{proposal.collaborating_agencies || "-"}</TableCell>
                   <TableCell className="text-[10px] py-2.5 px-3 max-w-[200px]">
                     <span className="line-clamp-2">
-                      {[...(proposal.target_beneficiaries || []), proposal.target_beneficiary_others ? `others: ${proposal.target_beneficiary_others}` : ""].filter(Boolean).join(", ") || "-"}
+                      {[...toStringArray(proposal.target_beneficiaries), proposal.target_beneficiary_others ? `others: ${proposal.target_beneficiary_others}` : ""].filter(Boolean).join(", ") || "-"}
                     </span>
                   </TableCell>
                   <TableCell className="text-[10px] py-2.5 px-3">
