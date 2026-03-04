@@ -42,7 +42,9 @@ export async function createProject(formData: object) {
 
     const payload = { ...(formData as Record<string, unknown>) };
     normalizePartnerAgencyCount(payload);
-    payload.entry_type = "project";
+    if (!payload.entry_type) {
+        payload.entry_type = "project";
+    }
     if (!payload.title && typeof payload.project_title === "string" && payload.project_title.trim()) {
         payload.title = payload.project_title.trim();
     }
@@ -302,7 +304,9 @@ export async function updateProject(id: string, formData: object) {
 
     const payload = { ...(formData as Record<string, unknown>) };
     normalizePartnerAgencyCount(payload);
-    payload.entry_type = "project";
+    if (!payload.entry_type) {
+        payload.entry_type = "project";
+    }
     if (!payload.title && typeof payload.project_title === "string" && payload.project_title.trim()) {
         payload.title = payload.project_title.trim();
     }

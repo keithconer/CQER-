@@ -442,6 +442,40 @@ where jsonb_typeof(coalesce(projects.partner_agencies, '[]'::jsonb)) = 'array';
 -- END COPY: Project Registration Form Cleanup (Project Title + Removed Fields)
 -- ============================================================
 
+-- ============================================================
+-- START COPY: Project Proposal Module Fields
+-- ============================================================
+-- Extend shared projects table for Project Proposal workflow.
+alter table public.projects
+add column if not exists proposal_department text,
+add column if not exists proposal_unit text,
+add column if not exists target_beneficiary_others text,
+add column if not exists faculty_involved jsonb default '[]'::jsonb;
+
+update public.projects
+set faculty_involved = coalesce(faculty_involved, '[]'::jsonb);
+
+alter table public.projects
+alter column faculty_involved set default '[]'::jsonb;
+
+-- Expand entry_type constraint to support project proposals.
+do $$
+begin
+  if exists (
+    select 1 from pg_constraint where conname = 'projects_entry_type_check'
+  ) then
+    alter table public.projects drop constraint projects_entry_type_check;
+  end if;
+
+  alter table public.projects
+    add constraint projects_entry_type_check
+    check (entry_type in ('project', 'program', 'project_proposal'));
+end
+$$;
+-- ============================================================
+-- END COPY: Project Proposal Module Fields
+-- ============================================================
+
 -- ============================================
 -- PDF Upload Enhancement
 -- Run this in Supabase SQL Editor

@@ -61,11 +61,25 @@ export function Navbar({ user }: NavbarProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [createExpanded, setCreateExpanded] = useState(true);
   const [recordsExpanded, setRecordsExpanded] = useState(true);
-  const [fontScale, setFontScale] = useState<"small" | "medium" | "large">("small");
-  const [darkModeEnabled, setDarkModeEnabled] = useState(false);
+  const [superProjectsExpanded, setSuperProjectsExpanded] = useState(true);
+  const [fontScale, setFontScale] = useState<"small" | "medium" | "large">(() => {
+    if (typeof window === "undefined") return "small";
+    const savedScale = window.localStorage.getItem("cqer_font_scale");
+    return savedScale === "small" || savedScale === "medium" || savedScale === "large"
+      ? savedScale
+      : "small";
+  });
+  const [darkModeEnabled, setDarkModeEnabled] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("cqer_theme") === "dark";
+  });
 
   const isDashboard = pathname?.startsWith("/dashboard");
-  const activeView = "projects";
+  const viewParam = searchParams.get("view");
+  const activeView =
+    viewParam === "project-registration" || viewParam === "project-proposal"
+      ? viewParam
+      : "project-registration";
   const panelParam = searchParams.get("panel");
   const activePanel =
     panelParam === "unit-coordinators" ||
@@ -81,7 +95,8 @@ export function Navbar({ user }: NavbarProps) {
 
   useEffect(() => {
     router.prefetch("/dashboard");
-    router.prefetch("/dashboard?panel=records&view=projects");
+    router.prefetch("/dashboard?panel=records&view=project-registration");
+    router.prefetch("/dashboard?panel=records&view=project-proposal");
     router.prefetch("/dashboard?panel=unit-coordinators");
     router.prefetch("/dashboard?panel=awards");
     router.prefetch("/dashboard?panel=student-involvement");
@@ -89,7 +104,8 @@ export function Navbar({ user }: NavbarProps) {
     router.prefetch("/dashboard?panel=technologies-innovation");
     router.prefetch("/dashboard?panel=ordinance-resolutions");
     router.prefetch("/dashboard?panel=accounts");
-    router.prefetch("/dashboard?panel=projects");
+    router.prefetch("/dashboard?panel=projects&view=project-registration");
+    router.prefetch("/dashboard?panel=projects&view=project-proposal");
     router.prefetch("/settings");
   }, [router]);
 
@@ -103,17 +119,6 @@ export function Navbar({ user }: NavbarProps) {
       document.documentElement.setAttribute("data-dashboard-sidebar", "closed");
     };
   }, [isDashboard, sidebarOpen]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const savedScale = window.localStorage.getItem("cqer_font_scale");
-    if (savedScale === "medium" || savedScale === "large" || savedScale === "small") {
-      setFontScale(savedScale);
-    } else {
-      setFontScale("small");
-    }
-    setDarkModeEnabled(window.localStorage.getItem("cqer_theme") === "dark");
-  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -342,17 +347,25 @@ export function Navbar({ user }: NavbarProps) {
                   onClick={() => setCreateExpanded((prev) => !prev)}
                 >
                   <FolderPlus className="mr-2 h-3.5 w-3.5" />
-                  Create
+                  Projects
                 </Button>
                 {createExpanded && (
                   <div className="space-y-1 pl-2">
                     <Button
                       variant="ghost"
-                      className={navItemClass(activePanel === "records" && activeView === "projects")}
-                      onClick={() => goTo("/dashboard?panel=records&view=projects")}
+                      className={navItemClass(activePanel === "records" && activeView === "project-registration")}
+                      onClick={() => goTo("/dashboard?panel=records&view=project-registration")}
                     >
                       <FolderKanban className="mr-2 h-3.5 w-3.5" />
-                      Projects
+                      Project Registration
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className={navItemClass(activePanel === "records" && activeView === "project-proposal")}
+                      onClick={() => goTo("/dashboard?panel=records&view=project-proposal")}
+                    >
+                      <FolderKanban className="mr-2 h-3.5 w-3.5" />
+                      Project Proposal
                     </Button>
                   </div>
                 )}
@@ -447,12 +460,32 @@ export function Navbar({ user }: NavbarProps) {
                     </Button>
                     <Button
                       variant="ghost"
-                      className={navItemClass(activePanel === "projects")}
-                      onClick={() => goTo("/dashboard?panel=projects")}
+                      className="dashboard-nav-item h-7 w-full justify-start text-[10px] border border-transparent"
+                      onClick={() => setSuperProjectsExpanded((prev) => !prev)}
                     >
                       <FolderKanban className="mr-2 h-3.5 w-3.5" />
                       Projects
                     </Button>
+                    {superProjectsExpanded && (
+                      <div className="space-y-1 pl-2">
+                        <Button
+                          variant="ghost"
+                          className={navItemClass(activePanel === "projects" && activeView === "project-registration")}
+                          onClick={() => goTo("/dashboard?panel=projects&view=project-registration")}
+                        >
+                          <FolderKanban className="mr-2 h-3.5 w-3.5" />
+                          Project Registration
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className={navItemClass(activePanel === "projects" && activeView === "project-proposal")}
+                          onClick={() => goTo("/dashboard?panel=projects&view=project-proposal")}
+                        >
+                          <FolderKanban className="mr-2 h-3.5 w-3.5" />
+                          Project Proposal
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
               </>

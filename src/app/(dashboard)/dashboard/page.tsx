@@ -11,6 +11,10 @@ import { getOrdinances, getTechnologies } from "@/lib/actions/technology-ordinan
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getUnitsByDepartment } from "@/lib/departments";
 import { CollegeProjectsManagement } from "@/components/dashboard/college-projects-management";
+import { CollegeProjectProposalsManagement } from "@/components/dashboard/college-project-proposals-management";
+import { UnitProjectProposalsManagement } from "@/components/dashboard/unit-project-proposals-management";
+import { ProjectProposalManagement } from "@/components/dashboard/project-proposal-management";
+import { ProjectManagement } from "@/components/dashboard/project-management";
 import { UnitCoordinatorsPanel } from "@/components/dashboard/unit-coordinators-panel";
 import { AwardsManagement, type AwardRecord } from "@/components/dashboard/awards-management";
 import { type Project } from "@/components/dashboard/projects-table";
@@ -39,7 +43,10 @@ export default async function DashboardPage({
 }) {
   const resolvedSearchParams = (await searchParams) || {};
   const panelParam = resolvedSearchParams.panel;
-  const hasEntitySelection = resolvedSearchParams.view === "projects";
+  const activeProjectView =
+    resolvedSearchParams.view === "project-proposal" ? "project-proposal" : "project-registration";
+  const hasEntitySelection =
+    activeProjectView === "project-registration" || activeProjectView === "project-proposal";
   const activePanel =
     panelParam === "unit-coordinators" ||
     panelParam === "awards" ||
@@ -147,7 +154,7 @@ export default async function DashboardPage({
   let allProjects: {
     id: string;
     created_by?: string | null;
-    entry_type?: "project" | null;
+    entry_type?: "project" | "project_proposal" | null;
     title: string;
     classification?: string[] | null;
     sdg_goals?: string[] | null;
@@ -230,17 +237,35 @@ export default async function DashboardPage({
         <div className="space-y-4">
           {hasSuperAdminSelection && (
             <>
-              <CoordinatorRegistration 
-                userType="college_coordinator" 
-                title="College Coordinators"
-                description="Register emails of College coordinators for their specific departments."
-              />
-              <SuperAdminOverview
-                accounts={allAccounts}
-                projects={allProjects}
-                panel={superAdminPanel}
-                currentUserId={user.id}
-              />
+              {superAdminPanel === "accounts" ? (
+                <>
+                  <CoordinatorRegistration
+                    userType="college_coordinator"
+                    title="College Coordinators"
+                    description="Register emails of College coordinators for their specific departments."
+                  />
+                  <SuperAdminOverview
+                    accounts={allAccounts}
+                    projects={allProjects}
+                    panel="accounts"
+                    currentUserId={user.id}
+                  />
+                </>
+              ) : activeProjectView === "project-proposal" ? (
+                <ProjectProposalManagement
+                  initialProjects={allProjects}
+                  userType={userType}
+                  department={profile.department}
+                  unit={profile.unit}
+                />
+              ) : (
+                <ProjectManagement
+                  initialProjects={allProjects}
+                  userType={userType}
+                  department={profile.department}
+                  unit={profile.unit}
+                />
+              )}
             </>
           )}
         </div>
@@ -294,14 +319,25 @@ export default async function DashboardPage({
               currentUserId={user.id}
             />
           ) : hasEntitySelection ? (
-            <CollegeProjectsManagement
-              initialProjects={projects}
-              userType={userType}
-              department={profile.department}
-              unit={profile.unit}
-              unitOptions={availableUnitsForCollege}
-              currentUserId={user.id}
-            />
+            activeProjectView === "project-proposal" ? (
+              <CollegeProjectProposalsManagement
+                initialProjects={projects}
+                userType={userType}
+                department={profile.department}
+                unit={profile.unit}
+                unitOptions={availableUnitsForCollege}
+                currentUserId={user.id}
+              />
+            ) : (
+              <CollegeProjectsManagement
+                initialProjects={projects}
+                userType={userType}
+                department={profile.department}
+                unit={profile.unit}
+                unitOptions={availableUnitsForCollege}
+                currentUserId={user.id}
+              />
+            )
           ) : null}
         </div>
       )}
@@ -348,15 +384,26 @@ export default async function DashboardPage({
             currentUserId={user.id}
           />
         ) : hasEntitySelection ? (
-          <UnitProjectsManagement
-            myProjects={projects}
-            unitProjects={unitProjects}
-            userType={userType}
-            department={profile.department}
-            unit={profile.unit}
-            unitOptions={[]}
-            currentUserId={user.id}
-          />
+          activeProjectView === "project-proposal" ? (
+            <UnitProjectProposalsManagement
+              myProjects={projects}
+              unitProjects={unitProjects}
+              userType={userType}
+              department={profile.department}
+              unit={profile.unit}
+              currentUserId={user.id}
+            />
+          ) : (
+            <UnitProjectsManagement
+              myProjects={projects}
+              unitProjects={unitProjects}
+              userType={userType}
+              department={profile.department}
+              unit={profile.unit}
+              unitOptions={[]}
+              currentUserId={user.id}
+            />
+          )
         ) : null
       )}
     </div>

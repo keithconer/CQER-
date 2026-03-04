@@ -244,7 +244,7 @@ function DatePickerField({
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          className={cn("h-8 w-full justify-start px-2 text-left text-xs font-normal", !value && "text-muted-foreground")}
+          className={cn("h-8 w-full justify-start px-2 text-left text-[10px] font-normal", !value && "text-muted-foreground")}
           disabled={disabled}
         >
           {value ? format(value, "PPP") : placeholder}
@@ -436,11 +436,11 @@ export function ProjectForm({
           <div className="space-y-5 pb-3">
             <FormField control={form.control} name="project_title" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-xs">Project Title</FormLabel>
+                <FormLabel className="text-[10px]">Project Title</FormLabel>
                 <FormControl>
                   <div className="relative">
                     <FileText className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-                    <Input {...field} className="h-8 pl-7 text-xs placeholder:text-[10px]" placeholder="Enter project title" disabled={isViewOnly} />
+                    <Input {...field} className="h-8 pl-7 text-[10px] placeholder:text-[10px]" placeholder="Enter project title" disabled={isViewOnly} />
                   </div>
                 </FormControl>
                 <FormMessage className="text-[10px]" />
@@ -448,17 +448,17 @@ export function ProjectForm({
             )} />
 
             <div className="space-y-3 rounded-md border border-border/50 p-3">
-              <h3 className="text-xs font-semibold">Proponents</h3>
+              <h3 className="text-[10px] font-semibold">Proponents</h3>
               <FormField control={form.control} name="project_leader" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs">Project Leader</FormLabel>
-                  <FormControl><Input {...field} className="h-8 text-xs placeholder:text-[10px]" placeholder="Full name" disabled={isViewOnly} /></FormControl>
+                  <FormLabel className="text-[10px]">Project leader</FormLabel>
+                  <FormControl><Input {...field} className="h-8 text-[10px] placeholder:text-[10px]" placeholder="Full name" disabled={isViewOnly} /></FormControl>
                   <FormMessage className="text-[10px]" />
                 </FormItem>
               )} />
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <FormLabel className="text-xs">Co-Project Leader(s)</FormLabel>
+                  <FormLabel className="text-[10px]">Co-project leader</FormLabel>
                   {!isViewOnly && (
                     <Button type="button" variant="outline" size="sm" className="h-7 text-[10px]" onClick={() => appendCoLeader({ name: "" })}>
                       <Plus className="mr-1 h-3 w-3" /> Add
@@ -472,7 +472,7 @@ export function ProjectForm({
                     <div key={leader.id} className="flex items-center gap-2">
                       <FormField control={form.control} name={`co_project_leaders.${idx}.name`} render={({ field }) => (
                         <FormItem className="flex-1">
-                          <FormControl><Input {...field} className="h-8 text-xs placeholder:text-[10px]" placeholder="Full name" disabled={isViewOnly} /></FormControl>
+                          <FormControl><Input {...field} className="h-8 text-[10px] placeholder:text-[10px]" placeholder="Full name" disabled={isViewOnly} /></FormControl>
                           <FormMessage className="text-[10px]" />
                         </FormItem>
                       )} />
@@ -490,24 +490,24 @@ export function ProjectForm({
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
               <FormField control={form.control} name="moa_no" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs">MOA No. (Optional)</FormLabel>
-                  <FormControl><Input {...field} placeholder="Numbers only" className="h-8 text-xs placeholder:text-[10px]" disabled={isViewOnly} /></FormControl>
+                  <FormLabel className="text-[10px]">MOA No. (Optional)</FormLabel>
+                  <FormControl><Input {...field} placeholder="Numbers only" className="h-8 text-[10px] placeholder:text-[10px]" disabled={isViewOnly} /></FormControl>
                   <FormMessage className="text-[10px]" />
                 </FormItem>
               )} />
               <FormField control={form.control} name="moa_category" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs">Category of MOA</FormLabel>
+                  <FormLabel className="text-[10px]">Category of MOA</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isViewOnly}>
-                    <FormControl><SelectTrigger className="h-8 text-xs capitalize"><FileText className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /><SelectValue placeholder="Select category" /></SelectTrigger></FormControl>
-                    <SelectContent>{moaCategoryOptions.map((option) => <SelectItem key={option} value={option} className="text-xs capitalize">{option}</SelectItem>)}</SelectContent>
+                    <FormControl><SelectTrigger className="h-8 text-[10px] capitalize"><FileText className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /><SelectValue placeholder="Select category" /></SelectTrigger></FormControl>
+                    <SelectContent>{moaCategoryOptions.map((option) => <SelectItem key={option} value={option} className="text-[10px] capitalize">{option}</SelectItem>)}</SelectContent>
                   </Select>
                   <FormMessage className="text-[10px]" />
                 </FormItem>
               )} />
               <FormField control={form.control} name="date_approved" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs">MOA Date Approved</FormLabel>
+                  <FormLabel className="text-[10px]">MOA Date Approved</FormLabel>
                   <FormControl><DatePickerField value={field.value} onChange={(d) => d && field.onChange(d)} disabled={isViewOnly} /></FormControl>
                   <FormMessage className="text-[10px]" />
                 </FormItem>
@@ -517,9 +517,9 @@ export function ProjectForm({
             {(currentUserType === "college_coordinator" || currentUserType === "unit_coordinator") && (
               <FormField control={form.control} name="lead_units" render={({ field }) => (
                 <FormItem className="space-y-2">
-                  <FormLabel className="text-xs">Lead unit</FormLabel>
+                  <FormLabel className="text-[10px]">Lead unit</FormLabel>
                   {currentUserType === "unit_coordinator" ? (
-                    <FormControl><Input value={currentDepartment || (field.value || []).join(", ")} readOnly disabled className="h-8 text-xs bg-muted/20" /></FormControl>
+                    <FormControl><Input value={currentDepartment || (field.value || []).join(", ")} readOnly disabled className="h-8 text-[10px] bg-muted/20" /></FormControl>
                   ) : (
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                       {DEPARTMENTS.map((option) => (
@@ -541,18 +541,18 @@ export function ProjectForm({
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <FormField control={form.control} name="contact_person" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs">Contact person</FormLabel>
-                  <FormControl><Input {...field} className="h-8 text-xs placeholder:text-[10px]" placeholder="Full name" disabled={isViewOnly} /></FormControl>
+                  <FormLabel className="text-[10px]">Contact person</FormLabel>
+                  <FormControl><Input {...field} className="h-8 text-[10px] placeholder:text-[10px]" placeholder="Full name" disabled={isViewOnly} /></FormControl>
                   <FormMessage className="text-[10px]" />
                 </FormItem>
               )} />
               <FormField control={form.control} name="contact_details" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs">Number / Email</FormLabel>
+                  <FormLabel className="text-[10px]">Number / Email</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <Mail className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-                      <Input {...field} className="h-8 pl-7 text-xs placeholder:text-[10px]" placeholder="Contact details" disabled={isViewOnly} />
+                      <Input {...field} className="h-8 pl-7 text-[10px] placeholder:text-[10px]" placeholder="Contact details" disabled={isViewOnly} />
                     </div>
                   </FormControl>
                   <FormMessage className="text-[10px]" />
@@ -563,7 +563,7 @@ export function ProjectForm({
             {(currentUserType === "college_coordinator" || currentUserType === "unit_coordinator") && (
               <FormField control={form.control} name="related_curricular_offerings" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs">Related curricular offering</FormLabel>
+                  <FormLabel className="text-[10px]">Related curricular offering</FormLabel>
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     {relatedOptions.length === 0 ? (
                       <p className="text-[10px] text-muted-foreground">No options available</p>
@@ -584,15 +584,15 @@ export function ProjectForm({
 
             <FormField control={form.control} name="partner_agency_count" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-xs">No. of partner agencies (signatory/ies)</FormLabel>
-                <FormControl><Input value={String(field.value || 0)} readOnly disabled className="h-8 text-xs bg-muted/20" /></FormControl>
+                <FormLabel className="text-[10px]">No. of partner agencies (signatory/ies)</FormLabel>
+                <FormControl><Input value={String(field.value || 0)} readOnly disabled className="h-8 text-[10px] bg-muted/20" /></FormControl>
               </FormItem>
             )} />
 
             <div className="space-y-3 rounded-md border border-border/50 p-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-xs font-semibold">Partner Agency/ies</h3>
+                  <h3 className="text-[10px] font-semibold">Partner Agency/ies</h3>
                   <p className="text-[10px] text-muted-foreground">Fill one or more partner records.</p>
                 </div>
                 {!isViewOnly && (
@@ -615,48 +615,48 @@ export function ProjectForm({
                     </div>
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                       <FormField control={form.control} name={`partner_agencies.${index}.agency_name`} render={({ field }) => (
-                        <FormItem><FormLabel className="text-xs">Name of agency</FormLabel><FormControl><Input {...field} className="h-8 text-xs placeholder:text-[10px]" disabled={isViewOnly} /></FormControl></FormItem>
+                        <FormItem><FormLabel className="text-[10px]">Name of agency</FormLabel><FormControl><Input {...field} className="h-8 text-[10px] placeholder:text-[10px]" disabled={isViewOnly} /></FormControl></FormItem>
                       )} />
                       <FormField control={form.control} name={`partner_agencies.${index}.head_of_agency`} render={({ field }) => (
-                        <FormItem><FormLabel className="text-xs">Head of agency</FormLabel><FormControl><Input {...field} className="h-8 text-xs placeholder:text-[10px]" disabled={isViewOnly} /></FormControl></FormItem>
+                        <FormItem><FormLabel className="text-[10px]">Head of agency</FormLabel><FormControl><Input {...field} className="h-8 text-[10px] placeholder:text-[10px]" disabled={isViewOnly} /></FormControl></FormItem>
                       )} />
                     </div>
 
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
                       <FormField control={form.control} name={`partner_agencies.${index}.email_or_number`} render={({ field }) => (
-                        <FormItem><FormLabel className="text-xs">Email / Number</FormLabel><FormControl><Input {...field} className="h-8 text-xs" disabled={isViewOnly} /></FormControl></FormItem>
+                        <FormItem><FormLabel className="text-[10px]">Email / Number</FormLabel><FormControl><Input {...field} className="h-8 text-[10px]" disabled={isViewOnly} /></FormControl></FormItem>
                       )} />
                       <FormField control={form.control} name={`partner_agencies.${index}.level`} render={({ field }) => (
-                        <FormItem><FormLabel className="text-xs">Level</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isViewOnly}><FormControl><SelectTrigger className="h-8 text-xs"><Globe className="mr-1 h-3.5 w-3.5" /><SelectValue /></SelectTrigger></FormControl><SelectContent>{levelOptions.map((v) => <SelectItem key={v} value={v} className="text-xs capitalize">{v}</SelectItem>)}</SelectContent></Select></FormItem>
+                        <FormItem><FormLabel className="text-[10px]">Level</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isViewOnly}><FormControl><SelectTrigger className="h-8 text-[10px]"><Globe className="mr-1 h-3.5 w-3.5" /><SelectValue /></SelectTrigger></FormControl><SelectContent>{levelOptions.map((v) => <SelectItem key={v} value={v} className="text-[10px] capitalize">{v}</SelectItem>)}</SelectContent></Select></FormItem>
                       )} />
                       <FormField control={form.control} name={`partner_agencies.${index}.agency_category`} render={({ field }) => (
-                        <FormItem><FormLabel className="text-xs">Category of agency</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isViewOnly}><FormControl><SelectTrigger className="h-8 text-xs"><Landmark className="mr-1 h-3.5 w-3.5" /><SelectValue /></SelectTrigger></FormControl><SelectContent>{agencyCategoryOptions.map((v) => <SelectItem key={v} value={v} className="text-xs uppercase">{v}</SelectItem>)}</SelectContent></Select></FormItem>
+                        <FormItem><FormLabel className="text-[10px]">Category of agency</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isViewOnly}><FormControl><SelectTrigger className="h-8 text-[10px]"><Landmark className="mr-1 h-3.5 w-3.5" /><SelectValue /></SelectTrigger></FormControl><SelectContent>{agencyCategoryOptions.map((v) => <SelectItem key={v} value={v} className="text-[10px] uppercase">{v}</SelectItem>)}</SelectContent></Select></FormItem>
                       )} />
                       <FormField control={form.control} name={`partner_agencies.${index}.nature_of_partnership`} render={({ field }) => (
-                        <FormItem><FormLabel className="text-xs">Nature</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isViewOnly}><FormControl><SelectTrigger className="h-8 text-xs"><Handshake className="mr-1 h-3.5 w-3.5" /><SelectValue /></SelectTrigger></FormControl><SelectContent>{natureOptions.map((v) => <SelectItem key={v} value={v} className="text-xs capitalize">{v}</SelectItem>)}</SelectContent></Select></FormItem>
+                        <FormItem><FormLabel className="text-[10px]">Nature</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isViewOnly}><FormControl><SelectTrigger className="h-8 text-[10px]"><Handshake className="mr-1 h-3.5 w-3.5" /><SelectValue /></SelectTrigger></FormControl><SelectContent>{natureOptions.map((v) => <SelectItem key={v} value={v} className="text-[10px] capitalize">{v}</SelectItem>)}</SelectContent></Select></FormItem>
                       )} />
                     </div>
 
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                       <FormField control={form.control} name={`partner_agencies.${index}.approved_title`} render={({ field }) => (
-                        <FormItem className="md:col-span-2"><FormLabel className="text-xs">Title of approved extension/project</FormLabel><FormControl><Textarea {...field} className="min-h-[56px] text-xs" disabled={isViewOnly} /></FormControl></FormItem>
+                        <FormItem className="md:col-span-2"><FormLabel className="text-[10px]">Title of approved extension/project</FormLabel><FormControl><Textarea {...field} className="min-h-[56px] text-[10px]" disabled={isViewOnly} /></FormControl></FormItem>
                       )} />
                       <div className="space-y-3">
                         <FormField control={form.control} name={`partner_agencies.${index}.partnership_type`} render={({ field }) => (
-                          <FormItem><FormLabel className="text-xs">Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isViewOnly}><FormControl><SelectTrigger className="h-8 text-xs"><FileText className="mr-1 h-3.5 w-3.5" /><SelectValue /></SelectTrigger></FormControl><SelectContent>{partnershipTypeOptions.map((v) => <SelectItem key={v} value={v} className="text-xs">{v}</SelectItem>)}</SelectContent></Select></FormItem>
+                          <FormItem><FormLabel className="text-[10px]">Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isViewOnly}><FormControl><SelectTrigger className="h-8 text-[10px]"><FileText className="mr-1 h-3.5 w-3.5" /><SelectValue /></SelectTrigger></FormControl><SelectContent>{partnershipTypeOptions.map((v) => <SelectItem key={v} value={v} className="text-[10px]">{v}</SelectItem>)}</SelectContent></Select></FormItem>
                         )} />
                         <FormField control={form.control} name={`partner_agencies.${index}.bor_approved_date`} render={({ field }) => (
-                          <FormItem><FormLabel className="text-xs">Board of Regents Approved Date</FormLabel><DatePickerField value={field.value || null} onChange={(d) => field.onChange(d)} disabled={isViewOnly} /></FormItem>
+                          <FormItem><FormLabel className="text-[10px]">Board of Regents Approved Date</FormLabel><DatePickerField value={field.value || null} onChange={(d) => field.onChange(d)} disabled={isViewOnly} /></FormItem>
                         )} />
                       </div>
                     </div>
 
                     <FormField control={form.control} name={`partner_agencies.${index}.duration_text`} render={({ field }) => (
-                      <FormItem><FormLabel className="text-xs">Duration (years / months)</FormLabel><FormControl><Input {...field} className="h-8 text-xs placeholder:text-[10px]" placeholder="e.g. 2 years" disabled={isViewOnly} /></FormControl></FormItem>
+                      <FormItem><FormLabel className="text-[10px]">Duration (years / months)</FormLabel><FormControl><Input {...field} className="h-8 text-[10px] placeholder:text-[10px]" placeholder="e.g. 2 years" disabled={isViewOnly} /></FormControl></FormItem>
                     )} />
 
                     <div className="space-y-2">
-                      <FormLabel className="text-xs">Inclusive dates</FormLabel>
+                      <FormLabel className="text-[10px]">Inclusive dates</FormLabel>
                       <FormField control={form.control} name={`partner_agencies.${index}.inclusive_dates`} render={({ field }) => {
                         const selectedDates = sortDates((field.value || []) as Date[]);
                         const start = selectedDates[0];
@@ -668,7 +668,7 @@ export function ProjectForm({
                                 <FormControl>
                                   <Button
                                     variant="outline"
-                                    className={cn("h-8 w-full justify-start px-2 text-left text-xs font-normal", selectedDates.length === 0 && "text-muted-foreground")}
+                                    className={cn("h-8 w-full justify-start px-2 text-left text-[10px] font-normal", selectedDates.length === 0 && "text-muted-foreground")}
                                     disabled={isViewOnly}
                                   >
                                     {selectedDates.length > 0
@@ -700,11 +700,11 @@ export function ProjectForm({
 
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                       <FormField control={form.control} name={`partner_agencies.${index}.amount_involved`} render={({ field }) => (
-                        <FormItem><FormLabel className="text-xs">Amount involved</FormLabel><FormControl><Input type="number" value={typeof field.value === "number" ? field.value : ""} onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))} className="h-8 text-xs" disabled={isViewOnly} /></FormControl></FormItem>
+                        <FormItem><FormLabel className="text-[10px]">Amount involved</FormLabel><FormControl><Input type="number" value={typeof field.value === "number" ? field.value : ""} onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))} className="h-8 text-[10px]" disabled={isViewOnly} /></FormControl></FormItem>
                       )} />
                       <FormField control={form.control} name={`partner_agencies.${index}.thematic_area`} render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs">Thematic area</FormLabel>
+                          <FormLabel className="text-[10px]">Thematic area</FormLabel>
                           <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
                             {thematicAreaOptions.map((option) => (
                               <label key={option} className="flex items-center gap-2 rounded-md border border-border/50 px-2 py-1.5">
@@ -722,7 +722,7 @@ export function ProjectForm({
                     </div>
                     <FormField control={form.control} name={`partner_agencies.${index}.sdg_goals`} render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs">SDGs</FormLabel>
+                        <FormLabel className="text-[10px]">SDGs</FormLabel>
                         <div className="grid grid-cols-2 gap-1 md:grid-cols-4">
                           {sdgOptions.map((goal) => (
                             <label key={goal.id} className="flex items-center gap-1 rounded-md border border-border/50 px-2 py-1">
@@ -735,7 +735,7 @@ export function ProjectForm({
                     )} />
 
                     <FormField control={form.control} name={`partner_agencies.${index}.extension_title`} render={({ field }) => (
-                      <FormItem><FormLabel className="text-xs">Title of extension program / project</FormLabel><FormControl><Input {...field} className="h-8 text-xs" disabled={isViewOnly} /></FormControl></FormItem>
+                      <FormItem><FormLabel className="text-[10px]">Title of extension program / project</FormLabel><FormControl><Input {...field} className="h-8 text-[10px]" disabled={isViewOnly} /></FormControl></FormItem>
                     )} />
                   </div>
                 );
@@ -745,10 +745,10 @@ export function ProjectForm({
             {isCollegeCoordinator && (
               <FormField control={form.control} name="visibility_scope" render={({ field }) => (
                 <FormItem className="space-y-2 rounded-md border border-border/50 p-3">
-                  <FormLabel className="text-xs">Visibility</FormLabel>
+                  <FormLabel className="text-[10px]">Visibility</FormLabel>
                   <div className="flex gap-4">
-                    <label className="flex items-center gap-2 text-xs"><Checkbox checked={field.value === "public"} disabled={isViewOnly} onCheckedChange={(c) => c && field.onChange("public")} /> Public</label>
-                    <label className="flex items-center gap-2 text-xs"><Checkbox checked={field.value === "specific_units"} disabled={isViewOnly} onCheckedChange={(c) => c && field.onChange("specific_units")} /> Specific units</label>
+                    <label className="flex items-center gap-2 text-[10px]"><Checkbox checked={field.value === "public"} disabled={isViewOnly} onCheckedChange={(c) => c && field.onChange("public")} /> Public</label>
+                    <label className="flex items-center gap-2 text-[10px]"><Checkbox checked={field.value === "specific_units"} disabled={isViewOnly} onCheckedChange={(c) => c && field.onChange("specific_units")} /> Specific units</label>
                   </div>
                   {visibilityScope === "specific_units" && (
                     <FormField control={form.control} name="visible_units" render={({ field: visField }) => (
@@ -768,13 +768,13 @@ export function ProjectForm({
 
             <FormField control={form.control} name="documents" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-xs">Upload documents</FormLabel>
+                <FormLabel className="text-[10px]">Upload documents</FormLabel>
                 <FormDescription className="text-[10px]">Attach supporting files.</FormDescription>
                 <FormControl><FileUpload value={field.value || []} onChange={field.onChange} disabled={isViewOnly || isSubmitting} maxFiles={10} /></FormControl>
               </FormItem>
             )} />
 
-            {!isViewOnly && <div className="flex justify-end"><Button type="submit" className="h-8 text-xs bg-[#159E44] hover:bg-[#128A3B]" disabled={isSubmitting}>{isSubmitting ? "Submitting..." : project?.id ? `Update ${recordLabel}` : `Submit ${recordLabel} Registration`}</Button></div>}
+            {!isViewOnly && <div className="flex justify-end"><Button type="submit" className="h-8 text-[10px] bg-[#159E44] hover:bg-[#128A3B]" disabled={isSubmitting}>{isSubmitting ? "Submitting..." : project?.id ? `Update ${recordLabel}` : `Submit ${recordLabel} Registration`}</Button></div>}
           </div>
         </ScrollArea>
       </form>
@@ -784,9 +784,9 @@ export function ProjectForm({
           <DialogHeader className="flex flex-col items-center justify-center pt-4">
             <div className="rounded-full bg-[#159E44]/10 p-3 mb-4"><CheckCircle2 className="h-10 w-10 text-[#159E44]" /></div>
             <DialogTitle className="text-lg font-semibold text-center">{project?.id ? `${recordLabel} Updated!` : `${recordLabel} Registered!`}</DialogTitle>
-            <DialogDescription className="text-xs text-center">{project?.id ? `The ${recordLabel.toLowerCase()} registration has been updated.` : `The ${recordLabel.toLowerCase()} registration has been submitted.`}</DialogDescription>
+            <DialogDescription className="text-[10px] text-center">{project?.id ? `The ${recordLabel.toLowerCase()} registration has been updated.` : `The ${recordLabel.toLowerCase()} registration has been submitted.`}</DialogDescription>
           </DialogHeader>
-          <DialogFooter className="sm:justify-center"><Button type="button" className="bg-[#159E44] hover:bg-[#128A3B] px-8 h-9 text-xs" onClick={handleSuccessClose}>Continue</Button></DialogFooter>
+          <DialogFooter className="sm:justify-center"><Button type="button" className="bg-[#159E44] hover:bg-[#128A3B] px-8 h-9 text-[10px]" onClick={handleSuccessClose}>Continue</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </Form>
