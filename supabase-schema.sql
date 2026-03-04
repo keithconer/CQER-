@@ -401,6 +401,47 @@ where program_no is not null;
 -- END COPY: Program Number Auto Field
 -- ============================================================
 
+-- ============================================================
+-- START COPY: Project Registration Form Cleanup (Project Title + Removed Fields)
+-- ============================================================
+-- Add dedicated project title column used by the updated form.
+alter table public.projects
+add column if not exists project_title text;
+
+update public.projects
+set project_title = coalesce(
+  nullif(trim(project_title), ''),
+  nullif(trim(title), ''),
+  'Untitled Project'
+);
+
+alter table public.projects
+alter column project_title set not null;
+
+-- Keep legacy title aligned with project_title for table views still using "title".
+update public.projects
+set title = project_title
+where coalesce(nullif(trim(title), ''), '') <> coalesce(nullif(trim(project_title), ''), '');
+
+-- Remove deprecated project number field and index.
+drop index if exists idx_projects_project_no_unique;
+alter table public.projects
+drop column if exists project_no;
+
+-- Remove deprecated fields from each partner agency JSON object.
+update public.projects
+set partner_agencies = coalesce(
+  (
+    select jsonb_agg(agency - 'extension_activities' - 'remarks' - 'date_conducted')
+    from jsonb_array_elements(coalesce(projects.partner_agencies, '[]'::jsonb)) as agency
+  ),
+  '[]'::jsonb
+)
+where jsonb_typeof(coalesce(projects.partner_agencies, '[]'::jsonb)) = 'array';
+-- ============================================================
+-- END COPY: Project Registration Form Cleanup (Project Title + Removed Fields)
+-- ============================================================
+
 -- ============================================
 -- PDF Upload Enhancement
 -- Run this in Supabase SQL Editor

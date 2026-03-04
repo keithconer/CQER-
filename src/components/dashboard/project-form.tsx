@@ -10,7 +10,6 @@ import {
   FileText,
   Globe,
   Handshake,
-  Hash,
   Landmark,
   Mail,
   Plus,
@@ -109,14 +108,11 @@ const partnerAgencySchema = z.object({
   sdg_goals: z.array(z.string()).min(1),
   thematic_area: z.array(z.string()).min(1),
   extension_title: z.string().min(1),
-  date_conducted: z.date(),
-  extension_activities: z.string().min(1),
-  remarks: z.string().optional(),
 });
 
 const schema = z.object({
   entry_type: z.literal("project"),
-  record_no: z.string().min(1),
+  project_title: z.string().min(1),
   project_leader: z.string().min(1),
   co_project_leaders: z.array(z.object({ name: z.string().min(1) })).default([]),
   moa_no: z.string().optional().refine((v) => !v || /^\d+$/.test(v), "Numbers only"),
@@ -139,6 +135,8 @@ type FormOutput = z.output<typeof schema>;
 
 interface LooseProject {
   id?: string;
+  title?: string | null;
+  project_title?: string | null;
   project_no?: string | null;
   entry_type?: "project" | null;
   category?: string | null;
@@ -183,9 +181,6 @@ const emptyAgency: FormValues["partner_agencies"][number] = {
   sdg_goals: [],
   thematic_area: [],
   extension_title: "",
-  date_conducted: new Date(),
-  extension_activities: "",
-  remarks: "",
 };
 
 function sortDates(values: Date[]) {
@@ -278,7 +273,8 @@ function buildPayload(values: FormValues) {
 
   const payload: Record<string, unknown> = {
     entry_type: "project",
-    title: firstAgency?.extension_title || "Project Registration",
+    title: values.project_title,
+    project_title: values.project_title,
     classification: thematicAreas,
     sdg_goals: sdgs,
     academic_program: values.related_curricular_offerings[0] || "N/A",
@@ -309,7 +305,6 @@ function buildPayload(values: FormValues) {
     visible_units: values.visible_units,
     documents: values.documents,
   };
-  payload.project_no = values.record_no;
   return payload;
 }
 
@@ -342,20 +337,11 @@ export function ProjectForm({
     : isMoaCategory(categoryCandidateText)
       ? categoryCandidateText
       : "new";
-  const autoProjectNo = React.useMemo(() => {
-    const now = new Date();
-    const yyyy = now.getFullYear();
-    const mm = String(now.getMonth() + 1).padStart(2, "0");
-    const dd = String(now.getDate()).padStart(2, "0");
-    const suffix = Math.floor(Math.random() * 9000 + 1000);
-    return `PRJ-${yyyy}${mm}${dd}-${suffix}`;
-  }, []);
-
   const form = useForm<FormInput, unknown, FormOutput>({
     resolver: zodResolver(schema),
     defaultValues: {
       entry_type: "project",
-      record_no: project?.project_no || autoProjectNo,
+      project_title: project?.project_title || project?.title || "",
       project_leader: project?.proponents?.[0]?.name || "",
       co_project_leaders: Array.isArray(project?.co_project_leaders)
         ? project.co_project_leaders.map((item) => ({ name: item?.name || "" }))
@@ -372,7 +358,6 @@ export function ProjectForm({
               ...emptyAgency,
               ...agency,
               bor_approved_date: typeof agency?.bor_approved_date === "string" ? new Date(agency.bor_approved_date) : null,
-              date_conducted: typeof agency?.date_conducted === "string" ? new Date(agency.date_conducted) : new Date(),
               inclusive_dates: toDateArray(agency?.inclusive_dates),
               thematic_area: Array.isArray(agency?.thematic_area)
                 ? agency.thematic_area.filter((item): item is string => typeof item === "string")
@@ -450,15 +435,17 @@ export function ProjectForm({
         <ScrollArea className="h-[72vh] pr-4">
           <div className="space-y-5 pb-3">
             <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-              <FormField control={form.control} name="record_no" render={({ field }) => (
+              <FormField control={form.control} name="project_title" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs">Project No.</FormLabel>
+                  <FormLabel className="text-xs">Project Title</FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <Hash className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-                      <Input {...field} readOnly disabled className="h-8 pl-7 text-xs bg-muted/20" />
+                      <FileText className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input {...field} className="h-8 pl-7 text-xs placeholder:text-[10px]" placeholder="Enter project title" disabled={isViewOnly} />
                     </div>
                   </FormControl>
+                  <FormDescription className="text-[10px] flex items-center gap-1"><FileText className="h-3 w-3" />Use the official project title.</FormDescription>
+                  <FormMessage className="text-[10px]" />
                 </FormItem>
               )} />
               <FormField control={form.control} name="moa_no" render={({ field }) => (
@@ -651,14 +638,14 @@ export function ProjectForm({
 
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                       <FormField control={form.control} name={`partner_agencies.${index}.approved_title`} render={({ field }) => (
-                        <FormItem className="md:col-span-2"><FormLabel className="text-xs">Title of approved extension/program/project/activity</FormLabel><FormControl><Textarea {...field} className="min-h-[56px] text-xs" disabled={isViewOnly} /></FormControl></FormItem>
+                        <FormItem className="md:col-span-2"><FormLabel className="text-xs">Title of approved extension/project</FormLabel><FormControl><Textarea {...field} className="min-h-[56px] text-xs" disabled={isViewOnly} /></FormControl></FormItem>
                       )} />
                       <div className="space-y-3">
                         <FormField control={form.control} name={`partner_agencies.${index}.partnership_type`} render={({ field }) => (
                           <FormItem><FormLabel className="text-xs">Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isViewOnly}><FormControl><SelectTrigger className="h-8 text-xs"><FileText className="mr-1 h-3.5 w-3.5" /><SelectValue /></SelectTrigger></FormControl><SelectContent>{partnershipTypeOptions.map((v) => <SelectItem key={v} value={v} className="text-xs">{v}</SelectItem>)}</SelectContent></Select></FormItem>
                         )} />
                         <FormField control={form.control} name={`partner_agencies.${index}.bor_approved_date`} render={({ field }) => (
-                          <FormItem><FormLabel className="text-xs">BOR Approved Date</FormLabel><DatePickerField value={field.value || null} onChange={(d) => field.onChange(d)} disabled={isViewOnly} /></FormItem>
+                          <FormItem><FormLabel className="text-xs">Board of Regents Approved Date</FormLabel><DatePickerField value={field.value || null} onChange={(d) => field.onChange(d)} disabled={isViewOnly} /></FormItem>
                         )} />
                       </div>
                     </div>
@@ -732,10 +719,6 @@ export function ProjectForm({
                         </FormItem>
                       )} />
                     </div>
-                    <FormField control={form.control} name={`partner_agencies.${index}.date_conducted`} render={({ field }) => (
-                      <FormItem className="max-w-sm"><FormLabel className="text-xs">Date conducted</FormLabel><DatePickerField value={field.value} onChange={(d) => d && field.onChange(d)} disabled={isViewOnly} /></FormItem>
-                    )} />
-
                     <FormField control={form.control} name={`partner_agencies.${index}.sdg_goals`} render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-xs">SDGs</FormLabel>
@@ -752,12 +735,6 @@ export function ProjectForm({
 
                     <FormField control={form.control} name={`partner_agencies.${index}.extension_title`} render={({ field }) => (
                       <FormItem><FormLabel className="text-xs">Title of extension program / project</FormLabel><FormControl><Input {...field} className="h-8 text-xs" disabled={isViewOnly} /></FormControl></FormItem>
-                    )} />
-                    <FormField control={form.control} name={`partner_agencies.${index}.extension_activities`} render={({ field }) => (
-                      <FormItem><FormLabel className="text-xs">Extension activities conducted within the period</FormLabel><FormControl><Textarea {...field} className="min-h-[60px] text-xs" disabled={isViewOnly} /></FormControl></FormItem>
-                    )} />
-                    <FormField control={form.control} name={`partner_agencies.${index}.remarks`} render={({ field }) => (
-                      <FormItem><FormLabel className="text-xs">Remarks</FormLabel><FormControl><Textarea {...field} value={typeof field.value === "string" ? field.value : ""} className="min-h-[56px] text-xs" disabled={isViewOnly} /></FormControl></FormItem>
                     )} />
                   </div>
                 );
