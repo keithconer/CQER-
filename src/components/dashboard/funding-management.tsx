@@ -40,7 +40,7 @@ function getFundingType(project: Project): FundingFilter {
 export function FundingManagement({
   projects,
   title = "Funding",
-  description = "Filter and view AB/B funding fields for reporting.",
+  description = "Filter and view funding fields for reporting.",
 }: FundingManagementProps) {
   const [searchTerm, setSearchTerm] = React.useState("");
   const [filter, setFilter] = React.useState<FundingFilter>("internal");
@@ -98,10 +98,10 @@ export function FundingManagement({
                 <DropdownMenuLabel className="text-[10px]">Funding Type</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuCheckboxItem className="text-[10px]" checked={filter === "internal"} onCheckedChange={() => setFilter("internal")}>
-                  Internal (AB fields)
+                  Internal
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem className="text-[10px]" checked={filter === "external"} onCheckedChange={() => setFilter("external")}>
-                  External (AB + B fields)
+                  External
                 </DropdownMenuCheckboxItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -119,9 +119,9 @@ export function FundingManagement({
                   <TableHead className="text-[10px] font-semibold h-9">Location</TableHead>
                   <TableHead className="text-[10px] font-semibold h-9">Types of Clientele</TableHead>
                   <TableHead className="text-[10px] font-semibold h-9">No. of Clientele</TableHead>
-                  {filter === "external" && <TableHead className="text-[10px] font-semibold h-9">Function/Nature (B)</TableHead>}
-                  {filter === "external" && <TableHead className="text-[10px] font-semibold h-9">Total Budget (B)</TableHead>}
-                  {filter === "external" && <TableHead className="text-[10px] font-semibold h-9">Funding Agency (B)</TableHead>}
+                  {filter === "external" && <TableHead className="text-[10px] font-semibold h-9">Function/Nature</TableHead>}
+                  {filter === "external" && <TableHead className="text-[10px] font-semibold h-9">Total Budget</TableHead>}
+                  {filter === "external" && <TableHead className="text-[10px] font-semibold h-9">Funding Agency</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>

@@ -531,6 +531,15 @@ $$;
 -- END COPY: Funding Report Fields + MOA Category Update
 -- ============================================================
 
+-- ============================================================
+-- START COPY: Supabase Schema Cache Reload (Funding Data)
+-- ============================================================
+-- Run this after adding/altering columns to refresh PostgREST schema cache.
+notify pgrst, 'reload schema';
+-- ============================================================
+-- END COPY: Supabase Schema Cache Reload (Funding Data)
+-- ============================================================
+
 -- ============================================
 -- PDF Upload Enhancement
 -- Run this in Supabase SQL Editor

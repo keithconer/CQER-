@@ -127,7 +127,7 @@ const schema = z.object({
   related_curricular_offerings: z.array(z.string()).default([]),
   partner_agencies: z.array(partnerAgencySchema).min(1),
   partner_agency_count: z.coerce.number().min(0),
-  collaborating_agencies_text: z.string().default(""),
+  collaborating_agencies: z.array(z.object({ name: z.string().min(1) })).default([]),
   funding_title: z.string().default(""),
   funding_location: z.string().default(""),
   funding_types_of_clientele: z.string().default(""),
@@ -149,7 +149,6 @@ const schema = z.object({
   awards_conferring_agency: z.string().default(""),
   awards_date: z.date().nullable(),
   funding_remarks_date: z.date().nullable(),
-  funding_documents: z.array(z.object({ url: z.string(), name: z.string() })).default([]),
   visibility_scope: z.enum(["public", "specific_units"]).default("public"),
   visible_units: z.array(z.string()).default([]),
   documents: z.array(z.object({ url: z.string(), name: z.string() })).default([]),
@@ -317,7 +316,10 @@ function buildPayload(values: FormValues) {
     co_project_leaders: values.co_project_leaders,
     project_assistants: values.project_assistants,
     college: "CEIT",
-    collaborating_agencies: values.collaborating_agencies_text || values.partner_agencies.map((a) => a.agency_name).join(", "),
+    collaborating_agencies:
+      values.collaborating_agencies.length > 0
+        ? values.collaborating_agencies.map((a) => a.name).join(", ")
+        : values.partner_agencies.map((a) => a.agency_name).join(", "),
     target_beneficiaries: [],
     community_location: "",
     category: values.moa_category,
@@ -344,7 +346,7 @@ function buildPayload(values: FormValues) {
     documents: values.documents,
     funding_data: {
       project_no: values.project_no,
-      collaborating_agencies: values.collaborating_agencies_text,
+      collaborating_agencies: values.collaborating_agencies,
       title: values.funding_title,
       location: values.funding_location,
       types_of_clientele: values.funding_types_of_clientele,
@@ -370,7 +372,7 @@ function buildPayload(values: FormValues) {
       awards_conferring_agency: values.awards_conferring_agency,
       awards_date: values.awards_date,
       remarks_date: values.funding_remarks_date,
-      documents: values.funding_documents,
+      documents: values.documents,
     },
   };
   return payload;
@@ -459,14 +461,14 @@ export function ProjectForm({
             }))
         : [emptyAgency],
       partner_agency_count: Array.isArray(project?.partner_agencies) ? project.partner_agencies.length : 1,
-      collaborating_agencies_text:
-        project?.collaborating_agencies ||
-        (Array.isArray(project?.partner_agencies)
-          ? project.partner_agencies
-              .map((agency) => String((agency as Record<string, unknown>)?.agency_name || ""))
+      collaborating_agencies:
+        typeof project?.collaborating_agencies === "string"
+          ? project.collaborating_agencies
+              .split(",")
+              .map((value) => value.trim())
               .filter(Boolean)
-              .join(", ")
-          : ""),
+              .map((name) => ({ name }))
+          : [],
       funding_title: typeof fundingData.title === "string" ? fundingData.title : project?.title || "",
       funding_location: typeof fundingData.location === "string" ? fundingData.location : "",
       funding_types_of_clientele: typeof fundingData.types_of_clientele === "string" ? fundingData.types_of_clientele : "",
@@ -502,11 +504,6 @@ export function ProjectForm({
       awards_conferring_agency: typeof fundingData.awards_conferring_agency === "string" ? fundingData.awards_conferring_agency : "",
       awards_date: typeof fundingData.awards_date === "string" ? new Date(fundingData.awards_date) : null,
       funding_remarks_date: typeof fundingData.remarks_date === "string" ? new Date(fundingData.remarks_date) : null,
-      funding_documents: Array.isArray(fundingData.documents)
-        ? (fundingData.documents as Array<{ url?: unknown; name?: unknown }>)
-            .filter((doc) => typeof doc?.url === "string" && typeof doc?.name === "string")
-            .map((doc) => ({ url: doc.url as string, name: doc.name as string }))
-        : [],
       visibility_scope: project?.visibility_scope || (currentUserType === "unit_coordinator" ? "specific_units" : "public"),
       visible_units: project?.visible_units || (currentUserType === "unit_coordinator" && currentUnit ? [currentUnit] : []),
       documents: project?.documents || [],
@@ -543,6 +540,14 @@ export function ProjectForm({
   } = useFieldArray({
     control: form.control,
     name: "funding_beneficiaries",
+  });
+  const {
+    fields: collaboratingAgencyFields,
+    append: appendCollaboratingAgency,
+    remove: removeCollaboratingAgency,
+  } = useFieldArray({
+    control: form.control,
+    name: "collaborating_agencies",
   });
 
   const partners = useWatch({ control: form.control, name: "partner_agencies" });
@@ -789,12 +794,34 @@ export function ProjectForm({
                 <FormControl><Input value={String(field.value || 0)} readOnly disabled className="h-8 text-[10px] bg-muted/20" /></FormControl>
               </FormItem>
             )} />
-            <FormField control={form.control} name="collaborating_agencies_text" render={({ field }) => (
-              <FormItem>
+            <div className="space-y-2 rounded-md border border-border/50 p-3">
+              <div className="flex items-center justify-between">
                 <FormLabel className="text-[10px]">Collaborating agency/ies</FormLabel>
-                <FormControl><Input {...field} className="h-8 text-[10px] placeholder:text-[10px]" placeholder="Enter collaborating agency/ies" disabled={isViewOnly} /></FormControl>
-              </FormItem>
-            )} />
+                {!isViewOnly && (
+                  <Button type="button" variant="outline" size="sm" className="h-7 text-[10px]" onClick={() => appendCollaboratingAgency({ name: "" })}>
+                    <Plus className="mr-1 h-3 w-3" /> Add
+                  </Button>
+                )}
+              </div>
+              {collaboratingAgencyFields.length === 0 ? (
+                <p className="text-[10px] text-muted-foreground">No collaborating agencies added.</p>
+              ) : (
+                collaboratingAgencyFields.map((agency, idx) => (
+                  <div key={agency.id} className="flex items-center gap-2">
+                    <FormField control={form.control} name={`collaborating_agencies.${idx}.name`} render={({ field }) => (
+                      <FormItem className="flex-1">
+                        <FormControl><Input {...field} className="h-8 text-[10px]" placeholder="Agency name" disabled={isViewOnly} /></FormControl>
+                      </FormItem>
+                    )} />
+                    {!isViewOnly && (
+                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeCollaboratingAgency(idx)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
 
             <div className="space-y-3 rounded-md border border-border/50 p-3">
               <div className="flex items-center justify-between">
@@ -952,26 +979,26 @@ export function ProjectForm({
             <div className="space-y-3 rounded-md border border-border/50 p-3">
               <div>
                 <h3 className="text-[10px] font-semibold">Funding Fields</h3>
-                <p className="text-[10px] text-muted-foreground">Fields marked for report generation (AB for internal/external, B for external-only).</p>
+                <p className="text-[10px] text-muted-foreground">Funding details for reporting.</p>
               </div>
 
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <FormField control={form.control} name="funding_title" render={({ field }) => (
-                  <FormItem><FormLabel className="text-[10px]">Title (AB)</FormLabel><FormControl><Input {...field} className="h-8 text-[10px]" disabled={isViewOnly} /></FormControl></FormItem>
+                  <FormItem><FormLabel className="text-[10px]">Title</FormLabel><FormControl><Input {...field} className="h-8 text-[10px]" disabled={isViewOnly} /></FormControl></FormItem>
                 )} />
                 <FormField control={form.control} name="funding_location" render={({ field }) => (
-                  <FormItem><FormLabel className="text-[10px]">Location (AB)</FormLabel><FormControl><Input {...field} className="h-8 text-[10px]" disabled={isViewOnly} /></FormControl></FormItem>
+                  <FormItem><FormLabel className="text-[10px]">Location</FormLabel><FormControl><Input {...field} className="h-8 text-[10px]" disabled={isViewOnly} /></FormControl></FormItem>
                 )} />
                 <FormField control={form.control} name="funding_types_of_clientele" render={({ field }) => (
-                  <FormItem><FormLabel className="text-[10px]">Types of Clientele (AB)</FormLabel><FormControl><Input {...field} className="h-8 text-[10px]" disabled={isViewOnly} /></FormControl></FormItem>
+                  <FormItem><FormLabel className="text-[10px]">Types of Clientele</FormLabel><FormControl><Input {...field} className="h-8 text-[10px]" disabled={isViewOnly} /></FormControl></FormItem>
                 )} />
                 <FormField control={form.control} name="funding_number_of_clientele" render={({ field }) => (
-                  <FormItem><FormLabel className="text-[10px]">Number of Clientele (AB)</FormLabel><FormControl><Input type="number" value={typeof field.value === "number" ? field.value : ""} onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))} className="h-8 text-[10px]" disabled={isViewOnly} /></FormControl></FormItem>
+                  <FormItem><FormLabel className="text-[10px]">Number of Clientele</FormLabel><FormControl><Input type="number" value={typeof field.value === "number" ? field.value : ""} onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))} className="h-8 text-[10px]" disabled={isViewOnly} /></FormControl></FormItem>
                 )} />
               </div>
 
               <div className="space-y-2">
-                <FormLabel className="text-[10px]">Duration inclusive dates (AB)</FormLabel>
+                <FormLabel className="text-[10px]">Duration inclusive dates</FormLabel>
                 <FormField control={form.control} name="funding_inclusive_dates" render={({ field }) => {
                   const selectedDates = sortDates((field.value || []) as Date[]);
                   const start = selectedDates[0];
@@ -1009,19 +1036,19 @@ export function ProjectForm({
 
               <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                 <FormField control={form.control} name="funding_re_council_approved_date" render={({ field }) => (
-                  <FormItem><FormLabel className="text-[10px]">Date approved by R&E Council (AB)</FormLabel><DatePickerField value={field.value || null} onChange={(d) => field.onChange(d)} disabled={isViewOnly} /></FormItem>
+                  <FormItem><FormLabel className="text-[10px]">Date approved by R&E Council</FormLabel><DatePickerField value={field.value || null} onChange={(d) => field.onChange(d)} disabled={isViewOnly} /></FormItem>
                 )} />
                 <FormField control={form.control} name="funding_bor_op_approved_date" render={({ field }) => (
-                  <FormItem><FormLabel className="text-[10px]">Date approved by Board of Regents / OP (AB)</FormLabel><DatePickerField value={field.value || null} onChange={(d) => field.onChange(d)} disabled={isViewOnly} /></FormItem>
+                  <FormItem><FormLabel className="text-[10px]">Date approved by Board of Regents / OP</FormLabel><DatePickerField value={field.value || null} onChange={(d) => field.onChange(d)} disabled={isViewOnly} /></FormItem>
                 )} />
                 <FormField control={form.control} name="funding_inception_meeting_date" render={({ field }) => (
-                  <FormItem><FormLabel className="text-[10px]">Date of inception meeting (AB)</FormLabel><DatePickerField value={field.value || null} onChange={(d) => field.onChange(d)} disabled={isViewOnly} /></FormItem>
+                  <FormItem><FormLabel className="text-[10px]">Date of inception meeting</FormLabel><DatePickerField value={field.value || null} onChange={(d) => field.onChange(d)} disabled={isViewOnly} /></FormItem>
                 )} />
               </div>
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <FormLabel className="text-[10px]">Beneficiaries (AB)</FormLabel>
+                  <FormLabel className="text-[10px]">Beneficiaries</FormLabel>
                   {!isViewOnly && (
                     <Button type="button" variant="outline" size="sm" className="h-7 text-[10px]" onClick={() => appendBeneficiary({ name: "" })}>
                       <Plus className="mr-1 h-3 w-3" /> Add
@@ -1051,7 +1078,7 @@ export function ProjectForm({
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <FormField control={form.control} name="funding_sdg_goals" render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-[10px]">SDGs (AB)</FormLabel>
+                    <FormLabel className="text-[10px]">SDGs</FormLabel>
                     <div className="grid grid-cols-2 gap-1">
                       {sdgOptions.map((goal) => (
                         <label key={goal.id} className="flex items-center gap-1 rounded-md border border-border/50 px-2 py-1">
@@ -1064,7 +1091,7 @@ export function ProjectForm({
                 )} />
                 <FormField control={form.control} name="funding_thematic_area" render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-[10px]">Thematic area (AB)</FormLabel>
+                    <FormLabel className="text-[10px]">Thematic area</FormLabel>
                     <div className="grid grid-cols-1 gap-1">
                       {thematicAreaOptions.map((option) => (
                         <label key={option} className="flex items-center gap-2 rounded-md border border-border/50 px-2 py-1.5">
@@ -1079,36 +1106,36 @@ export function ProjectForm({
 
               {hasExternalPartnership && (
                 <div className="space-y-3 rounded-md border border-border/50 p-3 bg-muted/10">
-                  <h4 className="text-[10px] font-semibold">External-only Fields (B)</h4>
+                  <h4 className="text-[10px] font-semibold">External Fields</h4>
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                     <FormField control={form.control} name="external_function_nature" render={({ field }) => (
-                      <FormItem><FormLabel className="text-[10px]">Function / Nature of Involvement (B)</FormLabel><FormControl><Textarea {...field} className="min-h-[56px] text-[10px]" disabled={isViewOnly} /></FormControl></FormItem>
+                      <FormItem><FormLabel className="text-[10px]">Function / Nature of Involvement</FormLabel><FormControl><Textarea {...field} className="min-h-[56px] text-[10px]" disabled={isViewOnly} /></FormControl></FormItem>
                     )} />
                     <FormField control={form.control} name="external_funding_agency" render={({ field }) => (
-                      <FormItem><FormLabel className="text-[10px]">Funding Agency (B)</FormLabel><FormControl><Input {...field} className="h-8 text-[10px]" disabled={isViewOnly} /></FormControl></FormItem>
+                      <FormItem><FormLabel className="text-[10px]">Funding Agency</FormLabel><FormControl><Input {...field} className="h-8 text-[10px]" disabled={isViewOnly} /></FormControl></FormItem>
                     )} />
                     <FormField control={form.control} name="external_approved_budget_cvsu" render={({ field }) => (
-                      <FormItem><FormLabel className="text-[10px]">Approved Budget - CvSU (B)</FormLabel><FormControl><Input type="number" value={typeof field.value === "number" ? field.value : ""} onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))} className="h-8 text-[10px]" disabled={isViewOnly} /></FormControl></FormItem>
+                      <FormItem><FormLabel className="text-[10px]">Approved Budget - CvSU</FormLabel><FormControl><Input type="number" value={typeof field.value === "number" ? field.value : ""} onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))} className="h-8 text-[10px]" disabled={isViewOnly} /></FormControl></FormItem>
                     )} />
                     <FormField control={form.control} name="external_counterpart_budget_cvsu" render={({ field }) => (
-                      <FormItem><FormLabel className="text-[10px]">Counterpart Budget - CvSU (Optional, B)</FormLabel><FormControl><Input type="number" value={typeof field.value === "number" ? field.value : ""} onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))} className="h-8 text-[10px]" disabled={isViewOnly} /></FormControl></FormItem>
+                      <FormItem><FormLabel className="text-[10px]">Counterpart Budget - CvSU (Optional)</FormLabel><FormControl><Input type="number" value={typeof field.value === "number" ? field.value : ""} onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))} className="h-8 text-[10px]" disabled={isViewOnly} /></FormControl></FormItem>
                     )} />
                     <FormItem>
                       <FormLabel className="text-[10px]">Total Budget (Auto, B)</FormLabel>
                       <FormControl><Input value={String(Number(externalApprovedBudget || 0) + Number(externalCounterpartBudget || 0))} readOnly disabled className="h-8 text-[10px] bg-muted/20" /></FormControl>
                     </FormItem>
                     <FormField control={form.control} name="external_date_approved_funding_agency" render={({ field }) => (
-                      <FormItem><FormLabel className="text-[10px]">Date Approved by the Funding Agency (B)</FormLabel><DatePickerField value={field.value || null} onChange={(d) => field.onChange(d)} disabled={isViewOnly} /></FormItem>
+                      <FormItem><FormLabel className="text-[10px]">Date Approved by the Funding Agency</FormLabel><DatePickerField value={field.value || null} onChange={(d) => field.onChange(d)} disabled={isViewOnly} /></FormItem>
                     )} />
                     <FormField control={form.control} name="external_date_inception_meeting" render={({ field }) => (
-                      <FormItem><FormLabel className="text-[10px]">Date of Inception Meeting (B)</FormLabel><DatePickerField value={field.value || null} onChange={(d) => field.onChange(d)} disabled={isViewOnly} /></FormItem>
+                      <FormItem><FormLabel className="text-[10px]">Date of Inception Meeting</FormLabel><DatePickerField value={field.value || null} onChange={(d) => field.onChange(d)} disabled={isViewOnly} /></FormItem>
                     )} />
                   </div>
                 </div>
               )}
 
               <div className="space-y-2 rounded-md border border-border/50 p-3">
-                <h4 className="text-[10px] font-semibold">Awards Section (AB)</h4>
+                <h4 className="text-[10px] font-semibold">Awards Section</h4>
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                   <FormField control={form.control} name="awards_title" render={({ field }) => (
                     <FormItem><FormLabel className="text-[10px]">Title Awards</FormLabel><FormControl><Input {...field} className="h-8 text-[10px]" disabled={isViewOnly} /></FormControl></FormItem>
@@ -1123,12 +1150,6 @@ export function ProjectForm({
                     <FormItem><FormLabel className="text-[10px]">Remarks (Date Picker)</FormLabel><DatePickerField value={field.value || null} onChange={(d) => field.onChange(d)} disabled={isViewOnly} /></FormItem>
                   )} />
                 </div>
-                <FormField control={form.control} name="funding_documents" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-[10px]">Upload doc</FormLabel>
-                    <FormControl><FileUpload value={field.value || []} onChange={field.onChange} disabled={isViewOnly || isSubmitting} maxFiles={10} /></FormControl>
-                  </FormItem>
-                )} />
               </div>
             </div>
 
@@ -1182,3 +1203,4 @@ export function ProjectForm({
     </Form>
   );
 }
+

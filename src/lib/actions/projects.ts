@@ -102,6 +102,25 @@ export async function createProject(formData: object) {
         .select();
 
     if (error) {
+        if (error.message?.toLowerCase().includes("funding_data") && error.message?.toLowerCase().includes("schema cache")) {
+            const fallbackPayload = { ...payload };
+            delete fallbackPayload.funding_data;
+            const { data: fallbackData, error: fallbackError } = await supabase
+                .from("projects")
+                .insert([
+                    {
+                        ...fallbackPayload,
+                        created_by: user.id,
+                    },
+                ])
+                .select();
+            if (fallbackError) {
+                console.error("Error creating project (fallback):", fallbackError);
+                return { error: fallbackError.message };
+            }
+            revalidatePath("/dashboard");
+            return { data: fallbackData };
+        }
         console.error("Error creating project:", error);
         return { error: error.message };
     }
@@ -360,6 +379,24 @@ export async function updateProject(id: string, formData: object) {
         .select();
 
     if (error) {
+        if (error.message?.toLowerCase().includes("funding_data") && error.message?.toLowerCase().includes("schema cache")) {
+            const fallbackPayload = { ...payload };
+            delete fallbackPayload.funding_data;
+            const { data: fallbackData, error: fallbackError } = await adminClient
+                .from("projects")
+                .update({
+                    ...fallbackPayload,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq("id", id)
+                .select();
+            if (fallbackError) {
+                console.error("Error updating project (fallback):", fallbackError);
+                return { error: fallbackError.message };
+            }
+            revalidatePath("/dashboard");
+            return { data: fallbackData };
+        }
         console.error("Error updating project:", error);
         return { error: error.message };
     }

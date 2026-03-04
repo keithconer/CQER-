@@ -264,7 +264,7 @@ export default async function DashboardPage({
             <FundingManagement
               projects={projects}
               title="Funding"
-              description="Filter funding rows by Internal (AB) or External (AB + B)."
+              description="Filter funding rows by Internal or External."
             />
           ) : activePanel === "student-involvement" ? (
             <StudentInvolvementManagement
@@ -335,7 +335,7 @@ export default async function DashboardPage({
           <FundingManagement
             projects={unitProjects}
             title="Funding"
-            description="Filter funding rows by Internal (AB) or External (AB + B)."
+            description="Filter funding rows by Internal or External."
           />
         ) : activePanel === "student-involvement" ? (
           <StudentInvolvementManagement
