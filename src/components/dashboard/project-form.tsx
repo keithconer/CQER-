@@ -115,6 +115,7 @@ const schema = z.object({
   project_title: z.string().min(1),
   project_leader: z.string().min(1),
   co_project_leaders: z.array(z.object({ name: z.string().min(1) })).default([]),
+  project_assistants: z.array(z.object({ name: z.string().min(1) })).default([]),
   moa_no: z.string().optional().refine((v) => !v || /^\d+$/.test(v), "Numbers only"),
   moa_category: z.enum(moaCategoryOptions),
   date_approved: z.date(),
@@ -148,6 +149,7 @@ interface LooseProject {
   contact_details?: string | null;
   proponents?: { name?: string | null }[] | null;
   co_project_leaders?: { name?: string | null }[] | null;
+  project_assistants?: { name?: string | null }[] | null;
   related_curricular_offerings?: string[] | null;
   partner_agencies?: Array<Record<string, unknown>> | null;
   visibility_scope?: "public" | "specific_units" | null;
@@ -281,6 +283,7 @@ function buildPayload(values: FormValues) {
     major: "",
     proponents: [{ name: values.project_leader }],
     co_project_leaders: values.co_project_leaders,
+    project_assistants: values.project_assistants,
     college: "CEIT",
     collaborating_agencies: values.partner_agencies.map((a) => a.agency_name).join(", "),
     target_beneficiaries: [],
@@ -346,6 +349,9 @@ export function ProjectForm({
       co_project_leaders: Array.isArray(project?.co_project_leaders)
         ? project.co_project_leaders.map((item) => ({ name: item?.name || "" }))
         : [],
+      project_assistants: Array.isArray(project?.project_assistants)
+        ? project.project_assistants.map((item) => ({ name: item?.name || "" }))
+        : [],
       moa_no: project?.moa_no || "",
       moa_category: initialMoaCategory,
       date_approved: project?.date_approved ? new Date(project.date_approved) : new Date(),
@@ -387,6 +393,14 @@ export function ProjectForm({
   } = useFieldArray({
     control: form.control,
     name: "co_project_leaders",
+  });
+  const {
+    fields: assistantFields,
+    append: appendAssistant,
+    remove: removeAssistant,
+  } = useFieldArray({
+    control: form.control,
+    name: "project_assistants",
   });
 
   const partners = useWatch({ control: form.control, name: "partner_agencies" });
@@ -478,6 +492,35 @@ export function ProjectForm({
                       )} />
                       {!isViewOnly && (
                         <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeCoLeader(idx)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <FormLabel className="text-[10px]">Project assistant</FormLabel>
+                  {!isViewOnly && (
+                    <Button type="button" variant="outline" size="sm" className="h-7 text-[10px]" onClick={() => appendAssistant({ name: "" })}>
+                      <Plus className="mr-1 h-3 w-3" /> Add
+                    </Button>
+                  )}
+                </div>
+                {assistantFields.length === 0 ? (
+                  <p className="text-[10px] text-muted-foreground">No project assistant added.</p>
+                ) : (
+                  assistantFields.map((assistant, idx) => (
+                    <div key={assistant.id} className="flex items-center gap-2">
+                      <FormField control={form.control} name={`project_assistants.${idx}.name`} render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormControl><Input {...field} className="h-8 text-[10px] placeholder:text-[10px]" placeholder="Full name" disabled={isViewOnly} /></FormControl>
+                          <FormMessage className="text-[10px]" />
+                        </FormItem>
+                      )} />
+                      {!isViewOnly && (
+                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeAssistant(idx)}>
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       )}

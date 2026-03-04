@@ -93,6 +93,7 @@ const schema = z
     agenda_classification: z.array(z.string()).min(1, "Select at least one"),
     project_leader: z.string().min(1, "Required"),
     co_project_leaders: z.array(z.object({ name: z.string().min(1) })).default([]),
+    project_assistants: z.array(z.object({ name: z.string().min(1) })).default([]),
     department_label: z.string().min(1),
     collaborating_agency: z.string().min(1, "Required"),
     target_beneficiaries: z.array(z.string()).min(1, "Select at least one"),
@@ -124,6 +125,7 @@ interface LooseProposal {
   classification?: string[] | null;
   proponents?: { name?: string | null }[] | null;
   co_project_leaders?: { name?: string | null }[] | null;
+  project_assistants?: { name?: string | null }[] | null;
   proposal_department?: string | null;
   proposal_unit?: string | null;
   collaborating_agencies?: string | null;
@@ -169,6 +171,9 @@ export function ProjectProposalForm({
       co_project_leaders: Array.isArray(proposal?.co_project_leaders)
         ? proposal.co_project_leaders.map((item) => ({ name: item?.name || "" }))
         : [],
+      project_assistants: Array.isArray(proposal?.project_assistants)
+        ? proposal.project_assistants.map((item) => ({ name: item?.name || "" }))
+        : [],
       department_label:
         `${proposal?.proposal_department || currentDepartment || "N/A"}${proposal?.proposal_unit || currentUnit ? ` / ${proposal?.proposal_unit || currentUnit}` : ""}`,
       collaborating_agency: proposal?.collaborating_agencies || "",
@@ -191,6 +196,10 @@ export function ProjectProposalForm({
     control: form.control,
     name: "co_project_leaders",
   });
+  const { fields: assistantFields, append: appendAssistant, remove: removeAssistant } = useFieldArray({
+    control: form.control,
+    name: "project_assistants",
+  });
   const { fields: facultyFields, append: appendFaculty, remove: removeFaculty } = useFieldArray({
     control: form.control,
     name: "faculty_involved",
@@ -209,6 +218,7 @@ export function ProjectProposalForm({
         classification: values.agenda_classification,
         proponents: [{ name: values.project_leader }],
         co_project_leaders: values.co_project_leaders,
+        project_assistants: values.project_assistants,
         proposal_department: currentDepartment || null,
         proposal_unit: currentUnit || null,
         lead_units: currentDepartment ? [currentDepartment] : [],
@@ -336,6 +346,41 @@ export function ProjectProposalForm({
                       />
                       {!isViewOnly && (
                         <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeCoLeader(idx)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <FormLabel className="text-[10px]">Project assistant</FormLabel>
+                  {!isViewOnly && (
+                    <Button type="button" variant="outline" size="sm" className="h-7 text-[10px]" onClick={() => appendAssistant({ name: "" })}>
+                      <Plus className="mr-1 h-3 w-3" /> Add
+                    </Button>
+                  )}
+                </div>
+                {assistantFields.length === 0 ? (
+                  <p className="text-[10px] text-muted-foreground">No project assistant added.</p>
+                ) : (
+                  assistantFields.map((assistant, idx) => (
+                    <div key={assistant.id} className="flex items-center gap-2">
+                      <FormField
+                        control={form.control}
+                        name={`project_assistants.${idx}.name`}
+                        render={({ field }) => (
+                          <FormItem className="flex-1">
+                            <FormControl>
+                              <Input {...field} className="h-8 text-[10px] placeholder:text-[10px]" placeholder="Full name" disabled={isViewOnly} />
+                            </FormControl>
+                            <FormMessage className="text-[10px]" />
+                          </FormItem>
+                        )}
+                      />
+                      {!isViewOnly && (
+                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeAssistant(idx)}>
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       )}

@@ -476,6 +476,22 @@ $$;
 -- END COPY: Project Proposal Module Fields
 -- ============================================================
 
+-- ============================================================
+-- START COPY: Project Assistant Field (Registration + Proposal)
+-- ============================================================
+-- Shared proponents field for both Project Registration and Project Proposal forms.
+alter table public.projects
+add column if not exists project_assistants jsonb default '[]'::jsonb;
+
+update public.projects
+set project_assistants = coalesce(project_assistants, '[]'::jsonb);
+
+alter table public.projects
+alter column project_assistants set default '[]'::jsonb;
+-- ============================================================
+-- END COPY: Project Assistant Field (Registration + Proposal)
+-- ============================================================
+
 -- ============================================
 -- PDF Upload Enhancement
 -- Run this in Supabase SQL Editor
