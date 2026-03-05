@@ -165,7 +165,7 @@ export default async function DashboardPage({
         .order("created_at", { ascending: false }),
       adminClient
         .from("projects")
-        .select("id, created_by, entry_type, title, classification, sdg_goals, academic_program, major, proponents, co_project_leaders, college, collaborating_agencies, target_beneficiaries, community_location, start_date, end_date, category, funding_source, lead_units, related_curricular_offerings, visibility_scope, visible_units, budget_total, budget_requirements, gad_score, documents")
+        .select("*")
         .order("created_at", { ascending: false }),
     ]);
 
