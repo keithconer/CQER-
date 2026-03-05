@@ -42,14 +42,41 @@ type FundingFilter = "internal" | "external";
 type FundingData = Record<string, unknown>;
 type FilledField = { label: string; value: string };
 
-function getFundingType(project: Project): FundingFilter {
-  const source = (project.funding_source || "").toLowerCase();
-  if (source.includes("internal")) return "internal";
-  return "external";
-}
-
 function getFundingData(project: Project): FundingData {
   return ((project as unknown as { funding_data?: FundingData }).funding_data || {}) as FundingData;
+}
+
+function getFundingType(project: Project): Exclude<FundingFilter | "all", "all"> {
+  const source = (project.funding_source || "").toLowerCase();
+  if (source.includes("external")) return "external";
+  if (source.includes("internal")) return "internal";
+
+  const fundingData = getFundingData(project);
+  const hasExternalHints =
+    Number(fundingData.external_approved_budget_cvsu || 0) > 0 ||
+    Number(fundingData.external_counterpart_budget_cvsu || 0) > 0 ||
+    Boolean(fundingData.external_funding_agency) ||
+    Boolean(fundingData.external_function_nature);
+  return hasExternalHints ? "external" : "internal";
+}
+
+function getTotalBudget(project: Project, fundingData: FundingData): number {
+  const approved = Number(fundingData.external_approved_budget_cvsu || 0);
+  const counterpart = Number(fundingData.external_counterpart_budget_cvsu || 0);
+  const combined = approved + counterpart;
+  if (combined > 0) return combined;
+
+  const budgetFromFundingData = Number(fundingData.total_budget ?? fundingData.budget_total ?? 0);
+  if (budgetFromFundingData > 0) return budgetFromFundingData;
+
+  const budgetFromProject = Number(project.budget_total ?? 0);
+  if (budgetFromProject > 0) return budgetFromProject;
+
+  return combined;
+}
+
+function formatPeso(value: number): string {
+  return new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(value);
 }
 
 function toText(value: unknown): string {
@@ -76,10 +103,10 @@ function toText(value: unknown): string {
 
 function getFilledFields(project: Project): FilledField[] {
   const fundingData = getFundingData(project);
-  const approved = Number(fundingData.external_approved_budget_cvsu || 0);
-  const counterpart = Number(fundingData.external_counterpart_budget_cvsu || 0);
-  const totalBudget = approved + counterpart;
+  const type = getFundingType(project);
+  const totalBudget = getTotalBudget(project, fundingData);
   const fields: FilledField[] = [
+    { label: "NOP", value: type === "internal" ? "Internal" : "External" },
     { label: "Project No.", value: toText(project.project_no || fundingData.project_no) },
     { label: "MOA Category", value: toText(project.category) },
     { label: "Collaborating Agency/ies", value: toText(project.collaborating_agencies || fundingData.collaborating_agencies) },
@@ -87,14 +114,14 @@ function getFilledFields(project: Project): FilledField[] {
     { label: "Location", value: toText(fundingData.location) },
     { label: "Types of Clientele", value: toText(fundingData.types_of_clientele) },
     { label: "No. of Clientele", value: toText(fundingData.number_of_clientele) },
-    { label: "Funding Type", value: getFundingType(project) === "internal" ? "Internal" : "External" },
+    { label: "Funding Type", value: type === "internal" ? "Internal" : "External" },
   ];
 
-  if (getFundingType(project) === "external") {
-    fields.push({ label: "Function/Nature", value: toText(fundingData.external_function_nature) });
+  if (type === "external") {
+    fields.push({ label: "Function/Nature of Involvement", value: toText(fundingData.external_function_nature) });
     fields.push({
       label: "Total Budget",
-      value: new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(totalBudget),
+      value: formatPeso(totalBudget),
     });
     fields.push({ label: "Funding Agency", value: toText(fundingData.external_funding_agency) });
   }
@@ -108,10 +135,9 @@ function toExportRows(projects: Project[], type: FundingFilter) {
     .filter((project) => getFundingType(project) === type)
     .map((project) => {
       const fundingData = getFundingData(project);
-      const approved = Number(fundingData.external_approved_budget_cvsu || 0);
-      const counterpart = Number(fundingData.external_counterpart_budget_cvsu || 0);
-      const totalBudget = approved + counterpart;
+      const totalBudget = getTotalBudget(project, fundingData);
       return {
+        NOP: type === "internal" ? "Internal" : "External",
         "Project No.": toText(project.project_no || fundingData.project_no) || "-",
         "Category of MOA": toText(project.category) || "-",
         "Collaborating Agency/ies": toText(project.collaborating_agencies || fundingData.collaborating_agencies) || "-",
@@ -119,10 +145,10 @@ function toExportRows(projects: Project[], type: FundingFilter) {
         Location: toText(fundingData.location) || "-",
         "Types of Clientele": toText(fundingData.types_of_clientele) || "-",
         "No. of Clientele": toText(fundingData.number_of_clientele) || "-",
-        "Function/Nature": type === "external" ? toText(fundingData.external_function_nature) || "-" : "-",
+        "Function/Nature of Involvement": type === "external" ? toText(fundingData.external_function_nature) || "-" : "-",
         "Total Budget":
           type === "external"
-            ? new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(totalBudget)
+            ? formatPeso(totalBudget)
             : "-",
         "Funding Agency": type === "external" ? toText(fundingData.external_funding_agency) || "-" : "-",
       };
@@ -135,7 +161,7 @@ export function FundingManagement({
   description = "Filter and view funding fields for reporting.",
 }: FundingManagementProps) {
   const [searchTerm, setSearchTerm] = React.useState("");
-  const [filter, setFilter] = React.useState<FundingFilter>("internal");
+  const [filter, setFilter] = React.useState<FundingFilter | "all">("all");
   const [viewProject, setViewProject] = React.useState<Project | null>(null);
   const [showExportDialog, setShowExportDialog] = React.useState(false);
   const [exportInternal, setExportInternal] = React.useState(true);
@@ -146,10 +172,11 @@ export function FundingManagement({
     const term = searchTerm.toLowerCase();
     return projects
       .filter((project) => (project.entry_type || "project") === "project")
-      .filter((project) => getFundingType(project) === filter)
+      .filter((project) => (filter === "all" ? true : getFundingType(project) === filter))
       .filter((project) => {
         const fundingData = getFundingData(project);
         return [
+          getFundingType(project) === "internal" ? "internal" : "external",
           project.title || "",
           String(project.project_no || ""),
           String(project.moa_no || ""),
@@ -157,6 +184,7 @@ export function FundingManagement({
           String((fundingData?.location as string) || ""),
           String((fundingData?.types_of_clientele as string) || ""),
           String((fundingData?.external_funding_agency as string) || ""),
+          String((fundingData?.external_function_nature as string) || ""),
         ]
           .join(" ")
           .toLowerCase()
@@ -165,8 +193,8 @@ export function FundingManagement({
   }, [filter, projects, searchTerm]);
 
   const handleOpenExportDialog = () => {
-    setExportInternal(filter === "internal");
-    setExportExternal(filter === "external");
+    setExportInternal(filter !== "external");
+    setExportExternal(filter !== "internal");
     setShowExportDialog(true);
   };
 
@@ -191,6 +219,7 @@ export function FundingManagement({
         const rows = toExportRows(projects, type);
         const worksheet = workbook.addWorksheet(type === "internal" ? "Internal Funding" : "External Funding");
         const columns = [
+          { header: "NOP", key: "NOP", width: 14 },
           { header: "Project No.", key: "Project No.", width: 18 },
           { header: "Category of MOA", key: "Category of MOA", width: 20 },
           { header: "Collaborating Agency/ies", key: "Collaborating Agency/ies", width: 28 },
@@ -198,7 +227,7 @@ export function FundingManagement({
           { header: "Location", key: "Location", width: 24 },
           { header: "Types of Clientele", key: "Types of Clientele", width: 24 },
           { header: "No. of Clientele", key: "No. of Clientele", width: 18 },
-          { header: "Function/Nature", key: "Function/Nature", width: 28 },
+          { header: "Function/Nature of Involvement", key: "Function/Nature of Involvement", width: 34 },
           { header: "Total Budget", key: "Total Budget", width: 18 },
           { header: "Funding Agency", key: "Funding Agency", width: 24 },
         ];
@@ -287,11 +316,14 @@ export function FundingManagement({
                 <DropdownMenuContent align="end" className="w-52">
                   <DropdownMenuLabel className="text-[10px]">Funding Type</DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  <DropdownMenuCheckboxItem className="text-[10px]" checked={filter === "all"} onCheckedChange={() => setFilter("all")}>
+                    All
+                  </DropdownMenuCheckboxItem>
                   <DropdownMenuCheckboxItem className="text-[10px]" checked={filter === "internal"} onCheckedChange={() => setFilter("internal")}>
-                    Internal
+                    Internally funded
                   </DropdownMenuCheckboxItem>
                   <DropdownMenuCheckboxItem className="text-[10px]" checked={filter === "external"} onCheckedChange={() => setFilter("external")}>
-                    External
+                    Externally funded
                   </DropdownMenuCheckboxItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -307,6 +339,7 @@ export function FundingManagement({
             <Table>
               <TableHeader className="bg-muted/30">
                 <TableRow className="hover:bg-transparent border-border/50">
+                  <TableHead className="text-[10px] font-semibold h-9">NOP</TableHead>
                   <TableHead className="text-[10px] font-semibold h-9">Project No.</TableHead>
                   <TableHead className="text-[10px] font-semibold h-9">Category of MOA</TableHead>
                   <TableHead className="text-[10px] font-semibold h-9">Collaborating Agency/ies</TableHead>
@@ -314,9 +347,9 @@ export function FundingManagement({
                   <TableHead className="text-[10px] font-semibold h-9">Location</TableHead>
                   <TableHead className="text-[10px] font-semibold h-9">Types of Clientele</TableHead>
                   <TableHead className="text-[10px] font-semibold h-9">No. of Clientele</TableHead>
-                  {filter === "external" && <TableHead className="text-[10px] font-semibold h-9">Function/Nature</TableHead>}
-                  {filter === "external" && <TableHead className="text-[10px] font-semibold h-9">Total Budget</TableHead>}
-                  {filter === "external" && <TableHead className="text-[10px] font-semibold h-9">Funding Agency</TableHead>}
+                  {filter !== "internal" && <TableHead className="text-[10px] font-semibold h-9">Function/Nature of Involvement</TableHead>}
+                  {filter !== "internal" && <TableHead className="text-[10px] font-semibold h-9">Total Budget</TableHead>}
+                  {filter !== "internal" && <TableHead className="text-[10px] font-semibold h-9">Funding Agency</TableHead>}
                   <TableHead className="text-[10px] font-semibold h-9 text-right">View</TableHead>
                 </TableRow>
               </TableHeader>
@@ -324,11 +357,11 @@ export function FundingManagement({
                 {records.length > 0 ? (
                   records.map((project) => {
                     const fundingData = getFundingData(project);
-                    const approved = Number(fundingData.external_approved_budget_cvsu || 0);
-                    const counterpart = Number(fundingData.external_counterpart_budget_cvsu || 0);
-                    const totalBudget = approved + counterpart;
+                    const type = getFundingType(project);
+                    const totalBudget = getTotalBudget(project, fundingData);
                     return (
                       <TableRow key={project.id} className="hover:bg-muted/10 border-border/30">
+                        <TableCell className="text-[10px] py-2.5 px-3">{type === "internal" ? "Internal" : "External"}</TableCell>
                         <TableCell className="text-[10px] py-2.5 px-3">{String(project.project_no || fundingData.project_no || "-")}</TableCell>
                         <TableCell className="text-[10px] py-2.5 px-3">{String(project.category || "-")}</TableCell>
                         <TableCell className="text-[10px] py-2.5 px-3">{String(project.collaborating_agencies || fundingData.collaborating_agencies || "-")}</TableCell>
@@ -336,9 +369,9 @@ export function FundingManagement({
                         <TableCell className="text-[10px] py-2.5 px-3">{String(fundingData.location || "-")}</TableCell>
                         <TableCell className="text-[10px] py-2.5 px-3">{String(fundingData.types_of_clientele || "-")}</TableCell>
                         <TableCell className="text-[10px] py-2.5 px-3">{String(fundingData.number_of_clientele ?? "-")}</TableCell>
-                        {filter === "external" && <TableCell className="text-[10px] py-2.5 px-3">{String(fundingData.external_function_nature || "-")}</TableCell>}
-                        {filter === "external" && <TableCell className="text-[10px] py-2.5 px-3">{new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(totalBudget)}</TableCell>}
-                        {filter === "external" && <TableCell className="text-[10px] py-2.5 px-3">{String(fundingData.external_funding_agency || "-")}</TableCell>}
+                        {filter !== "internal" && <TableCell className="text-[10px] py-2.5 px-3">{type === "external" ? String(fundingData.external_function_nature || "-") : "-"}</TableCell>}
+                        {filter !== "internal" && <TableCell className="text-[10px] py-2.5 px-3">{totalBudget > 0 ? formatPeso(totalBudget) : "-"}</TableCell>}
+                        {filter !== "internal" && <TableCell className="text-[10px] py-2.5 px-3">{type === "external" ? String(fundingData.external_funding_agency || "-") : "-"}</TableCell>}
                         <TableCell className="py-2.5 px-3 text-right">
                           <Button
                             variant="ghost"
@@ -355,7 +388,7 @@ export function FundingManagement({
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={filter === "external" ? 11 : 8} className="h-24 text-center text-[10px] text-muted-foreground">
+                    <TableCell colSpan={filter !== "internal" ? 12 : 9} className="h-24 text-center text-[10px] text-muted-foreground">
                       No funding records found.
                     </TableCell>
                   </TableRow>
