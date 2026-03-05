@@ -43,7 +43,131 @@ type FundingData = Record<string, unknown>;
 type FilledField = { label: string; value: string };
 
 function getFundingData(project: Project): FundingData {
-  return ((project as unknown as { funding_data?: FundingData }).funding_data || {}) as FundingData;
+  const raw = (project as unknown as { funding_data?: unknown }).funding_data;
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) return raw as FundingData;
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed as FundingData;
+    } catch {
+      // Keep empty object fallback when invalid JSON.
+    }
+  }
+  return {};
+}
+
+function pickValue(data: FundingData, ...keys: string[]): unknown {
+  for (const key of keys) {
+    if (Object.prototype.hasOwnProperty.call(data, key) && data[key] != null && String(data[key]).trim() !== "") {
+      return data[key];
+    }
+  }
+  return "";
+}
+
+function toDate(value: unknown): Date | null {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+  if (typeof value === "string" || typeof value === "number") {
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+  }
+  return null;
+}
+
+function formatDate(value: unknown): string {
+  const date = toDate(value);
+  if (!date) return "";
+  return new Intl.DateTimeFormat("en-PH", { month: "short", day: "numeric", year: "numeric" }).format(date);
+}
+
+function formatNameList(value: unknown): string {
+  if (!Array.isArray(value)) return "";
+  return value
+    .map((item) => {
+      if (typeof item === "string") return item.trim();
+      if (item && typeof item === "object" && "name" in item) return String((item as { name?: unknown }).name || "").trim();
+      return "";
+    })
+    .filter(Boolean)
+    .join(", ");
+}
+
+function formatStringList(value: unknown): string {
+  if (!Array.isArray(value)) return "";
+  return value
+    .map((item) => String(item || "").trim())
+    .filter(Boolean)
+    .join(", ");
+}
+
+function formatInclusiveDates(data: FundingData): { range: string; duration: string } {
+  const inclusiveDates = pickValue(data, "inclusive_dates", "funding_inclusive_dates");
+  const startDate = pickValue(data, "start_date", "funding_start_date");
+  const endDate = pickValue(data, "end_date", "funding_end_date");
+  const durationDays = pickValue(data, "duration_days", "funding_duration_days");
+
+  if (Array.isArray(inclusiveDates) && inclusiveDates.length > 0) {
+    const parsedDates = inclusiveDates
+      .map((item) => {
+        if (item && typeof item === "object") {
+          const candidate = (item as { date?: unknown; value?: unknown }).date ?? (item as { value?: unknown }).value ?? item;
+          return toDate(candidate);
+        }
+        return toDate(item);
+      })
+      .filter((date): date is Date => Boolean(date))
+      .sort((a, b) => a.getTime() - b.getTime());
+
+    if (parsedDates.length > 0) {
+      const first = parsedDates[0];
+      const last = parsedDates[parsedDates.length - 1];
+      return {
+        range: `${formatDate(first)} to ${formatDate(last)}`,
+        duration: `${parsedDates.length} day(s)`,
+      };
+    }
+  }
+
+  const parsedStart = formatDate(startDate);
+  const parsedEnd = formatDate(endDate);
+  if (parsedStart && parsedEnd) {
+    return {
+      range: `${parsedStart} to ${parsedEnd}`,
+      duration: durationDays ? `${String(durationDays)} day(s)` : "",
+    };
+  }
+
+  return { range: "", duration: durationDays ? `${String(durationDays)} day(s)` : "" };
+}
+
+function getFundingDetails(project: Project) {
+  const fundingData = getFundingData(project);
+  const type = getFundingType(project);
+  const totalBudget = getTotalBudget(project, fundingData);
+  const dates = formatInclusiveDates(fundingData);
+
+  return {
+    type,
+    nop: type === "internal" ? "Internal" : "External",
+    projectNo: toText(project.project_no || pickValue(fundingData, "project_no")),
+    category: toText(project.category),
+    collaboratingAgencies: toText(project.collaborating_agencies || pickValue(fundingData, "collaborating_agencies")),
+    title: toText(pickValue(fundingData, "title", "funding_title") || project.title),
+    location: toText(pickValue(fundingData, "location", "funding_location")),
+    typesOfClientele: toText(pickValue(fundingData, "types_of_clientele", "funding_types_of_clientele")),
+    numberOfClientele: toText(pickValue(fundingData, "number_of_clientele", "funding_number_of_clientele")),
+    inclusiveDateRange: dates.range,
+    durationDays: dates.duration,
+    dateApprovedRECouncil: formatDate(pickValue(fundingData, "date_approved_re_council", "funding_re_council_approved_date")),
+    dateApprovedBOROP: formatDate(pickValue(fundingData, "date_approved_bor_op", "funding_bor_op_approved_date")),
+    dateInceptionMeeting: formatDate(pickValue(fundingData, "date_inception_meeting", "funding_inception_meeting_date")),
+    beneficiaries: formatNameList(pickValue(fundingData, "beneficiaries", "funding_beneficiaries")),
+    sdgs: formatStringList(pickValue(fundingData, "sdg_goals", "funding_sdg_goals")),
+    thematicArea: formatStringList(pickValue(fundingData, "thematic_area", "funding_thematic_area")),
+    functionNature: toText(pickValue(fundingData, "external_function_nature")),
+    fundingAgency: toText(pickValue(fundingData, "external_funding_agency")),
+    totalBudget: totalBudget > 0 ? formatPeso(totalBudget) : "",
+  };
 }
 
 function getFundingType(project: Project): Exclude<FundingFilter | "all", "all"> {
@@ -102,28 +226,31 @@ function toText(value: unknown): string {
 }
 
 function getFilledFields(project: Project): FilledField[] {
-  const fundingData = getFundingData(project);
-  const type = getFundingType(project);
-  const totalBudget = getTotalBudget(project, fundingData);
+  const details = getFundingDetails(project);
   const fields: FilledField[] = [
-    { label: "NOP", value: type === "internal" ? "Internal" : "External" },
-    { label: "Project No.", value: toText(project.project_no || fundingData.project_no) },
-    { label: "MOA Category", value: toText(project.category) },
-    { label: "Collaborating Agency/ies", value: toText(project.collaborating_agencies || fundingData.collaborating_agencies) },
-    { label: "Title", value: toText(fundingData.title || project.title) },
-    { label: "Location", value: toText(fundingData.location) },
-    { label: "Types of Clientele", value: toText(fundingData.types_of_clientele) },
-    { label: "No. of Clientele", value: toText(fundingData.number_of_clientele) },
-    { label: "Funding Type", value: type === "internal" ? "Internal" : "External" },
+    { label: "NOP", value: details.nop },
+    { label: "Project No.", value: details.projectNo },
+    { label: "MOA Category", value: details.category },
+    { label: "Collaborating Agency/ies", value: details.collaboratingAgencies },
+    { label: "Title", value: details.title },
+    { label: "Location", value: details.location },
+    { label: "Types of Clientele", value: details.typesOfClientele },
+    { label: "No. of Clientele", value: details.numberOfClientele },
+    { label: "Inclusive Dates", value: details.inclusiveDateRange },
+    { label: "Duration", value: details.durationDays },
+    { label: "Date approved by R&E Council", value: details.dateApprovedRECouncil },
+    { label: "Date approved by Board of Regents / OP", value: details.dateApprovedBOROP },
+    { label: "Date of inception meeting", value: details.dateInceptionMeeting },
+    { label: "Beneficiaries", value: details.beneficiaries },
+    { label: "SDGs", value: details.sdgs },
+    { label: "Thematic Area", value: details.thematicArea },
+    { label: "Funding Type", value: details.nop },
   ];
 
-  if (type === "external") {
-    fields.push({ label: "Function/Nature of Involvement", value: toText(fundingData.external_function_nature) });
-    fields.push({
-      label: "Total Budget",
-      value: formatPeso(totalBudget),
-    });
-    fields.push({ label: "Funding Agency", value: toText(fundingData.external_funding_agency) });
+  if (details.type === "external") {
+    fields.push({ label: "Function/Nature of Involvement", value: details.functionNature });
+    fields.push({ label: "Total Budget", value: details.totalBudget });
+    fields.push({ label: "Funding Agency", value: details.fundingAgency });
   }
 
   return fields.filter((entry) => entry.value.trim().length > 0);
@@ -134,23 +261,27 @@ function toExportRows(projects: Project[], type: FundingFilter) {
     .filter((project) => (project.entry_type || "project") === "project")
     .filter((project) => getFundingType(project) === type)
     .map((project) => {
-      const fundingData = getFundingData(project);
-      const totalBudget = getTotalBudget(project, fundingData);
+      const details = getFundingDetails(project);
       return {
-        NOP: type === "internal" ? "Internal" : "External",
-        "Project No.": toText(project.project_no || fundingData.project_no) || "-",
-        "Category of MOA": toText(project.category) || "-",
-        "Collaborating Agency/ies": toText(project.collaborating_agencies || fundingData.collaborating_agencies) || "-",
-        Title: toText(fundingData.title || project.title) || "-",
-        Location: toText(fundingData.location) || "-",
-        "Types of Clientele": toText(fundingData.types_of_clientele) || "-",
-        "No. of Clientele": toText(fundingData.number_of_clientele) || "-",
-        "Function/Nature of Involvement": type === "external" ? toText(fundingData.external_function_nature) || "-" : "-",
-        "Total Budget":
-          type === "external"
-            ? formatPeso(totalBudget)
-            : "-",
-        "Funding Agency": type === "external" ? toText(fundingData.external_funding_agency) || "-" : "-",
+        NOP: details.nop || "-",
+        "Project No.": details.projectNo || "-",
+        "Category of MOA": details.category || "-",
+        "Collaborating Agency/ies": details.collaboratingAgencies || "-",
+        Title: details.title || "-",
+        Location: details.location || "-",
+        "Types of Clientele": details.typesOfClientele || "-",
+        "No. of Clientele": details.numberOfClientele || "-",
+        "Inclusive Dates": details.inclusiveDateRange || "-",
+        "Duration (days)": details.durationDays || "-",
+        "Date approved by R&E Council": details.dateApprovedRECouncil || "-",
+        "Date approved by Board of Regents / OP": details.dateApprovedBOROP || "-",
+        "Date of inception meeting": details.dateInceptionMeeting || "-",
+        Beneficiaries: details.beneficiaries || "-",
+        SDGs: details.sdgs || "-",
+        "Thematic Area": details.thematicArea || "-",
+        "Function/Nature of Involvement": type === "external" ? details.functionNature || "-" : "-",
+        "Total Budget": type === "external" ? details.totalBudget || "-" : "-",
+        "Funding Agency": type === "external" ? details.fundingAgency || "-" : "-",
       };
     });
 }
@@ -174,17 +305,27 @@ export function FundingManagement({
       .filter((project) => (project.entry_type || "project") === "project")
       .filter((project) => (filter === "all" ? true : getFundingType(project) === filter))
       .filter((project) => {
-        const fundingData = getFundingData(project);
+        const details = getFundingDetails(project);
         return [
-          getFundingType(project) === "internal" ? "internal" : "external",
-          project.title || "",
-          String(project.project_no || ""),
-          String(project.moa_no || ""),
-          String((fundingData?.title as string) || ""),
-          String((fundingData?.location as string) || ""),
-          String((fundingData?.types_of_clientele as string) || ""),
-          String((fundingData?.external_funding_agency as string) || ""),
-          String((fundingData?.external_function_nature as string) || ""),
+          details.nop,
+          details.projectNo,
+          details.category,
+          details.collaboratingAgencies,
+          details.title,
+          details.location,
+          details.typesOfClientele,
+          details.numberOfClientele,
+          details.inclusiveDateRange,
+          details.durationDays,
+          details.dateApprovedRECouncil,
+          details.dateApprovedBOROP,
+          details.dateInceptionMeeting,
+          details.beneficiaries,
+          details.sdgs,
+          details.thematicArea,
+          details.fundingAgency,
+          details.functionNature,
+          details.totalBudget,
         ]
           .join(" ")
           .toLowerCase()
@@ -227,6 +368,14 @@ export function FundingManagement({
           { header: "Location", key: "Location", width: 24 },
           { header: "Types of Clientele", key: "Types of Clientele", width: 24 },
           { header: "No. of Clientele", key: "No. of Clientele", width: 18 },
+          { header: "Inclusive Dates", key: "Inclusive Dates", width: 28 },
+          { header: "Duration (days)", key: "Duration (days)", width: 16 },
+          { header: "Date approved by R&E Council", key: "Date approved by R&E Council", width: 26 },
+          { header: "Date approved by Board of Regents / OP", key: "Date approved by Board of Regents / OP", width: 32 },
+          { header: "Date of inception meeting", key: "Date of inception meeting", width: 24 },
+          { header: "Beneficiaries", key: "Beneficiaries", width: 30 },
+          { header: "SDGs", key: "SDGs", width: 30 },
+          { header: "Thematic Area", key: "Thematic Area", width: 30 },
           { header: "Function/Nature of Involvement", key: "Function/Nature of Involvement", width: 34 },
           { header: "Total Budget", key: "Total Budget", width: 18 },
           { header: "Funding Agency", key: "Funding Agency", width: 24 },
@@ -347,6 +496,14 @@ export function FundingManagement({
                   <TableHead className="text-[10px] font-semibold h-9">Location</TableHead>
                   <TableHead className="text-[10px] font-semibold h-9">Types of Clientele</TableHead>
                   <TableHead className="text-[10px] font-semibold h-9">No. of Clientele</TableHead>
+                  <TableHead className="text-[10px] font-semibold h-9">Inclusive Dates</TableHead>
+                  <TableHead className="text-[10px] font-semibold h-9">Duration</TableHead>
+                  <TableHead className="text-[10px] font-semibold h-9">Date approved by R&E Council</TableHead>
+                  <TableHead className="text-[10px] font-semibold h-9">Date approved by Board of Regents / OP</TableHead>
+                  <TableHead className="text-[10px] font-semibold h-9">Date of inception meeting</TableHead>
+                  <TableHead className="text-[10px] font-semibold h-9">Beneficiaries</TableHead>
+                  <TableHead className="text-[10px] font-semibold h-9">SDGs</TableHead>
+                  <TableHead className="text-[10px] font-semibold h-9">Thematic Area</TableHead>
                   {filter !== "internal" && <TableHead className="text-[10px] font-semibold h-9">Function/Nature of Involvement</TableHead>}
                   {filter !== "internal" && <TableHead className="text-[10px] font-semibold h-9">Total Budget</TableHead>}
                   {filter !== "internal" && <TableHead className="text-[10px] font-semibold h-9">Funding Agency</TableHead>}
@@ -356,22 +513,28 @@ export function FundingManagement({
               <TableBody>
                 {records.length > 0 ? (
                   records.map((project) => {
-                    const fundingData = getFundingData(project);
-                    const type = getFundingType(project);
-                    const totalBudget = getTotalBudget(project, fundingData);
+                    const details = getFundingDetails(project);
                     return (
                       <TableRow key={project.id} className="hover:bg-muted/10 border-border/30">
-                        <TableCell className="text-[10px] py-2.5 px-3">{type === "internal" ? "Internal" : "External"}</TableCell>
-                        <TableCell className="text-[10px] py-2.5 px-3">{String(project.project_no || fundingData.project_no || "-")}</TableCell>
-                        <TableCell className="text-[10px] py-2.5 px-3">{String(project.category || "-")}</TableCell>
-                        <TableCell className="text-[10px] py-2.5 px-3">{String(project.collaborating_agencies || fundingData.collaborating_agencies || "-")}</TableCell>
-                        <TableCell className="text-[10px] py-2.5 px-3">{String(fundingData.title || project.title || "-")}</TableCell>
-                        <TableCell className="text-[10px] py-2.5 px-3">{String(fundingData.location || "-")}</TableCell>
-                        <TableCell className="text-[10px] py-2.5 px-3">{String(fundingData.types_of_clientele || "-")}</TableCell>
-                        <TableCell className="text-[10px] py-2.5 px-3">{String(fundingData.number_of_clientele ?? "-")}</TableCell>
-                        {filter !== "internal" && <TableCell className="text-[10px] py-2.5 px-3">{type === "external" ? String(fundingData.external_function_nature || "-") : "-"}</TableCell>}
-                        {filter !== "internal" && <TableCell className="text-[10px] py-2.5 px-3">{totalBudget > 0 ? formatPeso(totalBudget) : "-"}</TableCell>}
-                        {filter !== "internal" && <TableCell className="text-[10px] py-2.5 px-3">{type === "external" ? String(fundingData.external_funding_agency || "-") : "-"}</TableCell>}
+                        <TableCell className="text-[10px] py-2.5 px-3">{details.nop || "-"}</TableCell>
+                        <TableCell className="text-[10px] py-2.5 px-3">{details.projectNo || "-"}</TableCell>
+                        <TableCell className="text-[10px] py-2.5 px-3">{details.category || "-"}</TableCell>
+                        <TableCell className="text-[10px] py-2.5 px-3">{details.collaboratingAgencies || "-"}</TableCell>
+                        <TableCell className="text-[10px] py-2.5 px-3">{details.title || "-"}</TableCell>
+                        <TableCell className="text-[10px] py-2.5 px-3">{details.location || "-"}</TableCell>
+                        <TableCell className="text-[10px] py-2.5 px-3">{details.typesOfClientele || "-"}</TableCell>
+                        <TableCell className="text-[10px] py-2.5 px-3">{details.numberOfClientele || "-"}</TableCell>
+                        <TableCell className="text-[10px] py-2.5 px-3">{details.inclusiveDateRange || "-"}</TableCell>
+                        <TableCell className="text-[10px] py-2.5 px-3">{details.durationDays || "-"}</TableCell>
+                        <TableCell className="text-[10px] py-2.5 px-3">{details.dateApprovedRECouncil || "-"}</TableCell>
+                        <TableCell className="text-[10px] py-2.5 px-3">{details.dateApprovedBOROP || "-"}</TableCell>
+                        <TableCell className="text-[10px] py-2.5 px-3">{details.dateInceptionMeeting || "-"}</TableCell>
+                        <TableCell className="text-[10px] py-2.5 px-3">{details.beneficiaries || "-"}</TableCell>
+                        <TableCell className="text-[10px] py-2.5 px-3">{details.sdgs || "-"}</TableCell>
+                        <TableCell className="text-[10px] py-2.5 px-3">{details.thematicArea || "-"}</TableCell>
+                        {filter !== "internal" && <TableCell className="text-[10px] py-2.5 px-3">{details.type === "external" ? details.functionNature || "-" : "-"}</TableCell>}
+                        {filter !== "internal" && <TableCell className="text-[10px] py-2.5 px-3">{details.totalBudget || "-"}</TableCell>}
+                        {filter !== "internal" && <TableCell className="text-[10px] py-2.5 px-3">{details.type === "external" ? details.fundingAgency || "-" : "-"}</TableCell>}
                         <TableCell className="py-2.5 px-3 text-right">
                           <Button
                             variant="ghost"
@@ -388,7 +551,7 @@ export function FundingManagement({
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={filter !== "internal" ? 12 : 9} className="h-24 text-center text-[10px] text-muted-foreground">
+                    <TableCell colSpan={filter !== "internal" ? 20 : 17} className="h-24 text-center text-[10px] text-muted-foreground">
                       No funding records found.
                     </TableCell>
                   </TableRow>
