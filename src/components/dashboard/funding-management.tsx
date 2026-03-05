@@ -100,7 +100,7 @@ function formatStringList(value: unknown): string {
     .join(", ");
 }
 
-function formatInclusiveDates(data: FundingData): { range: string; duration: string } {
+function formatInclusiveDates(data: FundingData): { range: string; duration: string; selectedDates: string } {
   const inclusiveDates = pickValue(data, "inclusive_dates", "funding_inclusive_dates");
   const startDate = pickValue(data, "start_date", "funding_start_date");
   const endDate = pickValue(data, "end_date", "funding_end_date");
@@ -124,6 +124,7 @@ function formatInclusiveDates(data: FundingData): { range: string; duration: str
       return {
         range: `${formatDate(first)} to ${formatDate(last)}`,
         duration: `${parsedDates.length} day(s)`,
+        selectedDates: parsedDates.map((date) => formatDate(date)).join(", "),
       };
     }
   }
@@ -134,10 +135,11 @@ function formatInclusiveDates(data: FundingData): { range: string; duration: str
     return {
       range: `${parsedStart} to ${parsedEnd}`,
       duration: durationDays ? `${String(durationDays)} day(s)` : "",
+      selectedDates: "",
     };
   }
 
-  return { range: "", duration: durationDays ? `${String(durationDays)} day(s)` : "" };
+  return { range: "", duration: durationDays ? `${String(durationDays)} day(s)` : "", selectedDates: "" };
 }
 
 function getFundingDetails(project: Project) {
@@ -156,7 +158,7 @@ function getFundingDetails(project: Project) {
     location: toText(pickValue(fundingData, "location", "funding_location")),
     typesOfClientele: toText(pickValue(fundingData, "types_of_clientele", "funding_types_of_clientele")),
     numberOfClientele: toText(pickValue(fundingData, "number_of_clientele", "funding_number_of_clientele")),
-    inclusiveDateRange: dates.range,
+    inclusiveDateRange: dates.selectedDates || dates.range,
     durationDays: dates.duration,
     dateApprovedRECouncil: formatDate(pickValue(fundingData, "date_approved_re_council", "funding_re_council_approved_date")),
     dateApprovedBOROP: formatDate(pickValue(fundingData, "date_approved_bor_op", "funding_bor_op_approved_date")),

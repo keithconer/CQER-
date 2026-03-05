@@ -922,9 +922,14 @@ export function ProjectForm({
                               </PopoverContent>
                             </Popover>
                             {selectedDates.length > 0 && (
-                              <p className="text-[10px] text-muted-foreground">
-                                Start: {format(start, "MMM d, yyyy")} | End: {format(end, "MMM d, yyyy")} | Selected days: {selectedDates.length}
-                              </p>
+                              <div className="space-y-1 text-[10px] text-muted-foreground">
+                                <p>
+                                  Start: {format(start, "MMM d, yyyy")} | End: {format(end, "MMM d, yyyy")} | Duration (days): {selectedDates.length}
+                                </p>
+                                <p className="break-words">
+                                  Selected dates: {selectedDates.map((date) => format(date, "MMM d, yyyy")).join(", ")}
+                                </p>
+                              </div>
                             )}
                             <FormMessage className="text-[10px]" />
                           </FormItem>
@@ -1025,9 +1030,14 @@ export function ProjectForm({
                         </PopoverContent>
                       </Popover>
                       {selectedDates.length > 0 && (
-                        <p className="text-[10px] text-muted-foreground">
-                          Start: {format(start, "MMM d, yyyy")} | End: {format(end, "MMM d, yyyy")} | Duration (days): {selectedDates.length}
-                        </p>
+                        <div className="space-y-1 text-[10px] text-muted-foreground">
+                          <p>
+                            Start: {format(start, "MMM d, yyyy")} | End: {format(end, "MMM d, yyyy")} | Duration (days): {selectedDates.length}
+                          </p>
+                          <p className="break-words">
+                            Selected dates: {selectedDates.map((date) => format(date, "MMM d, yyyy")).join(", ")}
+                          </p>
+                        </div>
                       )}
                     </FormItem>
                   );
