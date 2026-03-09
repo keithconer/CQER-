@@ -434,7 +434,7 @@ export function ProjectsTable({
       )}
 
       <Dialog open={!!viewProject} onOpenChange={(open) => !open && setViewProject(null)}>
-        <DialogContent className="sm:max-w-[920px] p-6 max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[920px] p-6 max-h-[90vh] overflow-hidden">
           <DialogHeader className="pb-2">
             <DialogTitle className="text-sm font-semibold">{recordLabel} Details</DialogTitle>
             <DialogDescription className="text-[10px]">Viewing complete information for {viewProject?.title}</DialogDescription>
