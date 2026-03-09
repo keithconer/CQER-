@@ -359,30 +359,36 @@ export function ProjectsTable({
                           )
                         )}
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="icon"
-                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                          className="h-7 w-7 border-border/50"
+                          title="View"
+                          aria-label="View project"
                           onClick={() => setViewProject(project)}
                         >
-                          <Eye className="h-3.5 w-3.5" />
+                          <Eye className="h-3 w-3" />
                         </Button>
                         {!readOnly && (!currentUserId || project.created_by === currentUserId) && (
                           <>
                             <Button
-                              variant="ghost"
+                              variant="outline"
                               size="icon"
-                              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                              className="h-7 w-7 border-border/50"
+                              title="Update"
+                              aria-label="Update project"
                               onClick={() => setEditProject(project)}
                             >
-                              <Pencil className="h-3.5 w-3.5" />
+                              <Pencil className="h-3 w-3" />
                             </Button>
                             <Button
-                              variant="ghost"
+                              variant="outline"
                               size="icon"
-                              className="h-7 w-7 text-destructive hover:text-destructive/80 hover:bg-destructive/10"
+                              className="h-7 w-7 border-border/50 text-destructive"
+                              title="Delete"
+                              aria-label="Delete project"
                               onClick={() => setDeleteId(project.id)}
                             >
-                              <Trash2 className="h-3.5 w-3.5" />
+                              <Trash2 className="h-3 w-3" />
                             </Button>
                           </>
                         )}

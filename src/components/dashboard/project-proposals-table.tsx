@@ -278,16 +278,37 @@ export function ProjectProposalsTable({
                   {!readOnly && (
                     <TableCell className="py-2.5 px-3 text-right">
                       <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => setViewProposal(proposal)}>
-                          <Eye className="h-3.5 w-3.5" />
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7 border-border/50"
+                          title="View"
+                          aria-label="View project proposal"
+                          onClick={() => setViewProposal(proposal)}
+                        >
+                          <Eye className="h-3 w-3" />
                         </Button>
                         {(!currentUserId || proposal.created_by === currentUserId) && (
                           <>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => setEditProposal(proposal)}>
-                              <Pencil className="h-3.5 w-3.5" />
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-7 w-7 border-border/50"
+                              title="Update"
+                              aria-label="Update project proposal"
+                              onClick={() => setEditProposal(proposal)}
+                            >
+                              <Pencil className="h-3 w-3" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive/80 hover:bg-destructive/10" onClick={() => setDeleteId(proposal.id)}>
-                              <Trash2 className="h-3.5 w-3.5" />
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-7 w-7 border-border/50 text-destructive"
+                              title="Delete"
+                              aria-label="Delete project proposal"
+                              onClick={() => setDeleteId(proposal.id)}
+                            >
+                              <Trash2 className="h-3 w-3" />
                             </Button>
                           </>
                         )}
