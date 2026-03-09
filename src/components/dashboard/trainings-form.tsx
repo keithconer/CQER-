@@ -32,6 +32,15 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { FileUpload } from "./file-upload";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 
 const sdgOptions = [
   { id: "Goal 1", label: "Goal 1 - No Poverty" },
@@ -87,7 +96,19 @@ const disabilityTypes = [
   "Other",
 ];
 
-const numField = z.coerce.number().int().min(0).default(0);
+const numField = z
+  .preprocess(
+    (value) => (value === "" || value === null || typeof value === "undefined" ? undefined : value),
+    z.coerce.number().int().min(0).optional()
+  )
+  .transform((value) => value ?? 0);
+
+const decimalField = z
+  .preprocess(
+    (value) => (value === "" || value === null || typeof value === "undefined" ? undefined : value),
+    z.coerce.number().min(0).optional()
+  )
+  .transform((value) => value ?? 0);
 
 const schema = z
   .object({
@@ -142,17 +163,17 @@ const schema = z
       .default([]),
     tvl_total_persons_trained: numField,
     conducted_days_count: numField,
-    days_multiplier: z.coerce.number().min(0).default(0),
-    weighted_days_trained: z.coerce.number().min(0).default(0),
-    days_trained_per_weight: z.coerce.number().min(0).default(0),
+    days_multiplier: decimalField,
+    weighted_days_trained: decimalField,
+    days_trained_per_weight: decimalField,
     total_trainees_surveyed: numField,
     rating_relevance: z.coerce.number().int().min(1).max(5),
     rating_equality: z.coerce.number().int().min(1).max(5),
     rating_timeliness: z.coerce.number().int().min(1).max(5),
     total_clients_requesting_trainings: numField,
     total_requests_responded_next_3_days: numField,
-    amount_charged_to_cvsu: z.coerce.number().min(0).default(0),
-    amount_charged_to_partner_agency: z.coerce.number().min(0).default(0),
+    amount_charged_to_cvsu: decimalField,
+    amount_charged_to_partner_agency: decimalField,
     partner_agencies: z.array(z.string()).default([]),
     thematic_area: z.array(z.string()).default([]),
     remarks: z.string().default(""),
@@ -369,44 +390,44 @@ export function TrainingsForm({
       training_category: record?.training_category || "TVL",
       training_category_other: record?.training_category_other || "",
       training_mode: record?.training_mode || "FTF",
-      faculty_male: record?.faculty_male ?? 0,
-      faculty_female: record?.faculty_female ?? 0,
-      non_academic_male: record?.non_academic_male ?? 0,
-      non_academic_female: record?.non_academic_female ?? 0,
-      cvsu_students_male: record?.cvsu_students_male ?? 0,
-      cvsu_students_female: record?.cvsu_students_female ?? 0,
-      partner_agencies_male: record?.partner_agencies_male ?? 0,
-      partner_agencies_female: record?.partner_agencies_female ?? 0,
-      participants_prefer_not_say: record?.participants_prefer_not_say ?? 0,
+      faculty_male: record?.faculty_male,
+      faculty_female: record?.faculty_female,
+      non_academic_male: record?.non_academic_male,
+      non_academic_female: record?.non_academic_female,
+      cvsu_students_male: record?.cvsu_students_male,
+      cvsu_students_female: record?.cvsu_students_female,
+      partner_agencies_male: record?.partner_agencies_male,
+      partner_agencies_female: record?.partner_agencies_female,
+      participants_prefer_not_say: record?.participants_prefer_not_say,
       participants_male_total: record?.participants_male_total ?? 0,
       participants_female_total: record?.participants_female_total ?? 0,
       participants_overall_total: record?.participants_overall_total ?? 0,
-      category_student: record?.category_student ?? 0,
-      category_farmer: record?.category_farmer ?? 0,
-      category_fisherfolk: record?.category_fisherfolk ?? 0,
-      category_ag_technical: record?.category_ag_technical ?? 0,
-      category_government_employee: record?.category_government_employee ?? 0,
-      category_private_employee: record?.category_private_employee ?? 0,
-      category_4ps: record?.category_4ps ?? 0,
-      category_others: record?.category_others ?? 0,
+      category_student: record?.category_student,
+      category_farmer: record?.category_farmer,
+      category_fisherfolk: record?.category_fisherfolk,
+      category_ag_technical: record?.category_ag_technical,
+      category_government_employee: record?.category_government_employee,
+      category_private_employee: record?.category_private_employee,
+      category_4ps: record?.category_4ps,
+      category_others: record?.category_others,
       category_total: record?.category_total ?? 0,
-      tvl_solo_parent: record?.tvl_solo_parent ?? 0,
-      tvl_4ps_members: record?.tvl_4ps_members ?? 0,
-      tvl_disabilities_count: record?.tvl_disabilities_count ?? 0,
+      tvl_solo_parent: record?.tvl_solo_parent,
+      tvl_4ps_members: record?.tvl_4ps_members,
+      tvl_disabilities_count: record?.tvl_disabilities_count,
       tvl_disability_breakdown: record?.tvl_disability_breakdown || [],
       tvl_total_persons_trained: record?.tvl_total_persons_trained ?? 0,
       conducted_days_count: record?.conducted_days_count ?? 0,
       days_multiplier: record?.days_multiplier ?? 0,
       weighted_days_trained: record?.weighted_days_trained ?? 0,
-      days_trained_per_weight: record?.days_trained_per_weight ?? 0,
-      total_trainees_surveyed: record?.total_trainees_surveyed ?? 0,
+      days_trained_per_weight: record?.days_trained_per_weight,
+      total_trainees_surveyed: record?.total_trainees_surveyed,
       rating_relevance: record?.rating_relevance ?? 3,
       rating_equality: record?.rating_equality ?? 3,
       rating_timeliness: record?.rating_timeliness ?? 3,
-      total_clients_requesting_trainings: record?.total_clients_requesting_trainings ?? 0,
-      total_requests_responded_next_3_days: record?.total_requests_responded_next_3_days ?? 0,
-      amount_charged_to_cvsu: record?.amount_charged_to_cvsu ?? 0,
-      amount_charged_to_partner_agency: record?.amount_charged_to_partner_agency ?? 0,
+      total_clients_requesting_trainings: record?.total_clients_requesting_trainings,
+      total_requests_responded_next_3_days: record?.total_requests_responded_next_3_days,
+      amount_charged_to_cvsu: record?.amount_charged_to_cvsu,
+      amount_charged_to_partner_agency: record?.amount_charged_to_partner_agency,
       partner_agencies: toArray(record?.partner_agencies),
       thematic_area: toArray(record?.thematic_area),
       remarks: record?.remarks || "",
@@ -999,7 +1020,7 @@ export function TrainingsForm({
                         value={typeof field.value === "number" ? field.value : ""}
                         onChange={(event) =>
                           field.onChange(
-                            event.target.value === "" ? 0 : Number(event.target.value)
+                            event.target.value === "" ? undefined : Number(event.target.value)
                           )
                         }
                         disabled={isViewOnly}
@@ -1062,7 +1083,7 @@ export function TrainingsForm({
                       min={0}
                       value={typeof field.value === "number" ? field.value : ""}
                       onChange={(event) =>
-                        field.onChange(event.target.value === "" ? 0 : Number(event.target.value))
+                        field.onChange(event.target.value === "" ? undefined : Number(event.target.value))
                       }
                       disabled={isViewOnly}
                       className="h-8 text-[10px]"
@@ -1117,7 +1138,7 @@ export function TrainingsForm({
                         value={typeof field.value === "number" ? field.value : ""}
                         onChange={(event) =>
                           field.onChange(
-                            event.target.value === "" ? 0 : Number(event.target.value)
+                            event.target.value === "" ? undefined : Number(event.target.value)
                           )
                         }
                         disabled={isViewOnly}
@@ -1164,7 +1185,7 @@ export function TrainingsForm({
                         value={typeof field.value === "number" ? field.value : ""}
                         onChange={(event) =>
                           field.onChange(
-                            event.target.value === "" ? 0 : Number(event.target.value)
+                            event.target.value === "" ? undefined : Number(event.target.value)
                           )
                         }
                         disabled={isViewOnly}
@@ -1187,7 +1208,7 @@ export function TrainingsForm({
                         value={typeof field.value === "number" ? field.value : ""}
                         onChange={(event) =>
                           field.onChange(
-                            event.target.value === "" ? 0 : Number(event.target.value)
+                            event.target.value === "" ? undefined : Number(event.target.value)
                           )
                         }
                         disabled={isViewOnly}
@@ -1210,7 +1231,7 @@ export function TrainingsForm({
                         value={typeof field.value === "number" ? field.value : ""}
                         onChange={(event) =>
                           field.onChange(
-                            event.target.value === "" ? 0 : Number(event.target.value)
+                            event.target.value === "" ? undefined : Number(event.target.value)
                           )
                         }
                         disabled={isViewOnly}
@@ -1367,7 +1388,7 @@ export function TrainingsForm({
                       min={0}
                       value={typeof field.value === "number" ? field.value : ""}
                       onChange={(event) =>
-                        field.onChange(event.target.value === "" ? 0 : Number(event.target.value))
+                        field.onChange(event.target.value === "" ? undefined : Number(event.target.value))
                       }
                       disabled={isViewOnly}
                       className="h-8 text-[10px]"
@@ -1388,7 +1409,7 @@ export function TrainingsForm({
                       min={0}
                       value={typeof field.value === "number" ? field.value : ""}
                       onChange={(event) =>
-                        field.onChange(event.target.value === "" ? 0 : Number(event.target.value))
+                        field.onChange(event.target.value === "" ? undefined : Number(event.target.value))
                       }
                       disabled={isViewOnly}
                       className="h-8 text-[10px]"
@@ -1461,7 +1482,7 @@ export function TrainingsForm({
                     min={0}
                     value={typeof field.value === "number" ? field.value : ""}
                     onChange={(event) =>
-                      field.onChange(event.target.value === "" ? 0 : Number(event.target.value))
+                      field.onChange(event.target.value === "" ? undefined : Number(event.target.value))
                     }
                     disabled={isViewOnly}
                     className="h-8 text-[10px]"
@@ -1484,7 +1505,7 @@ export function TrainingsForm({
                     min={0}
                     value={typeof field.value === "number" ? field.value : ""}
                     onChange={(event) =>
-                      field.onChange(event.target.value === "" ? 0 : Number(event.target.value))
+                      field.onChange(event.target.value === "" ? undefined : Number(event.target.value))
                     }
                     disabled={isViewOnly}
                     className="h-8 text-[10px]"
@@ -1512,7 +1533,7 @@ export function TrainingsForm({
                       min={0}
                       value={typeof field.value === "number" ? field.value : ""}
                       onChange={(event) =>
-                        field.onChange(event.target.value === "" ? 0 : Number(event.target.value))
+                        field.onChange(event.target.value === "" ? undefined : Number(event.target.value))
                       }
                       disabled={isViewOnly}
                       className="h-8 text-[10px]"
@@ -1535,7 +1556,7 @@ export function TrainingsForm({
                       min={0}
                       value={typeof field.value === "number" ? field.value : ""}
                       onChange={(event) =>
-                        field.onChange(event.target.value === "" ? 0 : Number(event.target.value))
+                        field.onChange(event.target.value === "" ? undefined : Number(event.target.value))
                       }
                       disabled={isViewOnly}
                       className="h-8 text-[10px]"
@@ -1553,29 +1574,51 @@ export function TrainingsForm({
               <FormItem className="space-y-2">
                 <FormLabel className="text-[10px]">Number of Partner Agency/ies</FormLabel>
                 <div className="rounded-md border border-border/50 p-2 space-y-2">
-                  <p className="text-[10px] text-muted-foreground">
-                    Selected: {(field.value || []).length} agency/ies
-                  </p>
-                  {existingPartnerAgencies.length === 0 ? (
-                    <p className="text-[10px] text-muted-foreground">
-                      No existing partner agencies yet.
-                    </p>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-8 w-full justify-start text-[10px]"
+                        disabled={isViewOnly || existingPartnerAgencies.length === 0}
+                      >
+                        {existingPartnerAgencies.length === 0
+                          ? "No partner agencies available"
+                          : "Select partner agencies"}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-[24rem] max-h-72 overflow-y-auto">
+                      <DropdownMenuLabel className="text-[10px]">Partner Agencies</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
                       {existingPartnerAgencies.map((agency) => (
-                        <label key={agency} className="flex items-center gap-2 text-[10px]">
-                          <Checkbox
-                            checked={(field.value || []).includes(agency)}
-                            disabled={isViewOnly}
-                            onCheckedChange={() =>
-                              field.onChange(toggleArrayItem(field.value || [], agency))
-                            }
-                          />
-                          <span>{agency}</span>
-                        </label>
+                        <DropdownMenuCheckboxItem
+                          key={agency}
+                          className="text-[10px]"
+                          checked={(field.value || []).includes(agency)}
+                          onCheckedChange={() =>
+                            field.onChange(toggleArrayItem(field.value || [], agency))
+                          }
+                        >
+                          {agency}
+                        </DropdownMenuCheckboxItem>
                       ))}
-                    </div>
-                  )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <div className="flex flex-wrap gap-1">
+                    {(field.value || []).length > 0 ? (
+                      (field.value || []).map((agency) => (
+                        <Badge
+                          key={agency}
+                          variant="secondary"
+                          className="text-[10px] font-normal"
+                        >
+                          {agency}
+                        </Badge>
+                      ))
+                    ) : (
+                      <p className="text-[10px] text-muted-foreground">No partner agency selected.</p>
+                    )}
+                  </div>
                 </div>
               </FormItem>
             )}
@@ -1661,3 +1704,4 @@ export function TrainingsForm({
     </Form>
   );
 }
+

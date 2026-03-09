@@ -41,6 +41,29 @@ import {
 import { TrainingsManagement } from "@/components/dashboard/trainings-management";
 import { type TrainingRecord } from "@/components/dashboard/trainings-form";
 
+function extractPartnerAgencyNames(projects: Project[]) {
+  const values = new Set<string>();
+  projects.forEach((project) => {
+    const source = (project as unknown as Record<string, unknown>).partner_agencies;
+    if (!Array.isArray(source)) return;
+    source.forEach((item) => {
+      if (typeof item === "string") {
+        const normalized = item.trim();
+        if (normalized) values.add(normalized);
+        return;
+      }
+      if (item && typeof item === "object") {
+        const maybeName =
+          typeof (item as { agency_name?: unknown }).agency_name === "string"
+            ? (item as { agency_name: string }).agency_name.trim()
+            : "";
+        if (maybeName) values.add(maybeName);
+      }
+    });
+  });
+  return Array.from(values).sort((a, b) => a.localeCompare(b));
+}
+
 export default async function DashboardPage({
   searchParams,
 }: {
@@ -97,6 +120,7 @@ export default async function DashboardPage({
   let technologyRecords: TechnologyRecord[] = [];
   let ordinanceRecords: OrdinanceRecord[] = [];
   let trainingRecords: TrainingRecord[] = [];
+  let trainingPartnerAgencyOptions: string[] = [];
   let collegeUnitCoordinatorAccounts: {
     id: string;
     email: string | null;
@@ -122,6 +146,8 @@ export default async function DashboardPage({
       ordinanceRecords = (await getOrdinances()).data || [];
     } else if (activePanel === "trainings") {
       trainingRecords = (await getTrainings()).data || [];
+      const visibleProjects = (await getUnitProjects()).data || [];
+      trainingPartnerAgencyOptions = extractPartnerAgencyNames(visibleProjects);
     } else if (activePanel === "funding" || hasEntitySelection) {
       const [myProjectsResult, unitProjectsResult] = await Promise.all([
         getProjects(),
@@ -148,6 +174,8 @@ export default async function DashboardPage({
       ordinanceRecords = (await getOrdinances()).data || [];
     } else if (activePanel === "trainings") {
       trainingRecords = (await getTrainings()).data || [];
+      const visibleProjects = (await getCollegeProjects()).data || [];
+      trainingPartnerAgencyOptions = extractPartnerAgencyNames(visibleProjects);
     } else if (activePanel === "funding" || hasEntitySelection) {
       projects = (await getCollegeProjects()).data || [];
     }
@@ -316,6 +344,7 @@ export default async function DashboardPage({
               userType={userType}
               unit={profile.unit}
               unitOptions={availableUnitsForCollege}
+              partnerAgencyOptions={trainingPartnerAgencyOptions}
               currentUserId={user.id}
             />
           ) : hasEntitySelection ? (
@@ -396,6 +425,7 @@ export default async function DashboardPage({
             userType={userType}
             unit={profile.unit}
             unitOptions={[]}
+            partnerAgencyOptions={trainingPartnerAgencyOptions}
             currentUserId={user.id}
           />
         ) : hasEntitySelection ? (

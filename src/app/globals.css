@@ -164,3 +164,14 @@ html[data-font-scale="normal"] {
 .dashboard-main table tbody td {
   font-size: var(--dashboard-table-text-size, 10px) !important;
 }
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}

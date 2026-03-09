@@ -26,18 +26,8 @@ interface TrainingsManagementProps {
   userType?: "super_admin" | "college_coordinator" | "unit_coordinator";
   unit?: string | null;
   unitOptions?: string[];
+  partnerAgencyOptions?: string[];
   currentUserId: string;
-}
-
-function buildPartnerAgencyOptions(records: TrainingRecord[]) {
-  const normalized = new Set<string>();
-  records.forEach((record) => {
-    (record.partner_agencies || []).forEach((agency) => {
-      const value = String(agency || "").trim();
-      if (value) normalized.add(value);
-    });
-  });
-  return Array.from(normalized).sort((a, b) => a.localeCompare(b));
 }
 
 export function TrainingsManagement({
@@ -46,6 +36,7 @@ export function TrainingsManagement({
   userType,
   unit,
   unitOptions = [],
+  partnerAgencyOptions = [],
   currentUserId,
 }: TrainingsManagementProps) {
   const [searchTerm, setSearchTerm] = React.useState("");
@@ -77,11 +68,6 @@ export function TrainingsManagement({
       supabase.removeChannel(channel);
     };
   }, [router]);
-
-  const partnerAgencyOptions = React.useMemo(
-    () => buildPartnerAgencyOptions(initialRecords),
-    [initialRecords]
-  );
 
   const filteredRecords = React.useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
