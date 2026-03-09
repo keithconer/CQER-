@@ -703,7 +703,7 @@ export function TrainingsForm({
                       <Input
                         {...field}
                         disabled={isViewOnly}
-                        className="h-8 pl-7 text-[10px]"
+                        className="h-8 pl-7 text-[10px] placeholder:text-[9px]"
                         placeholder="Full name"
                       />
                     </div>
@@ -724,7 +724,7 @@ export function TrainingsForm({
                       <Input
                         {...field}
                         disabled={isViewOnly}
-                        className="h-8 pl-7 text-[10px]"
+                        className="h-8 pl-7 text-[10px] placeholder:text-[9px]"
                         placeholder="Mobile number or email"
                       />
                     </div>
@@ -794,7 +794,7 @@ export function TrainingsForm({
                     <MapPin className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
                     <Input
                       {...field}
-                      className="h-8 pl-7 text-[10px]"
+                      className="h-8 pl-7 text-[10px] placeholder:text-[9px]"
                       placeholder="Venue or platform"
                       disabled={isViewOnly}
                     />
@@ -890,7 +890,7 @@ export function TrainingsForm({
                           )
                         }
                         disabled={isViewOnly}
-                        className="h-8 pl-7 text-[10px]"
+                        className="h-8 pl-7 text-[10px] placeholder:text-[9px]"
                         placeholder="e.g. 6"
                       />
                     </div>
@@ -911,7 +911,7 @@ export function TrainingsForm({
                 <FormLabel className="text-[10px]">Category of training</FormLabel>
                 <Select value={field.value} onValueChange={field.onChange} disabled={isViewOnly}>
                   <FormControl>
-                    <SelectTrigger className="h-8 text-[10px]">
+                    <SelectTrigger className="h-8 text-[10px] data-[placeholder]:text-[9px]">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                   </FormControl>
@@ -935,7 +935,7 @@ export function TrainingsForm({
                 <FormLabel className="text-[10px]">Mode/Method of training</FormLabel>
                 <Select value={field.value} onValueChange={field.onChange} disabled={isViewOnly}>
                   <FormControl>
-                    <SelectTrigger className="h-8 text-[10px]">
+                    <SelectTrigger className="h-8 text-[10px] data-[placeholder]:text-[9px]">
                       <SelectValue placeholder="Select mode" />
                     </SelectTrigger>
                   </FormControl>
@@ -1266,7 +1266,7 @@ export function TrainingsForm({
                             disabled={isViewOnly}
                           >
                             <FormControl>
-                              <SelectTrigger className="h-8 text-[10px]">
+                              <SelectTrigger className="h-8 text-[10px] data-[placeholder]:text-[9px]">
                                 <SelectValue placeholder="Select disability type" />
                               </SelectTrigger>
                             </FormControl>
@@ -1292,7 +1292,7 @@ export function TrainingsForm({
                             <Input
                               {...field}
                               value={field.value || ""}
-                              className="h-8 text-[10px]"
+                              className="h-8 text-[10px] placeholder:text-[9px]"
                               disabled={isViewOnly}
                               placeholder="e.g. assistive requirement"
                             />
@@ -1664,7 +1664,7 @@ export function TrainingsForm({
                 <Textarea
                   {...field}
                   value={field.value || ""}
-                  className="min-h-[80px] text-[10px] resize-none"
+                  className="min-h-[80px] text-[10px] resize-none placeholder:text-[9px]"
                   disabled={isViewOnly}
                   placeholder="Comments"
                 />
