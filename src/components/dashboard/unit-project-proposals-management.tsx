@@ -105,7 +105,7 @@ export function UnitProjectProposalsManagement({
               <CardTitle className="text-xs font-semibold">Project Proposals</CardTitle>
               <CardDescription className="text-[10px]">Manage project proposals from your unit, including your own records.</CardDescription>
             </div>
-            <Button size="sm" className="h-8 text-xs bg-[#159E44] hover:bg-[#128A3B] text-white" onClick={() => setOpen(true)}>
+            <Button size="sm" className="h-8 text-[10px] bg-[#159E44] hover:bg-[#128A3B] text-white" onClick={() => setOpen(true)}>
               <Plus className="h-3 w-3 mr-1" />
               Create Project Proposal
             </Button>
@@ -152,7 +152,7 @@ export function UnitProjectProposalsManagement({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-[800px] p-6 max-h-[90vh] overflow-hidden">
           <DialogHeader className="pb-2">
-            <DialogTitle className="text-sm font-semibold">Project Proposal Form</DialogTitle>
+            <DialogTitle className="text-xs font-semibold">Project Proposal Form</DialogTitle>
             <DialogDescription className="text-[10px]">Fill out the project proposal form below.</DialogDescription>
           </DialogHeader>
           <ProjectProposalForm
@@ -166,4 +166,3 @@ export function UnitProjectProposalsManagement({
     </div>
   );
 }
-

@@ -144,7 +144,7 @@ export function TrainingsManagement({
             </div>
             <Button
               size="sm"
-              className="h-8 text-xs bg-[#159E44] hover:bg-[#128A3B] text-white"
+              className="h-8 text-[10px] bg-[#159E44] hover:bg-[#128A3B] text-white"
               onClick={() => setCreateOpen(true)}
             >
               <Plus className="h-3 w-3 mr-1" />
@@ -296,7 +296,7 @@ export function TrainingsManagement({
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="sm:max-w-[920px] p-6 max-h-[90vh] overflow-hidden">
           <DialogHeader className="pb-2">
-            <DialogTitle className="text-sm font-semibold flex items-center gap-1.5">
+            <DialogTitle className="text-xs font-semibold flex items-center gap-1.5">
               <GraduationCap className="h-4 w-4" /> Create Training
             </DialogTitle>
             <DialogDescription className="text-[10px]">

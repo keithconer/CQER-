@@ -57,7 +57,7 @@ export function ProjectProposalManagement({
             <CardDescription className="text-[10px]">Manage project proposal records.</CardDescription>
           </div>
           {!readOnly && (
-            <Button size="sm" className="text-xs h-8 bg-[#159E44] hover:bg-[#128A3B] text-white" onClick={() => setOpen(true)}>
+            <Button size="sm" className="text-[10px] h-8 bg-[#159E44] hover:bg-[#128A3B] text-white" onClick={() => setOpen(true)}>
               <Plus className="h-3 w-3 mr-1" />
               Create Project Proposal
             </Button>
@@ -76,7 +76,7 @@ export function ProjectProposalManagement({
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogContent className="sm:max-w-[800px] p-6 max-h-[90vh] overflow-hidden">
             <DialogHeader className="pb-2">
-              <DialogTitle className="text-sm font-semibold">Create Project Proposal</DialogTitle>
+              <DialogTitle className="text-xs font-semibold">Create Project Proposal</DialogTitle>
               <DialogDescription className="text-[10px]">
                 Fill out the form below to register a new project proposal.
               </DialogDescription>
@@ -93,4 +93,3 @@ export function ProjectProposalManagement({
     </div>
   );
 }
-
