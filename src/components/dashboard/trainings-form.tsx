@@ -1172,14 +1172,14 @@ export function TrainingsForm({
 
         {trainingCategory === "TVL" && (
           <div className="space-y-3 rounded-md border border-border/50 p-3">
-            <h3 className="text-[10px] font-semibold">TVL-specific Participants</h3>
+            <h3 className="text-[9px] font-semibold">TVL-specific Participants</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <FormField
                 control={form.control}
                 name="tvl_solo_parent"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-[10px]">No. solo parent</FormLabel>
+                    <FormLabel className="text-[9px]">No. solo parent</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -1191,7 +1191,7 @@ export function TrainingsForm({
                           )
                         }
                         disabled={isViewOnly}
-                        className="h-8 text-[10px]"
+                        className="h-7 text-[9px]"
                       />
                     </FormControl>
                   </FormItem>
@@ -1202,7 +1202,7 @@ export function TrainingsForm({
                 name="tvl_4ps_members"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-[10px]">No. 4Ps members</FormLabel>
+                    <FormLabel className="text-[9px]">No. 4Ps members</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -1214,7 +1214,7 @@ export function TrainingsForm({
                           )
                         }
                         disabled={isViewOnly}
-                        className="h-8 text-[10px]"
+                        className="h-7 text-[9px]"
                       />
                     </FormControl>
                   </FormItem>
@@ -1225,7 +1225,7 @@ export function TrainingsForm({
                 name="tvl_disabilities_count"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-[10px]">No. with disabilities</FormLabel>
+                    <FormLabel className="text-[9px]">No. with disabilities</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -1237,7 +1237,7 @@ export function TrainingsForm({
                           )
                         }
                         disabled={isViewOnly}
-                        className="h-8 text-[10px]"
+                        className="h-7 text-[9px]"
                       />
                     </FormControl>
                   </FormItem>
@@ -1247,7 +1247,7 @@ export function TrainingsForm({
 
             {disabilityFields.fields.length > 0 && (
               <div className="space-y-2 rounded-md border border-border/50 p-3">
-                <p className="text-[10px] font-medium">
+                <p className="text-[9px] font-medium">
                   Disability details per participant ({disabilityFields.fields.length})
                 </p>
                 {disabilityFields.fields.map((field, index) => (
@@ -1257,7 +1257,7 @@ export function TrainingsForm({
                       name={`tvl_disability_breakdown.${index}.disability_type`}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[10px]">
+                          <FormLabel className="text-[9px]">
                             Participant {index + 1} disability type
                           </FormLabel>
                           <Select
@@ -1266,19 +1266,19 @@ export function TrainingsForm({
                             disabled={isViewOnly}
                           >
                             <FormControl>
-                              <SelectTrigger className="h-8 text-[10px] data-[placeholder]:text-[9px]">
+                              <SelectTrigger className="h-7 text-[9px] data-[placeholder]:text-[8px]">
                                 <SelectValue placeholder="Select disability type" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
                               {disabilityTypes.map((option) => (
-                                <SelectItem key={option} value={option} className="text-[10px]">
+                                <SelectItem key={option} value={option} className="text-[9px]">
                                   {option}
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
-                          <FormMessage className="text-[10px]" />
+                          <FormMessage className="text-[9px]" />
                         </FormItem>
                       )}
                     />
@@ -1287,12 +1287,12 @@ export function TrainingsForm({
                       name={`tvl_disability_breakdown.${index}.notes`}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[10px]">Notes (optional)</FormLabel>
+                          <FormLabel className="text-[9px]">Notes (optional)</FormLabel>
                           <FormControl>
                             <Input
                               {...field}
                               value={field.value || ""}
-                              className="h-8 text-[10px] placeholder:text-[9px]"
+                              className="h-7 text-[9px] placeholder:text-[8px]"
                               disabled={isViewOnly}
                               placeholder="e.g. assistive requirement"
                             />
@@ -1309,12 +1309,12 @@ export function TrainingsForm({
               name="tvl_total_persons_trained"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-[10px]">Total of Persons Trained (auto)</FormLabel>
+                  <FormLabel className="text-[9px]">Total of Persons Trained (auto)</FormLabel>
                   <FormControl>
                     <Input
                       value={String(field.value ?? "")}
                       readOnly
-                      className="h-8 text-[10px] bg-muted/30"
+                      className="h-7 text-[9px] bg-muted/30"
                     />
                   </FormControl>
                 </FormItem>
