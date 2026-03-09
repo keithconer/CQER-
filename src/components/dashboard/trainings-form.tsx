@@ -651,7 +651,7 @@ export function TrainingsForm({
           />
         </div>
 
-        <div className="space-y-2 rounded-md border border-border/50 p-3">
+        <div className="mt-2 space-y-2 rounded-md border border-border/50 p-3">
           <FormField
             control={form.control}
             name="lead_units"
