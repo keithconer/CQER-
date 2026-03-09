@@ -83,21 +83,21 @@ export function ProjectManagement({
 
       {!readOnly && (
         <Dialog open={open} onOpenChange={setOpen}>
-              <DialogContent className="sm:max-w-[800px] p-6 max-h-[90vh] overflow-hidden">
-                <DialogHeader className="pb-2">
-                  <DialogTitle className="text-sm font-semibold">Create New {recordLabel}</DialogTitle>
-                  <DialogDescription className="text-[10px]">
-                    Fill out the form below to register a new college extension {recordLabel.toLowerCase()}.
-                  </DialogDescription>
-                </DialogHeader>
-                <ProjectForm
-                  onSuccess={handleSuccess}
-                  currentUserType={userType}
-                  currentDepartment={department}
-                  currentUnit={unit}
-                  unitOptions={unitOptions}
-                />
-              </DialogContent>
+          <DialogContent className="sm:max-w-[920px] p-6 max-h-[90vh] overflow-y-auto">
+            <DialogHeader className="pb-2">
+              <DialogTitle className="text-sm font-semibold">Create New {recordLabel}</DialogTitle>
+              <DialogDescription className="text-[10px]">
+                Fill out the form below to register a new college extension {recordLabel.toLowerCase()}.
+              </DialogDescription>
+            </DialogHeader>
+            <ProjectForm
+              onSuccess={handleSuccess}
+              currentUserType={userType}
+              currentDepartment={department}
+              currentUnit={unit}
+              unitOptions={unitOptions}
+            />
+          </DialogContent>
         </Dialog>
       )}
     </div>

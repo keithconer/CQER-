@@ -1203,13 +1203,27 @@ export function ProjectForm({
       </form>
 
       <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader className="flex flex-col items-center justify-center pt-4">
-            <div className="rounded-full bg-[#159E44]/10 p-3 mb-4"><CheckCircle2 className="h-10 w-10 text-[#159E44]" /></div>
-            <DialogTitle className="text-lg font-semibold text-center">{project?.id ? `${recordLabel} Updated!` : `${recordLabel} Registered!`}</DialogTitle>
-            <DialogDescription className="text-[10px] text-center">{project?.id ? `The ${recordLabel.toLowerCase()} registration has been updated.` : `The ${recordLabel.toLowerCase()} registration has been submitted.`}</DialogDescription>
+        <DialogContent className="sm:max-w-[360px]">
+          <DialogHeader className="items-center text-center">
+            <div className="rounded-full bg-[#159E44]/10 p-2">
+              <CheckCircle2 className="h-7 w-7 text-[#159E44]" />
+            </div>
+            <DialogTitle className="text-sm">{project?.id ? `${recordLabel} Updated!` : `${recordLabel} Registered!`}</DialogTitle>
+            <DialogDescription className="text-[10px]">
+              {project?.id
+                ? `The ${recordLabel.toLowerCase()} registration has been updated.`
+                : `The ${recordLabel.toLowerCase()} registration has been submitted.`}
+            </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="sm:justify-center"><Button type="button" className="bg-[#159E44] hover:bg-[#128A3B] px-8 h-9 text-[10px]" onClick={handleSuccessClose}>Continue</Button></DialogFooter>
+          <DialogFooter className="sm:justify-center">
+            <Button
+              type="button"
+              className="h-8 text-[10px] bg-[#159E44] hover:bg-[#128A3B]"
+              onClick={handleSuccessClose}
+            >
+              Continue
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </Form>

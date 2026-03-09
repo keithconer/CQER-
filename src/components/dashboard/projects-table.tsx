@@ -434,67 +434,63 @@ export function ProjectsTable({
       )}
 
       <Dialog open={!!viewProject} onOpenChange={(open) => !open && setViewProject(null)}>
-        <DialogContent className="sm:max-w-[800px] p-6 max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className="sm:max-w-[920px] p-6 max-h-[90vh] overflow-y-auto">
           <DialogHeader className="pb-2">
             <DialogTitle className="text-sm font-semibold">{recordLabel} Details</DialogTitle>
             <DialogDescription className="text-[10px]">Viewing complete information for {viewProject?.title}</DialogDescription>
           </DialogHeader>
-          <div className="flex-1 overflow-hidden">
-            {viewProject && (
-              <ProjectForm
-                project={viewProject}
-                isViewOnly
-                onSuccess={() => setViewProject(null)}
-                currentUserType={formContext?.userType}
-                currentDepartment={formContext?.department}
-                currentUnit={formContext?.unit}
-                unitOptions={formContext?.unitOptions}
-              />
-            )}
-          </div>
+          {viewProject && (
+            <ProjectForm
+              project={viewProject}
+              isViewOnly
+              onSuccess={() => setViewProject(null)}
+              currentUserType={formContext?.userType}
+              currentDepartment={formContext?.department}
+              currentUnit={formContext?.unit}
+              unitOptions={formContext?.unitOptions}
+            />
+          )}
         </DialogContent>
       </Dialog>
 
       <Dialog open={!!editProject} onOpenChange={(open) => !open && setEditProject(null)}>
-        <DialogContent className="sm:max-w-[800px] p-6 max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className="sm:max-w-[920px] p-6 max-h-[90vh] overflow-y-auto">
           <DialogHeader className="pb-2">
             <DialogTitle className="text-sm font-semibold">Edit {recordLabel}</DialogTitle>
             <DialogDescription className="text-[10px]">Modify {recordLabel.toLowerCase()} information below.</DialogDescription>
           </DialogHeader>
-          <div className="flex-1 overflow-hidden">
-            {editProject && (
-              <ProjectForm
-                project={editProject}
-                currentUserType={formContext?.userType}
-                currentDepartment={formContext?.department}
-                currentUnit={formContext?.unit}
-                unitOptions={formContext?.unitOptions}
-                onSuccess={() => {
-                  setEditProject(null);
-                  router.refresh();
-                }}
-              />
-            )}
-          </div>
+          {editProject && (
+            <ProjectForm
+              project={editProject}
+              currentUserType={formContext?.userType}
+              currentDepartment={formContext?.department}
+              currentUnit={formContext?.unit}
+              unitOptions={formContext?.unitOptions}
+              onSuccess={() => {
+                setEditProject(null);
+                router.refresh();
+              }}
+            />
+          )}
         </DialogContent>
       </Dialog>
 
       <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader className="flex flex-col items-center justify-center pt-4">
-            <div className="rounded-full bg-destructive/10 p-3 mb-4">
-              <AlertTriangle className="h-10 w-10 text-destructive" />
+        <DialogContent className="sm:max-w-[360px]">
+          <DialogHeader className="items-center text-center">
+            <div className="rounded-full bg-destructive/10 p-2">
+              <AlertTriangle className="h-7 w-7 text-destructive" />
             </div>
-            <DialogTitle className="text-lg font-semibold text-center">Delete {recordLabel}?</DialogTitle>
-            <DialogDescription className="text-xs text-center">
+            <DialogTitle className="text-sm">Delete {recordLabel}?</DialogTitle>
+            <DialogDescription className="text-[10px]">
               This action cannot be undone. This will permanently delete the {recordLabel.toLowerCase()} data.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="sm:justify-center gap-2">
-            <Button variant="outline" onClick={() => setDeleteId(null)} className="h-9 text-xs">
+            <Button variant="outline" onClick={() => setDeleteId(null)} className="h-8 text-[10px]">
               Cancel
             </Button>
-            <Button variant="destructive" className="h-9 text-xs px-8" onClick={handleDelete} disabled={isDeleting}>
+            <Button variant="destructive" className="h-8 text-[10px] px-6" onClick={handleDelete} disabled={isDeleting}>
               {isDeleting ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
