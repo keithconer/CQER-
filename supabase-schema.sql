@@ -1100,3 +1100,161 @@ $$;
 -- ============================================================
 -- END COPY: Ordinance or Resolutions
 -- ============================================================
+
+-- ============================================================
+-- START COPY: Trainings Management
+-- ============================================================
+create table if not exists public.trainings (
+  id uuid default gen_random_uuid() primary key,
+  college text not null default 'CEIT',
+  department text not null,
+  lead_units jsonb not null default '[]'::jsonb,
+  contact_person text not null,
+  contact_details text not null,
+  related_curricular_offerings jsonb not null default '[]'::jsonb,
+  training_title text not null,
+  date_mode text not null default 'days',
+  inclusive_dates jsonb not null default '[]'::jsonb,
+  manual_hours numeric(6,2),
+  venue_platform text not null,
+  sdg_goals jsonb not null default '[]'::jsonb,
+  training_category text not null,
+  training_category_other text,
+  training_mode text not null,
+  faculty_male integer not null default 0,
+  faculty_female integer not null default 0,
+  non_academic_male integer not null default 0,
+  non_academic_female integer not null default 0,
+  cvsu_students_male integer not null default 0,
+  cvsu_students_female integer not null default 0,
+  partner_agencies_male integer not null default 0,
+  partner_agencies_female integer not null default 0,
+  participants_prefer_not_say integer not null default 0,
+  participants_male_total integer not null default 0,
+  participants_female_total integer not null default 0,
+  participants_overall_total integer not null default 0,
+  category_student integer not null default 0,
+  category_farmer integer not null default 0,
+  category_fisherfolk integer not null default 0,
+  category_ag_technical integer not null default 0,
+  category_government_employee integer not null default 0,
+  category_private_employee integer not null default 0,
+  category_4ps integer not null default 0,
+  category_others integer not null default 0,
+  category_total integer not null default 0,
+  tvl_solo_parent integer not null default 0,
+  tvl_4ps_members integer not null default 0,
+  tvl_disabilities_count integer not null default 0,
+  tvl_disability_breakdown jsonb not null default '[]'::jsonb,
+  tvl_total_persons_trained integer not null default 0,
+  conducted_days_count integer not null default 0,
+  days_multiplier numeric(6,2) not null default 0,
+  weighted_days_trained numeric(10,2) not null default 0,
+  days_trained_per_weight numeric(10,2) not null default 0,
+  total_trainees_surveyed integer not null default 0,
+  rating_relevance integer not null default 3,
+  rating_equality integer not null default 3,
+  rating_timeliness integer not null default 3,
+  total_clients_requesting_trainings integer not null default 0,
+  total_requests_responded_next_3_days integer not null default 0,
+  amount_charged_to_cvsu numeric(14,2) not null default 0,
+  amount_charged_to_partner_agency numeric(14,2) not null default 0,
+  partner_agencies jsonb not null default '[]'::jsonb,
+  thematic_area jsonb not null default '[]'::jsonb,
+  remarks text,
+  documents jsonb not null default '[]'::jsonb,
+  created_by uuid references public.profiles(id) on delete cascade not null,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'trainings_date_mode_check'
+  ) then
+    alter table public.trainings
+      add constraint trainings_date_mode_check
+      check (date_mode in ('days', 'hours'));
+  end if;
+end
+$$;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'trainings_category_check'
+  ) then
+    alter table public.trainings
+      add constraint trainings_category_check
+      check (training_category in ('TVL', 'CE', 'GAD', 'AE', 'BE', 'OTHERS'));
+  end if;
+end
+$$;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'trainings_mode_check'
+  ) then
+    alter table public.trainings
+      add constraint trainings_mode_check
+      check (training_mode in ('FTF', 'O', 'H'));
+  end if;
+end
+$$;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'trainings_ratings_check'
+  ) then
+    alter table public.trainings
+      add constraint trainings_ratings_check
+      check (
+        rating_relevance between 1 and 5 and
+        rating_equality between 1 and 5 and
+        rating_timeliness between 1 and 5
+      );
+  end if;
+end
+$$;
+
+alter table public.trainings enable row level security;
+
+drop policy if exists "Users can view own trainings" on public.trainings;
+create policy "Users can view own trainings" on public.trainings
+  for select using (auth.uid() = created_by);
+
+drop policy if exists "Users can create own trainings" on public.trainings;
+create policy "Users can create own trainings" on public.trainings
+  for insert with check (auth.uid() = created_by);
+
+drop policy if exists "Users can update own trainings" on public.trainings;
+create policy "Users can update own trainings" on public.trainings
+  for update using (auth.uid() = created_by);
+
+drop policy if exists "Users can delete own trainings" on public.trainings;
+create policy "Users can delete own trainings" on public.trainings
+  for delete using (auth.uid() = created_by);
+
+create index if not exists idx_trainings_created_by on public.trainings (created_by);
+create index if not exists idx_trainings_department on public.trainings (department);
+create index if not exists idx_trainings_training_category on public.trainings (training_category);
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'trainings'
+  ) then
+    alter publication supabase_realtime add table public.trainings;
+  end if;
+end
+$$;
+-- ============================================================
+-- END COPY: Trainings Management
+-- ============================================================

@@ -36,6 +36,7 @@ import {
   GraduationCap,
   Cpu,
   ScrollText,
+  BookOpenCheck,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -89,6 +90,7 @@ export function Navbar({ user }: NavbarProps) {
     panelParam === "faculty-involvement" ||
     panelParam === "technologies-innovation" ||
     panelParam === "ordinance-resolutions" ||
+    panelParam === "trainings" ||
     panelParam === "accounts" ||
     panelParam === "projects"
       ? panelParam
@@ -105,6 +107,7 @@ export function Navbar({ user }: NavbarProps) {
     router.prefetch("/dashboard?panel=faculty-involvement");
     router.prefetch("/dashboard?panel=technologies-innovation");
     router.prefetch("/dashboard?panel=ordinance-resolutions");
+    router.prefetch("/dashboard?panel=trainings");
     router.prefetch("/dashboard?panel=accounts");
     router.prefetch("/dashboard?panel=projects&view=project-registration");
     router.prefetch("/dashboard?panel=projects&view=project-proposal");
@@ -448,6 +451,17 @@ export function Navbar({ user }: NavbarProps) {
               >
                 <ScrollText className="mr-2 h-3.5 w-3.5" />
                 Ordinance or Resolutions
+              </Button>
+            )}
+
+            {(user.userType === "college_coordinator" || user.userType === "unit_coordinator") && (
+              <Button
+                variant="ghost"
+                className={navItemClass(activePanel === "trainings")}
+                onClick={() => goTo("/dashboard?panel=trainings")}
+              >
+                <BookOpenCheck className="mr-2 h-3.5 w-3.5" />
+                Trainings
               </Button>
             )}
 
