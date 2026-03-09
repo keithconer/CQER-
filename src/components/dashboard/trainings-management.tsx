@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Eye, GraduationCap, Pencil, Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react";
+import { CheckCircle2, Eye, GraduationCap, Pencil, Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { deleteTraining } from "@/lib/actions/trainings";
@@ -44,6 +44,8 @@ export function TrainingsManagement({
   const [editRecord, setEditRecord] = React.useState<TrainingRecord | null>(null);
   const [viewRecord, setViewRecord] = React.useState<TrainingRecord | null>(null);
   const [isDeletingId, setIsDeletingId] = React.useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = React.useState("");
+  const [successOpen, setSuccessOpen] = React.useState(false);
   const [selectedScopes, setSelectedScopes] = React.useState<string[]>([
     "created_by_me",
     "department_files",
@@ -103,9 +105,11 @@ export function TrainingsManagement({
     );
   };
 
-  const handleSuccess = () => {
+  const handleSuccess = (action: "created" | "updated") => {
     setCreateOpen(false);
     setEditRecord(null);
+    setSuccessMessage(action === "created" ? "Training created successfully." : "Training updated successfully.");
+    setSuccessOpen(true);
     router.refresh();
   };
 
@@ -122,6 +126,8 @@ export function TrainingsManagement({
       return;
     }
 
+    setSuccessMessage("Training deleted successfully.");
+    setSuccessOpen(true);
     router.refresh();
   };
 
@@ -354,6 +360,27 @@ export function TrainingsManagement({
               onSuccess={() => setViewRecord(null)}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={successOpen} onOpenChange={setSuccessOpen}>
+        <DialogContent className="sm:max-w-[360px]">
+          <DialogHeader className="items-center text-center">
+            <div className="rounded-full bg-[#159E44]/10 p-2">
+              <CheckCircle2 className="h-7 w-7 text-[#159E44]" />
+            </div>
+            <DialogTitle className="text-sm">Success</DialogTitle>
+            <DialogDescription className="text-[10px]">{successMessage}</DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-center">
+            <Button
+              type="button"
+              className="h-8 text-[10px] bg-[#159E44] hover:bg-[#128A3B]"
+              onClick={() => setSuccessOpen(false)}
+            >
+              Continue
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

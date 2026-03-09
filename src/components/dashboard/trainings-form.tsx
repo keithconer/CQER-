@@ -286,7 +286,7 @@ interface TrainingsFormProps {
   existingPartnerAgencies?: string[];
   record?: TrainingRecord | null;
   isViewOnly?: boolean;
-  onSuccess: () => void;
+  onSuccess: (action: "created" | "updated") => void;
 }
 
 const toArray = (value: unknown): string[] =>
@@ -607,7 +607,7 @@ export function TrainingsForm({
         return;
       }
 
-      onSuccess();
+      onSuccess(record?.id ? "updated" : "created");
     } catch {
       alert("Something went wrong.");
     } finally {
@@ -1676,7 +1676,7 @@ export function TrainingsForm({
           name="documents"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-[10px]">Upload Doc</FormLabel>
+              <FormLabel className="text-[10px]">Upload Documents</FormLabel>
               <FormControl>
                 <FileUpload
                   value={field.value || []}

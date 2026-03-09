@@ -148,7 +148,7 @@ const schema = z.object({
   awards_title: z.string().default(""),
   awards_conferring_agency: z.string().default(""),
   awards_date: z.date().nullable(),
-  funding_remarks_date: z.date().nullable(),
+  funding_remarks_date: z.string().default(""),
   visibility_scope: z.enum(["public", "specific_units"]).default("public"),
   visible_units: z.array(z.string()).default([]),
   documents: z.array(z.object({ url: z.string(), name: z.string() })).default([]),
@@ -503,7 +503,7 @@ export function ProjectForm({
       awards_title: typeof fundingData.awards_title === "string" ? fundingData.awards_title : "",
       awards_conferring_agency: typeof fundingData.awards_conferring_agency === "string" ? fundingData.awards_conferring_agency : "",
       awards_date: typeof fundingData.awards_date === "string" ? new Date(fundingData.awards_date) : null,
-      funding_remarks_date: typeof fundingData.remarks_date === "string" ? new Date(fundingData.remarks_date) : null,
+      funding_remarks_date: typeof fundingData.remarks_date === "string" ? fundingData.remarks_date : "",
       visibility_scope: project?.visibility_scope || (currentUserType === "unit_coordinator" ? "specific_units" : "public"),
       visible_units: project?.visible_units || (currentUserType === "unit_coordinator" && currentUnit ? [currentUnit] : []),
       documents: project?.documents || [],
@@ -1147,10 +1147,10 @@ export function ProjectForm({
               )}
 
               <div className="space-y-2 rounded-md border border-border/50 p-3">
-                <h4 className="text-[10px] font-semibold">Awards Section</h4>
+                <h4 className="text-[10px] font-semibold">Awards Received</h4>
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                   <FormField control={form.control} name="awards_title" render={({ field }) => (
-                    <FormItem><FormLabel className="text-[10px]">Title Awards</FormLabel><FormControl><Input {...field} className="h-8 text-[10px]" disabled={isViewOnly} /></FormControl></FormItem>
+                    <FormItem><FormLabel className="text-[10px]">Title of Award</FormLabel><FormControl><Input {...field} className="h-8 text-[10px]" disabled={isViewOnly} /></FormControl></FormItem>
                   )} />
                   <FormField control={form.control} name="awards_conferring_agency" render={({ field }) => (
                     <FormItem><FormLabel className="text-[10px]">Conferring Agency / Body</FormLabel><FormControl><Input {...field} className="h-8 text-[10px]" disabled={isViewOnly} /></FormControl></FormItem>
@@ -1159,7 +1159,7 @@ export function ProjectForm({
                     <FormItem><FormLabel className="text-[10px]">Date</FormLabel><DatePickerField value={field.value || null} onChange={(d) => field.onChange(d)} disabled={isViewOnly} /></FormItem>
                   )} />
                   <FormField control={form.control} name="funding_remarks_date" render={({ field }) => (
-                    <FormItem><FormLabel className="text-[10px]">Remarks (Date Picker)</FormLabel><DatePickerField value={field.value || null} onChange={(d) => field.onChange(d)} disabled={isViewOnly} /></FormItem>
+                    <FormItem><FormLabel className="text-[10px]">Remarks</FormLabel><FormControl><Input {...field} value={field.value || ""} className="h-8 text-[10px]" disabled={isViewOnly} /></FormControl></FormItem>
                   )} />
                 </div>
               </div>
