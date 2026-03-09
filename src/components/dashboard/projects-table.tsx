@@ -454,7 +454,7 @@ export function ProjectsTable({
       </Dialog>
 
       <Dialog open={!!editProject} onOpenChange={(open) => !open && setEditProject(null)}>
-        <DialogContent className="sm:max-w-[920px] p-6 max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[920px] p-6 max-h-[90vh] overflow-hidden">
           <DialogHeader className="pb-2">
             <DialogTitle className="text-sm font-semibold">Edit {recordLabel}</DialogTitle>
             <DialogDescription className="text-[10px]">Modify {recordLabel.toLowerCase()} information below.</DialogDescription>
