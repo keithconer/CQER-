@@ -31,6 +31,7 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { FileUpload } from "./file-upload";
 import {
   DropdownMenu,
@@ -622,6 +623,7 @@ export function TrainingsForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <ScrollArea className="h-[72vh] pr-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <FormField
             control={form.control}
@@ -1700,6 +1702,7 @@ export function TrainingsForm({
             </Button>
           </div>
         )}
+        </ScrollArea>
       </form>
     </Form>
   );

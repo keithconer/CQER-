@@ -294,7 +294,7 @@ export function TrainingsManagement({
       </Card>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="sm:max-w-[920px] p-6 max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[920px] p-6 max-h-[90vh] overflow-hidden">
           <DialogHeader className="pb-2">
             <DialogTitle className="text-sm font-semibold flex items-center gap-1.5">
               <GraduationCap className="h-4 w-4" /> Create Training
@@ -315,7 +315,7 @@ export function TrainingsManagement({
       </Dialog>
 
       <Dialog open={!!editRecord} onOpenChange={(open) => !open && setEditRecord(null)}>
-        <DialogContent className="sm:max-w-[920px] p-6 max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[920px] p-6 max-h-[90vh] overflow-hidden">
           <DialogHeader className="pb-2">
             <DialogTitle className="text-sm font-semibold flex items-center gap-1.5">
               <GraduationCap className="h-4 w-4" /> Update Training
@@ -339,7 +339,7 @@ export function TrainingsManagement({
       </Dialog>
 
       <Dialog open={!!viewRecord} onOpenChange={(open) => !open && setViewRecord(null)}>
-        <DialogContent className="sm:max-w-[920px] p-6 max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[920px] p-6 max-h-[90vh] overflow-hidden">
           <DialogHeader className="pb-2">
             <DialogTitle className="text-sm font-semibold flex items-center gap-1.5">
               <GraduationCap className="h-4 w-4" /> View Training
