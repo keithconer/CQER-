@@ -166,7 +166,7 @@ export function Navbar({ user }: NavbarProps) {
     : null;
 
   const navItemClass = (active: boolean) =>
-    `dashboard-nav-item h-7 w-full justify-start text-[10px] border ${active ? "border-border/40 bg-muted/30" : "border-transparent"}`;
+    `dashboard-nav-item h-6 w-full justify-start text-[9px] border ${active ? "border-border/40 bg-muted/30" : "border-transparent"}`;
 
   return (
     <header className="border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -180,9 +180,9 @@ export function Navbar({ user }: NavbarProps) {
               onClick={() => setSidebarOpen((prev) => !prev)}
             >
               {sidebarOpen ? (
-                <PanelLeftClose className="h-3.5 w-3.5" />
+                <PanelLeftClose className="h-3 w-3" />
               ) : (
-                <PanelLeftOpen className="h-3.5 w-3.5" />
+                <PanelLeftOpen className="h-3 w-3" />
               )}
             </Button>
           )}
@@ -233,31 +233,31 @@ export function Navbar({ user }: NavbarProps) {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="p-1.5 rounded-md hover:bg-muted transition-colors cursor-pointer">
-                <Settings className="h-3.5 w-3.5 text-muted-foreground" />
+              <button className="p-1 rounded-md hover:bg-muted transition-colors cursor-pointer">
+                <Settings className="h-3 w-3 text-muted-foreground" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               <div className="px-2 py-1.5">
-                <p className="text-xs font-medium">
+                <p className="text-[10px] font-medium">
                   {user.firstName} {user.lastName}
                 </p>
-                <p className="text-[10px] text-muted-foreground truncate">{user.email}</p>
+                <p className="text-[9px] text-muted-foreground truncate">{user.email}</p>
               </div>
               <DropdownMenuSeparator />
               <DropdownMenuSub>
-                <DropdownMenuSubTrigger className="text-[10px] cursor-pointer">
-                  <Settings className="mr-2 h-3 w-3" />
+                <DropdownMenuSubTrigger className="text-[9px] cursor-pointer">
+                  <Settings className="mr-2 h-2.5 w-2.5" />
                   Settings
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent className="w-56">
                   <DropdownMenuSub>
-                    <DropdownMenuSubTrigger className="text-[10px] cursor-pointer">
-                      <Type className="mr-2 h-3 w-3" />
+                    <DropdownMenuSubTrigger className="text-[9px] cursor-pointer">
+                      <Type className="mr-2 h-2.5 w-2.5" />
                       Accessibility
                     </DropdownMenuSubTrigger>
                     <DropdownMenuSubContent className="w-48">
-                      <DropdownMenuLabel className="text-[10px]">Font Size</DropdownMenuLabel>
+                      <DropdownMenuLabel className="text-[9px]">Font Size</DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       <DropdownMenuRadioGroup
                         value={fontScale}
@@ -265,26 +265,26 @@ export function Navbar({ user }: NavbarProps) {
                           setFontScale(value as "small" | "medium" | "large")
                         }
                       >
-                        <DropdownMenuRadioItem value="small" className="text-[10px] cursor-pointer">
+                        <DropdownMenuRadioItem value="small" className="text-[9px] cursor-pointer">
                           Default (Small)
                         </DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="medium" className="text-[10px] cursor-pointer">
+                        <DropdownMenuRadioItem value="medium" className="text-[9px] cursor-pointer">
                           Medium
                         </DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="large" className="text-[10px] cursor-pointer">
+                        <DropdownMenuRadioItem value="large" className="text-[9px] cursor-pointer">
                           Large
                         </DropdownMenuRadioItem>
                       </DropdownMenuRadioGroup>
                     </DropdownMenuSubContent>
                   </DropdownMenuSub>
                   <DropdownMenuItem
-                    className="text-[10px] cursor-pointer"
+                    className="text-[9px] cursor-pointer"
                     onSelect={(event) => {
                       event.preventDefault();
                       setDarkModeEnabled((prev) => !prev);
                     }}
                   >
-                    <Moon className="mr-2 h-3 w-3" />
+                    <Moon className="mr-2 h-2.5 w-2.5" />
                     Dark Mode
                   </DropdownMenuItem>
                 </DropdownMenuSubContent>
@@ -292,17 +292,17 @@ export function Navbar({ user }: NavbarProps) {
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => router.push("/settings")}
-                className="text-[10px] cursor-pointer"
+                className="text-[9px] cursor-pointer"
               >
-                <KeyRound className="mr-2 h-3 w-3" />
+                <KeyRound className="mr-2 h-2.5 w-2.5" />
                 Change Password
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={handleLogout}
-                className="text-[10px] cursor-pointer"
+                className="text-[9px] cursor-pointer"
               >
-                <LogOut className="mr-2 h-3 w-3" />
+                <LogOut className="mr-2 h-2.5 w-2.5" />
                 Log out
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -339,7 +339,7 @@ export function Navbar({ user }: NavbarProps) {
               className="h-7 w-7"
               onClick={() => setSidebarOpen(false)}
             >
-              <PanelLeftClose className="h-3.5 w-3.5" />
+              <PanelLeftClose className="h-3 w-3" />
             </Button>
           </div>
 
@@ -348,10 +348,10 @@ export function Navbar({ user }: NavbarProps) {
               <>
                 <Button
                   variant="ghost"
-                  className="dashboard-nav-item h-8 w-full justify-start text-[10px] font-medium"
+                  className="dashboard-nav-item h-7 w-full justify-start text-[9px] font-medium"
                   onClick={() => setCreateExpanded((prev) => !prev)}
                 >
-                  <FolderPlus className="mr-2 h-3.5 w-3.5" />
+                  <FolderPlus className="mr-2 h-3 w-3" />
                   Projects
                 </Button>
                 {createExpanded && (
@@ -361,7 +361,7 @@ export function Navbar({ user }: NavbarProps) {
                       className={navItemClass(activePanel === "records" && activeView === "project-registration")}
                       onClick={() => goTo("/dashboard?panel=records&view=project-registration")}
                     >
-                      <FolderKanban className="mr-2 h-3.5 w-3.5" />
+                      <FolderKanban className="mr-2 h-3 w-3" />
                       Project Registration
                     </Button>
                     <Button
@@ -369,7 +369,7 @@ export function Navbar({ user }: NavbarProps) {
                       className={navItemClass(activePanel === "records" && activeView === "project-proposal")}
                       onClick={() => goTo("/dashboard?panel=records&view=project-proposal")}
                     >
-                      <FolderKanban className="mr-2 h-3.5 w-3.5" />
+                      <FolderKanban className="mr-2 h-3 w-3" />
                       Project Proposal
                     </Button>
                   </div>
@@ -383,7 +383,7 @@ export function Navbar({ user }: NavbarProps) {
                 className={navItemClass(activePanel === "unit-coordinators")}
                 onClick={() => goTo("/dashboard?panel=unit-coordinators")}
               >
-                <Users className="mr-2 h-3.5 w-3.5" />
+                <Users className="mr-2 h-3 w-3" />
                 Register Unit Coordinators
               </Button>
             )}
@@ -394,7 +394,7 @@ export function Navbar({ user }: NavbarProps) {
                 className={navItemClass(activePanel === "funding")}
                 onClick={() => goTo("/dashboard?panel=funding")}
               >
-                <Database className="mr-2 h-3.5 w-3.5" />
+                <Database className="mr-2 h-3 w-3" />
                 Funding
               </Button>
             )}
@@ -405,7 +405,7 @@ export function Navbar({ user }: NavbarProps) {
                 className={navItemClass(activePanel === "awards")}
                 onClick={() => goTo("/dashboard?panel=awards")}
               >
-                <Award className="mr-2 h-3.5 w-3.5" />
+                <Award className="mr-2 h-3 w-3" />
                 Awards
               </Button>
             )}
@@ -416,7 +416,7 @@ export function Navbar({ user }: NavbarProps) {
                 className={navItemClass(activePanel === "student-involvement")}
                 onClick={() => goTo("/dashboard?panel=student-involvement")}
               >
-                <UserRoundCheck className="mr-2 h-3.5 w-3.5" />
+                <UserRoundCheck className="mr-2 h-3 w-3" />
                 Student Involvement
               </Button>
             )}
@@ -427,7 +427,7 @@ export function Navbar({ user }: NavbarProps) {
                 className={navItemClass(activePanel === "faculty-involvement")}
                 onClick={() => goTo("/dashboard?panel=faculty-involvement")}
               >
-                <GraduationCap className="mr-2 h-3.5 w-3.5" />
+                <GraduationCap className="mr-2 h-3 w-3" />
                 Faculty Involvement in ESCE
               </Button>
             )}
@@ -438,7 +438,7 @@ export function Navbar({ user }: NavbarProps) {
                 className={navItemClass(activePanel === "technologies-innovation")}
                 onClick={() => goTo("/dashboard?panel=technologies-innovation")}
               >
-                <Cpu className="mr-2 h-3.5 w-3.5" />
+                <Cpu className="mr-2 h-3 w-3" />
                 Technologies/Innovation Adapted
               </Button>
             )}
@@ -449,7 +449,7 @@ export function Navbar({ user }: NavbarProps) {
                 className={navItemClass(activePanel === "ordinance-resolutions")}
                 onClick={() => goTo("/dashboard?panel=ordinance-resolutions")}
               >
-                <ScrollText className="mr-2 h-3.5 w-3.5" />
+                <ScrollText className="mr-2 h-3 w-3" />
                 Ordinance or Resolutions
               </Button>
             )}
@@ -460,7 +460,7 @@ export function Navbar({ user }: NavbarProps) {
                 className={navItemClass(activePanel === "trainings")}
                 onClick={() => goTo("/dashboard?panel=trainings")}
               >
-                <BookOpenCheck className="mr-2 h-3.5 w-3.5" />
+                <BookOpenCheck className="mr-2 h-3 w-3" />
                 Trainings
               </Button>
             )}
@@ -469,10 +469,10 @@ export function Navbar({ user }: NavbarProps) {
               <>
                 <Button
                   variant="ghost"
-                  className="dashboard-nav-item h-8 w-full justify-start text-[10px] font-medium"
+                  className="dashboard-nav-item h-7 w-full justify-start text-[9px] font-medium"
                   onClick={() => setRecordsExpanded((prev) => !prev)}
                 >
-                  <Database className="mr-2 h-3.5 w-3.5" />
+                  <Database className="mr-2 h-3 w-3" />
                   Records
                 </Button>
                 {recordsExpanded && (
@@ -482,15 +482,15 @@ export function Navbar({ user }: NavbarProps) {
                       className={navItemClass(activePanel === "accounts")}
                       onClick={() => goTo("/dashboard?panel=accounts")}
                     >
-                      <Users className="mr-2 h-3.5 w-3.5" />
+                      <Users className="mr-2 h-3 w-3" />
                       Accounts
                     </Button>
                     <Button
                       variant="ghost"
-                      className="dashboard-nav-item h-7 w-full justify-start text-[10px] border border-transparent"
+                      className="dashboard-nav-item h-6 w-full justify-start text-[9px] border border-transparent"
                       onClick={() => setSuperProjectsExpanded((prev) => !prev)}
                     >
-                      <FolderKanban className="mr-2 h-3.5 w-3.5" />
+                      <FolderKanban className="mr-2 h-3 w-3" />
                       Projects
                     </Button>
                     {superProjectsExpanded && (
@@ -500,7 +500,7 @@ export function Navbar({ user }: NavbarProps) {
                           className={navItemClass(activePanel === "projects" && activeView === "project-registration")}
                           onClick={() => goTo("/dashboard?panel=projects&view=project-registration")}
                         >
-                          <FolderKanban className="mr-2 h-3.5 w-3.5" />
+                          <FolderKanban className="mr-2 h-3 w-3" />
                           Project Registration
                         </Button>
                         <Button
@@ -508,7 +508,7 @@ export function Navbar({ user }: NavbarProps) {
                           className={navItemClass(activePanel === "projects" && activeView === "project-proposal")}
                           onClick={() => goTo("/dashboard?panel=projects&view=project-proposal")}
                         >
-                          <FolderKanban className="mr-2 h-3.5 w-3.5" />
+                          <FolderKanban className="mr-2 h-3 w-3" />
                           Project Proposal
                         </Button>
                       </div>
