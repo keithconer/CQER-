@@ -587,32 +587,48 @@ with check (
   (storage.foldername(name))[1] = auth.uid()::text
 );
 
--- Allow users to view their own files
-create policy "Allow individual read"
+-- ============================================
+-- START: Fix Document Access Permissions
+-- ============================================
+
+-- Drop the restrictive individual read policy if it exists
+drop policy if exists "Allow individual read" on storage.objects;
+
+-- Allow all authenticated users to read files in the bucket.
+-- Security is managed at the application/database level where only links 
+-- for visible records are generated as signed URLs.
+create policy "Allow authenticated read"
 on storage.objects for select
 to authenticated
 using (
-  bucket_id = 'cqer-projects_pdfs' AND
-  (storage.foldername(name))[1] = auth.uid()::text
+  bucket_id = 'cqer-projects_pdfs'
 );
 
--- Allow users to delete their own files
-create policy "Allow individual delete"
-on storage.objects for delete
+-- Ensure Super Admin has full management access to the bucket
+drop policy if exists "Allow super admin full access" on storage.objects;
+create policy "Allow super admin full access"
+on storage.objects for all
 to authenticated
 using (
   bucket_id = 'cqer-projects_pdfs' AND
-  (storage.foldername(name))[1] = auth.uid()::text
+  exists (
+    select 1 from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.user_type = 'super_admin'
+  )
+)
+with check (
+  bucket_id = 'cqer-projects_pdfs' AND
+  exists (
+    select 1 from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.user_type = 'super_admin'
+  )
 );
 
--- Allow users to update their own files
-create policy "Allow individual update"
-on storage.objects for update
-to authenticated
-using (
-  bucket_id = 'cqer-projects_pdfs' AND
-  (storage.foldername(name))[1] = auth.uid()::text
-);
+-- ============================================
+-- END: Fix Document Access Permissions
+-- ============================================
 
 -- ============================================================
 -- START COPY: Awards Module (College and Unit Coordinators)
