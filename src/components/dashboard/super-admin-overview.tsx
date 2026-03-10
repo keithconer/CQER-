@@ -74,7 +74,7 @@ interface ExistingProject {
   end_date: string | null;
   category: "new" | "existing" | "on process" | "existing/ongoing" | "completed" | "terminated" | "proposal" | null;
   funding_source: "internally funded" | "externally funded" | null;
-  visibility_scope?: "public" | "specific_units" | null;
+  visibility_scope?: "public" | "specific_units" | "all_departments" | "specific_departments" | null;
   visible_units?: string[] | null;
   lead_units?: string[] | null;
   related_curricular_offerings?: string[] | null;
