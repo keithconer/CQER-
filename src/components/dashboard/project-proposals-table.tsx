@@ -67,6 +67,7 @@ interface ProjectProposalsTableProps {
     userType?: "super_admin" | "college_coordinator" | "unit_coordinator";
     department?: string | null;
     unit?: string | null;
+    unitOptions?: string[];
   };
 }
 
@@ -360,6 +361,7 @@ export function ProjectProposalsTable({
               currentUserType={formContext?.userType}
               currentDepartment={formContext?.department}
               currentUnit={formContext?.unit}
+              unitOptions={formContext?.unitOptions}
             />
           )}
         </DialogContent>
@@ -377,6 +379,7 @@ export function ProjectProposalsTable({
               currentUserType={formContext?.userType}
               currentDepartment={formContext?.department}
               currentUnit={formContext?.unit}
+              unitOptions={formContext?.unitOptions}
               onSuccess={() => {
                 setEditProposal(null);
                 router.refresh();

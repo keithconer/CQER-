@@ -3,11 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { DEPARTMENTS } from "@/lib/departments";
 
 export interface TrainingPayload {
   college: string;
   department: string;
   lead_units: string[];
+  visibility_scope?: "department" | "all_departments" | "specific_departments";
+  visible_departments?: string[];
   contact_person: string;
   contact_details: string;
   related_curricular_offerings: string[];
@@ -73,16 +76,60 @@ async function getCurrentContext() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("department")
+    .select("department, user_type")
     .eq("id", user.id)
     .single();
 
-  return { supabase, user, department: profile?.department || "" };
+  return {
+    supabase,
+    user,
+    department: profile?.department || "",
+    userType: profile?.user_type || null,
+  };
+}
+
+function normalizeDepartments(raw: unknown) {
+  if (!Array.isArray(raw)) return [];
+  const allowed = new Set(DEPARTMENTS);
+  return Array.from(
+    new Set(
+      raw
+        .map((department) => String(department || "").trim())
+        .filter((department) => department && allowed.has(department as typeof DEPARTMENTS[number]))
+    )
+  );
+}
+
+function trainingVisibleToDepartment(
+  training: { visibility_scope?: string | null; visible_departments?: unknown; department?: string | null },
+  department: string | null | undefined
+) {
+  if (!department) return false;
+  const visibleDepartments = normalizeDepartments(training.visible_departments);
+  if (training.visibility_scope === "all_departments") return true;
+  if (training.visibility_scope === "specific_departments") {
+    return visibleDepartments.includes(department);
+  }
+  return training.department === department;
 }
 
 export async function getTrainings() {
-  const { department } = await getCurrentContext();
+  const { department, userType } = await getCurrentContext();
   const adminClient = createAdminClient();
+  if (userType === "super_admin") {
+    const { data, error } = await adminClient
+      .from("trainings")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching trainings:", error);
+      return { error: error.message };
+    }
+
+    return { data };
+  }
+
   if (!department) {
     return { data: [] };
   }
@@ -99,14 +146,25 @@ export async function getTrainings() {
   }
 
   const creatorIds = (deptProfiles || []).map((item) => item.id);
-  if (creatorIds.length === 0) {
+  const { data: superAdmins, error: superAdminError } = await adminClient
+    .from("profiles")
+    .select("id")
+    .eq("user_type", "super_admin");
+
+  if (superAdminError) {
+    console.error("Error fetching super admin profiles:", superAdminError);
+    return { error: superAdminError.message };
+  }
+
+  const allCreatorIds = Array.from(new Set([...creatorIds, ...((superAdmins || []).map((item) => item.id))]));
+  if (allCreatorIds.length === 0) {
     return { data: [] };
   }
 
   const { data, error } = await adminClient
     .from("trainings")
     .select("*")
-    .in("created_by", creatorIds)
+    .in("created_by", allCreatorIds)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -114,18 +172,40 @@ export async function getTrainings() {
     return { error: error.message };
   }
 
-  return { data };
+  return {
+    data: (data || []).filter((training) => {
+      if (creatorIds.includes(training.created_by)) return true;
+      return trainingVisibleToDepartment(training, department);
+    }),
+  };
 }
 
 export async function createTraining(formData: TrainingPayload) {
-  const { supabase, user, department } = await getCurrentContext();
+  const { supabase, user, department, userType } = await getCurrentContext();
+  const visibilityScope =
+    userType === "super_admin"
+      ? formData.visibility_scope === "specific_departments"
+        ? "specific_departments"
+        : "all_departments"
+      : "department";
+  const visibleDepartments =
+    userType === "super_admin"
+      ? visibilityScope === "specific_departments"
+        ? normalizeDepartments(formData.visible_departments)
+        : [...DEPARTMENTS]
+      : department
+        ? [department]
+        : [];
+
   const { data, error } = await supabase
     .from("trainings")
     .insert([
       {
         ...formData,
         college: "CEIT",
-        department: department || formData.department || "",
+        department: userType === "super_admin" ? formData.department || "" : department || formData.department || "",
+        visibility_scope: visibilityScope,
+        visible_departments: visibleDepartments,
         created_by: user.id,
       },
     ])
@@ -140,18 +220,40 @@ export async function createTraining(formData: TrainingPayload) {
 }
 
 export async function updateTraining(id: string, formData: TrainingPayload) {
-  const { supabase, user, department } = await getCurrentContext();
-  const { data, error } = await supabase
+  const { supabase, user, department, userType } = await getCurrentContext();
+  const client = userType === "super_admin" ? createAdminClient() : supabase;
+  const visibilityScope =
+    userType === "super_admin"
+      ? formData.visibility_scope === "specific_departments"
+        ? "specific_departments"
+        : "all_departments"
+      : "department";
+  const visibleDepartments =
+    userType === "super_admin"
+      ? visibilityScope === "specific_departments"
+        ? normalizeDepartments(formData.visible_departments)
+        : [...DEPARTMENTS]
+      : department
+        ? [department]
+        : [];
+
+  let query = client
     .from("trainings")
     .update({
       ...formData,
       college: "CEIT",
-      department: department || formData.department || "",
+      department: userType === "super_admin" ? formData.department || "" : department || formData.department || "",
+      visibility_scope: visibilityScope,
+      visible_departments: visibleDepartments,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", id)
-    .eq("created_by", user.id)
-    .select();
+    .eq("id", id);
+
+  if (userType !== "super_admin") {
+    query = query.eq("created_by", user.id);
+  }
+
+  const { data, error } = await query.select();
 
   if (error) {
     console.error("Error updating training record:", error);
@@ -165,12 +267,17 @@ export async function updateTraining(id: string, formData: TrainingPayload) {
 }
 
 export async function deleteTraining(id: string) {
-  const { supabase, user } = await getCurrentContext();
-  const { error } = await supabase
+  const { supabase, user, userType } = await getCurrentContext();
+  let query = (userType === "super_admin" ? createAdminClient() : supabase)
     .from("trainings")
     .delete()
-    .eq("id", id)
-    .eq("created_by", user.id);
+    .eq("id", id);
+
+  if (userType !== "super_admin") {
+    query = query.eq("created_by", user.id);
+  }
+
+  const { error } = await query;
 
   if (error) {
     console.error("Error deleting training record:", error);

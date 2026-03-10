@@ -64,8 +64,9 @@ export interface Project {
   funding_source: "internally funded" | "externally funded" | null;
   lead_units?: string[];
   related_curricular_offerings?: string[];
-  visibility_scope?: "public" | "specific_units" | null;
+  visibility_scope?: "public" | "specific_units" | "all_departments" | "specific_departments" | null;
   visible_units?: string[];
+  visible_departments?: string[];
   budget_total: number | null;
   budget_requirements: { name: string; amount: number }[];
   gad_score: number;

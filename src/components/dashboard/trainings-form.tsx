@@ -7,7 +7,7 @@ import * as z from "zod";
 import { CalendarIcon, Clock3, Mail, MapPin, UserRound } from "lucide-react";
 import { format } from "date-fns";
 import { createTraining, updateTraining } from "@/lib/actions/trainings";
-import { DEPARTMENTS, getUnitsByDepartment } from "@/lib/departments";
+import { DEPARTMENTS, getAllUnits, getUnitsByDepartment } from "@/lib/departments";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -116,6 +116,8 @@ const schema = z
     college: z.string().min(1),
     department: z.string().min(1),
     lead_units: z.array(z.string()).min(1, "Select at least one lead unit"),
+    visibility_scope: z.enum(["department", "all_departments", "specific_departments"]).default("department"),
+    visible_departments: z.array(z.string()).default([]),
     contact_person: z.string().min(1, "Contact person is required"),
     contact_details: z.string().min(1, "Number / email is required"),
     related_curricular_offerings: z
@@ -353,6 +355,9 @@ export function TrainingsForm({
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const curricularOptions = React.useMemo(() => {
+    if (userType === "super_admin") {
+      return unitOptions.length > 0 ? unitOptions : getAllUnits();
+    }
     if (userType === "college_coordinator") return unitOptions;
     if (userType === "unit_coordinator" && department) {
       const options = getUnitsByDepartment(department);
@@ -379,6 +384,20 @@ export function TrainingsForm({
         : userType === "unit_coordinator" && department
           ? [department]
           : [],
+      visibility_scope:
+        userType === "super_admin"
+          ? (((record as unknown as { visibility_scope?: string | null })?.visibility_scope === "specific_departments"
+              ? "specific_departments"
+              : (record as unknown as { visibility_scope?: string | null })?.visibility_scope === "all_departments"
+                ? "all_departments"
+                : "all_departments"))
+          : "department",
+      visible_departments:
+        userType === "super_admin"
+          ? ((record as unknown as { visible_departments?: string[] | null })?.visible_departments || [...DEPARTMENTS])
+          : department
+            ? [department]
+            : [],
       contact_person: record?.contact_person || "",
       contact_details: record?.contact_details || "",
       related_curricular_offerings: toArray(record?.related_curricular_offerings),
@@ -446,6 +465,8 @@ export function TrainingsForm({
   const selectedDates = form.watch("inclusive_dates");
   const manualHours = form.watch("manual_hours");
   const disabilityCount = form.watch("tvl_disabilities_count");
+  const watchedDepartment = form.watch("department");
+  const visibilityScope = form.watch("visibility_scope");
 
   const maleTotal =
     toNumber(form.watch("faculty_male")) +
@@ -515,6 +536,23 @@ export function TrainingsForm({
   }, [form, trainingCategory]);
 
   React.useEffect(() => {
+    if (userType === "unit_coordinator" && department) {
+      form.setValue("department", department, { shouldValidate: true });
+      form.setValue("visible_departments", [department], { shouldValidate: true });
+    }
+    if (userType === "college_coordinator" && department) {
+      form.setValue("visible_departments", [department], { shouldValidate: false });
+    }
+    if (
+      userType === "super_admin" &&
+      visibilityScope === "all_departments" &&
+      (form.getValues("visible_departments") || []).length !== DEPARTMENTS.length
+    ) {
+      form.setValue("visible_departments", [...DEPARTMENTS], { shouldValidate: true });
+    }
+  }, [department, form, userType, visibilityScope]);
+
+  React.useEffect(() => {
     if (dateMode === "days") {
       const dayCount = selectedDates?.length || 0;
       const multiplier = getDayMultiplier(dayCount);
@@ -539,6 +577,8 @@ export function TrainingsForm({
         college: "CEIT",
         department: values.department,
         lead_units: values.lead_units,
+        visibility_scope: values.visibility_scope,
+        visible_departments: values.visible_departments,
         contact_person: values.contact_person.trim(),
         contact_details: values.contact_details.trim(),
         related_curricular_offerings: values.related_curricular_offerings,
@@ -643,13 +683,62 @@ export function TrainingsForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="text-xs">Department</FormLabel>
-                <FormControl>
-                  <Input {...field} readOnly className="h-8 text-xs bg-muted/30" />
-                </FormControl>
+                {userType === "super_admin" ? (
+                  <Select value={field.value} onValueChange={field.onChange} disabled={isViewOnly}>
+                    <FormControl>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Select department" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {DEPARTMENTS.map((departmentName) => (
+                        <SelectItem key={departmentName} value={departmentName} className="text-xs">
+                          {departmentName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <FormControl>
+                    <Input {...field} readOnly className="h-8 text-xs bg-muted/30" />
+                  </FormControl>
+                )}
               </FormItem>
             )}
           />
         </div>
+
+        {userType === "super_admin" && (
+          <FormField
+            control={form.control}
+            name="visibility_scope"
+            render={({ field }) => (
+              <FormItem className="space-y-2 rounded-md border border-border/50 p-3">
+                <FormLabel className="text-[10px]">Visibility</FormLabel>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 text-[10px]"><Checkbox checked={field.value === "all_departments"} disabled={isViewOnly} onCheckedChange={(checked) => checked && field.onChange("all_departments")} /> All departments</label>
+                  <label className="flex items-center gap-2 text-[10px]"><Checkbox checked={field.value === "specific_departments"} disabled={isViewOnly} onCheckedChange={(checked) => checked && field.onChange("specific_departments")} /> Specific departments</label>
+                </div>
+                {field.value === "specific_departments" && (
+                  <FormField
+                    control={form.control}
+                    name="visible_departments"
+                    render={({ field: departmentField }) => (
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        {DEPARTMENTS.map((departmentName) => (
+                          <label key={departmentName} className="flex items-center gap-2 rounded-md border border-border/50 px-2 py-1.5">
+                            <Checkbox checked={(departmentField.value || []).includes(departmentName)} disabled={isViewOnly} onCheckedChange={() => departmentField.onChange(toggleArrayItem(departmentField.value || [], departmentName))} />
+                            <span className="text-[10px]">{departmentName}</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  />
+                )}
+              </FormItem>
+            )}
+          />
+        )}
 
         <div className="mt-2 space-y-2 rounded-md border border-border/50 p-3">
           <FormField
@@ -742,10 +831,10 @@ export function TrainingsForm({
               <FormItem className="space-y-2">
                 <FormLabel className="text-[10px]">Related curricular offering</FormLabel>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {curricularOptions.length === 0 ? (
+                  {(userType === "super_admin" ? getUnitsByDepartment(watchedDepartment) : curricularOptions).length === 0 ? (
                     <p className="text-[10px] text-muted-foreground">No options available</p>
                   ) : (
-                    curricularOptions.map((option) => (
+                    (userType === "super_admin" ? getUnitsByDepartment(watchedDepartment) : curricularOptions).map((option) => (
                       <label
                         key={option}
                         className="flex items-center gap-2 rounded-md border border-border/50 px-2 py-1.5"

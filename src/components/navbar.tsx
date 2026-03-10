@@ -95,6 +95,7 @@ export function Navbar({ user }: NavbarProps) {
     panelParam === "trainings" ||
     panelParam === "accounts" ||
     panelParam === "projects"
+    || panelParam === "trainings"
       ? panelParam
       : "records";
 
@@ -516,6 +517,14 @@ export function Navbar({ user }: NavbarProps) {
                         </Button>
                       </div>
                     )}
+                    <Button
+                      variant="ghost"
+                      className={navItemClass(activePanel === "trainings")}
+                      onClick={() => goTo("/dashboard?panel=trainings")}
+                    >
+                      <BookOpenCheck className="mr-2 h-3 w-3" />
+                      Trainings
+                    </Button>
                   </div>
                 )}
               </>

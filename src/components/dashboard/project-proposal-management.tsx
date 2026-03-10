@@ -27,6 +27,7 @@ interface ProjectProposalManagementProps {
   userType?: "super_admin" | "college_coordinator" | "unit_coordinator";
   department?: string | null;
   unit?: string | null;
+  unitOptions?: string[];
 }
 
 export function ProjectProposalManagement({
@@ -35,6 +36,7 @@ export function ProjectProposalManagement({
   userType,
   department,
   unit,
+  unitOptions = [],
 }: ProjectProposalManagementProps) {
   const [open, setOpen] = React.useState(false);
   const router = useRouter();
@@ -67,7 +69,7 @@ export function ProjectProposalManagement({
           <ProjectProposalsTable
             proposals={filteredRecords}
             readOnly={readOnly}
-            formContext={{ userType, department, unit }}
+            formContext={{ userType, department, unit, unitOptions }}
           />
         </CardContent>
       </Card>
@@ -86,6 +88,7 @@ export function ProjectProposalManagement({
               currentUserType={userType}
               currentDepartment={department}
               currentUnit={unit}
+              unitOptions={unitOptions}
             />
           </DialogContent>
         </Dialog>

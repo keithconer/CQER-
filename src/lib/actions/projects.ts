@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
-import { DEPARTMENTS, getUnitsByDepartment } from "@/lib/departments";
+import { DEPARTMENTS, getAllUnits, getUnitsByDepartment } from "@/lib/departments";
 
 function normalizeLeadUnits(raw: unknown, allowedUnits: string[] = []) {
     if (!Array.isArray(raw)) return [];
@@ -19,6 +19,28 @@ function normalizeLeadUnits(raw: unknown, allowedUnits: string[] = []) {
 
 function getDepartmentUnits(department: string | null | undefined) {
     return getUnitsByDepartment(department);
+}
+
+function normalizeDepartments(raw: unknown) {
+    if (!Array.isArray(raw)) return [];
+    const allowed = new Set(DEPARTMENTS);
+    return Array.from(
+        new Set(
+            raw
+                .map((department) => String(department || "").trim())
+                .filter((department) => department && allowed.has(department as typeof DEPARTMENTS[number]))
+        )
+    );
+}
+
+function projectVisibleToDepartment(
+    project: { visibility_scope?: string | null; visible_units?: unknown; visible_departments?: unknown },
+    department: string | null | undefined
+) {
+    if (!department) return false;
+    const visibleDepartments = normalizeDepartments(project.visible_departments);
+    return project.visibility_scope === "all_departments" ||
+        (project.visibility_scope === "specific_departments" && visibleDepartments.includes(department));
 }
 
 function normalizePartnerAgencyCount(payload: Record<string, unknown>) {
@@ -78,6 +100,7 @@ export async function createProject(formData: object) {
         const fallbackUnit = profile.unit ? [profile.unit] : [];
         payload.visibility_scope = "specific_units";
         payload.visible_units = profile.unit ? [profile.unit] : [];
+        payload.visible_departments = profile.department ? [profile.department] : [];
         payload.lead_units = profile.department ? [profile.department] : [];
         payload.related_curricular_offerings = normalizeLeadUnits(
             payload.related_curricular_offerings,
@@ -90,15 +113,35 @@ export async function createProject(formData: object) {
             scope === "specific_units" && Array.isArray(payload.visible_units)
                 ? payload.visible_units
                 : [];
+        payload.visible_departments = profile.department ? [profile.department] : [];
         payload.lead_units = normalizeLeadUnits(payload.lead_units, [...DEPARTMENTS]);
         const allowedUnits = getDepartmentUnits(profile.department);
         payload.related_curricular_offerings = normalizeLeadUnits(
             payload.related_curricular_offerings,
             allowedUnits
         );
-    } else {
-        payload.visibility_scope = "public";
+    } else if (profile?.user_type === "super_admin") {
+        const scope =
+            payload.visibility_scope === "specific_departments" ? "specific_departments" : "all_departments";
+        const visibleDepartments =
+            scope === "specific_departments" ? normalizeDepartments(payload.visible_departments) : [...DEPARTMENTS];
+        const allowedUnits =
+            visibleDepartments.length > 0
+                ? visibleDepartments.flatMap((department) => getDepartmentUnits(department))
+                : getAllUnits();
+
+        payload.visibility_scope = scope;
+        payload.visible_departments = visibleDepartments;
         payload.visible_units = [];
+        payload.lead_units = normalizeLeadUnits(payload.lead_units, [...DEPARTMENTS]);
+        payload.related_curricular_offerings = normalizeLeadUnits(
+            payload.related_curricular_offerings,
+            allowedUnits
+        );
+    } else {
+        payload.visibility_scope = "all_departments";
+        payload.visible_units = [];
+        payload.visible_departments = [...DEPARTMENTS];
         payload.lead_units = [];
         payload.related_curricular_offerings = [];
     }
@@ -187,7 +230,7 @@ export async function getCollegeProjects() {
     const { data: deptProfiles, error: deptProfilesError } = await adminClient
         .from("profiles")
         .select("id, user_type, unit")
-        .in("user_type", ["college_coordinator", "unit_coordinator"])
+        .in("user_type", ["college_coordinator", "unit_coordinator", "super_admin"])
         .eq("department", profile.department);
 
     if (deptProfilesError) {
@@ -198,7 +241,19 @@ export async function getCollegeProjects() {
     const profileMap = new Map(
         (deptProfiles || []).map((p) => [p.id, { user_type: p.user_type, unit: p.unit }])
     );
-    const creatorIds = deptProfiles?.map((p) => p.id) || [];
+    const { data: superAdmins, error: superAdminError } = await adminClient
+        .from("profiles")
+        .select("id, user_type, unit")
+        .eq("user_type", "super_admin");
+
+    if (superAdminError) {
+        console.error("Error fetching super admin profiles:", superAdminError);
+        return { error: superAdminError.message };
+    }
+
+    (superAdmins || []).forEach((entry) => profileMap.set(entry.id, { user_type: entry.user_type, unit: entry.unit }));
+
+    const creatorIds = Array.from(new Set([...(deptProfiles?.map((p) => p.id) || []), ...((superAdmins || []).map((p) => p.id))]));
     if (creatorIds.length === 0) {
         return { data: [] };
     }
@@ -215,7 +270,16 @@ export async function getCollegeProjects() {
     }
 
     const enriched =
-        (data || []).map((project) => {
+        (data || []).filter((project) => {
+            const creator = profileMap.get(project.created_by);
+            if (!creator) return false;
+
+            if (creator.user_type === "super_admin") {
+                return projectVisibleToDepartment(project, profile.department);
+            }
+
+            return true;
+        }).map((project) => {
             const creator = profileMap.get(project.created_by);
             return {
                 ...project,
@@ -267,7 +331,19 @@ export async function getUnitProjects() {
     const profileMap = new Map(
         (deptProfiles || []).map((p) => [p.id, { user_type: p.user_type, unit: p.unit }])
     );
-    const creatorIds = (deptProfiles || []).map((p) => p.id);
+    const { data: superAdmins, error: superAdminError } = await adminClient
+        .from("profiles")
+        .select("id, user_type, unit")
+        .eq("user_type", "super_admin");
+
+    if (superAdminError) {
+        console.error("Error fetching super admin profiles:", superAdminError);
+        return { error: superAdminError.message };
+    }
+
+    (superAdmins || []).forEach((entry) => profileMap.set(entry.id, { user_type: entry.user_type, unit: entry.unit }));
+
+    const creatorIds = Array.from(new Set([...(deptProfiles || []).map((p) => p.id), ...((superAdmins || []).map((p) => p.id))]));
 
     if (creatorIds.length === 0) {
         return { data: [] };
@@ -300,6 +376,10 @@ export async function getUnitProjects() {
                     return visibleUnits.includes(profile.unit);
                 }
                 return false;
+            }
+
+            if (creator.user_type === "super_admin") {
+                return projectVisibleToDepartment(project, profile.department);
             }
 
             return false;
@@ -367,6 +447,7 @@ export async function updateProject(id: string, formData: object) {
         const fallbackUnit = profile.unit ? [profile.unit] : [];
         payload.visibility_scope = "specific_units";
         payload.visible_units = profile.unit ? [profile.unit] : [];
+        payload.visible_departments = profile.department ? [profile.department] : [];
         payload.lead_units = profile.department ? [profile.department] : [];
         payload.related_curricular_offerings = normalizeLeadUnits(
             payload.related_curricular_offerings,
@@ -379,8 +460,27 @@ export async function updateProject(id: string, formData: object) {
             scope === "specific_units" && Array.isArray(payload.visible_units)
                 ? payload.visible_units
                 : [];
+        payload.visible_departments = profile.department ? [profile.department] : [];
         payload.lead_units = normalizeLeadUnits(payload.lead_units, [...DEPARTMENTS]);
         const allowedUnits = getDepartmentUnits(profile.department);
+        payload.related_curricular_offerings = normalizeLeadUnits(
+            payload.related_curricular_offerings,
+            allowedUnits
+        );
+    } else if (profile?.user_type === "super_admin") {
+        const scope =
+            payload.visibility_scope === "specific_departments" ? "specific_departments" : "all_departments";
+        const visibleDepartments =
+            scope === "specific_departments" ? normalizeDepartments(payload.visible_departments) : [...DEPARTMENTS];
+        const allowedUnits =
+            visibleDepartments.length > 0
+                ? visibleDepartments.flatMap((department) => getDepartmentUnits(department))
+                : getAllUnits();
+
+        payload.visibility_scope = scope;
+        payload.visible_departments = visibleDepartments;
+        payload.visible_units = [];
+        payload.lead_units = normalizeLeadUnits(payload.lead_units, [...DEPARTMENTS]);
         payload.related_curricular_offerings = normalizeLeadUnits(
             payload.related_curricular_offerings,
             allowedUnits

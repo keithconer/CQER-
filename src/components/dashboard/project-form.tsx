@@ -46,7 +46,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { createProject, updateProject } from "@/lib/actions/projects";
-import { DEPARTMENTS, getUnitsByDepartment } from "@/lib/departments";
+import { DEPARTMENTS, getAllUnits, getUnitsByDepartment } from "@/lib/departments";
 import {
   Dialog,
   DialogContent,
@@ -149,8 +149,9 @@ const schema = z.object({
   awards_conferring_agency: z.string().default(""),
   awards_date: z.date().nullable(),
   funding_remarks_date: z.string().default(""),
-  visibility_scope: z.enum(["public", "specific_units"]).default("public"),
+  visibility_scope: z.enum(["public", "specific_units", "all_departments", "specific_departments"]).default("public"),
   visible_units: z.array(z.string()).default([]),
+  visible_departments: z.array(z.string()).default([]),
   documents: z.array(z.object({ url: z.string(), name: z.string() })).default([]),
 });
 
@@ -178,8 +179,9 @@ interface LooseProject {
   partner_agencies?: Array<Record<string, unknown>> | null;
   collaborating_agencies?: string | null;
   funding_data?: Record<string, unknown> | null;
-  visibility_scope?: "public" | "specific_units" | null;
+  visibility_scope?: "public" | "specific_units" | "all_departments" | "specific_departments" | null;
   visible_units?: string[] | null;
+  visible_departments?: string[] | null;
   documents?: { url: string; name: string }[] | null;
 }
 
@@ -343,6 +345,7 @@ function buildPayload(values: FormValues) {
     partner_agency_count: values.partner_agency_count,
     visibility_scope: values.visibility_scope,
     visible_units: values.visible_units,
+    visible_departments: values.visible_departments,
     documents: values.documents,
     funding_data: {
       project_no: values.project_no,
@@ -389,8 +392,12 @@ export function ProjectForm({
 }: ProjectFormProps) {
   const recordLabel = "Project";
   const isCollegeCoordinator = currentUserType === "college_coordinator";
+  const isSuperAdmin = currentUserType === "super_admin";
 
   const relatedOptions = React.useMemo(() => {
+    if (currentUserType === "super_admin") {
+      return unitOptions.length > 0 ? unitOptions : getAllUnits();
+    }
     if (currentUserType === "college_coordinator") return unitOptions;
     if (currentUserType === "unit_coordinator" && currentDepartment) {
       const units = getUnitsByDepartment(currentDepartment);
@@ -504,8 +511,9 @@ export function ProjectForm({
       awards_conferring_agency: typeof fundingData.awards_conferring_agency === "string" ? fundingData.awards_conferring_agency : "",
       awards_date: typeof fundingData.awards_date === "string" ? new Date(fundingData.awards_date) : null,
       funding_remarks_date: typeof fundingData.remarks_date === "string" ? fundingData.remarks_date : "",
-      visibility_scope: project?.visibility_scope || (currentUserType === "unit_coordinator" ? "specific_units" : "public"),
+      visibility_scope: project?.visibility_scope || (currentUserType === "unit_coordinator" ? "specific_units" : currentUserType === "super_admin" ? "all_departments" : "public"),
       visible_units: project?.visible_units || (currentUserType === "unit_coordinator" && currentUnit ? [currentUnit] : []),
+      visible_departments: project?.visible_departments || (currentUserType === "super_admin" ? [...DEPARTMENTS] : currentDepartment ? [currentDepartment] : []),
       documents: project?.documents || [],
     },
   });
@@ -566,9 +574,23 @@ export function ProjectForm({
     if (currentUserType === "unit_coordinator") {
       form.setValue("visibility_scope", "specific_units", { shouldValidate: true });
       form.setValue("visible_units", currentUnit ? [currentUnit] : [], { shouldValidate: true });
+      form.setValue("visible_departments", currentDepartment ? [currentDepartment] : [], { shouldValidate: true });
       form.setValue("lead_units", currentDepartment ? [currentDepartment] : [], { shouldValidate: true });
     }
   }, [currentUserType, currentUnit, currentDepartment, form]);
+
+  React.useEffect(() => {
+    if (currentUserType === "college_coordinator" && currentDepartment) {
+      form.setValue("visible_departments", [currentDepartment], { shouldValidate: false });
+    }
+    if (
+      currentUserType === "super_admin" &&
+      visibilityScope === "all_departments" &&
+      (form.getValues("visible_departments") || []).length !== DEPARTMENTS.length
+    ) {
+      form.setValue("visible_departments", [...DEPARTMENTS], { shouldValidate: true });
+    }
+  }, [currentUserType, currentDepartment, visibilityScope, form]);
 
   async function onSubmit(values: FormOutput) {
     if (isViewOnly) return;
@@ -720,7 +742,7 @@ export function ProjectForm({
               )} />
             </div>
 
-            {(currentUserType === "college_coordinator" || currentUserType === "unit_coordinator") && (
+            {(currentUserType === "college_coordinator" || currentUserType === "unit_coordinator" || currentUserType === "super_admin") && (
               <FormField control={form.control} name="lead_units" render={({ field }) => (
                 <FormItem className="space-y-2">
                   <FormLabel className="text-[10px]">Lead unit</FormLabel>
@@ -1165,13 +1187,22 @@ export function ProjectForm({
               </div>
             </div>
 
-            {isCollegeCoordinator && (
+            {(isCollegeCoordinator || isSuperAdmin) && (
               <FormField control={form.control} name="visibility_scope" render={({ field }) => (
                 <FormItem className="space-y-2 rounded-md border border-border/50 p-3">
                   <FormLabel className="text-[10px]">Visibility</FormLabel>
                   <div className="flex gap-4">
-                    <label className="flex items-center gap-2 text-[10px]"><Checkbox checked={field.value === "public"} disabled={isViewOnly} onCheckedChange={(c) => c && field.onChange("public")} /> Public</label>
-                    <label className="flex items-center gap-2 text-[10px]"><Checkbox checked={field.value === "specific_units"} disabled={isViewOnly} onCheckedChange={(c) => c && field.onChange("specific_units")} /> Specific units</label>
+                    {isCollegeCoordinator ? (
+                      <>
+                        <label className="flex items-center gap-2 text-[10px]"><Checkbox checked={field.value === "public"} disabled={isViewOnly} onCheckedChange={(c) => c && field.onChange("public")} /> Public</label>
+                        <label className="flex items-center gap-2 text-[10px]"><Checkbox checked={field.value === "specific_units"} disabled={isViewOnly} onCheckedChange={(c) => c && field.onChange("specific_units")} /> Specific units</label>
+                      </>
+                    ) : (
+                      <>
+                        <label className="flex items-center gap-2 text-[10px]"><Checkbox checked={field.value === "all_departments"} disabled={isViewOnly} onCheckedChange={(c) => c && field.onChange("all_departments")} /> All departments</label>
+                        <label className="flex items-center gap-2 text-[10px]"><Checkbox checked={field.value === "specific_departments"} disabled={isViewOnly} onCheckedChange={(c) => c && field.onChange("specific_departments")} /> Specific departments</label>
+                      </>
+                    )}
                   </div>
                   {visibilityScope === "specific_units" && (
                     <FormField control={form.control} name="visible_units" render={({ field: visField }) => (
@@ -1180,6 +1211,18 @@ export function ProjectForm({
                           <label key={unitName} className="flex items-center gap-2 rounded-md border border-border/50 px-2 py-1.5">
                             <Checkbox checked={(visField.value || []).includes(unitName)} disabled={isViewOnly} onCheckedChange={() => visField.onChange(toggleArrayItem(visField.value || [], unitName))} />
                             <span className="text-[10px]">{unitName}</span>
+                          </label>
+                        ))}
+                      </div>
+                    )} />
+                  )}
+                  {visibilityScope === "specific_departments" && (
+                    <FormField control={form.control} name="visible_departments" render={({ field: deptField }) => (
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        {DEPARTMENTS.map((departmentName) => (
+                          <label key={departmentName} className="flex items-center gap-2 rounded-md border border-border/50 px-2 py-1.5">
+                            <Checkbox checked={(deptField.value || []).includes(departmentName)} disabled={isViewOnly} onCheckedChange={() => deptField.onChange(toggleArrayItem(deptField.value || [], departmentName))} />
+                            <span className="text-[10px]">{departmentName}</span>
                           </label>
                         ))}
                       </div>

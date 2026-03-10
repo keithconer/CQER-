@@ -10,7 +10,7 @@ import { getFacultyModuleData } from "@/lib/actions/faculty-involvement";
 import { getOrdinances, getTechnologies } from "@/lib/actions/technology-ordinance";
 import { getTrainings } from "@/lib/actions/trainings";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getUnitsByDepartment } from "@/lib/departments";
+import { getAllUnits, getUnitsByDepartment } from "@/lib/departments";
 import { CollegeProjectsManagement } from "@/components/dashboard/college-projects-management";
 import { CollegeProjectProposalsManagement } from "@/components/dashboard/college-project-proposals-management";
 import { UnitProjectProposalsManagement } from "@/components/dashboard/unit-project-proposals-management";
@@ -87,8 +87,8 @@ export default async function DashboardPage({
       ? panelParam
       : "records";
   const hasSuperAdminSelection = panelParam === "accounts" || panelParam === "projects";
-  const superAdminPanel: "accounts" | "projects" =
-    panelParam === "accounts" || panelParam === "projects"
+  const superAdminPanel: "accounts" | "projects" | "trainings" =
+    panelParam === "accounts" || panelParam === "projects" || panelParam === "trainings"
       ? panelParam
       : "projects";
 
@@ -190,18 +190,23 @@ export default async function DashboardPage({
     unit: string | null;
   }[] = [];
   let availableUnitsForCollege: string[] = [];
+  let availableUnitsForSuperAdmin: string[] = [];
 
   let allProjects: Project[] = [];
 
   if (profile.user_type === "super_admin") {
     const adminClient = createAdminClient();
-    const [accountsResult, projectsResult] = await Promise.all([
+    const [accountsResult, projectsResult, trainingsResult] = await Promise.all([
       adminClient
         .from("profiles")
         .select("id, first_name, last_name, user_type, department, unit")
         .order("created_at", { ascending: false }),
       adminClient
         .from("projects")
+        .select("*")
+        .order("created_at", { ascending: false }),
+      adminClient
+        .from("trainings")
         .select("*")
         .order("created_at", { ascending: false }),
     ]);
@@ -215,6 +220,9 @@ export default async function DashboardPage({
       ) || [];
 
     allProjects = (projectsResult.data as Project[] | null) || [];
+    trainingRecords = (trainingsResult.data as TrainingRecord[] | null) || [];
+    trainingPartnerAgencyOptions = extractPartnerAgencyNames(allProjects);
+    availableUnitsForSuperAdmin = getAllUnits();
   }
 
   if (profile.user_type === "college_coordinator" && profile.department) {
@@ -248,7 +256,7 @@ export default async function DashboardPage({
 
       {userType === "super_admin" && (
         <div className="space-y-4">
-          {hasSuperAdminSelection && (
+          {(hasSuperAdminSelection || superAdminPanel === "trainings") && (
             <>
               {superAdminPanel === "accounts" ? (
                 <>
@@ -270,6 +278,17 @@ export default async function DashboardPage({
                   userType={userType}
                   department={profile.department}
                   unit={profile.unit}
+                  unitOptions={availableUnitsForSuperAdmin}
+                />
+              ) : superAdminPanel === "trainings" ? (
+                <TrainingsManagement
+                  initialRecords={trainingRecords}
+                  department={profile.department}
+                  userType={userType}
+                  unit={profile.unit}
+                  unitOptions={availableUnitsForSuperAdmin}
+                  partnerAgencyOptions={trainingPartnerAgencyOptions}
+                  currentUserId={user.id}
                 />
               ) : (
                 <ProjectManagement
@@ -277,6 +296,7 @@ export default async function DashboardPage({
                   userType={userType}
                   department={profile.department}
                   unit={profile.unit}
+                  unitOptions={availableUnitsForSuperAdmin}
                 />
               )}
             </>

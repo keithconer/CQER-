@@ -101,6 +101,10 @@ export function getUnitsByDepartment(department: string | null | undefined) {
   return UNITS_BY_DEPARTMENT[normalized] || [];
 }
 
+export function getAllUnits() {
+  return DEPARTMENTS.flatMap((department) => UNITS_BY_DEPARTMENT[department] || []);
+}
+
 export function isIndustrialEngineeringAndTechnologyDepartment(
   department: string | null | undefined
 ) {

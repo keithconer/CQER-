@@ -46,6 +46,8 @@ import {
 } from "@/components/ui/dialog";
 import { createProject, updateProject } from "@/lib/actions/projects";
 import { FileUpload } from "./file-upload";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DEPARTMENTS, getUnitsByDepartment } from "@/lib/departments";
 
 const agendaOptions = [
   "Agri-Fisheries and Food Security",
@@ -106,6 +108,10 @@ const schema = z
       .refine((value) => /^\d+(\.\d+)?$/.test(value), "Numbers only"),
     sdg_goals: z.array(z.string()).min(1, "Select at least one"),
     faculty_involved: z.array(z.object({ name: z.string().min(1) })).min(1, "Add at least one faculty"),
+    proposal_department: z.string().min(1, "Required"),
+    proposal_unit: z.string().optional(),
+    visibility_scope: z.enum(["all_departments", "specific_departments", "public", "specific_units"]).default("public"),
+    visible_departments: z.array(z.string()).default([]),
     documents: z.array(z.object({ url: z.string(), name: z.string() })).default([]),
   })
   .superRefine((data, ctx) => {
@@ -149,6 +155,7 @@ interface ProjectProposalFormProps {
   currentUserType?: "super_admin" | "college_coordinator" | "unit_coordinator";
   currentDepartment?: string | null;
   currentUnit?: string | null;
+  unitOptions?: string[];
 }
 
 const emptyFaculty = { name: "" };
@@ -226,14 +233,22 @@ function toggleArrayItem(arr: string[], value: string) {
   return arr.includes(value) ? arr.filter((entry) => entry !== value) : [...arr, value];
 }
 
+function proposalVisibilityScope(proposal: LooseProposal) {
+  const raw = (proposal as Record<string, unknown>).visibility_scope;
+  return raw === "specific_departments" || raw === "all_departments" ? raw : "all_departments";
+}
+
 export function ProjectProposalForm({
   onSuccess,
   proposal,
   isViewOnly,
+  currentUserType,
   currentDepartment,
   currentUnit,
+  unitOptions = [],
 }: ProjectProposalFormProps) {
   const departmentLabel = `${currentDepartment || "N/A"}${currentUnit ? ` / ${currentUnit}` : ""}`;
+  const isSuperAdmin = currentUserType === "super_admin";
   const form = useForm<FormInput, unknown, FormOutput>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -258,6 +273,18 @@ export function ProjectProposalForm({
       faculty_involved: Array.isArray(proposal?.faculty_involved) && proposal.faculty_involved.length > 0
         ? proposal.faculty_involved.map((item) => ({ name: item?.name || "" }))
         : [emptyFaculty],
+      proposal_department: proposal?.proposal_department || currentDepartment || "",
+      proposal_unit: proposal?.proposal_unit || currentUnit || "",
+      visibility_scope: proposal && isSuperAdmin
+        ? proposalVisibilityScope(proposal)
+        : isSuperAdmin
+          ? "all_departments"
+          : "public",
+      visible_departments: proposal && isSuperAdmin
+        ? normalizeStringArray((proposal as Record<string, unknown>).visible_departments)
+        : isSuperAdmin
+          ? [...DEPARTMENTS]
+          : currentDepartment ? [currentDepartment] : [],
       documents: proposal?.documents || [],
     },
   });
@@ -279,6 +306,33 @@ export function ProjectProposalForm({
   });
 
   const selectedBeneficiaries = form.watch("target_beneficiaries");
+  const watchedDepartment = form.watch("proposal_department");
+  const watchedVisibilityScope = form.watch("visibility_scope");
+  const availableUnits = React.useMemo(
+    () =>
+      isSuperAdmin
+        ? (watchedDepartment ? getUnitsByDepartment(watchedDepartment) : unitOptions)
+        : getUnitsByDepartment(watchedDepartment || currentDepartment),
+    [currentDepartment, isSuperAdmin, unitOptions, watchedDepartment]
+  );
+
+  React.useEffect(() => {
+    if (!isSuperAdmin) return;
+    const nextUnit = form.getValues("proposal_unit");
+    if (nextUnit && !availableUnits.includes(nextUnit)) {
+      form.setValue("proposal_unit", "", { shouldValidate: true });
+    }
+  }, [availableUnits, form, isSuperAdmin]);
+
+  React.useEffect(() => {
+    if (!isSuperAdmin) return;
+    if (
+      watchedVisibilityScope === "all_departments" &&
+      (form.getValues("visible_departments") || []).length !== DEPARTMENTS.length
+    ) {
+      form.setValue("visible_departments", [...DEPARTMENTS], { shouldValidate: true });
+    }
+  }, [form, isSuperAdmin, watchedVisibilityScope]);
 
   async function onSubmit(values: FormValues) {
     if (isViewOnly) return;
@@ -292,10 +346,10 @@ export function ProjectProposalForm({
         proponents: [{ name: values.project_leader }],
         co_project_leaders: values.co_project_leaders,
         project_assistants: values.project_assistants,
-        proposal_department: currentDepartment || null,
-        proposal_unit: currentUnit || null,
-        lead_units: currentDepartment ? [currentDepartment] : [],
-        related_curricular_offerings: currentUnit ? [currentUnit] : [],
+        proposal_department: values.proposal_department || currentDepartment || null,
+        proposal_unit: values.proposal_unit || currentUnit || null,
+        lead_units: values.proposal_department ? [values.proposal_department] : currentDepartment ? [currentDepartment] : [],
+        related_curricular_offerings: values.proposal_unit ? [values.proposal_unit] : currentUnit ? [currentUnit] : [],
         collaborating_agencies: values.collaborating_agency,
         target_beneficiaries: values.target_beneficiaries,
         target_beneficiary_others: values.target_beneficiary_others?.trim() || null,
@@ -305,6 +359,8 @@ export function ProjectProposalForm({
         faculty_involved: values.faculty_involved,
         academic_program: "N/A",
         budget_requirements: [],
+        visibility_scope: isSuperAdmin ? values.visibility_scope : "public",
+        visible_departments: isSuperAdmin ? values.visible_departments : currentDepartment ? [currentDepartment] : [],
         documents: values.documents,
       };
 
@@ -463,26 +519,110 @@ export function ProjectProposalForm({
               </div>
             </div>
 
-            <FormField
-              control={form.control}
-              name="department_label"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-[10px]">Department</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Building2 className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-                      <Input
-                        value={field.value || departmentLabel}
-                        readOnly
-                        disabled
-                        className="h-8 pl-7 text-[10px] bg-muted/20"
-                      />
+            {isSuperAdmin ? (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="proposal_department"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-[10px]">Department</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange} disabled={isViewOnly}>
+                        <FormControl>
+                          <SelectTrigger className="h-8 text-[10px]">
+                            <SelectValue placeholder="Select department" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {DEPARTMENTS.map((departmentName) => (
+                            <SelectItem key={departmentName} value={departmentName} className="text-[10px]">
+                              {departmentName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage className="text-[10px]" />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="proposal_unit"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-[10px]">Unit</FormLabel>
+                      <Select value={field.value || ""} onValueChange={field.onChange} disabled={isViewOnly || availableUnits.length === 0}>
+                        <FormControl>
+                          <SelectTrigger className="h-8 text-[10px]">
+                            <SelectValue placeholder="Select unit" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {availableUnits.map((unitName) => (
+                            <SelectItem key={unitName} value={unitName} className="text-[10px]">
+                              {unitName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+              </div>
+            ) : (
+              <FormField
+                control={form.control}
+                name="department_label"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-[10px]">Department</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Building2 className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                        <Input
+                          value={field.value || departmentLabel}
+                          readOnly
+                          disabled
+                          className="h-8 pl-7 text-[10px] bg-muted/20"
+                        />
+                      </div>
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {isSuperAdmin && (
+              <FormField
+                control={form.control}
+                name="visibility_scope"
+                render={({ field }) => (
+                  <FormItem className="space-y-2 rounded-md border border-border/50 p-3">
+                    <FormLabel className="text-[10px]">Visibility</FormLabel>
+                    <div className="flex gap-4">
+                      <label className="flex items-center gap-2 text-[10px]"><Checkbox checked={field.value === "all_departments"} disabled={isViewOnly} onCheckedChange={(checked) => checked && field.onChange("all_departments")} /> All departments</label>
+                      <label className="flex items-center gap-2 text-[10px]"><Checkbox checked={field.value === "specific_departments"} disabled={isViewOnly} onCheckedChange={(checked) => checked && field.onChange("specific_departments")} /> Specific departments</label>
                     </div>
-                  </FormControl>
-                </FormItem>
-              )}
-            />
+                    {field.value === "specific_departments" && (
+                      <FormField
+                        control={form.control}
+                        name="visible_departments"
+                        render={({ field: departmentField }) => (
+                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                            {DEPARTMENTS.map((departmentName) => (
+                              <label key={departmentName} className="flex items-center gap-2 rounded-md border border-border/50 px-2 py-1.5">
+                                <Checkbox checked={(departmentField.value || []).includes(departmentName)} disabled={isViewOnly} onCheckedChange={() => departmentField.onChange(toggleArrayItem(departmentField.value || [], departmentName))} />
+                                <span className="text-[10px]">{departmentName}</span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      />
+                    )}
+                  </FormItem>
+                )}
+              />
+            )}
 
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <FormField
