@@ -801,7 +801,7 @@ export function ProjectProposalForm({
                 <FormItem>
                   <FormLabel className="text-[10px]">Upload documents</FormLabel>
                   <FormControl>
-                    <FileUpload value={field.value || []} onChange={field.onChange} disabled={isViewOnly || isSubmitting} maxFiles={10} />
+                    <FileUpload value={field.value || []} onChange={(docs) => form.setValue("documents", docs, { shouldDirty: true })} disabled={isViewOnly || isSubmitting} maxFiles={10} />
                   </FormControl>
                 </FormItem>
               )}

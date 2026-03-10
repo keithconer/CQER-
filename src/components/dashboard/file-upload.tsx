@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Upload, FileText, X, Loader2, CheckCircle2 } from "lucide-react";
+import { Upload, FileText, X, Loader2, CheckCircle2, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
@@ -14,11 +14,14 @@ interface FileUploadProps {
   maxFiles?: number;
 }
 
+const BUCKET = "cqer-projects_pdfs";
+
 export function FileUpload({ value = [], onChange, disabled, maxFiles = 5 }: FileUploadProps) {
   const [uploading, setUploading] = React.useState(false);
   const [progress, setProgress] = React.useState(0);
+  const [openingIndex, setOpeningIndex] = React.useState<number | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const supabase = createClient();
+  const supabase = React.useMemo(() => createClient(), []);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -51,7 +54,7 @@ export function FileUpload({ value = [], onChange, disabled, maxFiles = 5 }: Fil
       const filePath = `${user.id}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from("cqer-projects_pdfs")
+        .from(BUCKET)
         .upload(filePath, file, {
           upsert: true,
           cacheControl: "3600",
@@ -63,15 +66,15 @@ export function FileUpload({ value = [], onChange, disabled, maxFiles = 5 }: Fil
 
       const newDocs = [...value, { url: filePath, name: file.name }];
       onChange(newDocs);
-      
+
       setTimeout(() => {
         setUploading(false);
         setProgress(0);
       }, 500);
-
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Upload failed";
       console.error("Error uploading:", error);
-      alert(error.message || "Upload failed");
+      alert(message);
       setUploading(false);
       setProgress(0);
     } finally {
@@ -80,9 +83,34 @@ export function FileUpload({ value = [], onChange, disabled, maxFiles = 5 }: Fil
   };
 
   const removeFile = (index: number) => {
-    const newDocs = [...value];
-    newDocs.splice(index, 1);
+    const newDocs = value.filter((_, i) => i !== index);
     onChange(newDocs);
+  };
+
+  const handleOpen = async (file: { url: string; name: string }, index: number) => {
+    setOpeningIndex(index);
+    try {
+      // If the url is already a full http URL (legacy), open directly
+      if (file.url.startsWith("http")) {
+        window.open(file.url, "_blank", "noopener,noreferrer");
+        return;
+      }
+
+      const { data, error } = await supabase.storage
+        .from(BUCKET)
+        .createSignedUrl(file.url, 3600);
+
+      if (error || !data?.signedUrl) {
+        alert("Could not generate a link for this file. Please try again.");
+        return;
+      }
+
+      window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+    } catch {
+      alert("Something went wrong opening the file.");
+    } finally {
+      setOpeningIndex(null);
+    }
   };
 
   return (
@@ -91,13 +119,29 @@ export function FileUpload({ value = [], onChange, disabled, maxFiles = 5 }: Fil
       {value.length > 0 && (
         <div className="grid grid-cols-1 gap-2">
           {value.map((file, index) => (
-            <div key={index} className="flex items-center justify-between p-2.5 border rounded-lg bg-muted/30 group">
-              <div className="flex items-center gap-3">
-                <div className="p-1.5 rounded-md bg-primary/10">
+            <div
+              key={index}
+              className="flex items-center justify-between p-2.5 border rounded-lg bg-muted/30 group"
+            >
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div className="p-1.5 rounded-md bg-primary/10 shrink-0">
                   <FileText className="h-4 w-4 text-primary" />
                 </div>
-                <div className="flex flex-col">
-                  <span className="text-xs font-medium truncate max-w-[200px]">{file.name}</span>
+                <div className="flex flex-col min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => void handleOpen(file, index)}
+                    disabled={disabled || openingIndex === index}
+                    className="flex items-center gap-1 text-left text-xs font-medium truncate max-w-[200px] hover:text-primary hover:underline transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={`Open ${file.name}`}
+                  >
+                    <span className="truncate">{file.name}</span>
+                    {openingIndex === index ? (
+                      <Loader2 className="h-2.5 w-2.5 animate-spin shrink-0 text-muted-foreground" />
+                    ) : (
+                      <ExternalLink className="h-2.5 w-2.5 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    )}
+                  </button>
                   <span className="text-[9px] text-muted-foreground flex items-center gap-1">
                     <CheckCircle2 className="h-2 w-2 text-green-500" /> Uploaded
                   </span>
@@ -108,8 +152,8 @@ export function FileUpload({ value = [], onChange, disabled, maxFiles = 5 }: Fil
                 variant="ghost"
                 size="icon"
                 onClick={() => removeFile(index)}
-                disabled={disabled}
-                className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                disabled={disabled || uploading}
+                className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0"
               >
                 <X className="h-3.5 w-3.5" />
               </Button>
@@ -118,7 +162,7 @@ export function FileUpload({ value = [], onChange, disabled, maxFiles = 5 }: Fil
         </div>
       )}
 
-      {/* Upload area - only show if under limit or uploading */}
+      {/* Upload area */}
       {(value.length < maxFiles || uploading) && (
         <div
           onClick={() => !disabled && !uploading && fileInputRef.current?.click()}

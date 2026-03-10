@@ -1771,7 +1771,7 @@ export function TrainingsForm({
               <FormControl>
                 <FileUpload
                   value={field.value || []}
-                  onChange={field.onChange}
+                  onChange={(docs) => form.setValue("documents", docs, { shouldDirty: true })}
                   disabled={isSubmitting || isViewOnly}
                   maxFiles={10}
                 />

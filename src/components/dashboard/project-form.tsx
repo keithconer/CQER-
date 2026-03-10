@@ -1236,7 +1236,7 @@ export function ProjectForm({
               <FormItem>
                 <FormLabel className="text-[10px]">Upload documents</FormLabel>
                 <FormDescription className="text-[10px]">Attach supporting files.</FormDescription>
-                <FormControl><FileUpload value={field.value || []} onChange={field.onChange} disabled={isViewOnly || isSubmitting} maxFiles={10} /></FormControl>
+                <FormControl><FileUpload value={field.value || []} onChange={(docs) => form.setValue("documents", docs, { shouldDirty: true })} disabled={isViewOnly || isSubmitting} maxFiles={10} /></FormControl>
               </FormItem>
             )} />
 
