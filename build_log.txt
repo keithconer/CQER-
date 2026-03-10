@@ -1,0 +1,87 @@
+
+> cqer@0.1.0 build
+> next build
+
+Γû▓ Next.js 16.1.6 (Turbopack)
+- Environments: .env.local
+
+ΓÜá The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+
+> Build error occurred
+Error: Turbopack build failed with 7 errors:
+./node_modules/fs.realpath/package.json:1:1
+Error parsing package.json file
+package.json is not parseable: invalid JSON: EOF while parsing a value at line 1 column 0
+
+
+./node_modules/inflight/package.json:1:1
+Error parsing package.json file
+package.json is not parseable: invalid JSON: EOF while parsing a value at line 1 column 0
+
+
+./node_modules/lodash.isplainobject/package.json:1:1
+Error parsing package.json file
+package.json is not parseable: invalid JSON: EOF while parsing a value at line 1 column 0
+
+
+./node_modules/normalize-path/package.json:1:1
+Error parsing package.json file
+package.json is not parseable: invalid JSON: EOF while parsing a value at line 1 column 0
+
+
+./node_modules/path-is-absolute/package.json:1:1
+Error parsing package.json file
+package.json is not parseable: invalid JSON: EOF while parsing a value at line 1 column 0
+
+
+./src/components/ui/skeleton.tsx:10:7
+Parsing ecmascript source code failed
+   8 |     <div
+   9 |       className={cn("animate-pulse rounded-md bg-muted", className)}
+> 10 |       ...props
+     |       ^^^
+  11 |     />
+  12 |   )
+  13 | }
+
+Unexpected token `...`. Expected jsx identifier
+
+Import trace:
+  Server Component:
+    ./src/components/ui/skeleton.tsx
+    ./src/components/dashboard/table-skeleton.tsx
+    ./src/app/(dashboard)/dashboard/loading.tsx
+
+
+./node_modules/glob/glob.js:55:16
+Module not found: Can't resolve 'inflight'
+  53 | var setopts = common.setopts
+  54 | var ownProp = common.ownProp
+> 55 | var inflight = require('inflight')
+     |                ^^^^^^^^^^^^^^^^^^^
+  56 | var util = require('util')
+  57 | var childrenIgnored = common.childrenIgnored
+  58 | var isIgnored = common.isIgnored
+
+
+
+Import trace:
+  Client Component SSR:
+    ./node_modules/glob/glob.js [Client Component SSR]
+    ./node_modules/archiver-utils/file.js [Client Component SSR]
+    ./node_modules/archiver-utils/index.js [Client Component SSR]
+    ./node_modules/archiver/lib/plugins/tar.js [Client Component SSR]
+    ./node_modules/archiver/index.js [Client Component SSR]
+    ./node_modules/exceljs/lib/stream/xlsx/workbook-writer.js [Client Component SSR]
+    ./node_modules/exceljs/lib/exceljs.nodejs.js [Client Component SSR]
+    ./node_modules/exceljs/excel.js [Client Component SSR]
+    ./src/components/dashboard/funding-management.tsx [Client Component SSR]
+    ./src/components/dashboard/funding-management.tsx [Server Component]
+    ./src/app/(dashboard)/dashboard/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+    at <unknown> (./src/components/ui/skeleton.tsx:10:7)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
