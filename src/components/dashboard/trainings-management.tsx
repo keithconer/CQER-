@@ -208,15 +208,6 @@ export function TrainingsManagement({
       workbook.created = new Date();
 
       const worksheet = workbook.addWorksheet("Trainings");
-      
-      // Add Title Row
-      const year = new Date().getFullYear();
-      worksheet.mergeCells("A1:Q1");
-      const titleCell = worksheet.getCell("A1");
-      titleCell.value = `Trainings (${year})`;
-      titleCell.font = { bold: true, size: 12, color: { argb: "FF000000" }, name: "Calibri" };
-      titleCell.alignment = { vertical: "middle", horizontal: "center" };
-      worksheet.getRow(1).height = 25;
 
       const recordsToExport = filteredRecords.filter((r) => selectedExportIds.has(r.id));
       const rows = toExportRows(recordsToExport);
@@ -241,9 +232,19 @@ export function TrainingsManagement({
         { header: "Remarks", key: "Remarks", width: 30 },
       ];
 
-      worksheet.columns = columns;
+      // Define columns first (this might populate Row 1 headers by default)
+      worksheet.columns = columns.map(col => ({ key: col.key, width: col.width }));
 
-      // Formatting headers (Row 2 because Row 1 is the title)
+      // Now override Row 1 with the Title
+      const year = new Date().getFullYear();
+      worksheet.mergeCells("A1:Q1");
+      const titleCell = worksheet.getCell("A1");
+      titleCell.value = `Trainings (${year})`;
+      titleCell.font = { bold: true, size: 12, color: { argb: "FF000000" }, name: "Calibri" };
+      titleCell.alignment = { vertical: "middle", horizontal: "center" };
+      worksheet.getRow(1).height = 25;
+
+      // Now set Row 2 for the Headers
       const headerRow = worksheet.getRow(2);
       headerRow.values = columns.map(c => c.header);
       headerRow.height = 24;
