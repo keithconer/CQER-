@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { NotificationBell } from "@/components/notification-bell";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,6 +43,7 @@ import Image from "next/image";
 
 interface NavbarProps {
   user: {
+    id: string;
     firstName: string;
     lastName: string;
     email: string;
@@ -201,6 +203,7 @@ export function Navbar({ user }: NavbarProps) {
         </div>
 
         <div className="flex items-center gap-2">
+          <NotificationBell userId={user.id} />
           <Avatar className="h-7 w-7">
             <AvatarImage src={user.avatarUrl || undefined} alt={user.firstName} />
             <AvatarFallback className="text-[10px] font-medium bg-muted">

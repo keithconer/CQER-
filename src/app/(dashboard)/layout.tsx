@@ -47,6 +47,7 @@ export default async function DashboardLayout({
   }
 
   const userData = {
+    id: user.id,
     firstName: profile.first_name || user.user_metadata?.first_name || "User",
     lastName: profile.last_name || user.user_metadata?.last_name || "",
     email: user.email || "",

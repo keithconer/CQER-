@@ -1258,3 +1258,374 @@ $$;
 -- ============================================================
 -- END COPY: Trainings Management
 -- ============================================================
+
+-- ============================================================
+-- START COPY: Navbar Notifications
+-- ============================================================
+create table if not exists public.notifications (
+  id uuid primary key default gen_random_uuid(),
+  recipient_id uuid not null references public.profiles(id) on delete cascade,
+  actor_id uuid references public.profiles(id) on delete cascade,
+  actor_name text not null,
+  actor_avatar_url text,
+  entity_table text not null check (entity_table in ('projects', 'trainings')),
+  entity_id uuid not null,
+  entity_kind text not null check (entity_kind in ('project', 'proposal', 'program', 'training')),
+  entity_title text not null,
+  action_type text not null check (action_type in ('created', 'updated', 'document_uploaded')),
+  route text not null,
+  read_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_notifications_recipient_created_at
+on public.notifications (recipient_id, created_at desc);
+
+create index if not exists idx_notifications_unread
+on public.notifications (recipient_id, read_at, created_at desc);
+
+alter table public.notifications enable row level security;
+
+drop policy if exists "Users can view own notifications" on public.notifications;
+create policy "Users can view own notifications" on public.notifications
+  for select using (auth.uid() = recipient_id);
+
+drop policy if exists "Users can update own notifications" on public.notifications;
+create policy "Users can update own notifications" on public.notifications
+  for update using (auth.uid() = recipient_id)
+  with check (auth.uid() = recipient_id);
+
+create or replace function public.push_project_notification()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  actor_record public.profiles%rowtype;
+  route_target text;
+  action_name text;
+  title_value text;
+  kind_value text;
+begin
+  select *
+  into actor_record
+  from public.profiles
+  where id = new.created_by;
+
+  if actor_record.id is null or actor_record.user_type not in ('college_coordinator', 'unit_coordinator') then
+    return new;
+  end if;
+
+  kind_value := case coalesce(new.entry_type, 'project')
+    when 'project_proposal' then 'proposal'
+    when 'program' then 'program'
+    else 'project'
+  end;
+
+  title_value := coalesce(nullif(trim(new.project_title), ''), nullif(trim(new.title), ''), 'Untitled');
+  route_target := case
+    when coalesce(new.entry_type, 'project') = 'project_proposal'
+      then '/dashboard?panel=records&view=project-proposal'
+    else '/dashboard?panel=records&view=project-registration'
+  end;
+
+  if tg_op = 'INSERT' then
+    action_name := 'created';
+  elsif actor_record.user_type = 'unit_coordinator' then
+    if coalesce(jsonb_array_length(coalesce(new.documents, '[]'::jsonb)), 0)
+      > coalesce(jsonb_array_length(coalesce(old.documents, '[]'::jsonb)), 0)
+      or new.pdf_url is distinct from old.pdf_url
+      or new.pdf_name is distinct from old.pdf_name then
+      action_name := 'document_uploaded';
+    else
+      action_name := 'updated';
+    end if;
+  else
+    return new;
+  end if;
+
+  if actor_record.user_type = 'college_coordinator' then
+    if tg_op <> 'INSERT' then
+      return new;
+    end if;
+
+    insert into public.notifications (
+      recipient_id,
+      actor_id,
+      actor_name,
+      actor_avatar_url,
+      entity_table,
+      entity_id,
+      entity_kind,
+      entity_title,
+      action_type,
+      route
+    )
+    select
+      recipient.id,
+      actor_record.id,
+      trim(concat(coalesce(actor_record.first_name, ''), ' ', coalesce(actor_record.last_name, ''))),
+      actor_record.avatar_url,
+      'projects',
+      new.id,
+      kind_value,
+      title_value,
+      action_name,
+      route_target
+    from public.profiles recipient
+    where recipient.user_type = 'unit_coordinator'
+      and recipient.department = actor_record.department
+      and recipient.id <> actor_record.id
+      and (
+        coalesce(new.visibility_scope, 'public') = 'public'
+        or (
+          coalesce(new.visibility_scope, 'public') = 'specific_units'
+          and recipient.unit in (
+            select jsonb_array_elements_text(coalesce(new.visible_units, '[]'::jsonb))
+          )
+        )
+      );
+
+    return new;
+  end if;
+
+  if tg_op = 'INSERT' then
+    insert into public.notifications (
+      recipient_id,
+      actor_id,
+      actor_name,
+      actor_avatar_url,
+      entity_table,
+      entity_id,
+      entity_kind,
+      entity_title,
+      action_type,
+      route
+    )
+    select
+      recipient.id,
+      actor_record.id,
+      trim(concat(coalesce(actor_record.first_name, ''), ' ', coalesce(actor_record.last_name, ''))),
+      actor_record.avatar_url,
+      'projects',
+      new.id,
+      kind_value,
+      title_value,
+      action_name,
+      route_target
+    from public.profiles recipient
+    where recipient.user_type = 'unit_coordinator'
+      and recipient.department = actor_record.department
+      and recipient.unit = actor_record.unit
+      and recipient.id <> actor_record.id;
+  end if;
+
+  insert into public.notifications (
+    recipient_id,
+    actor_id,
+    actor_name,
+    actor_avatar_url,
+    entity_table,
+    entity_id,
+    entity_kind,
+    entity_title,
+    action_type,
+    route
+  )
+  select
+    recipient.id,
+    actor_record.id,
+    trim(concat(coalesce(actor_record.first_name, ''), ' ', coalesce(actor_record.last_name, ''))),
+    actor_record.avatar_url,
+    'projects',
+    new.id,
+    kind_value,
+    title_value,
+    action_name,
+    route_target
+  from public.profiles recipient
+  where recipient.user_type = 'college_coordinator'
+    and recipient.department = actor_record.department
+    and recipient.id <> actor_record.id;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists project_notifications_after_insert on public.projects;
+create trigger project_notifications_after_insert
+after insert on public.projects
+for each row execute function public.push_project_notification();
+
+drop trigger if exists project_notifications_after_update on public.projects;
+create trigger project_notifications_after_update
+after update on public.projects
+for each row execute function public.push_project_notification();
+
+create or replace function public.push_training_notification()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  actor_record public.profiles%rowtype;
+  action_name text;
+begin
+  select *
+  into actor_record
+  from public.profiles
+  where id = new.created_by;
+
+  if actor_record.id is null or actor_record.user_type not in ('college_coordinator', 'unit_coordinator') then
+    return new;
+  end if;
+
+  if tg_op = 'INSERT' then
+    action_name := 'created';
+  elsif actor_record.user_type = 'unit_coordinator' then
+    if coalesce(jsonb_array_length(coalesce(new.documents, '[]'::jsonb)), 0)
+      > coalesce(jsonb_array_length(coalesce(old.documents, '[]'::jsonb)), 0) then
+      action_name := 'document_uploaded';
+    else
+      action_name := 'updated';
+    end if;
+  else
+    return new;
+  end if;
+
+  if actor_record.user_type = 'college_coordinator' then
+    if tg_op <> 'INSERT' then
+      return new;
+    end if;
+
+    insert into public.notifications (
+      recipient_id,
+      actor_id,
+      actor_name,
+      actor_avatar_url,
+      entity_table,
+      entity_id,
+      entity_kind,
+      entity_title,
+      action_type,
+      route
+    )
+    select
+      recipient.id,
+      actor_record.id,
+      trim(concat(coalesce(actor_record.first_name, ''), ' ', coalesce(actor_record.last_name, ''))),
+      actor_record.avatar_url,
+      'trainings',
+      new.id,
+      'training',
+      coalesce(nullif(trim(new.training_title), ''), 'Untitled training'),
+      action_name,
+      '/dashboard?panel=trainings'
+    from public.profiles recipient
+    where recipient.user_type = 'unit_coordinator'
+      and recipient.department = actor_record.department
+      and recipient.id <> actor_record.id
+      and (
+        coalesce(jsonb_array_length(coalesce(new.lead_units, '[]'::jsonb)), 0) = 0
+        or recipient.unit in (
+          select jsonb_array_elements_text(coalesce(new.lead_units, '[]'::jsonb))
+        )
+      );
+
+    return new;
+  end if;
+
+  if tg_op = 'INSERT' then
+    insert into public.notifications (
+      recipient_id,
+      actor_id,
+      actor_name,
+      actor_avatar_url,
+      entity_table,
+      entity_id,
+      entity_kind,
+      entity_title,
+      action_type,
+      route
+    )
+    select
+      recipient.id,
+      actor_record.id,
+      trim(concat(coalesce(actor_record.first_name, ''), ' ', coalesce(actor_record.last_name, ''))),
+      actor_record.avatar_url,
+      'trainings',
+      new.id,
+      'training',
+      coalesce(nullif(trim(new.training_title), ''), 'Untitled training'),
+      action_name,
+      '/dashboard?panel=trainings'
+    from public.profiles recipient
+    where recipient.user_type = 'unit_coordinator'
+      and recipient.department = actor_record.department
+      and recipient.id <> actor_record.id;
+  end if;
+
+  insert into public.notifications (
+    recipient_id,
+    actor_id,
+    actor_name,
+    actor_avatar_url,
+    entity_table,
+    entity_id,
+    entity_kind,
+    entity_title,
+    action_type,
+    route
+  )
+  select
+    recipient.id,
+    actor_record.id,
+    trim(concat(coalesce(actor_record.first_name, ''), ' ', coalesce(actor_record.last_name, ''))),
+    actor_record.avatar_url,
+    'trainings',
+    new.id,
+    'training',
+    coalesce(nullif(trim(new.training_title), ''), 'Untitled training'),
+    action_name,
+    '/dashboard?panel=trainings'
+  from public.profiles recipient
+  where recipient.user_type = 'college_coordinator'
+    and recipient.department = actor_record.department
+    and recipient.id <> actor_record.id;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists training_notifications_after_insert on public.trainings;
+create trigger training_notifications_after_insert
+after insert on public.trainings
+for each row execute function public.push_training_notification();
+
+drop trigger if exists training_notifications_after_update on public.trainings;
+create trigger training_notifications_after_update
+after update on public.trainings
+for each row execute function public.push_training_notification();
+
+do $$
+begin
+  if exists (
+    select 1
+    from pg_publication
+    where pubname = 'supabase_realtime'
+  ) and not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'notifications'
+  ) then
+    alter publication supabase_realtime add table public.notifications;
+  end if;
+end
+$$;
+-- ============================================================
+-- END COPY: Navbar Notifications
+-- ============================================================
