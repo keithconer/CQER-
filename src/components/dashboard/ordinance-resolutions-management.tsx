@@ -66,6 +66,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { DocumentPreview } from "./document-preview";
 
 const statusOptions = ["Submitted/Endorse", "approved"] as const;
 
@@ -540,17 +541,7 @@ export function OrdinanceResolutionsManagement({
                         {item.date_approved ? format(new Date(item.date_approved), "MMM d, yyyy") : "-"}
                       </TableCell>
                       <TableCell className="text-[10px] py-2.5 px-3">
-                        {item.documents?.length ? (
-                          <div className="max-w-[220px] space-y-1">
-                            {item.documents.map((doc) => (
-                              <p key={`${item.id}-${doc.url}`} className="truncate" title={doc.name}>
-                                {doc.name}
-                              </p>
-                            ))}
-                          </div>
-                        ) : (
-                          "-"
-                        )}
+                        <DocumentPreview documents={item.documents} />
                       </TableCell>
                       <TableCell className="text-[10px] py-2.5 px-3">
                         <div className="flex items-center justify-end gap-1">

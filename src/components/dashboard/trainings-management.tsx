@@ -18,6 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { DocumentPreview } from "./document-preview";
 import { TrainingRecord, TrainingsForm } from "./trainings-form";
 
 interface TrainingsManagementProps {
@@ -234,11 +235,7 @@ export function TrainingsManagement({
                       </TableCell>
                       <TableCell className="text-[10px] py-2.5 px-3">{record.participants_overall_total}</TableCell>
                       <TableCell className="text-[10px] py-2.5 px-3">
-                        {Array.isArray(record.documents) && record.documents.length > 0 ? (
-                          <span>{record.documents.length} file(s)</span>
-                        ) : (
-                          "-"
-                        )}
+                        <DocumentPreview documents={record.documents} />
                       </TableCell>
                       <TableCell className="text-[10px] py-2.5 px-3">
                         <div className="flex items-center justify-end gap-1">

@@ -57,6 +57,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { FileUpload } from "./file-upload";
+import { DocumentPreview } from "./document-preview";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -964,17 +965,7 @@ export function FacultyInvolvementManagement({
                         <TableCell className="text-[10px] py-2.5 px-3">{item.total_hours_period}</TableCell>
                         <TableCell className="text-[10px] py-2.5 px-3">{item.remarks || "-"}</TableCell>
                         <TableCell className="text-[10px] py-2.5 px-3">
-                          {item.documents?.length ? (
-                            <div className="max-w-[220px] space-y-1">
-                              {item.documents.map((doc) => (
-                                <p key={`${item.id}-${doc.url}`} className="truncate" title={doc.name}>
-                                  {doc.name}
-                                </p>
-                              ))}
-                            </div>
-                          ) : (
-                            "-"
-                          )}
+                          <DocumentPreview documents={item.documents} />
                         </TableCell>
                         <TableCell className="text-[10px] py-2.5 px-3">
                           <div className="flex items-center justify-end gap-1">
@@ -1029,17 +1020,7 @@ export function FacultyInvolvementManagement({
                         <TableCell className="text-[10px] py-2.5 px-3">{(item.specialization || []).join(", ") || "-"}</TableCell>
                         <TableCell className="text-[10px] py-2.5 px-3">{item.other_expertise || "-"}</TableCell>
                         <TableCell className="text-[10px] py-2.5 px-3">
-                          {item.documents?.length ? (
-                            <div className="max-w-[220px] space-y-1">
-                              {item.documents.map((doc) => (
-                                <p key={`${item.id}-${doc.url}`} className="truncate" title={doc.name}>
-                                  {doc.name}
-                                </p>
-                              ))}
-                            </div>
-                          ) : (
-                            "-"
-                          )}
+                          <DocumentPreview documents={item.documents} />
                         </TableCell>
                         <TableCell className="text-[10px] py-2.5 px-3">
                           <div className="flex items-center justify-end gap-1">

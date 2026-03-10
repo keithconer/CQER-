@@ -19,6 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { DocumentPreview } from "./document-preview";
 
 export interface StudentInvolvementRecord {
   id: string;
@@ -231,17 +232,7 @@ export function StudentInvolvementManagement({
                       <TableCell className="text-[10px] py-2.5 px-3">{Number(record.percentage || 0).toFixed(2)}%</TableCell>
                       <TableCell className="text-[10px] py-2.5 px-3">{record.remarks || "-"}</TableCell>
                       <TableCell className="text-[10px] py-2.5 px-3">
-                        {Array.isArray(record.documents) && record.documents.length > 0 ? (
-                          <div className="max-w-[240px] space-y-1">
-                            {record.documents.map((doc) => (
-                              <p key={`${record.id}-${doc.url}`} className="truncate" title={doc.name}>
-                                {doc.name}
-                              </p>
-                            ))}
-                          </div>
-                        ) : (
-                          "-"
-                        )}
+                        <DocumentPreview documents={record.documents} />
                       </TableCell>
                       <TableCell className="text-[10px] py-2.5 px-3">
                         <div className="flex items-center justify-end gap-1">

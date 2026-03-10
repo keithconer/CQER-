@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ProjectForm } from "./project-form";
 import { useRouter } from "next/navigation";
+import { DocumentPreview } from "./document-preview";
 
 export interface Project {
   id: string;
@@ -209,25 +210,6 @@ export function ProjectsTable({
     }
   };
 
-  const handleDownload = async (url: string) => {
-    if (!url) return;
-
-    const supabase = createClient();
-    const { data: dataResponse, error } = await supabase.storage
-      .from("cqer-projects_pdfs")
-      .createSignedUrl(url, 60);
-
-    if (error) {
-      console.error("Error creating signed URL:", error);
-      alert("Error fetching document link.");
-      return;
-    }
-
-    if (dataResponse?.signedUrl) {
-      window.open(dataResponse.signedUrl, "_blank");
-    }
-  };
-
   if (!projects || projects.length === 0) {
     return (
       <div className="text-center py-8 border border-dashed rounded-lg bg-muted/20">
@@ -265,6 +247,7 @@ export function ProjectsTable({
               <TableHead className="text-[10px] font-semibold h-9">Category</TableHead>
               <TableHead className="text-[10px] font-semibold h-9">Funding</TableHead>
               <TableHead className="text-[10px] font-semibold h-9">Budget Total</TableHead>
+              <TableHead className="text-[10px] font-semibold h-9">Documents</TableHead>
               {showActionsColumn && (
                 <TableHead className="text-[10px] font-semibold h-9 text-right">Actions</TableHead>
               )}
@@ -315,50 +298,12 @@ export function ProjectsTable({
                   <TableCell className="text-[10px] py-2.5 px-3 font-medium whitespace-nowrap">
                     {formatBudgetTotal(getBudgetTotal(project))}
                   </TableCell>
+                  <TableCell className="text-[10px] py-2.5 px-3">
+                    <DocumentPreview documents={project.documents} />
+                  </TableCell>
                   {showActionsColumn && (
                     <TableCell className="py-2.5 px-3 text-right">
                       <div className="flex justify-end gap-1">
-                        {project.documents && project.documents.length > 0 && (
-                          project.documents.length === 1 ? (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-primary hover:text-primary/80 hover:bg-primary/10"
-                              onClick={() => handleDownload(project.documents[0].url)}
-                              title={project.documents[0].name}
-                            >
-                              <FileText className="h-3.5 w-3.5" />
-                            </Button>
-                          ) : (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 text-primary hover:text-primary/80 hover:bg-primary/10"
-                                  title={`${project.documents.length} document(s)`}
-                                >
-                                  <FileText className="h-3.5 w-3.5" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-56">
-                                <div className="px-2 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                                  Select Document
-                                </div>
-                                {project.documents.map((doc, idx) => (
-                                  <DropdownMenuItem
-                                    key={idx}
-                                    onClick={() => handleDownload(doc.url)}
-                                    className="text-xs py-2 cursor-pointer"
-                                  >
-                                    <FileText className="h-3 w-3 mr-2 text-primary" />
-                                    <span className="truncate">{doc.name}</span>
-                                  </DropdownMenuItem>
-                                ))}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          )
-                        )}
                         <Button
                           variant="outline"
                           size="icon"
@@ -400,7 +345,7 @@ export function ProjectsTable({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={showActionsColumn ? 10 : 9} className="h-24 text-center text-xs text-muted-foreground">
+                <TableCell colSpan={showActionsColumn ? 11 : 10} className="h-24 text-center text-xs text-muted-foreground">
                   No matches found for &quot;{searchTerm}&quot;
                 </TableCell>
               </TableRow>
