@@ -213,10 +213,10 @@ export function TrainingsManagement({
       const year = new Date().getFullYear();
       worksheet.mergeCells("A1:Q1");
       const titleCell = worksheet.getCell("A1");
-      titleCell.value = `(Trainings) (${year})`;
-      titleCell.font = { bold: true, size: 14, color: { argb: "FF000000" } };
+      titleCell.value = `Trainings (${year})`;
+      titleCell.font = { bold: true, size: 12, color: { argb: "FF000000" }, name: "Calibri" };
       titleCell.alignment = { vertical: "middle", horizontal: "center" };
-      worksheet.getRow(1).height = 30;
+      worksheet.getRow(1).height = 25;
 
       const recordsToExport = filteredRecords.filter((r) => selectedExportIds.has(r.id));
       const rows = toExportRows(recordsToExport);
@@ -311,25 +311,14 @@ export function TrainingsManagement({
                 Manage training records and monitor participant metrics.
               </CardDescription>
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 text-[10px] border-border/50 bg-muted/20"
-                onClick={handleOpenExportDialog}
-              >
-                <FileSpreadsheet className="mr-1 h-3.5 w-3.5" />
-                Export
-              </Button>
-              <Button
-                size="sm"
-                className="h-8 text-[10px] bg-[#159E44] hover:bg-[#128A3B] text-white"
-                onClick={() => setCreateOpen(true)}
-              >
-                <Plus className="h-3 w-3 mr-1" />
-                Create Training
-              </Button>
-            </div>
+            <Button
+              size="sm"
+              className="h-8 text-[10px] bg-[#159E44] hover:bg-[#128A3B] text-white"
+              onClick={() => setCreateOpen(true)}
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              Create Training
+            </Button>
           </div>
 
           <div className="flex items-center justify-between gap-2">
@@ -342,36 +331,47 @@ export function TrainingsManagement({
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 text-[10px] border-border/50 bg-muted/20"
-                >
-                  <SlidersHorizontal className="h-3 w-3 mr-1" />
-                  Filter
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel className="text-[10px]">Results Filter</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuCheckboxItem
-                  className="text-[10px]"
-                  checked={selectedScopes.includes("created_by_me")}
-                  onCheckedChange={() => toggleScopeFilter("created_by_me")}
-                >
-                  Created by me
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  className="text-[10px]"
-                  checked={selectedScopes.includes("department_files")}
-                  onCheckedChange={() => toggleScopeFilter("department_files")}
-                >
-                  All files from the department
-                </DropdownMenuCheckboxItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="flex items-center gap-2 shrink-0">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-[10px] border-border/50 bg-muted/20"
+                  >
+                    <SlidersHorizontal className="h-3 w-3 mr-1" />
+                    Filter
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel className="text-[10px]">Results Filter</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuCheckboxItem
+                    className="text-[10px]"
+                    checked={selectedScopes.includes("created_by_me")}
+                    onCheckedChange={() => toggleScopeFilter("created_by_me")}
+                  >
+                    Created by me
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    className="text-[10px]"
+                    checked={selectedScopes.includes("department_files")}
+                    onCheckedChange={() => toggleScopeFilter("department_files")}
+                  >
+                    All files from the department
+                  </DropdownMenuCheckboxItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-[10px] border-border/50 bg-muted/20"
+                onClick={handleOpenExportDialog}
+              >
+                <FileSpreadsheet className="mr-1 h-3.5 w-3.5" />
+                Export
+              </Button>
+            </div>
           </div>
         </CardHeader>
 
