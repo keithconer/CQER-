@@ -1,15 +1,17 @@
 "use client";
 
 import * as React from "react";
-import { CheckCircle2, Eye, GraduationCap, Pencil, Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react";
+import { CheckCircle2, Download, Eye, FileSpreadsheet, GraduationCap, Pencil, Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { deleteTraining } from "@/lib/actions/trainings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -29,6 +31,42 @@ interface TrainingsManagementProps {
   unitOptions?: string[];
   partnerAgencyOptions?: string[];
   currentUserId: string;
+}
+
+function formatList(value: string[] | null): string {
+  if (!value || !Array.isArray(value)) return "-";
+  return value.join(", ");
+}
+
+function formatTrainingCategory(record: TrainingRecord): string {
+  if (record.training_category === "OTHERS") {
+    return `Others: ${record.training_category_other || "-"}`;
+  }
+  return record.training_category;
+}
+
+function toExportRows(records: TrainingRecord[]) {
+  return records.map((record) => ({
+    "College": record.college || "-",
+    "Department": record.department || "-",
+    "Lead Unit(s)": formatList(record.lead_units),
+    "Contact Person": record.contact_person || "-",
+    "Contact Details": record.contact_details || "-",
+    "Title of Training": record.training_title || "-",
+    "Category": formatTrainingCategory(record),
+    "Mode": record.training_mode || "-",
+    "Venue/Platform": record.venue_platform || "-",
+    "Inclusive Dates / Hours": record.date_mode === "hours" 
+      ? `${record.manual_hours || 0} hours` 
+      : formatList(record.inclusive_dates),
+    "Overall Total Participants": record.participants_overall_total || 0,
+    "Male Total": record.participants_male_total || 0,
+    "Female Total": record.participants_female_total || 0,
+    "SDGs": formatList(record.sdg_goals),
+    "Thematic Area": formatList(record.thematic_area),
+    "Partner Agencies": formatList(record.partner_agencies),
+    "Remarks": record.remarks || "-",
+  }));
 }
 
 export function TrainingsManagement({
@@ -51,6 +89,10 @@ export function TrainingsManagement({
     "created_by_me",
     "department_files",
   ]);
+  const [showExportDialog, setShowExportDialog] = React.useState(false);
+  const [selectedExportIds, setSelectedExportIds] = React.useState<Set<string>>(new Set());
+  const [isExporting, setIsExporting] = React.useState(false);
+
   const refreshTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
 
@@ -132,6 +174,132 @@ export function TrainingsManagement({
     router.refresh();
   };
 
+  const handleOpenExportDialog = () => {
+    setSelectedExportIds(new Set(filteredRecords.map((r) => r.id)));
+    setShowExportDialog(true);
+  };
+
+  const toggleExportSelection = (id: string) => {
+    const next = new Set(selectedExportIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelectedExportIds(next);
+  };
+
+  const toggleExportAll = () => {
+    if (selectedExportIds.size === filteredRecords.length) {
+      setSelectedExportIds(new Set());
+    } else {
+      setSelectedExportIds(new Set(filteredRecords.map((r) => r.id)));
+    }
+  };
+
+  const handleExportExcel = async () => {
+    if (selectedExportIds.size === 0) {
+      alert("Please select at least one training record to export.");
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const ExcelJS = await import("exceljs");
+      const workbook = new ExcelJS.Workbook();
+      workbook.creator = "CQER";
+      workbook.created = new Date();
+
+      const worksheet = workbook.addWorksheet("Trainings");
+      
+      // Add Title Row
+      const year = new Date().getFullYear();
+      worksheet.mergeCells("A1:Q1");
+      const titleCell = worksheet.getCell("A1");
+      titleCell.value = `(Trainings) (${year})`;
+      titleCell.font = { bold: true, size: 14, color: { argb: "FF000000" } };
+      titleCell.alignment = { vertical: "middle", horizontal: "center" };
+      worksheet.getRow(1).height = 30;
+
+      const recordsToExport = filteredRecords.filter((r) => selectedExportIds.has(r.id));
+      const rows = toExportRows(recordsToExport);
+
+      const columns = [
+        { header: "College", key: "College", width: 15 },
+        { header: "Department", key: "Department", width: 25 },
+        { header: "Lead Unit(s)", key: "Lead Unit(s)", width: 25 },
+        { header: "Contact Person", key: "Contact Person", width: 25 },
+        { header: "Contact Details", key: "Contact Details", width: 25 },
+        { header: "Title of Training", key: "Title of Training", width: 40 },
+        { header: "Category", key: "Category", width: 20 },
+        { header: "Mode", key: "Mode", width: 15 },
+        { header: "Venue/Platform", key: "Venue/Platform", width: 25 },
+        { header: "Inclusive Dates / Hours", key: "Inclusive Dates / Hours", width: 30 },
+        { header: "Overall Total Participants", key: "Overall Total Participants", width: 22 },
+        { header: "Male Total", key: "Male Total", width: 12 },
+        { header: "Female Total", key: "Female Total", width: 12 },
+        { header: "SDGs", key: "SDGs", width: 30 },
+        { header: "Thematic Area", key: "Thematic Area", width: 25 },
+        { header: "Partner Agencies", key: "Partner Agencies", width: 25 },
+        { header: "Remarks", key: "Remarks", width: 30 },
+      ];
+
+      worksheet.columns = columns;
+
+      // Formatting headers (Row 2 because Row 1 is the title)
+      const headerRow = worksheet.getRow(2);
+      headerRow.values = columns.map(c => c.header);
+      headerRow.height = 24;
+      headerRow.eachCell((cell) => {
+        cell.font = { bold: true, color: { argb: "FFFFFFFF" }, name: "Calibri", size: 11 };
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF159E44" } };
+        cell.alignment = { vertical: "middle", horizontal: "left", wrapText: true };
+        cell.border = {
+          top: { style: "thin", color: { argb: "FFD9D9D9" } },
+          left: { style: "thin", color: { argb: "FFD9D9D9" } },
+          bottom: { style: "thin", color: { argb: "FFD9D9D9" } },
+          right: { style: "thin", color: { argb: "FFD9D9D9" } },
+        };
+      });
+
+      // Add data rows
+      rows.forEach((row) => worksheet.addRow(row));
+
+      // Format data rows
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber <= 2) return;
+        row.height = 20;
+        row.eachCell((cell) => {
+          cell.font = { name: "Calibri", size: 10, color: { argb: "FF000000" } };
+          cell.alignment = { vertical: "top", horizontal: "left", wrapText: true };
+          cell.border = {
+            top: { style: "thin", color: { argb: "FFEDEDED" } },
+            left: { style: "thin", color: { argb: "FFEDEDED" } },
+            bottom: { style: "thin", color: { argb: "FFEDEDED" } },
+            right: { style: "thin", color: { argb: "FFEDEDED" } },
+          };
+        });
+      });
+
+      worksheet.views = [{ state: "frozen", ySplit: 2 }];
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      const datePart = new Date().toISOString().slice(0, 10);
+      anchor.href = url;
+      anchor.download = `trainings-export-${datePart}.xlsx`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      setShowExportDialog(false);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to export Excel file.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <Card className="border-border/50 shadow-sm">
@@ -143,14 +311,25 @@ export function TrainingsManagement({
                 Manage training records and monitor participant metrics.
               </CardDescription>
             </div>
-            <Button
-              size="sm"
-              className="h-8 text-[10px] bg-[#159E44] hover:bg-[#128A3B] text-white"
-              onClick={() => setCreateOpen(true)}
-            >
-              <Plus className="h-3 w-3 mr-1" />
-              Create Training
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-[10px] border-border/50 bg-muted/20"
+                onClick={handleOpenExportDialog}
+              >
+                <FileSpreadsheet className="mr-1 h-3.5 w-3.5" />
+                Export
+              </Button>
+              <Button
+                size="sm"
+                className="h-8 text-[10px] bg-[#159E44] hover:bg-[#128A3B] text-white"
+                onClick={() => setCreateOpen(true)}
+              >
+                <Plus className="h-3 w-3 mr-1" />
+                Create Training
+              </Button>
+            </div>
           </div>
 
           <div className="flex items-center justify-between gap-2">
@@ -378,6 +557,83 @@ export function TrainingsManagement({
               Continue
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="text-sm flex items-center gap-2">
+              <Download className="h-4 w-4 text-[#159E44]" />
+              Export Trainings to Excel
+            </DialogTitle>
+            <DialogDescription className="text-[10px]">
+              Select which training records to include in the export.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[10px] font-medium text-muted-foreground">
+                {selectedExportIds.size} of {filteredRecords.length} selected
+              </span>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-6 text-[9px] px-2 h-auto"
+                onClick={toggleExportAll}
+              >
+                {selectedExportIds.size === filteredRecords.length ? "Deselect All" : "Select All"}
+              </Button>
+            </div>
+            <ScrollArea className="h-[300px] rounded-md border border-border/50 p-1">
+              <div className="space-y-1">
+                {filteredRecords.map((record) => (
+                  <label
+                    key={record.id}
+                    className="flex items-start gap-3 rounded-md border border-transparent px-2 py-2 hover:bg-muted/50 cursor-pointer transition-colors"
+                  >
+                    <Checkbox
+                      className="mt-0.5"
+                      checked={selectedExportIds.has(record.id)}
+                      onCheckedChange={() => toggleExportSelection(record.id)}
+                    />
+                    <div className="space-y-0.5 min-w-0">
+                      <p className="text-[10px] font-medium leading-none truncate">
+                        {record.training_title}
+                      </p>
+                      <p className="text-[9px] text-muted-foreground truncate">
+                        {record.department} • {record.training_category}
+                      </p>
+                    </div>
+                  </label>
+                ))}
+                {filteredRecords.length === 0 && (
+                  <div className="py-8 text-center text-[10px] text-muted-foreground">
+                    No results found for current search/filter.
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-8 text-[10px]"
+              onClick={() => setShowExportDialog(false)}
+              disabled={isExporting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="h-8 text-[10px] bg-[#159E44] hover:bg-[#128A3B]"
+              onClick={handleExportExcel}
+              disabled={isExporting || selectedExportIds.size === 0}
+            >
+              {isExporting ? "Exporting..." : `Export ${selectedExportIds.size} Records`}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
