@@ -157,6 +157,7 @@ export function Navbar({ user }: NavbarProps) {
 
   const goTo = (path: string) => {
     router.push(path);
+    setSidebarOpen(false);
   };
 
   const initials = (user.firstName?.[0] || "") + (user.lastName?.[0] || "");
