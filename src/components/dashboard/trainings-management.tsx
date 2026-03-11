@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { CheckCircle2, Download, Eye, FileSpreadsheet, GraduationCap, Pencil, Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react";
+import { CheckCircle2, Download, Eye, FileSpreadsheet, FileText, GraduationCap, LayoutPanelLeft, MousePointer2, Pencil, Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { deleteTraining } from "@/lib/actions/trainings";
@@ -92,6 +92,9 @@ export function TrainingsManagement({
   const [showExportDialog, setShowExportDialog] = React.useState(false);
   const [selectedExportIds, setSelectedExportIds] = React.useState<Set<string>>(new Set());
   const [isExporting, setIsExporting] = React.useState(false);
+  const [exportStep, setExportStep] = React.useState<1 | 2 | 3>(1);
+  const [exportFormat, setExportFormat] = React.useState<"excel" | "pdf" | "both">("excel");
+  const [pdfOrientation, setPdfOrientation] = React.useState<"p" | "l">("l");
 
   const refreshTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
@@ -175,6 +178,7 @@ export function TrainingsManagement({
   };
 
   const handleOpenExportDialog = () => {
+    setExportStep(1);
     setSelectedExportIds(new Set(filteredRecords.map((r) => r.id)));
     setShowExportDialog(true);
   };
@@ -194,13 +198,65 @@ export function TrainingsManagement({
     }
   };
 
-  const handleExportExcel = async () => {
-    if (selectedExportIds.size === 0) {
-      alert("Please select at least one training record to export.");
-      return;
-    }
+  const handleExportPDF = async (records: TrainingRecord[]) => {
+    const { jsPDF } = await import("jspdf");
+    const { default: autoTable } = await import("jspdf-autotable");
+    
+    const doc = new jsPDF({
+      orientation: pdfOrientation,
+      unit: "mm",
+      format: "a4",
+    });
 
-    setIsExporting(true);
+    const year = new Date().getFullYear();
+    const title = `Trainings (${year})`;
+    
+    // Add Title
+    doc.setFontSize(14);
+    doc.text(title, doc.internal.pageSize.getWidth() / 2, 15, { align: "center" });
+
+    const rows = toExportRows(records);
+    const tableData = rows.map(r => Object.values(r));
+    const tableHeaders = [
+      "College", "Department", "Lead Unit(s)", "Contact Person", "Contact Details", 
+      "Title of Training", "Category", "Mode", "Venue/Platform", "Inclusive Dates / Hours", 
+      "Overall Total Participants", "Male Total", "Female Total", "SDGs", "Thematic Area", 
+      "Partner Agencies", "Remarks"
+    ];
+
+    autoTable(doc, {
+      startY: 25,
+      head: [tableHeaders],
+      body: tableData,
+      theme: "grid",
+      headStyles: { 
+        fillColor: [21, 158, 68], // #159E44
+        textColor: [255, 255, 255],
+        fontSize: 8,
+        fontStyle: "bold",
+        halign: "left"
+      },
+      styles: {
+        fontSize: 7,
+        cellPadding: 2,
+        overflow: "linebreak",
+        cellWidth: "auto",
+        textColor: [0, 0, 0]
+      },
+      columnStyles: {
+        0: { cellWidth: 15 }, // College
+        5: { cellWidth: 35 }, // Title
+        9: { cellWidth: 25 }, // Dates
+        13: { cellWidth: 25 }, // SDGs
+      },
+      margin: { top: 20 },
+    });
+
+    const datePart = new Date().toISOString().slice(0, 10);
+    doc.save(`trainings-export-${datePart}.pdf`);
+  };
+
+  const handleExportExcel = async (records: TrainingRecord[]) => {
     try {
       const ExcelJS = await import("exceljs");
       const workbook = new ExcelJS.Workbook();
@@ -209,8 +265,7 @@ export function TrainingsManagement({
 
       const worksheet = workbook.addWorksheet("Trainings");
 
-      const recordsToExport = filteredRecords.filter((r) => selectedExportIds.has(r.id));
-      const rows = toExportRows(recordsToExport);
+      const rows = toExportRows(records);
 
       const columns = [
         { header: "College", key: "College", width: 15 },
@@ -292,10 +347,34 @@ export function TrainingsManagement({
       anchor.download = `trainings-export-${datePart}.xlsx`;
       anchor.click();
       URL.revokeObjectURL(url);
-      setShowExportDialog(false);
     } catch (err) {
       console.error(err);
       alert("Failed to export Excel file.");
+    }
+  };
+
+  const handleStartExport = async () => {
+    if (selectedExportIds.size === 0) {
+      alert("Please select at least one record to export.");
+      return;
+    }
+
+    setIsExporting(true);
+    const recordsToExport = filteredRecords.filter((r) => selectedExportIds.has(r.id));
+    
+    try {
+      if (exportFormat === "excel" || exportFormat === "both") {
+        await handleExportExcel(recordsToExport);
+      }
+      
+      if (exportFormat === "pdf" || exportFormat === "both") {
+        await handleExportPDF(recordsToExport);
+      }
+      
+      setShowExportDialog(false);
+    } catch (err) {
+      console.error(err);
+      alert("Error during export process.");
     } finally {
       setIsExporting(false);
     }
@@ -566,57 +645,149 @@ export function TrainingsManagement({
           <DialogHeader>
             <DialogTitle className="text-sm flex items-center gap-2">
               <Download className="h-4 w-4 text-[#159E44]" />
-              Export Trainings to Excel
+              {exportStep === 1 ? "Export Format" : exportStep === 2 ? "PDF Orientation" : "Select Records"}
             </DialogTitle>
             <DialogDescription className="text-[10px]">
-              Select which training records to include in the export.
+              {exportStep === 1 
+                ? "Choose your preferred export format." 
+                : exportStep === 2 
+                ? "Choose the orientation for your PDF document." 
+                : "Select which training records to include in the export."}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between px-1">
-              <span className="text-[10px] font-medium text-muted-foreground">
-                {selectedExportIds.size} of {filteredRecords.length} selected
-              </span>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-6 text-[9px] px-2 h-auto"
-                onClick={toggleExportAll}
+
+          {exportStep === 1 && (
+            <div className="grid grid-cols-3 gap-3 py-4">
+              <button
+                onClick={() => {
+                  setExportFormat("excel");
+                  setExportStep(3);
+                }}
+                className={`flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all hover:bg-muted/50 ${
+                  exportFormat === "excel" ? "border-[#159E44] bg-[#159E44]/5" : "border-border/50"
+                }`}
               >
-                {selectedExportIds.size === filteredRecords.length ? "Deselect All" : "Select All"}
-              </Button>
+                <FileSpreadsheet className="h-8 w-8 mb-2 text-[#159E44]" />
+                <span className="text-[10px] font-medium">Excel</span>
+              </button>
+              <button
+                onClick={() => {
+                  setExportFormat("pdf");
+                  setExportStep(2);
+                }}
+                className={`flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all hover:bg-muted/50 ${
+                  exportFormat === "pdf" ? "border-[#159E44] bg-[#159E44]/10" : "border-border/50"
+                }`}
+              >
+                <FileText className="h-8 w-8 mb-2 text-red-600" />
+                <span className="text-[10px] font-medium">PDF</span>
+              </button>
+              <button
+                onClick={() => {
+                  setExportFormat("both");
+                  setExportStep(2);
+                }}
+                className={`flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all hover:bg-muted/50 ${
+                  exportFormat === "both" ? "border-[#159E44] bg-[#159E44]/10" : "border-border/50"
+                }`}
+              >
+                <div className="flex gap-1 mb-2">
+                  <FileSpreadsheet className="h-6 w-6 text-[#159E44]" />
+                  <FileText className="h-6 w-6 text-red-600" />
+                </div>
+                <span className="text-[10px] font-medium">Both</span>
+              </button>
             </div>
-            <ScrollArea className="h-[300px] rounded-md border border-border/50 p-1">
-              <div className="space-y-1">
-                {filteredRecords.map((record) => (
-                  <label
-                    key={record.id}
-                    className="flex items-start gap-3 rounded-md border border-transparent px-2 py-2 hover:bg-muted/50 cursor-pointer transition-colors"
-                  >
-                    <Checkbox
-                      className="mt-0.5"
-                      checked={selectedExportIds.has(record.id)}
-                      onCheckedChange={() => toggleExportSelection(record.id)}
-                    />
-                    <div className="space-y-0.5 min-w-0">
-                      <p className="text-[10px] font-medium leading-none truncate">
-                        {record.training_title}
-                      </p>
-                      <p className="text-[9px] text-muted-foreground truncate">
-                        {record.department} • {record.training_category}
-                      </p>
-                    </div>
-                  </label>
-                ))}
-                {filteredRecords.length === 0 && (
-                  <div className="py-8 text-center text-[10px] text-muted-foreground">
-                    No results found for current search/filter.
-                  </div>
-                )}
+          )}
+
+          {exportStep === 2 && (
+            <div className="grid grid-cols-2 gap-4 py-6">
+              <button
+                onClick={() => {
+                  setPdfOrientation("p");
+                  setExportStep(3);
+                }}
+                className={`flex flex-col items-center justify-center p-6 rounded-lg border-2 transition-all hover:bg-muted/50 ${
+                  pdfOrientation === "p" ? "border-[#159E44] bg-[#159E44]/5" : "border-border/50"
+                }`}
+              >
+                <div className="w-8 h-12 border-2 border-muted-foreground/30 rounded-sm mb-2" />
+                <span className="text-[10px] font-medium">Portrait</span>
+              </button>
+              <button
+                onClick={() => {
+                  setPdfOrientation("l");
+                  setExportStep(3);
+                }}
+                className={`flex flex-col items-center justify-center p-6 rounded-lg border-2 transition-all hover:bg-muted/50 ${
+                  pdfOrientation === "l" ? "border-[#159E44] bg-[#159E44]/5" : "border-border/50"
+                }`}
+              >
+                <div className="w-12 h-8 border-2 border-muted-foreground/30 rounded-sm mb-2" />
+                <span className="text-[10px] font-medium">Landscape</span>
+              </button>
+            </div>
+          )}
+
+          {exportStep === 3 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between px-1">
+                <span className="text-[10px] font-medium text-muted-foreground">
+                  {selectedExportIds.size} of {filteredRecords.length} selected
+                </span>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 text-[9px] px-2 h-auto"
+                  onClick={toggleExportAll}
+                >
+                  {selectedExportIds.size === filteredRecords.length ? "Deselect All" : "Select All"}
+                </Button>
               </div>
-            </ScrollArea>
-          </div>
+              <ScrollArea className="h-[300px] rounded-md border border-border/50 p-1">
+                <div className="space-y-1">
+                  {filteredRecords.map((record) => (
+                    <label
+                      key={record.id}
+                      className="flex items-start gap-3 rounded-md border border-transparent px-2 py-2 hover:bg-muted/50 cursor-pointer transition-colors"
+                    >
+                      <Checkbox
+                        className="mt-0.5"
+                        checked={selectedExportIds.has(record.id)}
+                        onCheckedChange={() => toggleExportSelection(record.id)}
+                      />
+                      <div className="space-y-0.5 min-w-0">
+                        <p className="text-[10px] font-medium leading-none truncate">
+                          {record.training_title}
+                        </p>
+                        <p className="text-[9px] text-muted-foreground truncate">
+                          {record.department} • {record.training_category}
+                        </p>
+                      </div>
+                    </label>
+                  ))}
+                  {filteredRecords.length === 0 && (
+                    <div className="py-8 text-center text-[10px] text-muted-foreground">
+                      No results found for current search/filter.
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+          )}
+
           <DialogFooter className="gap-2 sm:gap-0">
+            {exportStep > 1 && (
+              <Button
+                type="button"
+                variant="outline"
+                className="h-8 text-[10px]"
+                onClick={() => setExportStep(exportStep === 3 && exportFormat === "excel" ? 1 : exportStep - 1 as any)}
+                disabled={isExporting}
+              >
+                Back
+              </Button>
+            )}
             <Button
               type="button"
               variant="outline"
@@ -626,14 +797,16 @@ export function TrainingsManagement({
             >
               Cancel
             </Button>
-            <Button
-              type="button"
-              className="h-8 text-[10px] bg-[#159E44] hover:bg-[#128A3B]"
-              onClick={handleExportExcel}
-              disabled={isExporting || selectedExportIds.size === 0}
-            >
-              {isExporting ? "Exporting..." : `Export ${selectedExportIds.size} Records`}
-            </Button>
+            {exportStep === 3 && (
+              <Button
+                type="button"
+                className="h-8 text-[10px] bg-[#159E44] hover:bg-[#128A3B]"
+                onClick={handleStartExport}
+                disabled={isExporting || selectedExportIds.size === 0}
+              >
+                {isExporting ? "Exporting..." : `Export ${selectedExportIds.size} Records`}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
