@@ -122,6 +122,17 @@ drop policy if exists "Users can delete own projects" on public.projects;
 create policy "Users can delete own projects" on public.projects
   for delete using (auth.uid() = created_by);
 
+-- Allow super admin full access to projects
+drop policy if exists "Super admins can manage all projects" on public.projects;
+create policy "Super admins can manage all projects" on public.projects
+  for all using (
+    exists (
+      select 1 from public.profiles
+      where profiles.id = auth.uid()
+        and profiles.user_type = 'super_admin'
+    )
+  );
+
 -- Helpful indexes for scalable unit-based lookups
 create index if not exists idx_profiles_department_unit_type on public.profiles (department, unit, user_type);
 create index if not exists idx_projects_created_by on public.projects (created_by);
@@ -680,6 +691,17 @@ drop policy if exists "Users can delete own awards" on public.awards;
 create policy "Users can delete own awards" on public.awards
   for delete using (auth.uid() = created_by);
 
+-- Allow super admin full access to awards
+drop policy if exists "Super admins can manage all awards" on public.awards;
+create policy "Super admins can manage all awards" on public.awards
+  for all using (
+    exists (
+      select 1 from public.profiles
+      where profiles.id = auth.uid()
+        and profiles.user_type = 'super_admin'
+    )
+  );
+
 create index if not exists idx_awards_created_by on public.awards (created_by);
 create index if not exists idx_awards_department on public.awards (department);
 create index if not exists idx_awards_date_received on public.awards (date_received desc);
@@ -773,6 +795,17 @@ drop policy if exists "Users can delete own student involvement" on public.stude
 create policy "Users can delete own student involvement" on public.student_involvement
   for delete using (auth.uid() = created_by);
 
+-- Allow super admin full access to student involvement
+drop policy if exists "Super admins can manage all student involvement" on public.student_involvement;
+create policy "Super admins can manage all student involvement" on public.student_involvement
+  for all using (
+    exists (
+      select 1 from public.profiles
+      where profiles.id = auth.uid()
+        and profiles.user_type = 'super_admin'
+    )
+  );
+
 create index if not exists idx_student_involvement_created_by on public.student_involvement (created_by);
 create index if not exists idx_student_involvement_department on public.student_involvement (department);
 create index if not exists idx_student_involvement_curricular on public.student_involvement (curricular_offering);
@@ -855,6 +888,17 @@ drop policy if exists "Users can delete own faculty involvement" on public.facul
 create policy "Users can delete own faculty involvement" on public.faculty_involvement
   for delete using (auth.uid() = created_by);
 
+-- Allow super admin full access to faculty involvement
+drop policy if exists "Super admins can manage all faculty involvement" on public.faculty_involvement;
+create policy "Super admins can manage all faculty involvement" on public.faculty_involvement
+  for all using (
+    exists (
+      select 1 from public.profiles
+      where profiles.id = auth.uid()
+        and profiles.user_type = 'super_admin'
+    )
+  );
+
 create index if not exists idx_faculty_involvement_created_by on public.faculty_involvement (created_by);
 create index if not exists idx_faculty_involvement_name on public.faculty_involvement (faculty_name);
 
@@ -916,6 +960,17 @@ create policy "Users can update own pool experts" on public.pool_of_experts
 drop policy if exists "Users can delete own pool experts" on public.pool_of_experts;
 create policy "Users can delete own pool experts" on public.pool_of_experts
   for delete using (auth.uid() = created_by);
+
+-- Allow super admin full access to pool of experts
+drop policy if exists "Super admins can manage all pool experts" on public.pool_of_experts;
+create policy "Super admins can manage all pool experts" on public.pool_of_experts
+  for all using (
+    exists (
+      select 1 from public.profiles
+      where profiles.id = auth.uid()
+        and profiles.user_type = 'super_admin'
+    )
+  );
 
 create index if not exists idx_pool_of_experts_created_by on public.pool_of_experts (created_by);
 create index if not exists idx_pool_of_experts_name on public.pool_of_experts (faculty_name);
@@ -1013,6 +1068,17 @@ drop policy if exists "Users can delete own technologies innovations" on public.
 create policy "Users can delete own technologies innovations" on public.technologies_innovations
   for delete using (auth.uid() = created_by);
 
+-- Allow super admin full access to technologies
+drop policy if exists "Super admins can manage all technologies" on public.technologies_innovations;
+create policy "Super admins can manage all technologies" on public.technologies_innovations
+  for all using (
+    exists (
+      select 1 from public.profiles
+      where profiles.id = auth.uid()
+        and profiles.user_type = 'super_admin'
+    )
+  );
+
 create index if not exists idx_technologies_innovations_created_by on public.technologies_innovations (created_by);
 create index if not exists idx_technologies_innovations_department on public.technologies_innovations (department);
 create index if not exists idx_technologies_innovations_year on public.technologies_innovations (year_develop);
@@ -1096,6 +1162,17 @@ create policy "Users can update own ordinance resolutions" on public.ordinance_r
 drop policy if exists "Users can delete own ordinance resolutions" on public.ordinance_resolutions;
 create policy "Users can delete own ordinance resolutions" on public.ordinance_resolutions
   for delete using (auth.uid() = created_by);
+
+-- Allow super admin full access to ordinances
+drop policy if exists "Super admins can manage all ordinances" on public.ordinance_resolutions;
+create policy "Super admins can manage all ordinances" on public.ordinance_resolutions
+  for all using (
+    exists (
+      select 1 from public.profiles
+      where profiles.id = auth.uid()
+        and profiles.user_type = 'super_admin'
+    )
+  );
 
 create index if not exists idx_ordinance_resolutions_created_by on public.ordinance_resolutions (created_by);
 create index if not exists idx_ordinance_resolutions_department on public.ordinance_resolutions (department);
@@ -1253,6 +1330,17 @@ create policy "Users can update own trainings" on public.trainings
 drop policy if exists "Users can delete own trainings" on public.trainings;
 create policy "Users can delete own trainings" on public.trainings
   for delete using (auth.uid() = created_by);
+
+-- Allow super admin full access to trainings
+drop policy if exists "Super admins can manage all trainings" on public.trainings;
+create policy "Super admins can manage all trainings" on public.trainings
+  for all using (
+    exists (
+      select 1 from public.profiles
+      where profiles.id = auth.uid()
+        and profiles.user_type = 'super_admin'
+    )
+  );
 
 create index if not exists idx_trainings_created_by on public.trainings (created_by);
 create index if not exists idx_trainings_department on public.trainings (department);

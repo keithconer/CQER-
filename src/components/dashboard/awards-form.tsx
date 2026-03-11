@@ -8,6 +8,7 @@ import { CalendarIcon, Plus, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { createAward, updateAward } from "@/lib/actions/awards";
+import { DEPARTMENTS } from "@/lib/departments";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -55,6 +56,7 @@ type AwardsFormOutput = z.output<typeof awardsSchema>;
 
 interface AwardsFormProps {
   department: string;
+  userType?: "super_admin" | "college_coordinator" | "unit_coordinator";
   award?: {
     id: string;
     department: string;
@@ -70,14 +72,14 @@ interface AwardsFormProps {
   onSuccess?: () => void;
 }
 
-export function AwardsForm({ department, award, isViewOnly = false, onSuccess }: AwardsFormProps) {
+export function AwardsForm({ department, userType, award, isViewOnly = false, onSuccess }: AwardsFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const defaultDate = award?.date_received ? new Date(award.date_received) : new Date();
 
   const form = useForm<AwardsFormInput, unknown, AwardsFormOutput>({
     resolver: zodResolver(awardsSchema),
     defaultValues: {
-      department: department || "",
+      department: award?.department || department || "",
       extension_ppa:
         Array.isArray(award?.extension_ppa) && award.extension_ppa.length > 0
           ? award.extension_ppa.map((value) => ({ value }))
@@ -98,7 +100,7 @@ export function AwardsForm({ department, award, isViewOnly = false, onSuccess }:
 
   React.useEffect(() => {
     form.reset({
-      department: department || "",
+      department: award?.department || department || "",
       extension_ppa:
         Array.isArray(award?.extension_ppa) && award.extension_ppa.length > 0
           ? award.extension_ppa.map((value) => ({ value }))
@@ -132,16 +134,6 @@ export function AwardsForm({ department, award, isViewOnly = false, onSuccess }:
         return;
       }
 
-      form.reset({
-        department: department || "",
-        extension_ppa: [{ value: "" }],
-        award_recognition_received: "",
-        donor: "",
-        level: "local",
-        date_received: new Date(),
-        remarks: "",
-        documents: [],
-      });
       onSuccess?.();
     } catch {
       alert("Something went wrong while creating the award.");
@@ -160,9 +152,26 @@ export function AwardsForm({ department, award, isViewOnly = false, onSuccess }:
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="text-xs">Department</FormLabel>
-                <FormControl>
-                  <Input {...field} readOnly className="h-8 text-xs bg-muted/30" />
-                </FormControl>
+                {userType === "super_admin" ? (
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="h-8 text-xs" disabled={isViewOnly}>
+                        <SelectValue placeholder="Select department" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {DEPARTMENTS.map((dept) => (
+                        <SelectItem key={dept} value={dept} className="text-xs">
+                          {dept}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <FormControl>
+                    <Input {...field} readOnly className="h-8 text-xs bg-muted/30" />
+                  </FormControl>
+                )}
                 <FormMessage className="text-[10px]" />
               </FormItem>
             )}

@@ -196,33 +196,45 @@ export default async function DashboardPage({
 
   if (profile.user_type === "super_admin") {
     const adminClient = createAdminClient();
-    const [accountsResult, projectsResult, trainingsResult] = await Promise.all([
-      adminClient
-        .from("profiles")
-        .select("id, first_name, last_name, user_type, department, unit")
-        .order("created_at", { ascending: false }),
-      adminClient
-        .from("projects")
-        .select("*")
-        .order("created_at", { ascending: false }),
-      adminClient
-        .from("trainings")
-        .select("*")
-        .order("created_at", { ascending: false }),
-    ]);
+    const { data: accountsData } = await adminClient
+      .from("profiles")
+      .select("id, first_name, last_name, user_type, department, unit")
+      .order("created_at", { ascending: false });
 
     allAccounts =
-      (accountsResult.data as typeof allAccounts | null)?.filter(
+      (accountsData as typeof allAccounts | null)?.filter(
         (account) =>
           account.user_type === "super_admin" ||
           account.user_type === "college_coordinator" ||
           account.user_type === "unit_coordinator"
       ) || [];
 
-    allProjects = (projectsResult.data as Project[] | null) || [];
-    trainingRecords = (trainingsResult.data as TrainingRecord[] | null) || [];
-    trainingPartnerAgencyOptions = extractPartnerAgencyNames(allProjects);
     availableUnitsForSuperAdmin = getAllUnits();
+
+    if (activePanel === "awards") {
+      awards = (await getAwards()).data || [];
+    } else if (activePanel === "student-involvement") {
+      studentInvolvementRecords = (await getStudentInvolvement()).data || [];
+    } else if (activePanel === "faculty-involvement") {
+      const moduleData = await getFacultyModuleData();
+      facultyInvolvementRecords = moduleData.data?.faculty || [];
+      poolExpertRecords = moduleData.data?.pool || [];
+    } else if (activePanel === "technologies-innovation") {
+      technologyRecords = (await getTechnologies()).data || [];
+    } else if (activePanel === "ordinance-resolutions") {
+      ordinanceRecords = (await getOrdinances()).data || [];
+    } else if (activePanel === "trainings" || superAdminPanel === "trainings") {
+      trainingRecords = (await getTrainings()).data || [];
+      const { data: projectsData } = await adminClient.from("projects").select("*");
+      trainingPartnerAgencyOptions = extractPartnerAgencyNames((projectsData as Project[] | null) || []);
+    } else if (activePanel === "funding" || hasEntitySelection || superAdminPanel === "projects") {
+      const { data: projectsData } = await adminClient
+        .from("projects")
+        .select("*")
+        .order("created_at", { ascending: false });
+      allProjects = (projectsData as Project[] | null) || [];
+      projects = allProjects;
+    }
   }
 
   if (profile.user_type === "college_coordinator" && profile.department) {
@@ -256,7 +268,55 @@ export default async function DashboardPage({
 
       {userType === "super_admin" && (
         <div className="space-y-4">
-          {(hasSuperAdminSelection || superAdminPanel === "trainings") && (
+          {activePanel === "awards" ? (
+            <AwardsManagement
+              initialAwards={awards}
+              department={null}
+              userType={userType}
+              currentUserId={user.id}
+            />
+          ) : activePanel === "funding" ? (
+            <FundingManagement
+              projects={projects}
+              title="Funding"
+              description="Filter funding rows by Internal or External."
+            />
+          ) : activePanel === "student-involvement" ? (
+            <StudentInvolvementManagement
+              initialRecords={studentInvolvementRecords}
+              department={null}
+              userType={userType}
+              unit={null}
+              unitOptions={availableUnitsForSuperAdmin}
+              currentUserId={user.id}
+            />
+          ) : activePanel === "faculty-involvement" ? (
+            <FacultyInvolvementManagement
+              department={null}
+              userType={userType}
+              facultyRecords={facultyInvolvementRecords}
+              poolRecords={poolExpertRecords}
+              currentUserId={user.id}
+            />
+          ) : activePanel === "technologies-innovation" ? (
+            <TechnologiesManagement
+              initialRecords={technologyRecords}
+              department={null}
+              userType={userType}
+              unit={null}
+              unitOptions={availableUnitsForSuperAdmin}
+              currentUserId={user.id}
+            />
+          ) : activePanel === "ordinance-resolutions" ? (
+            <OrdinanceResolutionsManagement
+              initialRecords={ordinanceRecords}
+              department={null}
+              userType={userType}
+              unit={null}
+              unitOptions={availableUnitsForSuperAdmin}
+              currentUserId={user.id}
+            />
+          ) : (hasSuperAdminSelection || superAdminPanel === "trainings") ? (
             <>
               {superAdminPanel === "accounts" ? (
                 <>
@@ -300,7 +360,17 @@ export default async function DashboardPage({
                 />
               )}
             </>
-          )}
+          ) : activePanel === "trainings" ? (
+            <TrainingsManagement
+              initialRecords={trainingRecords}
+              department={profile.department}
+              userType={userType}
+              unit={profile.unit}
+              unitOptions={availableUnitsForSuperAdmin}
+              partnerAgencyOptions={trainingPartnerAgencyOptions}
+              currentUserId={user.id}
+            />
+          ) : null}
         </div>
       )}
 
@@ -315,6 +385,7 @@ export default async function DashboardPage({
             <AwardsManagement
               initialAwards={awards}
               department={profile.department}
+              userType={userType}
               currentUserId={user.id}
             />
           ) : activePanel === "funding" ? (
@@ -335,6 +406,7 @@ export default async function DashboardPage({
           ) : activePanel === "faculty-involvement" ? (
             <FacultyInvolvementManagement
               department={profile.department}
+              userType={userType}
               facultyRecords={facultyInvolvementRecords}
               poolRecords={poolExpertRecords}
               currentUserId={user.id}
@@ -396,6 +468,7 @@ export default async function DashboardPage({
           <AwardsManagement
             initialAwards={awards}
             department={profile.department}
+            userType={userType}
             currentUserId={user.id}
           />
         ) : activePanel === "funding" ? (
@@ -416,6 +489,7 @@ export default async function DashboardPage({
         ) : activePanel === "faculty-involvement" ? (
           <FacultyInvolvementManagement
             department={profile.department}
+            userType={userType}
             facultyRecords={facultyInvolvementRecords}
             poolRecords={poolExpertRecords}
             currentUserId={user.id}

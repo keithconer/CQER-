@@ -37,16 +37,30 @@ async function getCurrentContext() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("department")
+    .select("department, user_type")
     .eq("id", user.id)
     .single();
 
-  return { supabase, user, department: profile?.department || "" };
+  return { supabase, user, department: profile?.department || "", userType: profile?.user_type || null };
 }
 
 export async function getTechnologies() {
-  const { department } = await getCurrentContext();
+  const { department, userType } = await getCurrentContext();
   const adminClient = createAdminClient();
+
+  if (userType === "super_admin") {
+    const { data, error } = await adminClient
+      .from("technologies_innovations")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching all technologies:", error);
+      return { error: error.message };
+    }
+    return { data };
+  }
+
   if (!department) {
     return { data: [] };
   }
@@ -63,14 +77,21 @@ export async function getTechnologies() {
   }
 
   const creatorIds = (deptProfiles || []).map((item) => item.id);
-  if (creatorIds.length === 0) {
+  const { data: superAdmins } = await adminClient
+    .from("profiles")
+    .select("id")
+    .eq("user_type", "super_admin");
+  
+  const allCreatorIds = Array.from(new Set([...creatorIds, ...((superAdmins || []).map((item) => item.id))]));
+
+  if (allCreatorIds.length === 0) {
     return { data: [] };
   }
 
   const { data, error } = await adminClient
     .from("technologies_innovations")
     .select("*")
-    .in("created_by", creatorIds)
+    .in("created_by", allCreatorIds)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -104,18 +125,24 @@ export async function createTechnology(formData: TechnologyPayload) {
 }
 
 export async function updateTechnology(id: string, formData: TechnologyPayload) {
-  const { supabase, user, department } = await getCurrentContext();
-  const { data, error } = await supabase
+  const { supabase, user, department, userType } = await getCurrentContext();
+  const client = userType === "super_admin" ? createAdminClient() : supabase;
+
+  let query = client
     .from("technologies_innovations")
     .update({
       ...formData,
       college: "CEIT",
-      department: department || formData.department || "",
+      department: userType === "super_admin" ? (formData.department || department || "") : (department || formData.department || ""),
       updated_at: new Date().toISOString(),
     })
-    .eq("id", id)
-    .eq("created_by", user.id)
-    .select();
+    .eq("id", id);
+
+  if (userType !== "super_admin") {
+    query = query.eq("created_by", user.id);
+  }
+
+  const { data, error } = await query.select();
 
   if (error) {
     console.error("Error updating technology record:", error);
@@ -129,12 +156,19 @@ export async function updateTechnology(id: string, formData: TechnologyPayload) 
 }
 
 export async function deleteTechnology(id: string) {
-  const { supabase, user } = await getCurrentContext();
-  const { error } = await supabase
+  const { supabase, user, userType } = await getCurrentContext();
+  const client = userType === "super_admin" ? createAdminClient() : supabase;
+
+  let query = client
     .from("technologies_innovations")
     .delete()
-    .eq("id", id)
-    .eq("created_by", user.id);
+    .eq("id", id);
+
+  if (userType !== "super_admin") {
+    query = query.eq("created_by", user.id);
+  }
+
+  const { error } = await query;
 
   if (error) {
     console.error("Error deleting technology record:", error);
@@ -145,8 +179,22 @@ export async function deleteTechnology(id: string) {
 }
 
 export async function getOrdinances() {
-  const { department } = await getCurrentContext();
+  const { department, userType } = await getCurrentContext();
   const adminClient = createAdminClient();
+
+  if (userType === "super_admin") {
+    const { data, error } = await adminClient
+      .from("ordinance_resolutions")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching all ordinance/resolutions:", error);
+      return { error: error.message };
+    }
+    return { data };
+  }
+
   if (!department) {
     return { data: [] };
   }
@@ -163,14 +211,21 @@ export async function getOrdinances() {
   }
 
   const creatorIds = (deptProfiles || []).map((item) => item.id);
-  if (creatorIds.length === 0) {
+  const { data: superAdmins } = await adminClient
+    .from("profiles")
+    .select("id")
+    .eq("user_type", "super_admin");
+  
+  const allCreatorIds = Array.from(new Set([...creatorIds, ...((superAdmins || []).map((item) => item.id))]));
+
+  if (allCreatorIds.length === 0) {
     return { data: [] };
   }
 
   const { data, error } = await adminClient
     .from("ordinance_resolutions")
     .select("*")
-    .in("created_by", creatorIds)
+    .in("created_by", allCreatorIds)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -203,17 +258,23 @@ export async function createOrdinance(formData: OrdinancePayload) {
 }
 
 export async function updateOrdinance(id: string, formData: OrdinancePayload) {
-  const { supabase, user, department } = await getCurrentContext();
-  const { data, error } = await supabase
+  const { supabase, user, department, userType } = await getCurrentContext();
+  const client = userType === "super_admin" ? createAdminClient() : supabase;
+
+  let query = client
     .from("ordinance_resolutions")
     .update({
       ...formData,
-      department: department || formData.department || "",
+      department: userType === "super_admin" ? (formData.department || department || "") : (department || formData.department || ""),
       updated_at: new Date().toISOString(),
     })
-    .eq("id", id)
-    .eq("created_by", user.id)
-    .select();
+    .eq("id", id);
+
+  if (userType !== "super_admin") {
+    query = query.eq("created_by", user.id);
+  }
+
+  const { data, error } = await query.select();
 
   if (error) {
     console.error("Error updating ordinance/resolution:", error);
@@ -227,12 +288,19 @@ export async function updateOrdinance(id: string, formData: OrdinancePayload) {
 }
 
 export async function deleteOrdinance(id: string) {
-  const { supabase, user } = await getCurrentContext();
-  const { error } = await supabase
+  const { supabase, user, userType } = await getCurrentContext();
+  const client = userType === "super_admin" ? createAdminClient() : supabase;
+
+  let query = client
     .from("ordinance_resolutions")
     .delete()
-    .eq("id", id)
-    .eq("created_by", user.id);
+    .eq("id", id);
+
+  if (userType !== "super_admin") {
+    query = query.eq("created_by", user.id);
+  }
+
+  const { error } = await query;
 
   if (error) {
     console.error("Error deleting ordinance/resolution:", error);

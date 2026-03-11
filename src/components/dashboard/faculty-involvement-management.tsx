@@ -15,6 +15,7 @@ import {
   updateFacultyInvolvement,
   updatePoolExpert,
 } from "@/lib/actions/faculty-involvement";
+import { DEPARTMENTS } from "@/lib/departments";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -112,12 +113,14 @@ export interface PoolExpertRecord {
 
 interface FacultyInvolvementManagementProps {
   department: string | null;
+  userType?: "super_admin" | "college_coordinator" | "unit_coordinator";
   facultyRecords: FacultyInvolvementRecord[];
   poolRecords: PoolExpertRecord[];
   currentUserId: string;
 }
 
 const facultySchema = z.object({
+  department: z.string().min(1, "Department is required"),
   faculty_name: z.string().min(1, "Name of faculty is required"),
   sex: z.enum(sexOptions, { message: "Sex is required" }),
   rank: z.string().min(1, "Rank is required"),
@@ -129,6 +132,7 @@ const facultySchema = z.object({
 });
 
 const poolSchema = z.object({
+  department: z.string().min(1, "Department is required"),
   faculty_name: z.string().min(1, "Name of faculty/staff is required"),
   sex: z.enum(sexOptions, { message: "Sex is required" }),
   rank: z.string().min(1, "Rank is required"),
@@ -150,10 +154,14 @@ type PoolInput = z.input<typeof poolSchema>;
 type PoolOutput = z.output<typeof poolSchema>;
 
 function FacultyForm({
+  department,
+  userType,
   record,
   isViewOnly = false,
   onSuccess,
 }: {
+  department: string;
+  userType?: "super_admin" | "college_coordinator" | "unit_coordinator";
   record?: FacultyInvolvementRecord | null;
   isViewOnly?: boolean;
   onSuccess: () => void;
@@ -162,6 +170,7 @@ function FacultyForm({
   const form = useForm<FacultyInput, unknown, FacultyOutput>({
     resolver: zodResolver(facultySchema),
     defaultValues: {
+      department: record?.department || department || "",
       faculty_name: record?.faculty_name || "",
       sex: record?.sex || "male",
       rank: record?.rank || "",
@@ -175,6 +184,7 @@ function FacultyForm({
 
   React.useEffect(() => {
     form.reset({
+      department: record?.department || department || "",
       faculty_name: record?.faculty_name || "",
       sex: record?.sex || "male",
       rank: record?.rank || "",
@@ -184,7 +194,7 @@ function FacultyForm({
       remarks: record?.remarks || "",
       documents: record?.documents || [],
     });
-  }, [record, form]);
+  }, [record, department, form]);
 
   const onSubmit = async (values: FacultyOutput) => {
     setIsSubmitting(true);
@@ -207,19 +217,51 @@ function FacultyForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="faculty_name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-xs">Name of Faculty (Last, First, MI)</FormLabel>
-              <FormControl>
-                <Input {...field} className="h-8 text-xs" disabled={isViewOnly} />
-              </FormControl>
-              <FormMessage className="text-[10px]" />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <FormField
+            control={form.control}
+            name="department"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs">Department</FormLabel>
+                {userType === "super_admin" ? (
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="h-8 text-xs" disabled={isViewOnly}>
+                        <SelectValue placeholder="Select department" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {DEPARTMENTS.map((dept) => (
+                        <SelectItem key={dept} value={dept} className="text-xs">
+                          {dept}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <FormControl>
+                    <Input {...field} readOnly className="h-8 text-xs bg-muted/30" />
+                  </FormControl>
+                )}
+                <FormMessage className="text-[10px]" />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="faculty_name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs">Name of Faculty (Last, First, MI)</FormLabel>
+                <FormControl>
+                  <Input {...field} className="h-8 text-xs" disabled={isViewOnly} />
+                </FormControl>
+                <FormMessage className="text-[10px]" />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <FormField
@@ -397,11 +439,15 @@ function FacultyForm({
   );
 }
 function PoolForm({
+  department,
+  userType,
   facultyRecords,
   record,
   isViewOnly = false,
   onSuccess,
 }: {
+  department: string;
+  userType?: "super_admin" | "college_coordinator" | "unit_coordinator";
   facultyRecords: FacultyInvolvementRecord[];
   record?: PoolExpertRecord | null;
   isViewOnly?: boolean;
@@ -422,6 +468,7 @@ function PoolForm({
   const form = useForm<PoolInput, unknown, PoolOutput>({
     resolver: zodResolver(poolSchema),
     defaultValues: {
+      department: record?.department || department || "",
       faculty_name: record?.faculty_name || "",
       sex: record?.sex || "male",
       rank: record?.rank || "",
@@ -445,6 +492,7 @@ function PoolForm({
 
   React.useEffect(() => {
     form.reset({
+      department: record?.department || department || "",
       faculty_name: record?.faculty_name || "",
       sex: record?.sex || "male",
       rank: record?.rank || "",
@@ -461,7 +509,7 @@ function PoolForm({
       remarks: record?.remarks || "",
       documents: record?.documents || [],
     });
-  }, [record, form]);
+  }, [record, department, form]);
 
   const selectedName = form.watch("faculty_name");
   React.useEffect(() => {
@@ -476,6 +524,7 @@ function PoolForm({
   const onSubmit = async (values: PoolOutput) => {
     setIsSubmitting(true);
     const payload = {
+      department: values.department,
       faculty_name: values.faculty_name,
       sex: values.sex,
       rank: values.rank,
@@ -498,30 +547,62 @@ function PoolForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="faculty_name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-xs">Name of Faculty/Staff</FormLabel>
-              <Select value={field.value} onValueChange={field.onChange}>
-                <FormControl>
-                  <SelectTrigger className="h-8 text-xs" disabled={isViewOnly}>
-                    <SelectValue placeholder="Select existing employee name" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {employeeOptions.map((option) => (
-                    <SelectItem key={option.name} value={option.name} className="text-xs">
-                      {option.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage className="text-[10px]" />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <FormField
+            control={form.control}
+            name="department"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs">Department</FormLabel>
+                {userType === "super_admin" ? (
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="h-8 text-xs" disabled={isViewOnly}>
+                        <SelectValue placeholder="Select department" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {DEPARTMENTS.map((dept) => (
+                        <SelectItem key={dept} value={dept} className="text-xs">
+                          {dept}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <FormControl>
+                    <Input {...field} readOnly className="h-8 text-xs bg-muted/30" />
+                  </FormControl>
+                )}
+                <FormMessage className="text-[10px]" />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="faculty_name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs">Name of Faculty/Staff</FormLabel>
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <FormControl>
+                    <SelectTrigger className="h-8 text-xs" disabled={isViewOnly}>
+                      <SelectValue placeholder="Select existing employee name" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {employeeOptions.map((option) => (
+                      <SelectItem key={option.name} value={option.name} className="text-xs">
+                        {option.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage className="text-[10px]" />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <FormField
@@ -723,6 +804,7 @@ function PoolForm({
 }
 export function FacultyInvolvementManagement({
   department,
+  userType,
   facultyRecords,
   poolRecords,
   currentUserId,
@@ -1057,7 +1139,7 @@ export function FacultyInvolvementManagement({
             <DialogTitle className="text-sm font-semibold">Create Faculty Involvement</DialogTitle>
             <DialogDescription className="text-[10px]">Fill out the form below.</DialogDescription>
           </DialogHeader>
-          <FacultyForm onSuccess={closeDialogsAndRefresh} />
+          <FacultyForm department={department || ""} userType={userType} onSuccess={closeDialogsAndRefresh} />
         </DialogContent>
       </Dialog>
 
@@ -1067,7 +1149,7 @@ export function FacultyInvolvementManagement({
             <DialogTitle className="text-sm font-semibold">Update Faculty Involvement</DialogTitle>
             <DialogDescription className="text-[10px]">Update record details.</DialogDescription>
           </DialogHeader>
-          {editFaculty && <FacultyForm record={editFaculty} onSuccess={closeDialogsAndRefresh} />}
+          {editFaculty && <FacultyForm department={department || ""} userType={userType} record={editFaculty} onSuccess={closeDialogsAndRefresh} />}
         </DialogContent>
       </Dialog>
 
@@ -1077,7 +1159,7 @@ export function FacultyInvolvementManagement({
             <DialogTitle className="text-sm font-semibold">View Faculty Involvement</DialogTitle>
             <DialogDescription className="text-[10px]">View record details.</DialogDescription>
           </DialogHeader>
-          {viewFaculty && <FacultyForm record={viewFaculty} isViewOnly onSuccess={() => setViewFaculty(null)} />}
+          {viewFaculty && <FacultyForm department={department || ""} userType={userType} record={viewFaculty} isViewOnly onSuccess={() => setViewFaculty(null)} />}
         </DialogContent>
       </Dialog>
 
@@ -1087,7 +1169,7 @@ export function FacultyInvolvementManagement({
             <DialogTitle className="text-sm font-semibold">Create Pool Expert</DialogTitle>
             <DialogDescription className="text-[10px]">Fill out the form below.</DialogDescription>
           </DialogHeader>
-          <PoolForm facultyRecords={facultyRecords} onSuccess={closeDialogsAndRefresh} />
+          <PoolForm department={department || ""} userType={userType} facultyRecords={facultyRecords} onSuccess={closeDialogsAndRefresh} />
         </DialogContent>
       </Dialog>
 
@@ -1097,7 +1179,7 @@ export function FacultyInvolvementManagement({
             <DialogTitle className="text-sm font-semibold">Update Pool Expert</DialogTitle>
             <DialogDescription className="text-[10px]">Update record details.</DialogDescription>
           </DialogHeader>
-          {editPool && <PoolForm facultyRecords={facultyRecords} record={editPool} onSuccess={closeDialogsAndRefresh} />}
+          {editPool && <PoolForm department={department || ""} userType={userType} facultyRecords={facultyRecords} record={editPool} onSuccess={closeDialogsAndRefresh} />}
         </DialogContent>
       </Dialog>
 
@@ -1107,7 +1189,7 @@ export function FacultyInvolvementManagement({
             <DialogTitle className="text-sm font-semibold">View Pool Expert</DialogTitle>
             <DialogDescription className="text-[10px]">View record details.</DialogDescription>
           </DialogHeader>
-          {viewPool && <PoolForm facultyRecords={facultyRecords} record={viewPool} isViewOnly onSuccess={() => setViewPool(null)} />}
+          {viewPool && <PoolForm department={department || ""} userType={userType} facultyRecords={facultyRecords} record={viewPool} isViewOnly onSuccess={() => setViewPool(null)} />}
         </DialogContent>
       </Dialog>
     </div>

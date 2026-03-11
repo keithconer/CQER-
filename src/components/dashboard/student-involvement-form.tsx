@@ -8,7 +8,7 @@ import {
   createStudentInvolvement,
   updateStudentInvolvement,
 } from "@/lib/actions/student-involvement";
-import { getUnitsByDepartment } from "@/lib/departments";
+import { DEPARTMENTS, getAllUnits, getUnitsByDepartment } from "@/lib/departments";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -87,7 +87,10 @@ export function StudentInvolvementForm({
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const curricularOptions = React.useMemo(() => {
-    if (userType === "college_coordinator") return unitOptions;
+    if (userType === "super_admin" || userType === "college_coordinator") {
+      if (userType === "super_admin") return getAllUnits();
+      return unitOptions;
+    }
     if (userType === "unit_coordinator" && department) {
       const fromDepartment = getUnitsByDepartment(department);
       if (fromDepartment.length > 0) return fromDepartment;
@@ -100,7 +103,7 @@ export function StudentInvolvementForm({
     resolver: zodResolver(schema),
     defaultValues: {
       college: "CEIT",
-      department: department || "",
+      department: record?.department || department || "",
       curricular_offering: record?.curricular_offering || "",
       total_students: record?.total_students ?? 0,
       involved_students: record?.involved_students ?? 0,
@@ -113,7 +116,7 @@ export function StudentInvolvementForm({
   React.useEffect(() => {
     form.reset({
       college: "CEIT",
-      department: department || "",
+      department: record?.department || department || "",
       curricular_offering: record?.curricular_offering || "",
       total_students: record?.total_students ?? 0,
       involved_students: record?.involved_students ?? 0,
@@ -187,9 +190,26 @@ export function StudentInvolvementForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="text-xs">Department</FormLabel>
-                <FormControl>
-                  <Input {...field} readOnly className="h-8 text-xs bg-muted/30" />
-                </FormControl>
+                {userType === "super_admin" ? (
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="h-8 text-xs" disabled={isViewOnly}>
+                        <SelectValue placeholder="Select department" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {DEPARTMENTS.map((dept) => (
+                        <SelectItem key={dept} value={dept} className="text-xs">
+                          {dept}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <FormControl>
+                    <Input {...field} readOnly className="h-8 text-xs bg-muted/30" />
+                  </FormControl>
+                )}
                 <FormMessage className="text-[10px]" />
               </FormItem>
             )}

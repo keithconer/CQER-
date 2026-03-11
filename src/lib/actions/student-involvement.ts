@@ -68,7 +68,24 @@ export async function getStudentInvolvement() {
     .eq("id", user.id)
     .single();
 
-  if (!profile || !profile.department) {
+  if (!profile) {
+    return { data: [] };
+  }
+
+  if (profile.user_type === "super_admin") {
+    const { data, error } = await adminClient
+      .from("student_involvement")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching all student involvement records:", error);
+      return { error: error.message };
+    }
+    return { data };
+  }
+
+  if (!profile.department) {
     return { data: [] };
   }
 
@@ -84,14 +101,21 @@ export async function getStudentInvolvement() {
   }
 
   const creatorIds = (deptProfiles || []).map((item) => item.id);
-  if (creatorIds.length === 0) {
+  const { data: superAdmins } = await adminClient
+    .from("profiles")
+    .select("id")
+    .eq("user_type", "super_admin");
+  
+  const allCreatorIds = Array.from(new Set([...creatorIds, ...((superAdmins || []).map((item) => item.id))]));
+
+  if (allCreatorIds.length === 0) {
     return { data: [] };
   }
 
   const { data, error } = await adminClient
     .from("student_involvement")
     .select("*")
-    .in("created_by", creatorIds)
+    .in("created_by", allCreatorIds)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -114,23 +138,30 @@ export async function updateStudentInvolvement(id: string, formData: StudentInvo
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("department")
+    .select("department, user_type")
     .eq("id", user.id)
     .single();
+
+  const userType = profile?.user_type || null;
+  const client = userType === "super_admin" ? createAdminClient() : supabase;
 
   const payload = {
     ...formData,
     college: "CEIT",
-    department: profile?.department || formData.department || "",
+    department: userType === "super_admin" ? (formData.department || profile?.department || "") : (profile?.department || formData.department || ""),
     updated_at: new Date().toISOString(),
   };
 
-  const { data, error } = await supabase
+  let query = client
     .from("student_involvement")
     .update(payload)
-    .eq("id", id)
-    .eq("created_by", user.id)
-    .select();
+    .eq("id", id);
+
+  if (userType !== "super_admin") {
+    query = query.eq("created_by", user.id);
+  }
+
+  const { data, error } = await query.select();
 
   if (error) {
     console.error("Error updating student involvement record:", error);
@@ -155,11 +186,25 @@ export async function deleteStudentInvolvement(id: string) {
     throw new Error("Unauthorized");
   }
 
-  const { error } = await supabase
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("user_type")
+    .eq("id", user.id)
+    .single();
+
+  const userType = profile?.user_type || null;
+  const client = userType === "super_admin" ? createAdminClient() : supabase;
+
+  let query = client
     .from("student_involvement")
     .delete()
-    .eq("id", id)
-    .eq("created_by", user.id);
+    .eq("id", id);
+
+  if (userType !== "super_admin") {
+    query = query.eq("created_by", user.id);
+  }
+
+  const { error } = await query;
 
   if (error) {
     console.error("Error deleting student involvement record:", error);

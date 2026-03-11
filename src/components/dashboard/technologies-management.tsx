@@ -7,12 +7,8 @@ import * as z from "zod";
 import { Eye, Pencil, Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { getUnitsByDepartment } from "@/lib/departments";
-import {
-  createTechnology,
-  deleteTechnology,
-  updateTechnology,
-} from "@/lib/actions/technology-ordinance";
+import { createTechnology, deleteTechnology, updateTechnology } from "@/lib/actions/technology-ordinance";
+import { DEPARTMENTS, getAllUnits, getUnitsByDepartment } from "@/lib/departments";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -135,7 +131,10 @@ function TechnologyForm({
 }) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const curricularOptions = React.useMemo(() => {
-    if (userType === "college_coordinator") return unitOptions;
+    if (userType === "super_admin" || userType === "college_coordinator") {
+      if (userType === "super_admin") return getAllUnits();
+      return unitOptions;
+    }
     if (userType === "unit_coordinator" && department) {
       const options = getUnitsByDepartment(department);
       if (options.length > 0) return options;
@@ -148,7 +147,7 @@ function TechnologyForm({
     resolver: zodResolver(schema),
     defaultValues: {
       college: "CEIT",
-      department: department || "",
+      department: record?.department || department || "",
       curricular_offering: record?.curricular_offering || "",
       technology_title: record?.technology_title || "",
       year_develop: record?.year_develop || new Date().getFullYear(),
@@ -168,7 +167,7 @@ function TechnologyForm({
   React.useEffect(() => {
     form.reset({
       college: "CEIT",
-      department: department || "",
+      department: record?.department || department || "",
       curricular_offering: record?.curricular_offering || "",
       technology_title: record?.technology_title || "",
       year_develop: record?.year_develop || new Date().getFullYear(),
@@ -230,9 +229,26 @@ function TechnologyForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="text-xs">Department</FormLabel>
-                <FormControl>
-                  <Input {...field} readOnly className="h-8 text-xs bg-muted/30" />
-                </FormControl>
+                {userType === "super_admin" ? (
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="h-8 text-xs" disabled={isViewOnly}>
+                        <SelectValue placeholder="Select department" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {DEPARTMENTS.map((dept) => (
+                        <SelectItem key={dept} value={dept} className="text-xs">
+                          {dept}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <FormControl>
+                    <Input {...field} readOnly className="h-8 text-xs bg-muted/30" />
+                  </FormControl>
+                )}
               </FormItem>
             )}
           />

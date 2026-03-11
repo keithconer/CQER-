@@ -9,12 +9,8 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { getUnitsByDepartment } from "@/lib/departments";
-import {
-  createOrdinance,
-  deleteOrdinance,
-  updateOrdinance,
-} from "@/lib/actions/technology-ordinance";
+import { createOrdinance, deleteOrdinance, updateOrdinance } from "@/lib/actions/technology-ordinance";
+import { DEPARTMENTS, getAllUnits, getUnitsByDepartment } from "@/lib/departments";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -135,7 +131,10 @@ function OrdinanceForm({
 }) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const curricularOptions = React.useMemo(() => {
-    if (userType === "college_coordinator") return unitOptions;
+    if (userType === "super_admin" || userType === "college_coordinator") {
+      if (userType === "super_admin") return getAllUnits();
+      return unitOptions;
+    }
     if (userType === "unit_coordinator" && department) {
       const options = getUnitsByDepartment(department);
       if (options.length > 0) return options;
@@ -147,7 +146,7 @@ function OrdinanceForm({
   const form = useForm<InputValues, unknown, OutputValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      department: department || "",
+      department: record?.department || department || "",
       curricular_offering: record?.curricular_offering || "",
       extension_project_activity: record?.extension_project_activity || "",
       ordinance_resolution: record?.ordinance_resolution || "",
@@ -160,7 +159,7 @@ function OrdinanceForm({
 
   React.useEffect(() => {
     form.reset({
-      department: department || "",
+      department: record?.department || department || "",
       curricular_offering: record?.curricular_offering || "",
       extension_project_activity: record?.extension_project_activity || "",
       ordinance_resolution: record?.ordinance_resolution || "",
@@ -208,9 +207,26 @@ function OrdinanceForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel className="text-xs">Department</FormLabel>
-              <FormControl>
-                <Input {...field} readOnly className="h-8 text-xs bg-muted/30" />
-              </FormControl>
+              {userType === "super_admin" ? (
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger className="h-8 text-xs" disabled={isViewOnly}>
+                      <SelectValue placeholder="Select department" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {DEPARTMENTS.map((dept) => (
+                      <SelectItem key={dept} value={dept} className="text-xs">
+                        {dept}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <FormControl>
+                  <Input {...field} readOnly className="h-8 text-xs bg-muted/30" />
+                </FormControl>
+              )}
             </FormItem>
           )}
         />

@@ -38,10 +38,11 @@ export interface AwardRecord {
 interface AwardsManagementProps {
   initialAwards: AwardRecord[];
   department: string | null;
+  userType?: "super_admin" | "college_coordinator" | "unit_coordinator";
   currentUserId: string;
 }
 
-export function AwardsManagement({ initialAwards, department, currentUserId }: AwardsManagementProps) {
+export function AwardsManagement({ initialAwards, department, userType, currentUserId }: AwardsManagementProps) {
   const [createOpen, setCreateOpen] = React.useState(false);
   const [editAward, setEditAward] = React.useState<AwardRecord | null>(null);
   const [viewAward, setViewAward] = React.useState<AwardRecord | null>(null);
@@ -291,7 +292,7 @@ export function AwardsManagement({ initialAwards, department, currentUserId }: A
               Fill out the form below to register an award or recognition.
             </DialogDescription>
           </DialogHeader>
-          <AwardsForm department={department || ""} onSuccess={handleSuccess} />
+          <AwardsForm department={department || ""} userType={userType} onSuccess={handleSuccess} />
         </DialogContent>
       </Dialog>
 
@@ -304,7 +305,7 @@ export function AwardsManagement({ initialAwards, department, currentUserId }: A
             </DialogDescription>
           </DialogHeader>
           {editAward && (
-            <AwardsForm department={department || ""} award={editAward} onSuccess={handleSuccess} />
+            <AwardsForm department={department || ""} userType={userType} award={editAward} onSuccess={handleSuccess} />
           )}
         </DialogContent>
       </Dialog>
@@ -320,6 +321,7 @@ export function AwardsManagement({ initialAwards, department, currentUserId }: A
           {viewAward && (
             <AwardsForm
               department={department || ""}
+              userType={userType}
               award={viewAward}
               isViewOnly
               onSuccess={() => setViewAward(null)}

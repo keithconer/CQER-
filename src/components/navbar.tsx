@@ -519,6 +519,54 @@ export function Navbar({ user }: NavbarProps) {
                     )}
                     <Button
                       variant="ghost"
+                      className={navItemClass(activePanel === "funding")}
+                      onClick={() => goTo("/dashboard?panel=funding")}
+                    >
+                      <Database className="mr-2 h-3 w-3" />
+                      Funding
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className={navItemClass(activePanel === "awards")}
+                      onClick={() => goTo("/dashboard?panel=awards")}
+                    >
+                      <Award className="mr-2 h-3 w-3" />
+                      Awards
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className={navItemClass(activePanel === "student-involvement")}
+                      onClick={() => goTo("/dashboard?panel=student-involvement")}
+                    >
+                      <UserRoundCheck className="mr-2 h-3 w-3" />
+                      Student Involvement
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className={navItemClass(activePanel === "faculty-involvement")}
+                      onClick={() => goTo("/dashboard?panel=faculty-involvement")}
+                    >
+                      <GraduationCap className="mr-2 h-3 w-3" />
+                      Faculty Involvement in ESCE
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className={navItemClass(activePanel === "technologies-innovation")}
+                      onClick={() => goTo("/dashboard?panel=technologies-innovation")}
+                    >
+                      <Cpu className="mr-2 h-3 w-3" />
+                      Technologies/Innovation Adapted
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className={navItemClass(activePanel === "ordinance-resolutions")}
+                      onClick={() => goTo("/dashboard?panel=ordinance-resolutions")}
+                    >
+                      <ScrollText className="mr-2 h-3 w-3" />
+                      Ordinance or Resolutions
+                    </Button>
+                    <Button
+                      variant="ghost"
                       className={navItemClass(activePanel === "trainings")}
                       onClick={() => goTo("/dashboard?panel=trainings")}
                     >
