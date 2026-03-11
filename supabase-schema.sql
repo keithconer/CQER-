@@ -2102,3 +2102,40 @@ $$;
 -- ============================================================
 -- END COPY: Super Admin Visibility + Notifications
 -- ============================================================
+
+-- ============================================================
+-- START: Global Visibility Support (Super Admin & Coordinator)
+-- ============================================================
+-- Ensure all management tables have visibility columns for Super Admin monitoring and Coordinator filtering.
+
+-- Add missing columns to trainings
+alter table public.trainings
+add column if not exists visibility_scope text default 'department',
+add column if not exists visible_departments jsonb default '[]'::jsonb;
+
+-- Add missing columns to projects
+alter table public.projects
+add column if not exists visibility_scope text default 'public',
+add column if not exists visible_units jsonb default '[]'::jsonb,
+add column if not exists visible_departments jsonb default '[]'::jsonb;
+
+-- Ensure constraints (optional but good for data integrity)
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'trainings_visibility_scope_check') then
+    alter table public.trainings add constraint trainings_visibility_scope_check 
+    check (visibility_scope in ('department', 'all_departments', 'specific_departments'));
+  end if;
+
+  if not exists (select 1 from pg_constraint where conname = 'projects_visibility_scope_check') then
+    alter table public.projects add constraint projects_visibility_scope_check 
+    check (visibility_scope in ('public', 'specific_units', 'all_departments', 'specific_departments'));
+  end if;
+end
+$$;
+
+-- Force schema cache reload
+notify pgrst, 'reload schema';
+-- ============================================================
+-- END: Global Visibility Support
+-- ============================================================

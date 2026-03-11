@@ -1781,7 +1781,12 @@ export function TrainingsForm({
         />
 
         {!isViewOnly && (
-          <div className="flex justify-end">
+          <div className="flex flex-col items-end gap-2">
+            {Object.keys(form.formState.errors).length > 0 && (
+              <p className="text-[10px] text-destructive font-medium">
+                Please fix validation errors before saving.
+              </p>
+            )}
             <Button
               type="submit"
               className="h-8 text-xs bg-[#159E44] hover:bg-[#128A3B] text-white"

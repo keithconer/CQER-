@@ -1240,7 +1240,22 @@ export function ProjectForm({
               </FormItem>
             )} />
 
-            {!isViewOnly && <div className="flex justify-end"><Button type="submit" className="h-8 text-[10px] bg-[#159E44] hover:bg-[#128A3B]" disabled={isSubmitting}>{isSubmitting ? "Submitting..." : project?.id ? `Update ${recordLabel}` : `Submit ${recordLabel} Registration`}</Button></div>}
+            {!isViewOnly && (
+              <div className="flex flex-col items-end gap-2">
+                {Object.keys(form.formState.errors).length > 0 && (
+                  <p className="text-[10px] text-destructive font-medium">
+                    Please fix validation errors before submitting.
+                  </p>
+                )}
+                <Button 
+                  type="submit" 
+                  className="h-8 text-[10px] bg-[#159E44] hover:bg-[#128A3B]" 
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? "Submitting..." : project?.id ? `Update ${recordLabel}` : `Submit ${recordLabel} Registration`}
+                </Button>
+              </div>
+            )}
           </div>
         </ScrollArea>
       </form>
