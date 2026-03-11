@@ -378,7 +378,7 @@ export function TrainingsForm({
     resolver: zodResolver(schema),
     defaultValues: {
       college: "CEIT",
-      department: department || "",
+      department: record?.department || department || "",
       lead_units: record?.lead_units?.length
         ? record.lead_units
         : userType === "unit_coordinator" && department

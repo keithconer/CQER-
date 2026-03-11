@@ -442,7 +442,7 @@ export function ProjectForm({
       moa_no: project?.moa_no || "",
       moa_category: initialMoaCategory,
       date_approved: project?.date_approved ? new Date(project.date_approved) : new Date(),
-      lead_units: project?.lead_units || (currentUserType === "unit_coordinator" && currentDepartment ? [currentDepartment] : []),
+      lead_units: (project?.lead_units && project.lead_units.length > 0) ? project.lead_units : (currentUserType === "unit_coordinator" && currentDepartment ? [currentDepartment] : []),
       contact_person: project?.contact_person || "",
       contact_details: project?.contact_details || "",
       related_curricular_offerings: project?.related_curricular_offerings || [],
