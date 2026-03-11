@@ -174,8 +174,9 @@ export function Navbar({ user }: NavbarProps) {
     `dashboard-nav-item h-6 w-full justify-start text-[9px] border ${active ? "border-border/40 bg-muted/30" : "border-transparent"}`;
 
   return (
-    <header className="border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="max-w-[95rem] mx-auto flex min-h-12 items-center justify-between px-2 sm:px-3 md:px-4 py-1.5">
+    <>
+      <header className="dashboard-header border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 relative z-30">
+        <div className="max-w-[95rem] mx-auto flex min-h-12 items-center justify-between px-2 sm:px-3 md:px-4 py-1.5">
         <div className="flex items-center gap-2">
           <button
             onClick={() => router.push("/dashboard")}
@@ -301,6 +302,7 @@ export function Navbar({ user }: NavbarProps) {
           </DropdownMenu>
         </div>
       </div>
+    </header>
 
       {isDashboard && sidebarOpen && (
         <button
@@ -314,8 +316,8 @@ export function Navbar({ user }: NavbarProps) {
       {isDashboard && (
         <aside
           className={cn(
-            "fixed top-0 left-0 z-50 h-full border-r border-border/40 bg-background transition-[width,transform] duration-300 ease-in-out",
-            sidebarOpen ? "w-64 translate-x-0" : "w-16 -translate-x-full md:translate-x-0"
+            "fixed top-0 left-0 z-50 h-full border-r border-border/40 bg-background transition-[width] duration-300 ease-in-out",
+            sidebarOpen ? "w-64" : "w-16"
           )}
         >
           <div className={cn(
@@ -499,6 +501,6 @@ export function Navbar({ user }: NavbarProps) {
           </ScrollArea>
         </aside>
       )}
-    </header>
+    </>
   );
 }

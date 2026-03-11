@@ -125,19 +125,16 @@
   }
 }
 
-@media (min-width: 768px) {
-  html[data-dashboard-sidebar="open"] .dashboard-main {
-    margin-left: 16rem;
-    max-width: calc(95rem - 16rem);
-  }
-  html[data-dashboard-sidebar="closed"] .dashboard-main {
-    margin-left: 64px;
-    max-width: calc(95rem - 64px);
-  }
+.dashboard-main, .dashboard-header {
+  margin-left: 64px;
+  transition: margin-left 0.3s ease-in-out, max-width 0.3s ease-in-out;
 }
 
-.dashboard-main {
-  transition: margin-left 0.2s ease-in-out, max-width 0.2s ease-in-out;
+@media (min-width: 768px) {
+  html[data-dashboard-sidebar="open"] .dashboard-main,
+  html[data-dashboard-sidebar="open"] .dashboard-header {
+    margin-left: 16rem;
+  }
 }
 
 html[data-font-scale="small"] {
