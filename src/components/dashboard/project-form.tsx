@@ -1243,9 +1243,16 @@ export function ProjectForm({
             {!isViewOnly && (
               <div className="flex flex-col items-end gap-2">
                 {Object.keys(form.formState.errors).length > 0 && (
-                  <p className="text-[10px] text-destructive font-medium">
-                    Please fix validation errors before submitting.
-                  </p>
+                  <div className="text-right">
+                    <p className="text-[10px] text-destructive font-medium">
+                      Please fix validation errors in the following fields:
+                    </p>
+                    <p className="text-[9px] text-destructive opacity-80">
+                      {Object.keys(form.formState.errors)
+                        .map((key) => key.replace(/_/g, " ").replace(/\./g, " "))
+                        .join(", ")}
+                    </p>
+                  </div>
                 )}
                 <Button 
                   type="submit" 
