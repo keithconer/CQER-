@@ -130,6 +130,14 @@
     margin-left: 16rem;
     max-width: calc(95rem - 16rem);
   }
+  html[data-dashboard-sidebar="closed"] .dashboard-main {
+    margin-left: 64px;
+    max-width: calc(95rem - 64px);
+  }
+}
+
+.dashboard-main {
+  transition: margin-left 0.2s ease-in-out, max-width 0.2s ease-in-out;
 }
 
 html[data-font-scale="small"] {

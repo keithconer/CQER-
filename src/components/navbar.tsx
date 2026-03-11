@@ -20,6 +20,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   PanelLeftClose,
   PanelLeftOpen,
@@ -325,259 +327,190 @@ export function Navbar({ user }: NavbarProps) {
 
       {isDashboard && (
         <aside
-          className={`fixed top-0 left-0 z-50 h-full w-64 border-r border-border/40 bg-background transition-transform duration-200 ${
-            sidebarOpen ? "translate-x-0" : "-translate-x-full"
-          }`}
+          className={cn(
+            "fixed top-0 left-0 z-50 h-full border-r border-border/40 bg-background transition-[width,transform] duration-300 ease-in-out",
+            sidebarOpen ? "w-64 translate-x-0" : "w-16 -translate-x-full md:translate-x-0"
+          )}
         >
-          <div className="flex h-12 items-center justify-between border-b border-border/40 px-3">
-            <Image
-              src="/CQERFINAL.png"
-              alt="CQER Logo"
-              width={36}
-              height={36}
-              className="object-contain"
-            />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              onClick={() => setSidebarOpen(false)}
-            >
-              <PanelLeftClose className="h-3 w-3" />
-            </Button>
+          <div className={cn(
+            "flex h-12 items-center border-b border-border/40 px-3 transition-all duration-300",
+            sidebarOpen ? "justify-between" : "justify-center"
+          )}>
+            {sidebarOpen ? (
+              <>
+                <Image
+                  src="/CQERFINAL.png"
+                  alt="CQER Logo"
+                  width={36}
+                  height={36}
+                  className="object-contain"
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  <PanelLeftClose className="h-3 w-3" />
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setSidebarOpen(true)}
+              >
+                <PanelLeftOpen className="h-4 w-4" />
+              </Button>
+            )}
           </div>
 
-          <div className="space-y-1 px-2 py-3">
-            {(user.userType === "college_coordinator" || user.userType === "unit_coordinator") && (
-              <>
-                <Button
-                  variant="ghost"
-                  className="dashboard-nav-item h-7 w-full justify-start text-[9px] font-medium"
-                  onClick={() => setCreateExpanded((prev) => !prev)}
-                >
-                  <FolderPlus className="mr-2 h-3 w-3" />
-                  Projects
-                </Button>
-                {createExpanded && (
-                  <div className="space-y-1 pl-2">
-                    <Button
-                      variant="ghost"
-                      className={navItemClass(activePanel === "records" && activeView === "project-registration")}
-                      onClick={() => goTo("/dashboard?panel=records&view=project-registration")}
-                    >
-                      <FolderKanban className="mr-2 h-3 w-3" />
-                      Project Registration
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className={navItemClass(activePanel === "records" && activeView === "project-proposal")}
-                      onClick={() => goTo("/dashboard?panel=records&view=project-proposal")}
-                    >
-                      <FolderKanban className="mr-2 h-3 w-3" />
-                      Project Proposal
-                    </Button>
-                  </div>
-                )}
-              </>
-            )}
-
-            {user.userType === "college_coordinator" && (
-              <Button
-                variant="ghost"
-                className={navItemClass(activePanel === "unit-coordinators")}
-                onClick={() => goTo("/dashboard?panel=unit-coordinators")}
-              >
-                <Users className="mr-2 h-3 w-3" />
-                Register Unit Coordinators
-              </Button>
-            )}
-
-            {(user.userType === "college_coordinator" || user.userType === "unit_coordinator") && (
-              <Button
-                variant="ghost"
-                className={navItemClass(activePanel === "funding")}
-                onClick={() => goTo("/dashboard?panel=funding")}
-              >
-                <Database className="mr-2 h-3 w-3" />
-                Funding
-              </Button>
-            )}
-
-            {(user.userType === "college_coordinator" || user.userType === "unit_coordinator") && (
-              <Button
-                variant="ghost"
-                className={navItemClass(activePanel === "awards")}
-                onClick={() => goTo("/dashboard?panel=awards")}
-              >
-                <Award className="mr-2 h-3 w-3" />
-                Awards
-              </Button>
-            )}
-
-            {(user.userType === "college_coordinator" || user.userType === "unit_coordinator") && (
-              <Button
-                variant="ghost"
-                className={navItemClass(activePanel === "student-involvement")}
-                onClick={() => goTo("/dashboard?panel=student-involvement")}
-              >
-                <UserRoundCheck className="mr-2 h-3 w-3" />
-                Student Involvement
-              </Button>
-            )}
-
-            {(user.userType === "college_coordinator" || user.userType === "unit_coordinator") && (
-              <Button
-                variant="ghost"
-                className={navItemClass(activePanel === "faculty-involvement")}
-                onClick={() => goTo("/dashboard?panel=faculty-involvement")}
-              >
-                <GraduationCap className="mr-2 h-3 w-3" />
-                Faculty Involvement in ESCE
-              </Button>
-            )}
-
-            {(user.userType === "college_coordinator" || user.userType === "unit_coordinator") && (
-              <Button
-                variant="ghost"
-                className={navItemClass(activePanel === "technologies-innovation")}
-                onClick={() => goTo("/dashboard?panel=technologies-innovation")}
-              >
-                <Cpu className="mr-2 h-3 w-3" />
-                Technologies/Innovation Adapted
-              </Button>
-            )}
-
-            {(user.userType === "college_coordinator" || user.userType === "unit_coordinator") && (
-              <Button
-                variant="ghost"
-                className={navItemClass(activePanel === "ordinance-resolutions")}
-                onClick={() => goTo("/dashboard?panel=ordinance-resolutions")}
-              >
-                <ScrollText className="mr-2 h-3 w-3" />
-                Ordinance or Resolutions
-              </Button>
-            )}
-
-            {(user.userType === "college_coordinator" || user.userType === "unit_coordinator") && (
-              <Button
-                variant="ghost"
-                className={navItemClass(activePanel === "trainings")}
-                onClick={() => goTo("/dashboard?panel=trainings")}
-              >
-                <BookOpenCheck className="mr-2 h-3 w-3" />
-                Trainings
-              </Button>
-            )}
-
-            {user.userType === "super_admin" && (
-              <>
-                <Button
-                  variant="ghost"
-                  className="dashboard-nav-item h-7 w-full justify-start text-[9px] font-medium"
-                  onClick={() => setRecordsExpanded((prev) => !prev)}
-                >
-                  <Database className="mr-2 h-3 w-3" />
-                  Records
-                </Button>
-                {recordsExpanded && (
-                  <div className="space-y-1 pl-2">
-                    <Button
-                      variant="ghost"
-                      className={navItemClass(activePanel === "accounts")}
-                      onClick={() => goTo("/dashboard?panel=accounts")}
-                    >
-                      <Users className="mr-2 h-3 w-3" />
-                      Accounts
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className="dashboard-nav-item h-6 w-full justify-start text-[9px] border border-transparent"
-                      onClick={() => setSuperProjectsExpanded((prev) => !prev)}
-                    >
-                      <FolderKanban className="mr-2 h-3 w-3" />
-                      Projects
-                    </Button>
-                    {superProjectsExpanded && (
-                      <div className="space-y-1 pl-2">
-                        <Button
-                          variant="ghost"
-                          className={navItemClass(activePanel === "projects" && activeView === "project-registration")}
-                          onClick={() => goTo("/dashboard?panel=projects&view=project-registration")}
-                        >
-                          <FolderKanban className="mr-2 h-3 w-3" />
-                          Project Registration
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          className={navItemClass(activePanel === "projects" && activeView === "project-proposal")}
-                          onClick={() => goTo("/dashboard?panel=projects&view=project-proposal")}
-                        >
-                          <FolderKanban className="mr-2 h-3 w-3" />
-                          Project Proposal
-                        </Button>
-                      </div>
+          <ScrollArea className="h-[calc(100vh-48px)]">
+            <div className={cn("space-y-1 py-3", sidebarOpen ? "px-2" : "px-0")}>
+              {(user.userType === "college_coordinator" || user.userType === "unit_coordinator") && (
+                <>
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      "h-8 transition-all duration-200",
+                      sidebarOpen ? "w-full justify-start px-3" : "w-10 h-10 mx-auto flex p-0 rounded-xl",
+                      (activePanel === "records" || createExpanded) && !sidebarOpen && "bg-muted/30"
                     )}
+                    onClick={() => setCreateExpanded((prev) => !prev)}
+                  >
+                    <FolderPlus className={cn("shrink-0", sidebarOpen ? "mr-2 h-3.5 w-3.5" : "h-5 w-5")} />
+                    {sidebarOpen && <span className="text-[9px] font-medium">Projects</span>}
+                  </Button>
+                  {createExpanded && sidebarOpen && (
+                    <div className="space-y-1 pl-2">
+                      <Button
+                        variant="ghost"
+                        className={navItemClass(activePanel === "records" && activeView === "project-registration")}
+                        onClick={() => goTo("/dashboard?panel=records&view=project-registration")}
+                      >
+                        <FolderKanban className="mr-2 h-3 w-3" />
+                        Project Registration
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className={navItemClass(activePanel === "records" && activeView === "project-proposal")}
+                        onClick={() => goTo("/dashboard?panel=records&view=project-proposal")}
+                      >
+                        <FolderKanban className="mr-2 h-3 w-3" />
+                        Project Proposal
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {user.userType === "college_coordinator" && (
+                <div className="flex justify-center w-full">
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      "transition-all duration-200",
+                      sidebarOpen ? "h-7 w-full justify-start px-3" : "h-10 w-10 p-0 rounded-xl",
+                      activePanel === "unit-coordinators" 
+                        ? sidebarOpen ? "bg-muted border-l-2 border-primary" : "bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
+                        : ""
+                    )}
+                    onClick={() => goTo("/dashboard?panel=unit-coordinators")}
+                    title={!sidebarOpen ? "Unit Coordinators" : ""}
+                  >
+                    <Users className={cn("shrink-0", sidebarOpen ? "mr-2 h-3 w-3" : "h-5 w-5")} />
+                    {sidebarOpen && <span className="text-[9px]">Register Unit Coordinators</span>}
+                  </Button>
+                </div>
+              )}
+
+              {/* Simplified loop for common items */}
+              {[
+                { panel: "funding", icon: Database, label: "Funding", roles: ["college_coordinator", "unit_coordinator"] },
+                { panel: "awards", icon: Award, label: "Awards", roles: ["college_coordinator", "unit_coordinator"] },
+                { panel: "student-involvement", icon: UserRoundCheck, label: "Student Involvement", roles: ["college_coordinator", "unit_coordinator"] },
+                { panel: "faculty-involvement", icon: GraduationCap, label: "Faculty Involvement", roles: ["college_coordinator", "unit_coordinator"] },
+                { panel: "technologies-innovation", icon: Cpu, label: "Technologies", roles: ["college_coordinator", "unit_coordinator"] },
+                { panel: "ordinance-resolutions", icon: ScrollText, label: "Ordinance", roles: ["college_coordinator", "unit_coordinator"] },
+                { panel: "trainings", icon: BookOpenCheck, label: "Trainings", roles: ["college_coordinator", "unit_coordinator"] },
+              ].map((item) => (
+                item.roles.includes(user.userType) && (
+                  <div key={item.panel} className="flex justify-center w-full">
                     <Button
                       variant="ghost"
-                      className={navItemClass(activePanel === "funding")}
-                      onClick={() => goTo("/dashboard?panel=funding")}
+                      className={cn(
+                        "transition-all duration-200",
+                        sidebarOpen ? "h-7 w-full justify-start px-3" : "h-10 w-10 p-0 rounded-xl",
+                        activePanel === item.panel 
+                          ? sidebarOpen ? "bg-muted border-l-2 border-primary text-primary" : "bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
+                          : "text-muted-foreground"
+                      )}
+                      onClick={() => goTo(`/dashboard?panel=${item.panel}`)}
+                      title={!sidebarOpen ? item.label : ""}
                     >
-                      <Database className="mr-2 h-3 w-3" />
-                      Funding
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className={navItemClass(activePanel === "awards")}
-                      onClick={() => goTo("/dashboard?panel=awards")}
-                    >
-                      <Award className="mr-2 h-3 w-3" />
-                      Awards
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className={navItemClass(activePanel === "student-involvement")}
-                      onClick={() => goTo("/dashboard?panel=student-involvement")}
-                    >
-                      <UserRoundCheck className="mr-2 h-3 w-3" />
-                      Student Involvement
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className={navItemClass(activePanel === "faculty-involvement")}
-                      onClick={() => goTo("/dashboard?panel=faculty-involvement")}
-                    >
-                      <GraduationCap className="mr-2 h-3 w-3" />
-                      Faculty Involvement in ESCE
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className={navItemClass(activePanel === "technologies-innovation")}
-                      onClick={() => goTo("/dashboard?panel=technologies-innovation")}
-                    >
-                      <Cpu className="mr-2 h-3 w-3" />
-                      Technologies/Innovation Adapted
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className={navItemClass(activePanel === "ordinance-resolutions")}
-                      onClick={() => goTo("/dashboard?panel=ordinance-resolutions")}
-                    >
-                      <ScrollText className="mr-2 h-3 w-3" />
-                      Ordinance or Resolutions
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className={navItemClass(activePanel === "trainings")}
-                      onClick={() => goTo("/dashboard?panel=trainings")}
-                    >
-                      <BookOpenCheck className="mr-2 h-3 w-3" />
-                      Trainings
+                      <item.icon className={cn("shrink-0", sidebarOpen ? "mr-2 h-3 w-3" : "h-5 w-5")} />
+                      {sidebarOpen && <span className="text-[9px]">{item.label}</span>}
                     </Button>
                   </div>
-                )}
-              </>
-            )}
-          </div>
+                )
+              ))}
+
+              {user.userType === "super_admin" && (
+                <>
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      "h-8 transition-all duration-200",
+                      sidebarOpen ? "w-full justify-start px-3" : "w-10 h-10 mx-auto flex p-0 rounded-xl",
+                      recordsExpanded && !sidebarOpen && "bg-muted/30"
+                    )}
+                    onClick={() => setRecordsExpanded((prev) => !prev)}
+                  >
+                    <Database className={cn("shrink-0", sidebarOpen ? "mr-2 h-3.5 w-3.5" : "h-5 w-5")} />
+                    {sidebarOpen && <span className="text-[9px] font-medium">Records</span>}
+                  </Button>
+                  
+                  {/* Super admin flattened items when collapsed, nested when expanded */}
+                  {(recordsExpanded || !sidebarOpen) && (
+                    <div className={cn(sidebarOpen ? "space-y-1 pl-2" : "space-y-1")}>
+                      {[
+                        { panel: "accounts", icon: Users, label: "Accounts" },
+                        { panel: "projects", icon: FolderKanban, label: "Projects" },
+                        { panel: "funding", icon: Database, label: "Funding" },
+                        { panel: "awards", icon: Award, label: "Awards" },
+                        { panel: "student-involvement", icon: UserRoundCheck, label: "Student Involvement" },
+                        { panel: "faculty-involvement", icon: GraduationCap, label: "Faculty Involvement" },
+                        { panel: "technologies-innovation", icon: Cpu, label: "Technologies" },
+                        { panel: "ordinance-resolutions", icon: ScrollText, label: "Ordinance" },
+                        { panel: "trainings", icon: BookOpenCheck, label: "Trainings" },
+                      ].map((item) => (
+                        <div key={item.panel} className="flex justify-center w-full">
+                          <Button
+                            variant="ghost"
+                            className={cn(
+                              "transition-all duration-200",
+                              sidebarOpen ? "h-6 w-full justify-start px-2" : "h-10 w-10 p-0 rounded-xl",
+                              activePanel === item.panel 
+                                ? sidebarOpen ? "bg-muted border-l-2 border-primary text-primary" : "bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
+                                : "text-muted-foreground border-transparent"
+                            )}
+                            onClick={() => (item.panel === "projects" && sidebarOpen) 
+                              ? setSuperProjectsExpanded(!superProjectsExpanded) 
+                              : goTo(`/dashboard?panel=${item.panel}`)}
+                            title={!sidebarOpen ? item.label : ""}
+                          >
+                            <item.icon className={cn("shrink-0", sidebarOpen ? "mr-2 h-3 w-3" : "h-5 w-5")} />
+                            {sidebarOpen && <span className="text-[9px]">{item.label}</span>}
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </ScrollArea>
         </aside>
       )}
     </header>
