@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -40,6 +40,7 @@ import {
   Cpu,
   ScrollText,
   BookOpenCheck,
+  Loader2,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -61,6 +62,7 @@ export function Navbar({ user }: NavbarProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const supabase = useMemo(() => createClient(), []);
+  const [isPending, startTransition] = useTransition();
 
   const [rolePopoverOpen, setRolePopoverOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -156,7 +158,9 @@ export function Navbar({ user }: NavbarProps) {
   };
 
   const goTo = (path: string) => {
-    router.push(path);
+    startTransition(() => {
+      router.push(path);
+    });
     setSidebarOpen(false);
   };
 
@@ -501,6 +505,20 @@ export function Navbar({ user }: NavbarProps) {
             </div>
           </ScrollArea>
         </aside>
+      )}
+
+      {isPending && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="flex flex-col items-center justify-center p-6 bg-background rounded-xl border shadow-lg gap-4 animate-in zoom-in-95 duration-200">
+            <div className="relative w-16 h-16 animate-pulse">
+              <Image src="/CQERFINAL.png" alt="CQER Logo" fill className="object-contain" />
+            </div>
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span className="text-[10px] font-medium">Loading...</span>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
