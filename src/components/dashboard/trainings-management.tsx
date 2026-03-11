@@ -92,9 +92,8 @@ export function TrainingsManagement({
   const [showExportDialog, setShowExportDialog] = React.useState(false);
   const [selectedExportIds, setSelectedExportIds] = React.useState<Set<string>>(new Set());
   const [isExporting, setIsExporting] = React.useState(false);
-  const [exportStep, setExportStep] = React.useState<1 | 2 | 3>(1);
+  const [exportStep, setExportStep] = React.useState<1 | 2>(1);
   const [exportFormat, setExportFormat] = React.useState<"excel" | "pdf" | "both">("excel");
-  const [pdfOrientation, setPdfOrientation] = React.useState<"p" | "l">("l");
 
   const refreshTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
@@ -202,8 +201,9 @@ export function TrainingsManagement({
     const { jsPDF } = await import("jspdf");
     const { default: autoTable } = await import("jspdf-autotable");
     
+    // Always Landscape for better fit
     const doc = new jsPDF({
-      orientation: pdfOrientation,
+      orientation: "l",
       unit: "mm",
       format: "a4",
     });
@@ -212,8 +212,8 @@ export function TrainingsManagement({
     const title = `Trainings (${year})`;
     
     // Add Title
-    doc.setFontSize(14);
-    doc.text(title, doc.internal.pageSize.getWidth() / 2, 15, { align: "center" });
+    doc.setFontSize(12);
+    doc.text(title, doc.internal.pageSize.getWidth() / 2, 12, { align: "center" });
 
     const rows = toExportRows(records);
     const tableData = rows.map(r => Object.values(r));
@@ -225,31 +225,53 @@ export function TrainingsManagement({
     ];
 
     autoTable(doc, {
-      startY: 25,
+      startY: 20,
       head: [tableHeaders],
       body: tableData,
       theme: "grid",
       headStyles: { 
         fillColor: [21, 158, 68], // #159E44
         textColor: [255, 255, 255],
-        fontSize: 8,
+        fontSize: 7.5,
         fontStyle: "bold",
         halign: "left"
       },
       styles: {
         fontSize: 7,
-        cellPadding: 2,
+        cellPadding: 1.5,
         overflow: "linebreak",
         cellWidth: "auto",
-        textColor: [0, 0, 0]
+        textColor: [0, 0, 0],
+        lineWidth: 0.1,
       },
       columnStyles: {
-        0: { cellWidth: 15 }, // College
-        5: { cellWidth: 35 }, // Title
-        9: { cellWidth: 25 }, // Dates
-        13: { cellWidth: 25 }, // SDGs
+        0: { cellWidth: 12 },  // College
+        1: { cellWidth: 20 },  // Dept
+        2: { cellWidth: 20 },  // Lead
+        3: { cellWidth: 18 },  // Person
+        4: { cellWidth: 18 },  // Details
+        5: { cellWidth: 35 },  // Title
+        6: { cellWidth: 15 },  // Category
+        7: { cellWidth: 10 },  // Mode
+        8: { cellWidth: 15 },  // Venue
+        9: { cellWidth: 20 },  // Dates
+        10: { cellWidth: 12 }, // Overall
+        11: { cellWidth: 10 }, // Male
+        12: { cellWidth: 10 }, // Female
+        13: { cellWidth: 20 }, // SDGs
+        14: { cellWidth: 15 }, // Thematic
+        15: { cellWidth: 15 }, // Partners
+        16: { cellWidth: 20 }, // Remarks
       },
-      margin: { top: 20 },
+      margin: { top: 15, left: 10, right: 10, bottom: 10 },
+      didDrawPage: (data) => {
+        // Optional: Add page numbering
+        const str = "Page " + doc.getNumberOfPages();
+        doc.setFontSize(8);
+        const pageSize = doc.internal.pageSize;
+        const pageHeight = pageSize.height ? pageSize.height : pageSize.getHeight();
+        doc.text(str, data.settings.margin.left, pageHeight - 5);
+      }
     });
 
     const datePart = new Date().toISOString().slice(0, 10);
@@ -645,91 +667,76 @@ export function TrainingsManagement({
           <DialogHeader>
             <DialogTitle className="text-sm flex items-center gap-2">
               <Download className="h-4 w-4 text-[#159E44]" />
-              {exportStep === 1 ? "Export Format" : exportStep === 2 ? "PDF Orientation" : "Select Records"}
+              {exportStep === 1 ? "Select Export Format" : "Select Records to Export"}
             </DialogTitle>
             <DialogDescription className="text-[10px]">
               {exportStep === 1 
-                ? "Choose your preferred export format." 
-                : exportStep === 2 
-                ? "Choose the orientation for your PDF document." 
-                : "Select which training records to include in the export."}
+                ? "Choose the format for your exported trainings report." 
+                : "Choose which training records you want to include in the file."}
             </DialogDescription>
           </DialogHeader>
 
           {exportStep === 1 && (
-            <div className="grid grid-cols-3 gap-3 py-4">
+            <div className="grid grid-cols-1 gap-2 py-4">
               <button
                 onClick={() => {
                   setExportFormat("excel");
-                  setExportStep(3);
+                  setExportStep(2);
                 }}
-                className={`flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all hover:bg-muted/50 ${
+                className={`flex items-center gap-3 w-full p-3 rounded-md border text-left transition-all hover:bg-muted/50 ${
                   exportFormat === "excel" ? "border-[#159E44] bg-[#159E44]/5" : "border-border/50"
                 }`}
               >
-                <FileSpreadsheet className="h-8 w-8 mb-2 text-[#159E44]" />
-                <span className="text-[10px] font-medium">Excel</span>
+                <div className="flex h-8 w-8 items-center justify-center rounded-sm bg-[#159E44]/10 shrink-0">
+                  <FileSpreadsheet className="h-4 w-4 text-[#159E44]" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-medium leading-none mb-1">Spreadsheet (.xlsx)</p>
+                  <p className="text-[9px] text-muted-foreground truncate">Best for data analysis and editing.</p>
+                </div>
               </button>
+
               <button
                 onClick={() => {
                   setExportFormat("pdf");
                   setExportStep(2);
                 }}
-                className={`flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all hover:bg-muted/50 ${
-                  exportFormat === "pdf" ? "border-[#159E44] bg-[#159E44]/10" : "border-border/50"
+                className={`flex items-center gap-3 w-full p-3 rounded-md border text-left transition-all hover:bg-muted/50 ${
+                  exportFormat === "pdf" ? "border-[#159E44] bg-[#159E44]/5" : "border-border/50"
                 }`}
               >
-                <FileText className="h-8 w-8 mb-2 text-red-600" />
-                <span className="text-[10px] font-medium">PDF</span>
+                <div className="flex h-8 w-8 items-center justify-center rounded-sm bg-muted/50 shrink-0">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-medium leading-none mb-1">Document (.pdf)</p>
+                  <p className="text-[9px] text-muted-foreground truncate">Best for sharing and printing. Always in landscape.</p>
+                </div>
               </button>
+
               <button
                 onClick={() => {
                   setExportFormat("both");
                   setExportStep(2);
                 }}
-                className={`flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all hover:bg-muted/50 ${
-                  exportFormat === "both" ? "border-[#159E44] bg-[#159E44]/10" : "border-border/50"
+                className={`flex items-center gap-3 w-full p-3 rounded-md border text-left transition-all hover:bg-muted/50 ${
+                  exportFormat === "both" ? "border-[#159E44] bg-[#159E44]/5" : "border-border/50"
                 }`}
               >
-                <div className="flex gap-1 mb-2">
-                  <FileSpreadsheet className="h-6 w-6 text-[#159E44]" />
-                  <FileText className="h-6 w-6 text-red-600" />
+                <div className="flex -space-x-2 shrink-0">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-sm bg-muted/50 border border-background">
+                    <Download className="h-4 w-4 text-muted-foreground" />
+                  </div>
                 </div>
-                <span className="text-[10px] font-medium">Both</span>
+                <div className="min-w-0 pl-1">
+                  <p className="text-[10px] font-medium leading-none mb-1">Combined (Excel & PDF)</p>
+                  <p className="text-[9px] text-muted-foreground truncate">Download both formats at once.</p>
+                </div>
               </button>
             </div>
           )}
 
           {exportStep === 2 && (
-            <div className="grid grid-cols-2 gap-4 py-6">
-              <button
-                onClick={() => {
-                  setPdfOrientation("p");
-                  setExportStep(3);
-                }}
-                className={`flex flex-col items-center justify-center p-6 rounded-lg border-2 transition-all hover:bg-muted/50 ${
-                  pdfOrientation === "p" ? "border-[#159E44] bg-[#159E44]/5" : "border-border/50"
-                }`}
-              >
-                <div className="w-8 h-12 border-2 border-muted-foreground/30 rounded-sm mb-2" />
-                <span className="text-[10px] font-medium">Portrait</span>
-              </button>
-              <button
-                onClick={() => {
-                  setPdfOrientation("l");
-                  setExportStep(3);
-                }}
-                className={`flex flex-col items-center justify-center p-6 rounded-lg border-2 transition-all hover:bg-muted/50 ${
-                  pdfOrientation === "l" ? "border-[#159E44] bg-[#159E44]/5" : "border-border/50"
-                }`}
-              >
-                <div className="w-12 h-8 border-2 border-muted-foreground/30 rounded-sm mb-2" />
-                <span className="text-[10px] font-medium">Landscape</span>
-              </button>
-            </div>
-          )}
-
-          {exportStep === 3 && (
             <div className="space-y-3">
               <div className="flex items-center justify-between px-1">
                 <span className="text-[10px] font-medium text-muted-foreground">
@@ -777,12 +784,12 @@ export function TrainingsManagement({
           )}
 
           <DialogFooter className="gap-2 sm:gap-0">
-            {exportStep > 1 && (
+            {exportStep === 2 && (
               <Button
                 type="button"
                 variant="outline"
                 className="h-8 text-[10px]"
-                onClick={() => setExportStep(exportStep === 3 && exportFormat === "excel" ? 1 : exportStep - 1 as any)}
+                onClick={() => setExportStep(1)}
                 disabled={isExporting}
               >
                 Back
@@ -797,7 +804,7 @@ export function TrainingsManagement({
             >
               Cancel
             </Button>
-            {exportStep === 3 && (
+            {exportStep === 2 && (
               <Button
                 type="button"
                 className="h-8 text-[10px] bg-[#159E44] hover:bg-[#128A3B]"
