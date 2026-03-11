@@ -43,6 +43,7 @@ export interface ProjectProposal {
   classification?: string[] | null;
   proponents?: { name?: string }[] | null;
   co_project_leaders?: { name?: string }[] | null;
+  project_assistants?: { name?: string }[] | null;
   proposal_department?: string | null;
   proposal_unit?: string | null;
   collaborating_agencies?: string | null;
@@ -164,10 +165,12 @@ export function ProjectProposalsTable({
   const filtered = React.useMemo(() => {
     const term = searchTerm.toLowerCase();
     return proposals.filter((proposal) =>
-      [
+        [
         proposal.project_title || proposal.title || "",
         toStringArray(proposal.classification).join(", "),
         (proposal.proponents || []).map((p) => p?.name || "").join(", "),
+        (proposal.co_project_leaders || []).map((p) => p?.name || "").join(", "),
+        (proposal.project_assistants || []).map((p) => p?.name || "").join(", "),
         proposal.proposal_department || "",
         proposal.proposal_unit || "",
         proposal.collaborating_agencies || "",
@@ -188,10 +191,18 @@ export function ProjectProposalsTable({
     setCurrentPage(1);
   }, [searchTerm]);
 
-  const formatNames = (values?: { name?: string }[] | null) =>
-    Array.isArray(values) && values.length > 0
-      ? values.map((item) => item?.name || "").filter(Boolean).join(", ") || "-"
-      : "-";
+  const formatProponents = (proposal: ProjectProposal) => {
+    const leader = proposal.proponents?.[0]?.name;
+    const coLeaders = (proposal.co_project_leaders || []).map(p => p?.name).filter(Boolean);
+    const assistants = (proposal.project_assistants || []).map(p => p?.name).filter(Boolean);
+    
+    const parts = [];
+    if (leader) parts.push(leader);
+    if (coLeaders.length > 0) parts.push(...coLeaders);
+    if (assistants.length > 0) parts.push(...assistants);
+    
+    return parts.join(", ") || "-";
+  };
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -260,7 +271,7 @@ export function ProjectProposalsTable({
                     <span className="line-clamp-2">{toStringArray(proposal.classification).join(", ") || "-"}</span>
                   </TableCell>
                   <TableCell className="text-[10px] py-2.5 px-3 max-w-[220px]">
-                    <span className="line-clamp-2">{formatNames(proposal.proponents)}</span>
+                    <span className="line-clamp-2">{formatProponents(proposal)}</span>
                   </TableCell>
                   <TableCell className="text-[10px] py-2.5 px-3">
                     {[proposal.proposal_department, proposal.proposal_unit].filter(Boolean).join(" / ") || "-"}
