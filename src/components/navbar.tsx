@@ -177,20 +177,6 @@ export function Navbar({ user }: NavbarProps) {
     <header className="border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="max-w-[95rem] mx-auto flex min-h-12 items-center justify-between px-2 sm:px-3 md:px-4 py-1.5">
         <div className="flex items-center gap-2">
-          {isDashboard && (
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8 border-border/40 bg-background"
-              onClick={() => setSidebarOpen((prev) => !prev)}
-            >
-              {sidebarOpen ? (
-                <PanelLeftClose className="h-3 w-3" />
-              ) : (
-                <PanelLeftOpen className="h-3 w-3" />
-              )}
-            </Button>
-          )}
           <button
             onClick={() => router.push("/dashboard")}
             className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer"
@@ -375,7 +361,7 @@ export function Navbar({ user }: NavbarProps) {
                     className={cn(
                       "h-8 transition-all duration-200",
                       sidebarOpen ? "w-full justify-start px-3" : "w-10 h-10 mx-auto flex p-0 rounded-xl",
-                      (activePanel === "records" || createExpanded) && !sidebarOpen && "bg-muted/30"
+                      (activePanel === "records" || createExpanded) && !sidebarOpen ? "border border-border/40 bg-muted/30" : "border border-transparent"
                     )}
                     onClick={() => setCreateExpanded((prev) => !prev)}
                   >
@@ -413,8 +399,8 @@ export function Navbar({ user }: NavbarProps) {
                       "transition-all duration-200",
                       sidebarOpen ? "h-7 w-full justify-start px-3" : "h-10 w-10 p-0 rounded-xl",
                       activePanel === "unit-coordinators" 
-                        ? sidebarOpen ? "bg-muted border-l-2 border-primary" : "bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
-                        : ""
+                        ? "border border-border/40 bg-muted/30 text-foreground"
+                        : "border border-transparent text-foreground"
                     )}
                     onClick={() => goTo("/dashboard?panel=unit-coordinators")}
                     title={!sidebarOpen ? "Unit Coordinators" : ""}
@@ -443,8 +429,8 @@ export function Navbar({ user }: NavbarProps) {
                         "transition-all duration-200",
                         sidebarOpen ? "h-7 w-full justify-start px-3" : "h-10 w-10 p-0 rounded-xl",
                         activePanel === item.panel 
-                          ? sidebarOpen ? "bg-muted border-l-2 border-primary text-primary" : "bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
-                          : "text-muted-foreground"
+                          ? "border border-border/40 bg-muted/30 text-foreground"
+                          : "border border-transparent text-foreground"
                       )}
                       onClick={() => goTo(`/dashboard?panel=${item.panel}`)}
                       title={!sidebarOpen ? item.label : ""}
@@ -463,7 +449,7 @@ export function Navbar({ user }: NavbarProps) {
                     className={cn(
                       "h-8 transition-all duration-200",
                       sidebarOpen ? "w-full justify-start px-3" : "w-10 h-10 mx-auto flex p-0 rounded-xl",
-                      recordsExpanded && !sidebarOpen && "bg-muted/30"
+                      recordsExpanded && !sidebarOpen ? "border border-border/40 bg-muted/30" : "border border-transparent"
                     )}
                     onClick={() => setRecordsExpanded((prev) => !prev)}
                   >
@@ -492,8 +478,8 @@ export function Navbar({ user }: NavbarProps) {
                               "transition-all duration-200",
                               sidebarOpen ? "h-6 w-full justify-start px-2" : "h-10 w-10 p-0 rounded-xl",
                               activePanel === item.panel 
-                                ? sidebarOpen ? "bg-muted border-l-2 border-primary text-primary" : "bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
-                                : "text-muted-foreground border-transparent"
+                                ? "border border-border/40 bg-muted/30 text-foreground"
+                                : "border border-transparent text-foreground"
                             )}
                             onClick={() => (item.panel === "projects" && sidebarOpen) 
                               ? setSuperProjectsExpanded(!superProjectsExpanded) 
