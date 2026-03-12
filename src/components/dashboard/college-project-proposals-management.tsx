@@ -151,9 +151,6 @@ export function CollegeProjectProposalsManagement({
                 <DropdownMenuCheckboxItem className="text-[10px]" checked={selectedScopes.includes("created_by_me")} onCheckedChange={() => toggleScopeFilter("created_by_me")}>
                   Created by me
                 </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem className="text-[10px]" checked={selectedScopes.includes("department_files")} onCheckedChange={() => toggleScopeFilter("department_files")}>
-                  All files from the department
-                </DropdownMenuCheckboxItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel className="text-[10px]">Department Units</DropdownMenuLabel>
                 <DropdownMenuCheckboxItem className="text-[10px]" checked={selectedUnits.length === 0} onCheckedChange={(checked) => checked && setSelectedUnits([])}>

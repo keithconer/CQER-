@@ -202,13 +202,6 @@ export function CollegeProjectsManagement({
                 >
                   Created by me
                 </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  className="text-[10px]"
-                  checked={selectedScopes.includes("department_files")}
-                  onCheckedChange={() => toggleScopeFilter("department_files")}
-                >
-                  All files from the department
-                </DropdownMenuCheckboxItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel className="text-[10px]">Department Units</DropdownMenuLabel>
                 <DropdownMenuCheckboxItem
