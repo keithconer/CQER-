@@ -31,6 +31,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { type Project } from "./projects-table";
+import { formatThematicAreaLetters } from "@/lib/thematic-area";
 
 interface FundingManagementProps {
   projects: Project[];
@@ -147,6 +148,9 @@ function getFundingDetails(project: Project) {
   const type = getFundingType(project);
   const totalBudget = getTotalBudget(project, fundingData);
   const dates = formatInclusiveDates(fundingData);
+  const thematicAreaSource = pickValue(fundingData, "thematic_area", "funding_thematic_area");
+  const thematicArea = formatStringList(thematicAreaSource);
+  const thematicAreaDisplay = formatThematicAreaLetters(thematicAreaSource) || thematicArea;
 
   return {
     type,
@@ -165,7 +169,8 @@ function getFundingDetails(project: Project) {
     dateInceptionMeeting: formatDate(pickValue(fundingData, "date_inception_meeting", "funding_inception_meeting_date")),
     beneficiaries: formatNameList(pickValue(fundingData, "beneficiaries", "funding_beneficiaries")),
     sdgs: formatStringList(pickValue(fundingData, "sdg_goals", "funding_sdg_goals")),
-    thematicArea: formatStringList(pickValue(fundingData, "thematic_area", "funding_thematic_area")),
+    thematicArea,
+    thematicAreaDisplay,
     functionNature: toText(pickValue(fundingData, "external_function_nature")),
     fundingAgency: toText(pickValue(fundingData, "external_funding_agency")),
     totalBudget: totalBudget > 0 ? formatPeso(totalBudget) : "",
@@ -245,7 +250,7 @@ function getFilledFields(project: Project): FilledField[] {
     { label: "Date of inception meeting", value: details.dateInceptionMeeting },
     { label: "Beneficiaries", value: details.beneficiaries },
     { label: "SDGs", value: details.sdgs },
-    { label: "Thematic Area", value: details.thematicArea },
+    { label: "Thematic Area", value: details.thematicAreaDisplay },
     { label: "Funding Type", value: details.nop },
   ];
 
@@ -280,7 +285,7 @@ function toExportRows(projects: Project[], type: FundingFilter) {
         "Date of inception meeting": details.dateInceptionMeeting || "-",
         Beneficiaries: details.beneficiaries || "-",
         SDGs: details.sdgs || "-",
-        "Thematic Area": details.thematicArea || "-",
+        "Thematic Area": details.thematicAreaDisplay || "-",
         "Function/Nature of Involvement": type === "external" ? details.functionNature || "-" : "-",
         "Total Budget": type === "external" ? details.totalBudget || "-" : "-",
         "Funding Agency": type === "external" ? details.fundingAgency || "-" : "-",
@@ -325,6 +330,7 @@ export function FundingManagement({
           details.beneficiaries,
           details.sdgs,
           details.thematicArea,
+          details.thematicAreaDisplay,
           details.fundingAgency,
           details.functionNature,
           details.totalBudget,
@@ -533,7 +539,7 @@ export function FundingManagement({
                         <TableCell className="text-[10px] py-2.5 px-3">{details.dateInceptionMeeting || "-"}</TableCell>
                         <TableCell className="text-[10px] py-2.5 px-3">{details.beneficiaries || "-"}</TableCell>
                         <TableCell className="text-[10px] py-2.5 px-3">{details.sdgs || "-"}</TableCell>
-                        <TableCell className="text-[10px] py-2.5 px-3 whitespace-pre-wrap">{details.thematicArea ? details.thematicArea.split(", ").join("\n") : "-"}</TableCell>
+                        <TableCell className="text-[10px] py-2.5 px-3 whitespace-nowrap">{details.thematicAreaDisplay || "-"}</TableCell>
                         {filter !== "internal" && <TableCell className="text-[10px] py-2.5 px-3">{details.type === "external" ? details.functionNature || "-" : "-"}</TableCell>}
                         {filter !== "internal" && <TableCell className="text-[10px] py-2.5 px-3">{details.totalBudget || "-"}</TableCell>}
                         {filter !== "internal" && <TableCell className="text-[10px] py-2.5 px-3">{details.type === "external" ? details.fundingAgency || "-" : "-"}</TableCell>}

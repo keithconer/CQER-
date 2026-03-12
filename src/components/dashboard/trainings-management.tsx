@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DocumentPreview } from "./document-preview";
 import { TrainingRecord, TrainingsForm } from "./trainings-form";
+import { formatThematicAreaLetters } from "@/lib/thematic-area";
 
 interface TrainingsManagementProps {
   initialRecords: TrainingRecord[];
@@ -36,6 +37,11 @@ interface TrainingsManagementProps {
 function formatList(value: string[] | null): string {
   if (!value || !Array.isArray(value)) return "-";
   return value.join(", ");
+}
+
+function formatThematicAreas(value: string[] | null): string {
+  const letters = formatThematicAreaLetters(value);
+  return letters || "-";
 }
 
 function formatTrainingCategory(record: TrainingRecord): string {
@@ -63,7 +69,7 @@ function toExportRows(records: TrainingRecord[]) {
     "Male Total": record.participants_male_total || 0,
     "Female Total": record.participants_female_total || 0,
     "SDGs": formatList(record.sdg_goals),
-    "Thematic Area": formatList(record.thematic_area),
+    "Thematic Area": formatThematicAreas(record.thematic_area),
     "Partner Agencies": formatList(record.partner_agencies),
     "Remarks": record.remarks || "-",
   }));

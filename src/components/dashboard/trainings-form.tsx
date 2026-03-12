@@ -9,6 +9,7 @@ import { format } from "date-fns";
 import { createTraining, updateTraining } from "@/lib/actions/trainings";
 import { DEPARTMENTS, getAllUnits, getUnitsByDepartment } from "@/lib/departments";
 import { cn } from "@/lib/utils";
+import { THEMATIC_AREA_OPTIONS } from "@/lib/thematic-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -63,13 +64,7 @@ const sdgOptions = [
   { id: "Goal 17", label: "Goal 17 - Partnerships for the Goals" },
 ];
 
-const thematicAreaOptions = [
-  "Agri-Fisheries and Food Security",
-  "Biodiversity and Environmental Conservation",
-  "Smart Engineering, ICT, and Industrial Competitiveness",
-  "Public Health and Welfare",
-  "Societal Development and Equality",
-];
+const thematicAreaOptions = THEMATIC_AREA_OPTIONS;
 
 const categoryOptions = [
   { value: "TVL", label: "TVL - Technical, Vocational, Livelihood" },
@@ -1724,17 +1719,17 @@ export function TrainingsForm({
                 <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
                   {thematicAreaOptions.map((option) => (
                     <label
-                      key={option}
+                      key={option.value}
                       className="flex items-center gap-2 rounded-md border border-border/50 px-2 py-1.5"
                     >
                       <Checkbox
-                        checked={(field.value || []).includes(option)}
+                        checked={(field.value || []).includes(option.value)}
                         disabled={isViewOnly}
                         onCheckedChange={() =>
-                          field.onChange(toggleArrayItem(field.value || [], option))
+                          field.onChange(toggleArrayItem(field.value || [], option.value))
                         }
                       />
-                      <span className="text-[10px]">{option}</span>
+                      <span className="text-[10px]">{option.label}</span>
                     </label>
                   ))}
                 </div>
@@ -1808,4 +1803,3 @@ export function TrainingsForm({
     </Form>
   );
 }
-

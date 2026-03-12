@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { THEMATIC_AREA_OPTIONS } from "@/lib/thematic-area";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -77,13 +78,7 @@ const sdgOptions = [
   { id: "Goal 17", label: "Goal 17 - Partnerships for the Goals" },
 ];
 
-const thematicAreaOptions = [
-  "Agri-Fisheries and Food Security",
-  "Biodiversity and Environmental Conservation",
-  "Smart Engineering, ICT, and Industrial Competitiveness",
-  "Public Health and Welfare",
-  "Societal Development and Equality",
-];
+const thematicAreaOptions = THEMATIC_AREA_OPTIONS;
 
 const moaCategoryOptions = ["new", "existing/ongoing", "completed", "terminated", "proposal"] as const;
 const levelOptions = ["local", "regional", "national", "international"] as const;
@@ -968,13 +963,13 @@ export function ProjectForm({
                           <FormLabel className="text-[10px]">Thematic area</FormLabel>
                           <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
                             {thematicAreaOptions.map((option) => (
-                              <label key={option} className="flex items-center gap-2 rounded-md border border-border/50 px-2 py-1.5">
+                              <label key={option.value} className="flex items-center gap-2 rounded-md border border-border/50 px-2 py-1.5">
                                 <Checkbox
-                                  checked={(field.value || []).includes(option)}
+                                  checked={(field.value || []).includes(option.value)}
                                   disabled={isViewOnly}
-                                  onCheckedChange={() => field.onChange(toggleArrayItem(field.value || [], option))}
+                                  onCheckedChange={() => field.onChange(toggleArrayItem(field.value || [], option.value))}
                                 />
-                                <span className="text-[10px]">{option}</span>
+                                <span className="text-[10px]">{option.label}</span>
                               </label>
                             ))}
                           </div>
@@ -1128,9 +1123,9 @@ export function ProjectForm({
                     <FormLabel className="text-[10px] leading-none">Thematic area</FormLabel>
                     <div className="grid grid-cols-1 gap-1">
                       {thematicAreaOptions.map((option) => (
-                        <label key={option} className="flex items-start gap-2 rounded-md border border-border/50 px-2 py-1.5">
-                          <Checkbox checked={(field.value || []).includes(option)} disabled={isViewOnly} onCheckedChange={() => field.onChange(toggleArrayItem(field.value || [], option))} />
-                          <span className="text-[10px] leading-snug">{option}</span>
+                        <label key={option.value} className="flex items-start gap-2 rounded-md border border-border/50 px-2 py-1.5">
+                          <Checkbox checked={(field.value || []).includes(option.value)} disabled={isViewOnly} onCheckedChange={() => field.onChange(toggleArrayItem(field.value || [], option.value))} />
+                          <span className="text-[10px] leading-snug">{option.label}</span>
                         </label>
                       ))}
                     </div>
@@ -1294,4 +1289,3 @@ export function ProjectForm({
     </Form>
   );
 }
-
