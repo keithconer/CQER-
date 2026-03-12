@@ -213,7 +213,7 @@ export function NotificationBell({ userId }: NotificationBellProps) {
         </div>
 
         <ScrollArea className="max-h-80 flex-1 min-h-0">
-          <div className="p-1.5">
+          <div className={`p-1.5 ${hasMore ? "pb-10" : ""}`}>
             {loading ? (
               <p className="px-2 py-3 text-[9px] text-muted-foreground">Loading notifications...</p>
             ) : notifications.length === 0 ? (
@@ -259,7 +259,7 @@ export function NotificationBell({ userId }: NotificationBellProps) {
         </ScrollArea>
 
         {!loading && hasMore && (
-          <div className="border-t border-border/40 px-2 py-1.5 bg-background">
+          <div className="border-t border-border/40 px-2 py-1.5 bg-background relative z-10">
             <Button
               type="button"
               variant="ghost"
