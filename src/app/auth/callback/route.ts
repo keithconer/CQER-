@@ -3,6 +3,8 @@ import { createServerClient } from "@supabase/ssr";
 import type { NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL?.toLowerCase() ?? "";
+
 export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const origin = request.nextUrl.origin;
@@ -55,6 +57,16 @@ export async function GET(request: NextRequest) {
         .maybeSingle();
 
     if (!profile) {
+        if (SUPER_ADMIN_EMAIL && user.email?.toLowerCase() === SUPER_ADMIN_EMAIL) {
+            await supabase.from("profiles").upsert({
+                id: user.id,
+                email: user.email,
+                first_name: "Keith Brian",
+                last_name: "Coner",
+                user_type: "super_admin",
+            });
+            return response;
+        }
         try {
             await createAdminClient().auth.admin.deleteUser(user.id);
         } catch {

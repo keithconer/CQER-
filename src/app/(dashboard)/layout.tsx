@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Navbar } from "@/components/navbar";
 
+const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL?.toLowerCase() ?? "";
+
 export default async function DashboardLayout({
   children,
 }: {
@@ -26,7 +28,7 @@ export default async function DashboardLayout({
   // BULLETPROOF REDIRECT: If no profile exists, redirected to login 
   // (unless they are the super admin we just registered)
   if (!profile) {
-    if (user.email === "main.keithbrian.coner@cvsu.edu.ph") {
+    if (SUPER_ADMIN_EMAIL && user.email?.toLowerCase() === SUPER_ADMIN_EMAIL) {
       // Proactively create super_admin profile if it doesn't exist
       await supabase.from("profiles").upsert({
         id: user.id,
