@@ -700,6 +700,24 @@ export function ProjectProposalForm({
                   </FormItem>
                 )}
               />
+              {selectedBeneficiaries.includes("others") && (
+                <FormField
+                  control={form.control}
+                  name="target_beneficiary_others"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-[10px]">Others (specify)</FormLabel>
+                      <FormControl>
+                        <Input {...field} className="h-8 text-[10px] placeholder:text-[10px]" disabled={isViewOnly} />
+                      </FormControl>
+                      <FormMessage className="text-[10px]" />
+                    </FormItem>
+                  )}
+                />
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <FormField
                 control={form.control}
                 name="target_budget"
@@ -727,22 +745,6 @@ export function ProjectProposalForm({
                 )}
               />
             </div>
-
-            {selectedBeneficiaries.includes("others") && (
-              <FormField
-                control={form.control}
-                name="target_beneficiary_others"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-[10px]">Others (specify)</FormLabel>
-                    <FormControl>
-                      <Textarea {...field} className="min-h-[56px] text-[10px]" disabled={isViewOnly} />
-                    </FormControl>
-                    <FormMessage className="text-[10px]" />
-                  </FormItem>
-                )}
-              />
-            )}
 
             <FormField
               control={form.control}

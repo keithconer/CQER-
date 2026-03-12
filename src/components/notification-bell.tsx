@@ -134,6 +134,22 @@ export function NotificationBell({ userId }: NotificationBellProps) {
   }, [supabase, userId]);
 
   const handleNotificationClick = async (item: NotificationItem) => {
+    // Show local loading state before routing
+    const overlay = document.createElement("div");
+    overlay.className = "fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200";
+    overlay.innerHTML = `
+      <div class="flex flex-col items-center justify-center p-6 bg-background rounded-xl border shadow-lg gap-4 animate-in zoom-in-95 duration-200">
+        <div class="relative w-16 h-16 animate-pulse">
+           <img src="/CQERFINAL.png" alt="CQER Logo" class="object-contain w-full h-full" />
+        </div>
+        <div class="flex items-center gap-2 text-muted-foreground">
+           <svg class="w-4 h-4 animate-spin" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+           <span class="text-[10px] font-medium">Loading...</span>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
     if (!item.read_at) {
       setNotifications((current) =>
         current.map((notification) =>
@@ -151,6 +167,12 @@ export function NotificationBell({ userId }: NotificationBellProps) {
     }
 
     setOpen(false);
+    
+    // Clean up local overlay after a short delay since routing might take a moment
+    setTimeout(() => {
+      document.body.removeChild(overlay);
+    }, 1500);
+
     router.push(item.route);
   };
 

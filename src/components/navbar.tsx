@@ -41,6 +41,7 @@ import {
   ScrollText,
   BookOpenCheck,
   Loader2,
+  Sun,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -182,7 +183,7 @@ export function Navbar({ user }: NavbarProps) {
     <>
       <header className="dashboard-header border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 relative z-30">
         <div className="max-w-[95rem] mx-auto flex min-h-12 items-center justify-between px-2 sm:px-3 md:px-4 py-1.5">
-        <div className="flex items-center gap-2">
+        <div className={cn("flex items-center gap-2 transition-opacity duration-200", sidebarOpen && isDashboard ? "opacity-0 invisible pointer-events-none" : "opacity-100 visible")}>
           <button
             onClick={() => router.push("/dashboard")}
             className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer"
@@ -282,8 +283,11 @@ export function Navbar({ user }: NavbarProps) {
                       setDarkModeEnabled((prev) => !prev);
                     }}
                   >
-                    <Moon className="mr-2 h-2.5 w-2.5" />
-                    Dark Mode
+                    {darkModeEnabled ? (
+                      <><Sun className="mr-2 h-2.5 w-2.5" /> Light Mode</>
+                    ) : (
+                      <><Moon className="mr-2 h-2.5 w-2.5" /> Dark Mode</>
+                    )}
                   </DropdownMenuItem>
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
@@ -363,18 +367,55 @@ export function Navbar({ user }: NavbarProps) {
             <div className={cn("space-y-1 py-3", sidebarOpen ? "px-2" : "px-0")}>
               {(user.userType === "college_coordinator" || user.userType === "unit_coordinator") && (
                 <>
-                  <Button
-                    variant="ghost"
-                    className={cn(
-                      "h-8 transition-all duration-200",
-                      sidebarOpen ? "w-full justify-start px-3" : "w-10 h-10 mx-auto flex p-0 rounded-xl",
-                      (activePanel === "records" || createExpanded) && !sidebarOpen ? "border border-border/40 bg-muted/30" : "border border-transparent"
-                    )}
-                    onClick={() => setCreateExpanded((prev) => !prev)}
-                  >
-                    <FolderPlus className={cn("shrink-0", sidebarOpen ? "mr-2 h-3.5 w-3.5" : "h-5 w-5")} />
-                    {sidebarOpen && <span className="text-[9px] font-medium">Projects</span>}
-                  </Button>
+                  {!sidebarOpen ? (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <div className="flex justify-center w-full">
+                          <Button
+                            variant="ghost"
+                            className={cn(
+                              "h-10 w-10 mx-auto flex p-0 rounded-xl transition-all duration-200",
+                              (activePanel === "records" || createExpanded) ? "border border-border/40 bg-muted/30 text-foreground" : "border border-transparent text-foreground"
+                            )}
+                          >
+                            <FolderPlus className="h-5 w-5 shrink-0" />
+                          </Button>
+                        </div>
+                      </PopoverTrigger>
+                      <PopoverContent side="right" align="start" className="w-48 p-2 ml-2 bg-background border border-border shadow-md rounded-lg">
+                        <div className="space-y-1">
+                          <Button
+                            variant="ghost"
+                            className={navItemClass(activePanel === "records" && activeView === "project-registration")}
+                            onClick={() => goTo("/dashboard?panel=records&view=project-registration")}
+                          >
+                            <FolderKanban className="mr-2 h-3 w-3" />
+                            Project Registration
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            className={navItemClass(activePanel === "records" && activeView === "project-proposal")}
+                            onClick={() => goTo("/dashboard?panel=records&view=project-proposal")}
+                          >
+                            <FolderKanban className="mr-2 h-3 w-3" />
+                            Project Proposal
+                          </Button>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      className={cn(
+                        "h-8 transition-all duration-200 w-full justify-start px-3",
+                        (activePanel === "records" || createExpanded) ? "border border-border/40 bg-muted/30" : "border border-transparent"
+                      )}
+                      onClick={() => setCreateExpanded((prev) => !prev)}
+                    >
+                      <FolderPlus className="mr-2 h-3.5 w-3.5 shrink-0" />
+                      <span className="text-[9px] font-medium">Projects</span>
+                    </Button>
+                  )}
                   {createExpanded && sidebarOpen && (
                     <div className="space-y-1 pl-2">
                       <Button
@@ -479,23 +520,62 @@ export function Navbar({ user }: NavbarProps) {
                         { panel: "trainings", icon: BookOpenCheck, label: "Trainings" },
                       ].map((item) => (
                         <div key={item.panel} className="flex justify-center w-full">
-                          <Button
-                            variant="ghost"
-                            className={cn(
-                              "transition-all duration-200",
-                              sidebarOpen ? "h-6 w-full justify-start px-2" : "h-10 w-10 p-0 rounded-xl",
-                              activePanel === item.panel 
-                                ? "border border-border/40 bg-muted/30 text-foreground"
-                                : "border border-transparent text-foreground"
-                            )}
-                            onClick={() => (item.panel === "projects" && sidebarOpen) 
-                              ? setSuperProjectsExpanded(!superProjectsExpanded) 
-                              : goTo(`/dashboard?panel=${item.panel}`)}
-                            title={!sidebarOpen ? item.label : ""}
-                          >
-                            <item.icon className={cn("shrink-0", sidebarOpen ? "mr-2 h-3 w-3" : "h-5 w-5")} />
-                            {sidebarOpen && <span className="text-[9px]">{item.label}</span>}
-                          </Button>
+                          {item.panel === "projects" && !sidebarOpen ? (
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  className={cn(
+                                    "transition-all duration-200 h-10 w-10 p-0 rounded-xl",
+                                    (activePanel === "records" && (activeView === "project-registration" || activeView === "project-proposal"))
+                                      ? "border border-border/40 bg-muted/30 text-foreground"
+                                      : "border border-transparent text-foreground"
+                                  )}
+                                  title={item.label}
+                                >
+                                  <item.icon className="shrink-0 h-5 w-5" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent side="right" align="start" className="w-48 p-2 ml-2 bg-background border border-border shadow-md rounded-lg">
+                                <div className="space-y-1">
+                                  <Button
+                                    variant="ghost"
+                                    className={navItemClass(activePanel === "records" && activeView === "project-registration")}
+                                    onClick={() => goTo("/dashboard?panel=records&view=project-registration")}
+                                  >
+                                    <FolderKanban className="mr-2 h-3 w-3" />
+                                    Project Registration
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    className={navItemClass(activePanel === "records" && activeView === "project-proposal")}
+                                    onClick={() => goTo("/dashboard?panel=records&view=project-proposal")}
+                                  >
+                                    <FolderKanban className="mr-2 h-3 w-3" />
+                                    Project Proposal
+                                  </Button>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              className={cn(
+                                "transition-all duration-200",
+                                sidebarOpen ? "h-6 w-full justify-start px-2" : "h-10 w-10 p-0 rounded-xl",
+                                activePanel === item.panel 
+                                  ? "border border-border/40 bg-muted/30 text-foreground"
+                                  : "border border-transparent text-foreground"
+                              )}
+                              onClick={() => (item.panel === "projects" && sidebarOpen) 
+                                ? setSuperProjectsExpanded(!superProjectsExpanded) 
+                                : goTo(`/dashboard?panel=${item.panel}`)}
+                              title={!sidebarOpen ? item.label : ""}
+                            >
+                              <item.icon className={cn("shrink-0", sidebarOpen ? "mr-2 h-3 w-3" : "h-5 w-5")} />
+                              {sidebarOpen && <span className="text-[9px]">{item.label}</span>}
+                            </Button>
+                          )}
                         </div>
                       ))}
                     </div>

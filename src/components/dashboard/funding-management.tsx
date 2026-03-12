@@ -533,7 +533,7 @@ export function FundingManagement({
                         <TableCell className="text-[10px] py-2.5 px-3">{details.dateInceptionMeeting || "-"}</TableCell>
                         <TableCell className="text-[10px] py-2.5 px-3">{details.beneficiaries || "-"}</TableCell>
                         <TableCell className="text-[10px] py-2.5 px-3">{details.sdgs || "-"}</TableCell>
-                        <TableCell className="text-[10px] py-2.5 px-3">{details.thematicArea || "-"}</TableCell>
+                        <TableCell className="text-[10px] py-2.5 px-3 whitespace-pre-wrap">{details.thematicArea ? details.thematicArea.split(", ").join("\n") : "-"}</TableCell>
                         {filter !== "internal" && <TableCell className="text-[10px] py-2.5 px-3">{details.type === "external" ? details.functionNature || "-" : "-"}</TableCell>}
                         {filter !== "internal" && <TableCell className="text-[10px] py-2.5 px-3">{details.totalBudget || "-"}</TableCell>}
                         {filter !== "internal" && <TableCell className="text-[10px] py-2.5 px-3">{details.type === "external" ? details.fundingAgency || "-" : "-"}</TableCell>}
