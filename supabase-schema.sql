@@ -1491,6 +1491,24 @@ begin
         )
       );
 
+    insert into public.notifications (
+      recipient_id, actor_id, actor_name, actor_avatar_url, entity_table, entity_id, entity_kind, entity_title, action_type, route
+    )
+    select
+      recipient.id,
+      actor_record.id,
+      trim(concat(coalesce(actor_record.first_name, ''), ' ', coalesce(actor_record.last_name, ''))),
+      actor_record.avatar_url,
+      'projects',
+      new.id,
+      kind_value,
+      title_value,
+      action_name,
+      route_target
+    from public.profiles recipient
+    where recipient.user_type = 'super_admin'
+      and recipient.id <> actor_record.id;
+
     return new;
   end if;
 
@@ -1956,6 +1974,24 @@ begin
     and recipient.department = actor_record.department
     and recipient.id <> actor_record.id;
 
+  insert into public.notifications (
+    recipient_id, actor_id, actor_name, actor_avatar_url, entity_table, entity_id, entity_kind, entity_title, action_type, route
+  )
+  select
+    recipient.id,
+    actor_record.id,
+    trim(concat(coalesce(actor_record.first_name, ''), ' ', coalesce(actor_record.last_name, ''))),
+    actor_record.avatar_url,
+    'projects',
+    new.id,
+    kind_value,
+    title_value,
+    action_name,
+    route_target
+  from public.profiles recipient
+  where recipient.user_type = 'super_admin'
+    and recipient.id <> actor_record.id;
+
   return new;
 end;
 $$;
@@ -2053,6 +2089,24 @@ begin
         )
       );
 
+    insert into public.notifications (
+      recipient_id, actor_id, actor_name, actor_avatar_url, entity_table, entity_id, entity_kind, entity_title, action_type, route
+    )
+    select
+      recipient.id,
+      actor_record.id,
+      trim(concat(coalesce(actor_record.first_name, ''), ' ', coalesce(actor_record.last_name, ''))),
+      actor_record.avatar_url,
+      'trainings',
+      new.id,
+      'training',
+      coalesce(nullif(trim(new.training_title), ''), 'Untitled training'),
+      action_name,
+      '/dashboard?panel=trainings'
+    from public.profiles recipient
+    where recipient.user_type = 'super_admin'
+      and recipient.id <> actor_record.id;
+
     return new;
   end if;
 
@@ -2094,6 +2148,24 @@ begin
   from public.profiles recipient
   where recipient.user_type = 'college_coordinator'
     and recipient.department = actor_record.department
+    and recipient.id <> actor_record.id;
+
+  insert into public.notifications (
+    recipient_id, actor_id, actor_name, actor_avatar_url, entity_table, entity_id, entity_kind, entity_title, action_type, route
+  )
+  select
+    recipient.id,
+    actor_record.id,
+    trim(concat(coalesce(actor_record.first_name, ''), ' ', coalesce(actor_record.last_name, ''))),
+    actor_record.avatar_url,
+    'trainings',
+    new.id,
+    'training',
+    coalesce(nullif(trim(new.training_title), ''), 'Untitled training'),
+    action_name,
+    '/dashboard?panel=trainings'
+  from public.profiles recipient
+  where recipient.user_type = 'super_admin'
     and recipient.id <> actor_record.id;
 
   return new;

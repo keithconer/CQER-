@@ -92,11 +92,13 @@ export function NotificationBell({ userId }: NotificationBellProps) {
           .select(
             "id, actor_name, actor_avatar_url, entity_kind, entity_title, action_type, route, created_at, read_at"
           )
+          .eq("recipient_id", userId)
           .order("created_at", { ascending: false })
           .limit(20),
         supabase
           .from("notifications")
           .select("id", { count: "exact", head: true })
+          .eq("recipient_id", userId)
           .is("read_at", null),
       ]);
 

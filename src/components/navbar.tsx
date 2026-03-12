@@ -519,15 +519,16 @@ export function Navbar({ user }: NavbarProps) {
                         { panel: "ordinance-resolutions", icon: ScrollText, label: "Ordinance" },
                         { panel: "trainings", icon: BookOpenCheck, label: "Trainings" },
                       ].map((item) => (
-                        <div key={item.panel} className="flex justify-center w-full">
-                          {item.panel === "projects" && !sidebarOpen ? (
+                        <div key={item.panel} className="w-full">
+                          <div className="flex justify-center w-full">
+                            {item.panel === "projects" && !sidebarOpen ? (
                             <Popover>
                               <PopoverTrigger asChild>
                                 <Button
                                   variant="ghost"
                                   className={cn(
                                     "transition-all duration-200 h-10 w-10 p-0 rounded-xl",
-                                    (activePanel === "records" && (activeView === "project-registration" || activeView === "project-proposal"))
+                                    (activePanel === "projects" && (activeView === "project-registration" || activeView === "project-proposal"))
                                       ? "border border-border/40 bg-muted/30 text-foreground"
                                       : "border border-transparent text-foreground"
                                   )}
@@ -540,16 +541,16 @@ export function Navbar({ user }: NavbarProps) {
                                 <div className="space-y-1">
                                   <Button
                                     variant="ghost"
-                                    className={navItemClass(activePanel === "records" && activeView === "project-registration")}
-                                    onClick={() => goTo("/dashboard?panel=records&view=project-registration")}
+                                    className={navItemClass(activePanel === "projects" && activeView === "project-registration")}
+                                    onClick={() => goTo("/dashboard?panel=projects&view=project-registration")}
                                   >
                                     <FolderKanban className="mr-2 h-3 w-3" />
                                     Project Registration
                                   </Button>
                                   <Button
                                     variant="ghost"
-                                    className={navItemClass(activePanel === "records" && activeView === "project-proposal")}
-                                    onClick={() => goTo("/dashboard?panel=records&view=project-proposal")}
+                                    className={navItemClass(activePanel === "projects" && activeView === "project-proposal")}
+                                    onClick={() => goTo("/dashboard?panel=projects&view=project-proposal")}
                                   >
                                     <FolderKanban className="mr-2 h-3 w-3" />
                                     Project Proposal
@@ -575,6 +576,27 @@ export function Navbar({ user }: NavbarProps) {
                               <item.icon className={cn("shrink-0", sidebarOpen ? "mr-2 h-3 w-3" : "h-5 w-5")} />
                               {sidebarOpen && <span className="text-[9px]">{item.label}</span>}
                             </Button>
+                          )}
+                          </div>
+                          {item.panel === "projects" && sidebarOpen && superProjectsExpanded && (
+                            <div className="space-y-1 pl-2">
+                              <Button
+                                variant="ghost"
+                                className={navItemClass(activePanel === "projects" && activeView === "project-registration")}
+                                onClick={() => goTo("/dashboard?panel=projects&view=project-registration")}
+                              >
+                                <FolderKanban className="mr-2 h-3 w-3" />
+                                Project Registration
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                className={navItemClass(activePanel === "projects" && activeView === "project-proposal")}
+                                onClick={() => goTo("/dashboard?panel=projects&view=project-proposal")}
+                              >
+                                <FolderKanban className="mr-2 h-3 w-3" />
+                                Project Proposal
+                              </Button>
+                            </div>
                           )}
                         </div>
                       ))}

@@ -86,7 +86,8 @@ export default async function DashboardPage({
     panelParam === "trainings"
       ? panelParam
       : "records";
-  const hasSuperAdminSelection = panelParam === "accounts" || panelParam === "projects";
+  const hasSuperAdminSelection =
+    panelParam === "accounts" || panelParam === "projects" || panelParam === "records";
   const superAdminPanel: "accounts" | "projects" | "trainings" =
     panelParam === "accounts" || panelParam === "projects" || panelParam === "trainings"
       ? panelParam
