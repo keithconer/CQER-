@@ -76,6 +76,11 @@ export function NotificationBell({ userId }: NotificationBellProps) {
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [showAll, setShowAll] = useState(false);
+
+  useEffect(() => {
+    if (!open) setShowAll(false);
+  }, [open]);
 
   useEffect(() => {
     let active = true;
@@ -132,6 +137,8 @@ export function NotificationBell({ userId }: NotificationBellProps) {
       void supabase.removeChannel(channel);
     };
   }, [supabase, userId]);
+
+  const visibleNotifications = showAll ? notifications : notifications.slice(0, 5);
 
   const handleNotificationClick = async (item: NotificationItem) => {
     // Show local loading state before routing
@@ -209,7 +216,7 @@ export function NotificationBell({ userId }: NotificationBellProps) {
             ) : notifications.length === 0 ? (
               <p className="px-2 py-3 text-[9px] text-muted-foreground">No notifications yet.</p>
             ) : (
-              notifications.map((item) => {
+              visibleNotifications.map((item) => {
                 const initials = item.actor_name
                   .split(" ")
                   .map((part) => part[0] || "")
@@ -247,6 +254,20 @@ export function NotificationBell({ userId }: NotificationBellProps) {
             )}
           </div>
         </ScrollArea>
+
+        {!loading && notifications.length > 5 && (
+          <div className="border-t border-border/40 px-2 py-1.5">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 w-full justify-center text-[9px] text-muted-foreground hover:text-foreground"
+              onClick={() => setShowAll((current) => !current)}
+            >
+              {showAll ? "Show latest only" : "See previous notifications"}
+            </Button>
+          </div>
+        )}
       </PopoverContent>
     </Popover>
   );
