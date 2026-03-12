@@ -1853,7 +1853,7 @@ begin
 
   if tg_op = 'INSERT' then
     action_name := 'created';
-  elsif actor_record.user_type in ('unit_coordinator', 'super_admin') then
+  elsif actor_record.user_type in ('unit_coordinator', 'college_coordinator', 'super_admin') then
     if coalesce(jsonb_array_length(coalesce(new.documents, '[]'::jsonb)), 0)
       > coalesce(jsonb_array_length(coalesce(old.documents, '[]'::jsonb)), 0)
       or new.pdf_url is distinct from old.pdf_url
@@ -1918,8 +1918,34 @@ begin
   end if;
 
   if actor_record.user_type = 'college_coordinator' then
-    if tg_op <> 'INSERT' then
-      return new;
+    if tg_op = 'INSERT' then
+      insert into public.notifications (
+        recipient_id, actor_id, actor_name, actor_avatar_url, entity_table, entity_id, entity_kind, entity_title, action_type, route
+      )
+      select
+        recipient.id,
+        actor_record.id,
+        trim(concat(coalesce(actor_record.first_name, ''), ' ', coalesce(actor_record.last_name, ''))),
+        actor_record.avatar_url,
+        'projects',
+        new.id,
+        kind_value,
+        title_value,
+        action_name,
+        route_target
+      from public.profiles recipient
+      where recipient.user_type = 'unit_coordinator'
+        and recipient.department = actor_record.department
+        and recipient.id <> actor_record.id
+        and (
+          coalesce(new.visibility_scope, 'public') = 'public'
+          or (
+            coalesce(new.visibility_scope, 'public') = 'specific_units'
+            and recipient.unit in (
+              select jsonb_array_elements_text(coalesce(new.visible_units, '[]'::jsonb))
+            )
+          )
+        );
     end if;
 
     insert into public.notifications (
@@ -1937,18 +1963,8 @@ begin
       action_name,
       route_target
     from public.profiles recipient
-    where recipient.user_type = 'unit_coordinator'
-      and recipient.department = actor_record.department
-      and recipient.id <> actor_record.id
-      and (
-        coalesce(new.visibility_scope, 'public') = 'public'
-        or (
-          coalesce(new.visibility_scope, 'public') = 'specific_units'
-          and recipient.unit in (
-            select jsonb_array_elements_text(coalesce(new.visible_units, '[]'::jsonb))
-          )
-        )
-      );
+    where recipient.user_type = 'super_admin'
+      and recipient.id <> actor_record.id;
 
     return new;
   end if;

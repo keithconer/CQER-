@@ -233,7 +233,36 @@ export default async function DashboardPage({
         .from("projects")
         .select("*")
         .order("created_at", { ascending: false });
-      allProjects = (projectsData as Project[] | null) || [];
+      const rawProjects = (projectsData as Project[] | null) || [];
+      const creatorIds = Array.from(
+        new Set(rawProjects.map((project) => project.created_by).filter(Boolean))
+      );
+      let creatorMap = new Map<
+        string,
+        { user_type: "super_admin" | "college_coordinator" | "unit_coordinator"; unit: string | null }
+      >();
+      if (creatorIds.length > 0) {
+        const { data: creatorProfiles } = await adminClient
+          .from("profiles")
+          .select("id, user_type, unit")
+          .in("id", creatorIds);
+        creatorMap = new Map(
+          (creatorProfiles || []).map((profile) => [
+            profile.id,
+            { user_type: profile.user_type, unit: profile.unit },
+          ])
+        );
+      }
+
+      allProjects =
+        rawProjects.map((project) => {
+          const creator = creatorMap.get(project.created_by as string);
+          return {
+            ...project,
+            created_by_user_type: creator?.user_type || null,
+            created_by_unit: creator?.unit || null,
+          };
+        }) || [];
       projects = allProjects;
     }
   }
@@ -340,6 +369,7 @@ export default async function DashboardPage({
                   department={profile.department}
                   unit={profile.unit}
                   unitOptions={availableUnitsForSuperAdmin}
+                  currentUserId={user.id}
                 />
               ) : superAdminPanel === "trainings" ? (
                 <TrainingsManagement
@@ -358,6 +388,7 @@ export default async function DashboardPage({
                   department={profile.department}
                   unit={profile.unit}
                   unitOptions={availableUnitsForSuperAdmin}
+                  currentUserId={user.id}
                 />
               )}
             </>
