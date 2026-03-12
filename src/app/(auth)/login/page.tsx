@@ -177,6 +177,8 @@ function LoginContent() {
                   ? "Account is not registered, please contact either the super admin or your college coordinator."
                   : callbackError === "auth_callback_error"
                   ? "Authentication failed. Please try again."
+                  : callbackError === "session_expired"
+                  ? "Session expired. Please sign in again."
                   : "Email confirmation failed. Please try again.")}
             </p>
           )}
