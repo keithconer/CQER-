@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -12,7 +12,7 @@ function sanitizeNextPath(nextPath: string | null) {
   return nextPath;
 }
 
-export default function OauthLoadingPage() {
+function OauthLoadingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextPath = sanitizeNextPath(searchParams.get("next"));
@@ -77,5 +77,27 @@ export default function OauthLoadingPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function OauthLoadingPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-background px-4">
+          <Card className="w-full max-w-sm border-border/50 shadow-md">
+            <CardHeader className="pt-6 pb-2 text-center">
+              <p className="text-[10px] font-semibold text-foreground">Signing you in</p>
+              <p className="text-[9px] text-muted-foreground">Preparing your session...</p>
+            </CardHeader>
+            <CardContent className="pb-6 flex items-center justify-center">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </CardContent>
+          </Card>
+        </div>
+      }
+    >
+      <OauthLoadingContent />
+    </Suspense>
   );
 }
