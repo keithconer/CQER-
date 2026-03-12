@@ -204,7 +204,7 @@ export function NotificationBell({ userId }: NotificationBellProps) {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-[22rem] p-0">
+      <PopoverContent align="end" className="w-[22rem] p-0 flex flex-col">
         <div className="border-b border-border/40 px-3 py-2">
           <p className="text-[10px] font-semibold text-foreground">Notifications</p>
           <p className="text-[9px] text-muted-foreground">
@@ -212,8 +212,8 @@ export function NotificationBell({ userId }: NotificationBellProps) {
           </p>
         </div>
 
-        <ScrollArea className="max-h-80">
-          <div className={`p-1.5 ${!loading && hasMore ? "pb-9" : ""}`}>
+        <ScrollArea className="max-h-80 flex-1 min-h-0">
+          <div className="p-1.5">
             {loading ? (
               <p className="px-2 py-3 text-[9px] text-muted-foreground">Loading notifications...</p>
             ) : notifications.length === 0 ? (
