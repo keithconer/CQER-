@@ -143,8 +143,8 @@ export function NotificationBell({ userId }: NotificationBellProps) {
   const hasMore = notifications.length > 5;
   const visibleNotifications = showAll ? notifications : notifications.slice(0, 5);
   const scrollMaxHeight = showAll
-    ? (hasMore ? "max-h-[calc(70vh-32px)]" : "max-h-[70vh]")
-    : (hasMore ? "max-h-[calc(20rem-32px)]" : "max-h-80");
+    ? "max-h-[70vh]"
+    : (hasMore ? "max-h-80" : "max-h-80");
 
   const handleNotificationClick = async (item: NotificationItem) => {
     // Show local loading state before routing
@@ -207,7 +207,7 @@ export function NotificationBell({ userId }: NotificationBellProps) {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-[22rem] p-0 flex flex-col">
+      <PopoverContent align="end" className="w-[22rem] p-0 flex flex-col max-h-[80vh] overflow-hidden">
         <div className="border-b border-border/40 px-3 py-2">
           <p className="text-[10px] font-semibold text-foreground">Notifications</p>
           <p className="text-[9px] text-muted-foreground">
@@ -215,8 +215,8 @@ export function NotificationBell({ userId }: NotificationBellProps) {
           </p>
         </div>
 
-        <ScrollArea className={`flex-1 min-h-0 ${scrollMaxHeight}`}>
-          <div className="p-1.5">
+        <ScrollArea className={`flex-1 min-h-0 overflow-y-auto ${scrollMaxHeight}`}>
+          <div className="p-1.5 pr-2">
             {loading ? (
               <p className="px-2 py-3 text-[9px] text-muted-foreground">Loading notifications...</p>
             ) : notifications.length === 0 ? (
@@ -262,7 +262,7 @@ export function NotificationBell({ userId }: NotificationBellProps) {
         </ScrollArea>
 
         {!loading && hasMore && (
-          <div className="border-t border-border/40 px-2 py-1.5 bg-background relative z-10">
+          <div className="border-t border-border/40 px-2 py-1.5 bg-background">
             <Button
               type="button"
               variant="ghost"

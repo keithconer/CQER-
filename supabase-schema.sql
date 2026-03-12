@@ -1399,6 +1399,37 @@ create policy "Users can update own notifications" on public.notifications
   for update using (auth.uid() = recipient_id)
   with check (auth.uid() = recipient_id);
 
+create or replace function public.trim_notifications_for_recipient()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  -- Drop stale notifications (older than 7 days)
+  delete from public.notifications
+  where recipient_id = new.recipient_id
+    and created_at < now() - interval '7 days';
+
+  -- Enforce a 50-row cap per recipient (keep newest)
+  delete from public.notifications
+  where id in (
+    select id
+    from public.notifications
+    where recipient_id = new.recipient_id
+    order by created_at desc
+    offset 50
+  );
+
+  return new;
+end;
+$$;
+
+drop trigger if exists notifications_trim_after_insert on public.notifications;
+create trigger notifications_trim_after_insert
+after insert on public.notifications
+for each row execute function public.trim_notifications_for_recipient();
+
 create or replace function public.push_project_notification()
 returns trigger
 language plpgsql
@@ -1885,15 +1916,9 @@ begin
     where recipient.user_type in ('college_coordinator', 'unit_coordinator')
       and recipient.id <> actor_record.id
       and (
-        coalesce(new.visibility_scope, 'all_departments') = 'all_departments'
+        coalesce(new.visibility_scope, 'all_departments') in ('all_departments', 'public')
         or (
           coalesce(new.visibility_scope, 'all_departments') = 'specific_departments'
-          and recipient.department in (
-            select jsonb_array_elements_text(coalesce(new.visible_departments, '[]'::jsonb))
-          )
-        )
-        or (
-          coalesce(new.visibility_scope, 'public') = 'public'
           and recipient.department in (
             select jsonb_array_elements_text(coalesce(new.visible_departments, '[]'::jsonb))
           )
