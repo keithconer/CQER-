@@ -109,7 +109,7 @@ export function SuperAdminOverview({
   const [currentPage, setCurrentPage] = React.useState(1);
   const [selectedScopes, setSelectedScopes] = React.useState<string[]>([
     "created_by_me",
-    "all_records",
+    "department_files",
   ]);
   const [viewProject, setViewProject] = React.useState<ExistingProject | null>(null);
   const [editProject, setEditProject] = React.useState<ExistingProject | null>(null);
@@ -141,7 +141,7 @@ export function SuperAdminOverview({
 
   React.useEffect(() => {
     setSearchTerm("");
-    setSelectedScopes(["created_by_me", "all_records"]);
+    setSelectedScopes(["created_by_me", "department_files"]);
   }, [panel]);
 
   const filteredAccounts = React.useMemo(() => {
@@ -164,7 +164,7 @@ export function SuperAdminOverview({
       const isMine = project.created_by === currentUserId;
       const matchesScope =
         (selectedScopes.includes("created_by_me") && isMine) ||
-        (selectedScopes.includes("all_records") && !isMine);
+        (selectedScopes.includes("department_files") && !isMine);
       if (!matchesScope) return false;
       if ((project.entry_type || "project") !== "project") return false;
       return (
@@ -295,10 +295,10 @@ export function SuperAdminOverview({
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem
                   className="text-[10px]"
-                  checked={selectedScopes.includes("all_records")}
-                  onCheckedChange={() => toggleScopeFilter("all_records")}
+                  checked={selectedScopes.includes("department_files")}
+                  onCheckedChange={() => toggleScopeFilter("department_files")}
                 >
-                  All records
+                  All files from departments
                 </DropdownMenuCheckboxItem>
               </DropdownMenuContent>
             </DropdownMenu>

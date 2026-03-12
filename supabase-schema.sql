@@ -1892,6 +1892,26 @@ begin
             select jsonb_array_elements_text(coalesce(new.visible_departments, '[]'::jsonb))
           )
         )
+        or (
+          coalesce(new.visibility_scope, 'public') = 'public'
+          and recipient.department in (
+            select jsonb_array_elements_text(coalesce(new.visible_departments, '[]'::jsonb))
+          )
+        )
+        or (
+          coalesce(new.visibility_scope, 'public') = 'specific_units'
+          and (
+            recipient.unit in (
+              select jsonb_array_elements_text(coalesce(new.visible_units, '[]'::jsonb))
+            )
+            or (
+              coalesce(jsonb_array_length(coalesce(new.visible_units, '[]'::jsonb)), 0) = 0
+              and recipient.department in (
+                select jsonb_array_elements_text(coalesce(new.visible_departments, '[]'::jsonb))
+              )
+            )
+          )
+        )
       );
 
     return new;
@@ -2053,6 +2073,10 @@ begin
           and recipient.department in (
             select jsonb_array_elements_text(coalesce(new.visible_departments, '[]'::jsonb))
           )
+        )
+        or (
+          coalesce(new.visibility_scope, 'department') = 'department'
+          and recipient.department = new.department
         )
       );
 
@@ -2226,7 +2250,7 @@ create table if not exists public.rate_limit_counters (
 create index if not exists idx_rate_limit_counters_window
 on public.rate_limit_counters (action, window_start desc);
 
-create or replace function public.check_rate_limit(action text, max_requests integer, window_seconds integer)
+create or replace function public.check_rate_limit(p_action text, max_requests integer, window_seconds integer)
 returns boolean
 language plpgsql
 security definer
@@ -2245,7 +2269,7 @@ begin
   window_start := to_timestamp(floor(extract(epoch from now()) / window_seconds) * window_seconds);
 
   insert into public.rate_limit_counters (user_id, action, window_start, count)
-  values (uid, action, window_start, 1)
+  values (uid, p_action, window_start, 1)
   on conflict (user_id, action, window_start)
   do update set count = public.rate_limit_counters.count + 1
   returning count into new_count;
