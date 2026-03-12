@@ -2211,3 +2211,127 @@ notify pgrst, 'reload schema';
 -- ============================================================
 -- END: Global Visibility Support
 -- ============================================================
+
+-- ============================================================
+-- START: Rate Limiting (Write Operations)
+-- ============================================================
+create table if not exists public.rate_limit_counters (
+  user_id uuid not null,
+  action text not null,
+  window_start timestamptz not null,
+  count integer not null default 0,
+  primary key (user_id, action, window_start)
+);
+
+create index if not exists idx_rate_limit_counters_window
+on public.rate_limit_counters (action, window_start desc);
+
+create or replace function public.check_rate_limit(action text, max_requests integer, window_seconds integer)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  uid uuid;
+  window_start timestamptz;
+  new_count integer;
+begin
+  uid := auth.uid();
+  if uid is null then
+    return true;
+  end if;
+
+  window_start := to_timestamp(floor(extract(epoch from now()) / window_seconds) * window_seconds);
+
+  insert into public.rate_limit_counters (user_id, action, window_start, count)
+  values (uid, action, window_start, 1)
+  on conflict (user_id, action, window_start)
+  do update set count = public.rate_limit_counters.count + 1
+  returning count into new_count;
+
+  if new_count > max_requests then
+    raise exception 'Rate limit exceeded' using errcode = 'P0001';
+  end if;
+
+  return true;
+end;
+$$;
+
+create or replace function public.enforce_rate_limit_write()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  perform public.check_rate_limit('write:' || tg_table_name, 120, 60);
+  if tg_op = 'DELETE' then
+    return old;
+  end if;
+  return new;
+end;
+$$;
+
+do $$
+begin
+  if exists (select 1 from information_schema.tables where table_schema = 'public' and table_name = 'projects') then
+    drop trigger if exists projects_rate_limit_write on public.projects;
+    create trigger projects_rate_limit_write
+    before insert or update or delete on public.projects
+    for each statement execute function public.enforce_rate_limit_write();
+  end if;
+
+  if exists (select 1 from information_schema.tables where table_schema = 'public' and table_name = 'trainings') then
+    drop trigger if exists trainings_rate_limit_write on public.trainings;
+    create trigger trainings_rate_limit_write
+    before insert or update or delete on public.trainings
+    for each statement execute function public.enforce_rate_limit_write();
+  end if;
+
+  if exists (select 1 from information_schema.tables where table_schema = 'public' and table_name = 'awards') then
+    drop trigger if exists awards_rate_limit_write on public.awards;
+    create trigger awards_rate_limit_write
+    before insert or update or delete on public.awards
+    for each statement execute function public.enforce_rate_limit_write();
+  end if;
+
+  if exists (select 1 from information_schema.tables where table_schema = 'public' and table_name = 'student_involvement') then
+    drop trigger if exists student_involvement_rate_limit_write on public.student_involvement;
+    create trigger student_involvement_rate_limit_write
+    before insert or update or delete on public.student_involvement
+    for each statement execute function public.enforce_rate_limit_write();
+  end if;
+
+  if exists (select 1 from information_schema.tables where table_schema = 'public' and table_name = 'faculty_involvement') then
+    drop trigger if exists faculty_involvement_rate_limit_write on public.faculty_involvement;
+    create trigger faculty_involvement_rate_limit_write
+    before insert or update or delete on public.faculty_involvement
+    for each statement execute function public.enforce_rate_limit_write();
+  end if;
+
+  if exists (select 1 from information_schema.tables where table_schema = 'public' and table_name = 'pool_of_experts') then
+    drop trigger if exists pool_of_experts_rate_limit_write on public.pool_of_experts;
+    create trigger pool_of_experts_rate_limit_write
+    before insert or update or delete on public.pool_of_experts
+    for each statement execute function public.enforce_rate_limit_write();
+  end if;
+
+  if exists (select 1 from information_schema.tables where table_schema = 'public' and table_name = 'technologies_innovations') then
+    drop trigger if exists technologies_innovations_rate_limit_write on public.technologies_innovations;
+    create trigger technologies_innovations_rate_limit_write
+    before insert or update or delete on public.technologies_innovations
+    for each statement execute function public.enforce_rate_limit_write();
+  end if;
+
+  if exists (select 1 from information_schema.tables where table_schema = 'public' and table_name = 'ordinance_resolutions') then
+    drop trigger if exists ordinance_resolutions_rate_limit_write on public.ordinance_resolutions;
+    create trigger ordinance_resolutions_rate_limit_write
+    before insert or update or delete on public.ordinance_resolutions
+    for each statement execute function public.enforce_rate_limit_write();
+  end if;
+end
+$$;
+-- ============================================================
+-- END: Rate Limiting (Write Operations)
+-- ============================================================

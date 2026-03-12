@@ -140,6 +140,7 @@ export function NotificationBell({ userId }: NotificationBellProps) {
     };
   }, [supabase, userId]);
 
+  const hasMore = notifications.length > 5;
   const visibleNotifications = showAll ? notifications : notifications.slice(0, 5);
 
   const handleNotificationClick = async (item: NotificationItem) => {
@@ -212,7 +213,7 @@ export function NotificationBell({ userId }: NotificationBellProps) {
         </div>
 
         <ScrollArea className="max-h-80">
-          <div className="p-1.5">
+          <div className={`p-1.5 ${!loading && hasMore ? "pb-9" : ""}`}>
             {loading ? (
               <p className="px-2 py-3 text-[9px] text-muted-foreground">Loading notifications...</p>
             ) : notifications.length === 0 ? (
@@ -257,8 +258,8 @@ export function NotificationBell({ userId }: NotificationBellProps) {
           </div>
         </ScrollArea>
 
-        {!loading && notifications.length > 5 && (
-          <div className="border-t border-border/40 px-2 py-1.5">
+        {!loading && hasMore && (
+          <div className="border-t border-border/40 px-2 py-1.5 bg-background">
             <Button
               type="button"
               variant="ghost"
