@@ -2,7 +2,6 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { UnitProjectsManagement } from "@/components/dashboard/unit-projects-management";
 import { CoordinatorRegistration } from "@/components/dashboard/coordinator-registration";
-import { SuperAdminOverview } from "@/components/dashboard/super-admin-overview";
 import { getCollegeProjects, getProjects, getUnitProjects } from "@/lib/actions/projects";
 import { getAwards } from "@/lib/actions/awards";
 import { getStudentInvolvement } from "@/lib/actions/student-involvement";
@@ -40,6 +39,8 @@ import {
 } from "@/components/dashboard/technologies-management";
 import { TrainingsManagement } from "@/components/dashboard/trainings-management";
 import { type TrainingRecord } from "@/components/dashboard/trainings-form";
+import { AccountsTable } from "@/components/dashboard/accounts-table";
+import { TransferCoordinatorPanel } from "@/components/dashboard/transfer-coordinator-panel";
 
 function extractPartnerAgencyNames(projects: Project[]) {
   const values = new Set<string>();
@@ -67,16 +68,21 @@ function extractPartnerAgencyNames(projects: Project[]) {
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ view?: string; panel?: string }>;
+  searchParams?: Promise<{ view?: string; panel?: string; account?: string }>;
 }) {
   const resolvedSearchParams = (await searchParams) || {};
   const panelParam = resolvedSearchParams.panel;
+  const accountViewParam = resolvedSearchParams.account;
   const activeProjectView =
     resolvedSearchParams.view === "project-proposal" ? "project-proposal" : "project-registration";
+  const accountView = accountViewParam === "transfer" ? "transfer" : "register";
   const hasEntitySelection =
     activeProjectView === "project-registration" || activeProjectView === "project-proposal";
+  const accountPanelSelected = panelParam === "account-management" || panelParam === "accounts";
   const activePanel =
     panelParam === "unit-coordinators" ||
+    panelParam === "account-management" ||
+    panelParam === "accounts" ||
     panelParam === "funding" ||
     panelParam === "awards" ||
     panelParam === "student-involvement" ||
@@ -87,9 +93,9 @@ export default async function DashboardPage({
       ? panelParam
       : "records";
   const hasSuperAdminSelection =
-    panelParam === "accounts" || panelParam === "projects" || panelParam === "records";
-  const superAdminPanel: "accounts" | "projects" | "trainings" =
-    panelParam === "accounts" || panelParam === "projects" || panelParam === "trainings"
+    panelParam === "projects" || panelParam === "records";
+  const superAdminPanel: "projects" | "trainings" =
+    panelParam === "projects" || panelParam === "trainings"
       ? panelParam
       : "projects";
 
@@ -127,6 +133,7 @@ export default async function DashboardPage({
     email: string | null;
     first_name: string | null;
     last_name: string | null;
+    user_type: "unit_coordinator";
     department: string | null;
     unit: string | null;
     created_at: string | null;
@@ -184,6 +191,7 @@ export default async function DashboardPage({
 
   let allAccounts: {
     id: string;
+    email: string | null;
     first_name: string | null;
     last_name: string | null;
     user_type: "super_admin" | "college_coordinator" | "unit_coordinator";
@@ -199,7 +207,7 @@ export default async function DashboardPage({
     const adminClient = createAdminClient();
     const { data: accountsData } = await adminClient
       .from("profiles")
-      .select("id, first_name, last_name, user_type, department, unit")
+      .select("id, email, first_name, last_name, user_type, department, unit")
       .order("created_at", { ascending: false });
 
     allAccounts =
@@ -271,11 +279,11 @@ export default async function DashboardPage({
     // Always expose all units in the department for visibility selection.
     availableUnitsForCollege = getUnitsByDepartment(profile.department);
 
-    if (activePanel === "unit-coordinators") {
+    if (activePanel === "unit-coordinators" || accountPanelSelected) {
       const adminClient = createAdminClient();
       const { data: unitAccounts } = await adminClient
         .from("profiles")
-        .select("id, email, first_name, last_name, department, unit, created_at")
+        .select("id, email, first_name, last_name, user_type, department, unit, created_at")
         .eq("user_type", "unit_coordinator")
         .eq("department", profile.department)
         .order("created_at", { ascending: false });
@@ -298,7 +306,27 @@ export default async function DashboardPage({
 
       {userType === "super_admin" && (
         <div className="space-y-4">
-          {activePanel === "awards" ? (
+          {accountPanelSelected ? (
+            accountView === "transfer" ? (
+              <TransferCoordinatorPanel
+                mode="college"
+                accounts={allAccounts}
+              />
+            ) : (
+              <>
+                <CoordinatorRegistration
+                  userType="college_coordinator"
+                  title="College Coordinators"
+                  description="Register emails of College coordinators for their specific departments."
+                />
+                <AccountsTable
+                  accounts={allAccounts}
+                  title="Registered Coordinators"
+                  description="All coordinator accounts across departments."
+                />
+              </>
+            )
+          ) : activePanel === "awards" ? (
             <AwardsManagement
               initialAwards={awards}
               department={null}
@@ -348,21 +376,7 @@ export default async function DashboardPage({
             />
           ) : (hasSuperAdminSelection || superAdminPanel === "trainings") ? (
             <>
-              {superAdminPanel === "accounts" ? (
-                <>
-                  <CoordinatorRegistration
-                    userType="college_coordinator"
-                    title="College Coordinators"
-                    description="Register emails of College coordinators for their specific departments."
-                  />
-                  <SuperAdminOverview
-                    accounts={allAccounts}
-                    projects={allProjects}
-                    panel="accounts"
-                    currentUserId={user.id}
-                  />
-                </>
-              ) : activeProjectView === "project-proposal" ? (
+              {activeProjectView === "project-proposal" ? (
                 <ProjectProposalManagement
                   initialProjects={allProjects as ProjectProposal[]}
                   userType={userType}
@@ -408,11 +422,19 @@ export default async function DashboardPage({
 
       {userType === "college_coordinator" && (
         <div className="space-y-4">
-          {activePanel === "unit-coordinators" ? (
-            <UnitCoordinatorsPanel
-              accounts={collegeUnitCoordinatorAccounts}
-              department={profile.department}
-            />
+          {activePanel === "unit-coordinators" || accountPanelSelected ? (
+            accountView === "transfer" ? (
+              <TransferCoordinatorPanel
+                mode="unit"
+                accounts={collegeUnitCoordinatorAccounts}
+                department={profile.department}
+              />
+            ) : (
+              <UnitCoordinatorsPanel
+                accounts={collegeUnitCoordinatorAccounts}
+                department={profile.department}
+              />
+            )
           ) : activePanel === "awards" ? (
             <AwardsManagement
               initialAwards={awards}

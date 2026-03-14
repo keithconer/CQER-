@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
+import Image from "next/image";
 
 function sanitizeNextPath(nextPath: string | null) {
   if (!nextPath) return "/dashboard";
@@ -18,9 +19,13 @@ function OauthLoadingContent() {
   const nextPath = sanitizeNextPath(searchParams.get("next"));
   const supabase = useMemo(() => createClient(), []);
   const [message, setMessage] = useState("Checking your account...");
+  const [showPreloader, setShowPreloader] = useState(false);
+  const [fadeOut, setFadeOut] = useState(false);
 
   useEffect(() => {
     let active = true;
+    let fadeTimer: NodeJS.Timeout | null = null;
+    let redirectTimer: NodeJS.Timeout | null = null;
 
     const resolveRedirect = async () => {
       const {
@@ -55,15 +60,38 @@ function OauthLoadingContent() {
       }
 
       setMessage("Redirecting...");
-      router.replace(nextPath);
+      setShowPreloader(true);
+      fadeTimer = setTimeout(() => {
+        if (active) setFadeOut(true);
+      }, 550);
+      redirectTimer = setTimeout(() => {
+        if (active) router.replace(nextPath);
+      }, 900);
     };
 
     resolveRedirect();
 
     return () => {
       active = false;
+      if (fadeTimer) clearTimeout(fadeTimer);
+      if (redirectTimer) clearTimeout(redirectTimer);
     };
   }, [nextPath, router, supabase]);
+
+  if (showPreloader) {
+    return (
+      <div
+        className={`min-h-screen flex flex-col items-center justify-center bg-white transition-opacity duration-300 ${
+          fadeOut ? "opacity-0" : "opacity-100"
+        }`}
+      >
+        <div className="relative h-24 w-24 preloader-logo">
+          <Image src="/CQERFINAL.png" alt="CQER Logo" fill className="object-contain" />
+        </div>
+        <p className="mt-3 text-[10px] font-medium text-muted-foreground">Loading dashboard...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">

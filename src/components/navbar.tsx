@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -20,6 +20,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -32,7 +38,6 @@ import {
   Type,
   FolderPlus,
   FolderKanban,
-  Users,
   Database,
   Award,
   UserRoundCheck,
@@ -42,6 +47,9 @@ import {
   BookOpenCheck,
   Loader2,
   Sun,
+  UserCog,
+  UserPlus,
+  ArrowRightLeft,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -70,6 +78,7 @@ export function Navbar({ user }: NavbarProps) {
   const [createExpanded, setCreateExpanded] = useState(true);
   const [recordsExpanded, setRecordsExpanded] = useState(true);
   const [superProjectsExpanded, setSuperProjectsExpanded] = useState(true);
+  const [accountExpanded, setAccountExpanded] = useState(true);
   const [fontScale, setFontScale] = useState<"small" | "medium" | "large">(() => {
     if (typeof window === "undefined") return "small";
     const savedScale = window.localStorage.getItem("cqer_font_scale");
@@ -84,13 +93,17 @@ export function Navbar({ user }: NavbarProps) {
 
   const isDashboard = pathname?.startsWith("/dashboard");
   const viewParam = searchParams.get("view");
+  const accountParam = searchParams.get("account");
   const activeView =
     viewParam === "project-registration" || viewParam === "project-proposal"
       ? viewParam
       : "project-registration";
+  const activeAccountView = accountParam === "transfer" ? "transfer" : "register";
   const panelParam = searchParams.get("panel");
   const activePanel =
     panelParam === "unit-coordinators" ||
+    panelParam === "account-management" ||
+    panelParam === "accounts" ||
     panelParam === "funding" ||
     panelParam === "awards" ||
     panelParam === "student-involvement" ||
@@ -98,7 +111,6 @@ export function Navbar({ user }: NavbarProps) {
     panelParam === "technologies-innovation" ||
     panelParam === "ordinance-resolutions" ||
     panelParam === "trainings" ||
-    panelParam === "accounts" ||
     panelParam === "projects"
     || panelParam === "trainings"
       ? panelParam
@@ -117,6 +129,8 @@ export function Navbar({ user }: NavbarProps) {
     router.prefetch("/dashboard?panel=ordinance-resolutions");
     router.prefetch("/dashboard?panel=trainings");
     router.prefetch("/dashboard?panel=accounts");
+    router.prefetch("/dashboard?panel=account-management&account=register");
+    router.prefetch("/dashboard?panel=account-management&account=transfer");
     router.prefetch("/dashboard?panel=projects&view=project-registration");
     router.prefetch("/dashboard?panel=projects&view=project-proposal");
     router.prefetch("/settings");
@@ -178,6 +192,17 @@ export function Navbar({ user }: NavbarProps) {
 
   const navItemClass = (active: boolean) =>
     `dashboard-nav-item h-6 w-full justify-start text-[9px] border ${active ? "border-border/40 bg-muted/30" : "border-transparent"}`;
+  const isAccountPanel = activePanel === "account-management" || activePanel === "accounts";
+
+  const withTooltip = (label: string, content: ReactNode) => {
+    if (sidebarOpen) return content;
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{content}</TooltipTrigger>
+        <TooltipContent side="right">{label}</TooltipContent>
+      </Tooltip>
+    );
+  };
 
   return (
     <>
@@ -363,25 +388,33 @@ export function Navbar({ user }: NavbarProps) {
             )}
           </div>
 
-          <ScrollArea className="h-[calc(100vh-48px)]">
-            <div className={cn("space-y-1 py-3", sidebarOpen ? "px-2" : "px-0")}>
+          <TooltipProvider delayDuration={150}>
+            <ScrollArea className="h-[calc(100vh-48px)]">
+              <div className={cn("space-y-1 py-3", sidebarOpen ? "px-2" : "px-0")}>
               {(user.userType === "college_coordinator" || user.userType === "unit_coordinator") && (
                 <>
                   {!sidebarOpen ? (
                     <Popover>
-                      <PopoverTrigger asChild>
-                        <div className="flex justify-center w-full">
-                          <Button
-                            variant="ghost"
-                            className={cn(
-                              "h-10 w-10 mx-auto flex p-0 rounded-xl transition-all duration-200",
-                              (activePanel === "records" || createExpanded) ? "border border-border/40 bg-muted/30 text-foreground" : "border border-transparent text-foreground"
-                            )}
-                          >
-                            <FolderPlus className="h-5 w-5 shrink-0" />
-                          </Button>
-                        </div>
-                      </PopoverTrigger>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex justify-center w-full">
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                className={cn(
+                                  "h-10 w-10 mx-auto flex p-0 rounded-xl transition-all duration-200",
+                                  (activePanel === "records" || createExpanded)
+                                    ? "border border-border/40 bg-muted/30 text-foreground"
+                                    : "border border-transparent text-foreground"
+                                )}
+                              >
+                                <FolderPlus className="h-5 w-5 shrink-0" />
+                              </Button>
+                            </PopoverTrigger>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">Projects</TooltipContent>
+                      </Tooltip>
                       <PopoverContent side="right" align="start" className="w-48 p-2 ml-2 bg-background border border-border shadow-md rounded-lg">
                         <div className="space-y-1">
                           <Button
@@ -440,23 +473,88 @@ export function Navbar({ user }: NavbarProps) {
               )}
 
               {user.userType === "college_coordinator" && (
-                <div className="flex justify-center w-full">
-                  <Button
-                    variant="ghost"
-                    className={cn(
-                      "transition-all duration-200",
-                      sidebarOpen ? "h-7 w-full justify-start px-3" : "h-10 w-10 p-0 rounded-xl",
-                      activePanel === "unit-coordinators" 
-                        ? "border border-border/40 bg-muted/30 text-foreground"
-                        : "border border-transparent text-foreground"
-                    )}
-                    onClick={() => goTo("/dashboard?panel=unit-coordinators")}
-                    title={!sidebarOpen ? "Unit Coordinators" : ""}
-                  >
-                    <Users className={cn("shrink-0", sidebarOpen ? "mr-2 h-3 w-3" : "h-5 w-5")} />
-                    {sidebarOpen && <span className="text-[9px]">Register Unit Coordinators</span>}
-                  </Button>
-                </div>
+                <>
+                  {!sidebarOpen ? (
+                    <Popover>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex justify-center w-full">
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                className={cn(
+                                  "transition-all duration-200 h-10 w-10 p-0 rounded-xl",
+                                  isAccountPanel
+                                    ? "border border-border/40 bg-muted/30 text-foreground"
+                                    : "border border-transparent text-foreground"
+                                )}
+                              >
+                                <UserCog className="h-5 w-5 shrink-0" />
+                              </Button>
+                            </PopoverTrigger>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">Account Management</TooltipContent>
+                      </Tooltip>
+                      <PopoverContent
+                        side="right"
+                        align="start"
+                        className="w-56 p-2 ml-2 bg-background border border-border shadow-md rounded-lg"
+                      >
+                        <div className="space-y-1">
+                          <Button
+                            variant="ghost"
+                            className={navItemClass(isAccountPanel && activeAccountView === "register")}
+                            onClick={() => goTo("/dashboard?panel=account-management&account=register")}
+                          >
+                            <UserPlus className="mr-2 h-3 w-3" />
+                            Register Unit Coordinators
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            className={navItemClass(isAccountPanel && activeAccountView === "transfer")}
+                            onClick={() => goTo("/dashboard?panel=account-management&account=transfer")}
+                          >
+                            <ArrowRightLeft className="mr-2 h-3 w-3" />
+                            Transfer Unit Coordinator Role
+                          </Button>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      className={cn(
+                        "h-8 transition-all duration-200 w-full justify-start px-3",
+                        isAccountPanel ? "border border-border/40 bg-muted/30" : "border border-transparent"
+                      )}
+                      onClick={() => setAccountExpanded((prev) => !prev)}
+                    >
+                      <UserCog className="mr-2 h-3.5 w-3.5 shrink-0" />
+                      <span className="text-[9px] font-medium">Account Management</span>
+                    </Button>
+                  )}
+                  {accountExpanded && sidebarOpen && (
+                    <div className="space-y-1 pl-2">
+                      <Button
+                        variant="ghost"
+                        className={navItemClass(isAccountPanel && activeAccountView === "register")}
+                        onClick={() => goTo("/dashboard?panel=account-management&account=register")}
+                      >
+                        <UserPlus className="mr-2 h-3 w-3" />
+                        Register Unit Coordinators
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className={navItemClass(isAccountPanel && activeAccountView === "transfer")}
+                        onClick={() => goTo("/dashboard?panel=account-management&account=transfer")}
+                      >
+                        <ArrowRightLeft className="mr-2 h-3 w-3" />
+                        Transfer Unit Coordinator Role
+                      </Button>
+                    </div>
+                  )}
+                </>
               )}
 
               {/* Simplified loop for common items */}
@@ -471,45 +569,130 @@ export function Navbar({ user }: NavbarProps) {
               ].map((item) => (
                 item.roles.includes(user.userType) && (
                   <div key={item.panel} className="flex justify-center w-full">
-                    <Button
-                      variant="ghost"
-                      className={cn(
-                        "transition-all duration-200",
-                        sidebarOpen ? "h-7 w-full justify-start px-3" : "h-10 w-10 p-0 rounded-xl",
-                        activePanel === item.panel 
-                          ? "border border-border/40 bg-muted/30 text-foreground"
-                          : "border border-transparent text-foreground"
-                      )}
-                      onClick={() => goTo(`/dashboard?panel=${item.panel}`)}
-                      title={!sidebarOpen ? item.label : ""}
-                    >
-                      <item.icon className={cn("shrink-0", sidebarOpen ? "mr-2 h-3 w-3" : "h-5 w-5")} />
-                      {sidebarOpen && <span className="text-[9px]">{item.label}</span>}
-                    </Button>
+                    {withTooltip(
+                      item.label,
+                      <Button
+                        variant="ghost"
+                        className={cn(
+                          "transition-all duration-200",
+                          sidebarOpen ? "h-7 w-full justify-start px-3" : "h-10 w-10 p-0 rounded-xl",
+                          activePanel === item.panel
+                            ? "border border-border/40 bg-muted/30 text-foreground"
+                            : "border border-transparent text-foreground"
+                        )}
+                        onClick={() => goTo(`/dashboard?panel=${item.panel}`)}
+                      >
+                        <item.icon className={cn("shrink-0", sidebarOpen ? "mr-2 h-3 w-3" : "h-5 w-5")} />
+                        {sidebarOpen && <span className="text-[9px]">{item.label}</span>}
+                      </Button>
+                    )}
                   </div>
                 )
               ))}
 
               {user.userType === "super_admin" && (
                 <>
-                  <Button
-                    variant="ghost"
-                    className={cn(
-                      "h-8 transition-all duration-200",
-                      sidebarOpen ? "w-full justify-start px-3" : "w-10 h-10 mx-auto flex p-0 rounded-xl",
-                      recordsExpanded && !sidebarOpen ? "border border-border/40 bg-muted/30" : "border border-transparent"
-                    )}
-                    onClick={() => setRecordsExpanded((prev) => !prev)}
-                  >
-                    <Database className={cn("shrink-0", sidebarOpen ? "mr-2 h-3.5 w-3.5" : "h-5 w-5")} />
-                    {sidebarOpen && <span className="text-[9px] font-medium">Records</span>}
-                  </Button>
+                  {!sidebarOpen ? (
+                    <Popover>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex justify-center w-full">
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                className={cn(
+                                  "transition-all duration-200 h-10 w-10 p-0 rounded-xl",
+                                  isAccountPanel
+                                    ? "border border-border/40 bg-muted/30 text-foreground"
+                                    : "border border-transparent text-foreground"
+                                )}
+                              >
+                                <UserCog className="h-5 w-5 shrink-0" />
+                              </Button>
+                            </PopoverTrigger>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">Account Management</TooltipContent>
+                      </Tooltip>
+                      <PopoverContent
+                        side="right"
+                        align="start"
+                        className="w-56 p-2 ml-2 bg-background border border-border shadow-md rounded-lg"
+                      >
+                        <div className="space-y-1">
+                          <Button
+                            variant="ghost"
+                            className={navItemClass(isAccountPanel && activeAccountView === "register")}
+                            onClick={() => goTo("/dashboard?panel=account-management&account=register")}
+                          >
+                            <UserPlus className="mr-2 h-3 w-3" />
+                            Register College Coordinators
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            className={navItemClass(isAccountPanel && activeAccountView === "transfer")}
+                            onClick={() => goTo("/dashboard?panel=account-management&account=transfer")}
+                          >
+                            <ArrowRightLeft className="mr-2 h-3 w-3" />
+                            Transfer College Coordinator Role
+                          </Button>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      className={cn(
+                        "h-8 transition-all duration-200",
+                        sidebarOpen ? "w-full justify-start px-3" : "w-10 h-10 mx-auto flex p-0 rounded-xl",
+                        isAccountPanel ? "border border-border/40 bg-muted/30" : "border border-transparent"
+                      )}
+                      onClick={() => setAccountExpanded((prev) => !prev)}
+                    >
+                      <UserCog className={cn("shrink-0", sidebarOpen ? "mr-2 h-3.5 w-3.5" : "h-5 w-5")} />
+                      {sidebarOpen && <span className="text-[9px] font-medium">Account Management</span>}
+                    </Button>
+                  )}
+                  {accountExpanded && sidebarOpen && (
+                    <div className="space-y-1 pl-2">
+                      <Button
+                        variant="ghost"
+                        className={navItemClass(isAccountPanel && activeAccountView === "register")}
+                        onClick={() => goTo("/dashboard?panel=account-management&account=register")}
+                      >
+                        <UserPlus className="mr-2 h-3 w-3" />
+                        Register College Coordinators
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className={navItemClass(isAccountPanel && activeAccountView === "transfer")}
+                        onClick={() => goTo("/dashboard?panel=account-management&account=transfer")}
+                      >
+                        <ArrowRightLeft className="mr-2 h-3 w-3" />
+                        Transfer College Coordinator Role
+                      </Button>
+                    </div>
+                  )}
+                  {withTooltip(
+                    "Records",
+                    <Button
+                      variant="ghost"
+                      className={cn(
+                        "h-8 transition-all duration-200",
+                        sidebarOpen ? "w-full justify-start px-3" : "w-10 h-10 mx-auto flex p-0 rounded-xl",
+                        recordsExpanded && !sidebarOpen ? "border border-border/40 bg-muted/30" : "border border-transparent"
+                      )}
+                      onClick={() => setRecordsExpanded((prev) => !prev)}
+                    >
+                      <Database className={cn("shrink-0", sidebarOpen ? "mr-2 h-3.5 w-3.5" : "h-5 w-5")} />
+                      {sidebarOpen && <span className="text-[9px] font-medium">Records</span>}
+                    </Button>
+                  )}
                   
                   {/* Super admin flattened items when collapsed, nested when expanded */}
                   {(recordsExpanded || !sidebarOpen) && (
                     <div className={cn(sidebarOpen ? "space-y-1 pl-2" : "space-y-1")}>
                       {[
-                        { panel: "accounts", icon: Users, label: "Accounts" },
                         { panel: "projects", icon: FolderKanban, label: "Projects" },
                         { panel: "funding", icon: Database, label: "Funding" },
                         { panel: "awards", icon: Award, label: "Awards" },
@@ -523,20 +706,26 @@ export function Navbar({ user }: NavbarProps) {
                           <div className="flex justify-center w-full">
                             {item.panel === "projects" && !sidebarOpen ? (
                             <Popover>
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  className={cn(
-                                    "transition-all duration-200 h-10 w-10 p-0 rounded-xl",
-                                    (activePanel === "projects" && (activeView === "project-registration" || activeView === "project-proposal"))
-                                      ? "border border-border/40 bg-muted/30 text-foreground"
-                                      : "border border-transparent text-foreground"
-                                  )}
-                                  title={item.label}
-                                >
-                                  <item.icon className="shrink-0 h-5 w-5" />
-                                </Button>
-                              </PopoverTrigger>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex justify-center w-full">
+                                    <PopoverTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        className={cn(
+                                          "transition-all duration-200 h-10 w-10 p-0 rounded-xl",
+                                          (activePanel === "projects" && (activeView === "project-registration" || activeView === "project-proposal"))
+                                            ? "border border-border/40 bg-muted/30 text-foreground"
+                                            : "border border-transparent text-foreground"
+                                        )}
+                                      >
+                                        <item.icon className="shrink-0 h-5 w-5" />
+                                      </Button>
+                                    </PopoverTrigger>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent side="right">{item.label}</TooltipContent>
+                              </Tooltip>
                               <PopoverContent side="right" align="start" className="w-48 p-2 ml-2 bg-background border border-border shadow-md rounded-lg">
                                 <div className="space-y-1">
                                   <Button
@@ -559,23 +748,25 @@ export function Navbar({ user }: NavbarProps) {
                               </PopoverContent>
                             </Popover>
                           ) : (
-                            <Button
-                              variant="ghost"
-                              className={cn(
-                                "transition-all duration-200",
-                                sidebarOpen ? "h-6 w-full justify-start px-2" : "h-10 w-10 p-0 rounded-xl",
-                                activePanel === item.panel 
-                                  ? "border border-border/40 bg-muted/30 text-foreground"
-                                  : "border border-transparent text-foreground"
-                              )}
-                              onClick={() => (item.panel === "projects" && sidebarOpen) 
-                                ? setSuperProjectsExpanded(!superProjectsExpanded) 
-                                : goTo(`/dashboard?panel=${item.panel}`)}
-                              title={!sidebarOpen ? item.label : ""}
-                            >
-                              <item.icon className={cn("shrink-0", sidebarOpen ? "mr-2 h-3 w-3" : "h-5 w-5")} />
-                              {sidebarOpen && <span className="text-[9px]">{item.label}</span>}
-                            </Button>
+                            withTooltip(
+                              item.label,
+                              <Button
+                                variant="ghost"
+                                className={cn(
+                                  "transition-all duration-200",
+                                  sidebarOpen ? "h-6 w-full justify-start px-2" : "h-10 w-10 p-0 rounded-xl",
+                                  activePanel === item.panel 
+                                    ? "border border-border/40 bg-muted/30 text-foreground"
+                                    : "border border-transparent text-foreground"
+                                )}
+                                onClick={() => (item.panel === "projects" && sidebarOpen) 
+                                  ? setSuperProjectsExpanded(!superProjectsExpanded) 
+                                  : goTo(`/dashboard?panel=${item.panel}`)}
+                              >
+                                <item.icon className={cn("shrink-0", sidebarOpen ? "mr-2 h-3 w-3" : "h-5 w-5")} />
+                                {sidebarOpen && <span className="text-[9px]">{item.label}</span>}
+                              </Button>
+                            )
                           )}
                           </div>
                           {item.panel === "projects" && sidebarOpen && superProjectsExpanded && (
@@ -604,8 +795,9 @@ export function Navbar({ user }: NavbarProps) {
                   )}
                 </>
               )}
-            </div>
-          </ScrollArea>
+              </div>
+            </ScrollArea>
+          </TooltipProvider>
         </aside>
       )}
 
