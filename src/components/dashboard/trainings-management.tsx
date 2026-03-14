@@ -286,7 +286,8 @@ export function TrainingsManagement({
 
   const handleExportExcel = async (records: TrainingRecord[]) => {
     try {
-      const ExcelJS = await import("exceljs");
+      const ExcelJSImport = await import("exceljs/dist/exceljs.min.js");
+      const ExcelJS = ExcelJSImport?.default ?? ExcelJSImport;
       const workbook = new ExcelJS.Workbook();
       workbook.creator = "CQER";
       workbook.created = new Date();
