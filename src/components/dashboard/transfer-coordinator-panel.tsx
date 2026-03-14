@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArrowRightLeft, UserMinus, UserRound } from "lucide-react";
+import { ArrowRightLeft, ShieldMinus, UserMinus, UserRound } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { transferCoordinatorRole } from "@/lib/actions/accounts";
+import {
+  deleteCoordinatorAccount,
+  getCoordinatorUsageCounts,
+  transferCoordinatorRole,
+} from "@/lib/actions/accounts";
 import { useRouter } from "next/navigation";
 
 type RoleType = "super_admin" | "college_coordinator" | "unit_coordinator";
@@ -58,6 +62,9 @@ export function TransferCoordinatorPanel({
   const [confirmText, setConfirmText] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
+  const [usageCounts, setUsageCounts] = React.useState<Record<string, number> | null>(null);
+  const [usageTotal, setUsageTotal] = React.useState<number | null>(null);
+  const [usageLoading, setUsageLoading] = React.useState(false);
 
   const sourceAccounts = React.useMemo(() => {
     if (mode === "unit") {
@@ -91,8 +98,40 @@ export function TransferCoordinatorPanel({
     });
   }, [mode, sourceAccount, sourceAccounts]);
 
+  React.useEffect(() => {
+    let active = true;
+    if (!sourceId) {
+      setUsageCounts(null);
+      setUsageTotal(null);
+      return;
+    }
+
+    setUsageLoading(true);
+    getCoordinatorUsageCounts(sourceId).then((result) => {
+      if (!active) return;
+      if ("error" in result) {
+        setUsageCounts(null);
+        setUsageTotal(null);
+        setStatusMessage(result.error);
+      } else {
+        setUsageCounts(result.counts);
+        setUsageTotal(result.total);
+      }
+      setUsageLoading(false);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [sourceId]);
+
+  const canTransfer =
+    confirmationMatched && !!sourceId && !!targetId && (usageTotal ?? 0) > 0;
+  const canDeleteOnly =
+    confirmationMatched && !!sourceId && usageTotal === 0;
+
   const handleTransfer = async () => {
-    if (!sourceId || !targetId || !confirmationMatched) return;
+    if (!canTransfer) return;
     setIsSubmitting(true);
     setStatusMessage(null);
     try {
@@ -117,6 +156,44 @@ export function TransferCoordinatorPanel({
     }
   };
 
+  const handleDeleteOnly = async () => {
+    if (!canDeleteOnly) return;
+    setIsSubmitting(true);
+    setStatusMessage(null);
+    try {
+      const result = await deleteCoordinatorAccount({
+        sourceId,
+        mode,
+      });
+      if (result?.error) {
+        setStatusMessage(result.error);
+      } else {
+        setStatusMessage("Account deleted. No transfers were needed.");
+        setSourceId("");
+        setTargetId("");
+        setConfirmText("");
+        setUsageCounts(null);
+        setUsageTotal(null);
+        router.refresh();
+      }
+    } catch {
+      setStatusMessage("Deletion failed. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const usageEntries = [
+    { key: "projects", label: "Projects" },
+    { key: "trainings", label: "Trainings" },
+    { key: "awards", label: "Awards" },
+    { key: "student_involvement", label: "Student" },
+    { key: "faculty_involvement", label: "Faculty" },
+    { key: "pool_of_experts", label: "Experts" },
+    { key: "technologies_innovations", label: "Technologies" },
+    { key: "ordinance_resolutions", label: "Ordinance" },
+  ];
+
   return (
     <Card className="border-border/50 shadow-sm">
       <CardHeader className="pb-3 pt-4 px-4 space-y-2">
@@ -128,81 +205,115 @@ export function TransferCoordinatorPanel({
           Move all records to a new coordinator before deleting the old account.
         </CardDescription>
       </CardHeader>
-      <CardContent className="px-4 pb-4 space-y-4">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <p className="text-[10px] font-semibold">Coordinator to remove</p>
-            <Badge variant="outline" className="text-[9px] border-border/50">
-              {mode === "unit" ? "Unit Coordinators" : "College Coordinators"}
-            </Badge>
+      <CardContent className="px-4 pb-4 space-y-3">
+        <div className="grid gap-3 md:grid-cols-[1.2fr_0.8fr]">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <p className="text-[10px] font-semibold">Coordinator</p>
+              <Badge variant="outline" className="text-[9px] border-border/50">
+                {mode === "unit" ? "Unit Coordinators" : "College Coordinators"}
+              </Badge>
+            </div>
+            <Select
+              value={sourceId}
+              onValueChange={(value) => {
+                setSourceId(value);
+                setTargetId("");
+                setConfirmText("");
+                setStatusMessage(null);
+              }}
+            >
+              <SelectTrigger className="h-8 text-[10px] data-[placeholder]:text-[9px]">
+                <SelectValue placeholder="Select account" />
+              </SelectTrigger>
+              <SelectContent>
+                {sourceAccounts.map((account) => (
+                  <SelectItem key={account.id} value={account.id} className="text-[10px]">
+                    {formatName(account)} • {account.department || "-"} {account.unit ? `• ${account.unit}` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <Select
-            value={sourceId}
-            onValueChange={(value) => {
-              setSourceId(value);
-              setTargetId("");
-              setConfirmText("");
-              setStatusMessage(null);
-            }}
-          >
-            <SelectTrigger className="h-8 text-[10px]">
-              <SelectValue placeholder="Select account to transfer" />
-            </SelectTrigger>
-            <SelectContent>
-              {sourceAccounts.map((account) => (
-                <SelectItem key={account.id} value={account.id} className="text-[10px]">
-                  {formatName(account)} • {account.department || "-"} {account.unit ? `• ${account.unit}` : ""}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
 
-        <div className="space-y-2">
-          <p className="text-[10px] font-semibold">Deletion confirmation</p>
-          <Input
-            placeholder={expectedPhrase ? `Type "${expectedPhrase}"` : "Select an account first"}
-            className="h-8 text-[10px]"
-            value={confirmText}
-            onChange={(event) => setConfirmText(event.target.value)}
-            disabled={!sourceAccount}
-          />
-          <p className="text-[9px] text-muted-foreground">
-            Type the exact phrase to unlock the transfer.
-          </p>
-        </div>
-
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <UserRound className="h-3.5 w-3.5 text-muted-foreground" />
-            <p className="text-[10px] font-semibold">New coordinator account</p>
-          </div>
-          <Select
-            value={targetId}
-            onValueChange={setTargetId}
-            disabled={!confirmationMatched}
-          >
-            <SelectTrigger className="h-8 text-[10px]">
-              <SelectValue
-                placeholder={
-                  confirmationMatched ? "Select receiver account" : "Confirm deletion phrase to continue"
-                }
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {targetAccounts.map((account) => (
-                <SelectItem key={account.id} value={account.id} className="text-[10px]">
-                  {formatName(account)} • {formatRole(account.user_type)} •{" "}
-                  {account.department || "-"} {account.unit ? `• ${account.unit}` : ""}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {sourceAccount && mode === "unit" && sourceAccount.unit && (
+          <div className="space-y-2">
+            <p className="text-[10px] font-semibold">Confirm deletion</p>
+            <Input
+              placeholder={expectedPhrase ? `Type "${expectedPhrase}"` : "Select account first"}
+              className="h-8 text-[10px] placeholder:text-[9px]"
+              value={confirmText}
+              onChange={(event) => setConfirmText(event.target.value)}
+              disabled={!sourceAccount}
+            />
             <p className="text-[9px] text-muted-foreground">
-              Receiver must be within {sourceAccount.unit}.
+              Type the exact phrase to unlock actions.
             </p>
-          )}
+          </div>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-[1.2fr_0.8fr]">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <UserRound className="h-3.5 w-3.5 text-muted-foreground" />
+              <p className="text-[10px] font-semibold">Receiver account</p>
+            </div>
+            <Select
+              value={targetId}
+              onValueChange={setTargetId}
+              disabled={!confirmationMatched || (usageTotal ?? 0) === 0}
+            >
+              <SelectTrigger className="h-8 text-[10px] data-[placeholder]:text-[9px]">
+                <SelectValue
+                  placeholder={
+                    confirmationMatched
+                      ? (usageTotal ?? 0) === 0
+                        ? "No transfer required"
+                        : "Select receiver"
+                      : "Confirm deletion phrase"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {targetAccounts.map((account) => (
+                  <SelectItem key={account.id} value={account.id} className="text-[10px]">
+                    {formatName(account)} • {formatRole(account.user_type)} •{" "}
+                    {account.department || "-"} {account.unit ? `• ${account.unit}` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {sourceAccount && mode === "unit" && sourceAccount.unit && (
+              <p className="text-[9px] text-muted-foreground">
+                Receiver must be within {sourceAccount.unit}.
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-[10px] font-semibold">Records created</p>
+            <div className="flex flex-wrap gap-1.5">
+              {usageLoading && (
+                <Badge variant="outline" className="text-[9px] border-border/50">
+                  Loading...
+                </Badge>
+              )}
+              {!usageLoading && usageCounts && usageEntries.map((entry) => (
+                <Badge key={entry.key} variant="outline" className="text-[9px] border-border/50">
+                  {entry.label}: {usageCounts[entry.key] ?? 0}
+                </Badge>
+              ))}
+              {!usageLoading && !usageCounts && (
+                <Badge variant="outline" className="text-[9px] border-border/50">
+                  Select an account
+                </Badge>
+              )}
+            </div>
+            {!usageLoading && usageTotal === 0 && sourceAccount && (
+              <p className="text-[9px] text-muted-foreground">
+                No records found. You can delete this account directly.
+              </p>
+            )}
+          </div>
         </div>
 
         {statusMessage && (
@@ -211,14 +322,25 @@ export function TransferCoordinatorPanel({
           </div>
         )}
 
-        <Button
-          onClick={handleTransfer}
-          className="h-8 text-[10px] w-full"
-          disabled={!confirmationMatched || !sourceId || !targetId || isSubmitting}
-        >
-          <ArrowRightLeft className="mr-2 h-3 w-3" />
-          {isSubmitting ? "Transferring..." : "Transfer & Delete"}
-        </Button>
+        <div className="flex items-center justify-end gap-2 pt-1">
+          <Button
+            variant="outline"
+            className="h-8 text-[10px]"
+            onClick={handleDeleteOnly}
+            disabled={!canDeleteOnly || isSubmitting}
+          >
+            <ShieldMinus className="mr-2 h-3 w-3" />
+            Delete Account
+          </Button>
+          <Button
+            onClick={handleTransfer}
+            className="h-8 text-[10px]"
+            disabled={!canTransfer || isSubmitting}
+          >
+            <ArrowRightLeft className="mr-2 h-3 w-3" />
+            {isSubmitting ? "Transferring..." : "Transfer & Delete"}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
