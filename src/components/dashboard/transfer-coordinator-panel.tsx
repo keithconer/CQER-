@@ -112,7 +112,7 @@ export function TransferCoordinatorPanel({
       if ("error" in result) {
         setUsageCounts(null);
         setUsageTotal(null);
-        setStatusMessage(result.error);
+        setStatusMessage(result.error ?? "Failed to load account usage.");
       } else {
         setUsageCounts(result.counts);
         setUsageTotal(result.total);
@@ -141,7 +141,7 @@ export function TransferCoordinatorPanel({
         mode,
       });
       if (result?.error) {
-        setStatusMessage(result.error);
+        setStatusMessage(result.error || null);
       } else {
         setStatusMessage("Transfer completed. The old account was removed.");
         setSourceId("");
@@ -166,7 +166,7 @@ export function TransferCoordinatorPanel({
         mode,
       });
       if (result?.error) {
-        setStatusMessage(result.error);
+        setStatusMessage(result.error || null);
       } else {
         setStatusMessage("Account deleted. No transfers were needed.");
         setSourceId("");
