@@ -102,9 +102,6 @@ export default async function DashboardPage({
   const activeProjectView =
     resolvedSearchParams.view === "project-proposal" ? "project-proposal" : "project-registration";
   const accountView = accountViewParam === "transfer" ? "transfer" : "register";
-  const hasEntitySelection =
-    activePanel === "records" &&
-    (activeProjectView === "project-registration" || activeProjectView === "project-proposal");
   const accountPanelSelected = panelParam === "account-management" || panelParam === "accounts";
   const activePanel =
     panelParam === "overview" ||
@@ -122,6 +119,9 @@ export default async function DashboardPage({
     panelParam === "projects"
       ? panelParam
       : "overview";
+  const hasEntitySelection =
+    activePanel === "records" &&
+    (activeProjectView === "project-registration" || activeProjectView === "project-proposal");
   const hasSuperAdminSelection =
     panelParam === "projects" || panelParam === "records";
   const superAdminPanel: "projects" | "trainings" =
