@@ -1,8 +1,52 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Wallet, GraduationCap } from "lucide-react";
+import { 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  CardTitle, 
+  CardDescription 
+} from "@/components/ui/card";
+import { 
+  Users, 
+  Wallet, 
+  GraduationCap, 
+  TrendingUp, 
+  TrendingDown, 
+  Target, 
+  Info,
+  Calendar,
+  Layers,
+  Activity,
+  ArrowUpRight,
+  ArrowDownRight
+} from "lucide-react";
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  RadarChart,
+  Radar,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+} from "recharts";
+import { 
+  Tooltip, 
+  TooltipContent, 
+  TooltipProvider, 
+  TooltipTrigger 
+} from "@/components/ui/tooltip";
 
 interface DashboardAnalyticsProps {
   users: number;
@@ -25,34 +69,68 @@ interface DashboardAnalyticsProps {
   scopeLabel?: string;
 }
 
-function StatCard({
-  title,
-  value,
-  helper,
-  icon: Icon,
-}: {
-  title: string;
-  value: number;
-  helper: string;
-  icon: typeof Users;
-}) {
-  return (
-    <Card className="border-border/50 shadow-sm">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-[11px] font-semibold text-foreground/80">
-          {title}
-        </CardTitle>
-        <div className="rounded-md border border-border/60 bg-muted/30 p-1.5 text-muted-foreground">
-          <Icon className="h-3.5 w-3.5" />
+// Consistent Monochromatic Palette
+const COLORS = [
+  "hsl(142, 72%, 29%)", // Dark Emerald
+  "hsl(142, 71%, 45%)", // Primary Emerald
+  "hsl(142, 60%, 65%)", // Light Emerald
+  "hsl(142, 50%, 85%)", // Soft Emerald
+];
+
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
+
+const CustomChartTooltip = ({ active, payload, label, prefix = "", suffix = "" }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="rounded-lg border border-border/50 bg-background/95 p-3 shadow-xl backdrop-blur-sm min-w-[160px]">
+        <p className="mb-2 text-[11px] font-bold text-foreground border-b border-border/50 pb-1">{label}</p>
+        <div className="space-y-2">
+          {payload.map((entry: any, index: number) => (
+            <div key={index} className="space-y-1.5">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-1.5">
+                  <div 
+                    className="h-2 w-2 rounded-full" 
+                    style={{ backgroundColor: entry.color || entry.fill }} 
+                  />
+                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                    {entry.name}:
+                  </span>
+                </div>
+                <span className="text-[10px] font-bold text-foreground">
+                  {prefix}{typeof entry.value === 'number' ? entry.value.toLocaleString() : entry.value}{suffix}
+                </span>
+              </div>
+              {/* Breakdown Support */}
+              {entry.payload?.breakdown && entry.payload.breakdown.length > 0 && (
+                <div className="pl-3.5 space-y-1 border-l border-emerald-500/30 ml-1">
+                  {entry.payload.breakdown.slice(0, 3).map((item: any, i: number) => (
+                    <div key={i} className="flex justify-between text-[9px] text-muted-foreground/90">
+                      <span className="truncate max-w-[80px]">{item.name}</span>
+                      <span className="font-medium">{item.count}</span>
+                    </div>
+                  ))}
+                  {entry.payload.breakdown.length > 3 && (
+                    <div className="text-[8px] text-muted-foreground/60 italic">
+                      + {entry.payload.breakdown.length - 3} more...
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
-      </CardHeader>
-      <CardContent className="space-y-1">
-        <p className="text-2xl font-semibold tracking-tight">{value}</p>
-        <p className="text-[10px] text-muted-foreground">{helper}</p>
-      </CardContent>
-    </Card>
-  );
-}
+      </div>
+    );
+  }
+  return null;
+};
 
 export function DashboardAnalytics({
   users,
@@ -72,696 +150,311 @@ export function DashboardAnalytics({
   fundingShare,
   trainingsShare,
   trainingsShareTotal,
-  scopeLabel = "Based on your current visibility",
+  scopeLabel = "Detailed System Analytics",
 }: DashboardAnalyticsProps) {
-  const totalBudgetValue = totalBudget || 0;
-  const budgetSegments = [
-    { label: "Internal", value: internalBudget, color: "bg-[#159E44]" },
-    { label: "External", value: externalBudget, color: "bg-emerald-600/80" },
-  ];
-  const budgetTotalForSegments = Math.max(
-    1,
-    budgetSegments.reduce((sum, item) => sum + item.value, 0)
-  );
-  const statusBars = [
-    { label: "Existing MOA", value: moaExisting, color: "bg-emerald-600/70" },
-    { label: "Completed", value: moaCompleted, color: "bg-emerald-500/60" },
-    { label: "New", value: moaNew, color: "bg-emerald-400/60" },
-  ];
-  const statusMax = Math.max(1, ...statusBars.map((item) => item.value));
-  const trainingsPercent = Math.round((trainingsShare / Math.max(1, trainingsShareTotal)) * 100);
 
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat("en-PH", {
-      style: "currency",
-      currency: "PHP",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-
-  const activityPeak = useMemo(() => {
-    const peak = activitySeries.reduce(
-      (acc, item) => (item.value > acc.value ? item : acc),
-      { label: "-", value: 0, breakdown: [] as { name: string; count: number }[] }
-    );
-    return peak;
-  }, [activitySeries]);
-
+  // Logic: Calculate Trends & Interpretations
   const budgetTrend = useMemo(() => {
-    if (budgetSeries.length < 2) return 0;
-    const last = budgetSeries[budgetSeries.length - 1].value;
-    const prev = budgetSeries[budgetSeries.length - 2].value;
-    if (prev === 0) return last > 0 ? 100 : 0;
-    return Math.round(((last - prev) / prev) * 100);
+    if (budgetSeries.length < 2) return null;
+    const current = budgetSeries[budgetSeries.length - 1].value;
+    const previous = budgetSeries[budgetSeries.length - 2].value;
+    if (previous === 0) return { percent: 100, up: true };
+    const diff = ((current - previous) / previous) * 100;
+    return { percent: Math.round(Math.abs(diff)), up: diff >= 0 };
   }, [budgetSeries]);
 
-  const fundingLead = useMemo(() => {
-    if (fundingShare.length === 0) return "Balanced";
-    const sorted = [...fundingShare].sort((a, b) => b.value - a.value);
-    if (sorted[0].value === sorted[1]?.value) return "Balanced";
-    return sorted[0].label;
-  }, [fundingShare]);
+  const activityInsight = useMemo(() => {
+    if (activitySeries.length === 0) return "Starting data collection phase.";
+    const peak = [...activitySeries].sort((a, b) => b.value - a.value)[0];
+    const total = activitySeries.reduce((acc, c) => acc + c.value, 0);
+    const avg = total / activitySeries.length;
+    if (total === 0) return "No projects recorded in this period.";
+    return `Peak output in ${peak.label} (${peak.value} projects). Monthly consistency is ${avg > 5 ? 'high' : 'developing'}.`;
+  }, [activitySeries]);
+
+  const fundingAnalysis = useMemo(() => {
+    const total = internalFunding + externalFunding;
+    if (total === 0) return "Analysis pending project registration.";
+    const internalPerc = Math.round((internalFunding / total) * 100);
+    if (internalPerc > 70) return "Highly dependent on institutional funding. Expansion of external partnerships recommended.";
+    if (internalPerc < 30) return "Strong external funding portfolio. Maintain internal base for stability.";
+    return "Balanced distribution between internal and external resources.";
+  }, [internalFunding, externalFunding]);
+
+  const moaInsight = useMemo(() => {
+    const total = moaExisting + moaCompleted + moaNew;
+    if (total === 0) return "No active project lifecycles logged.";
+    if (moaCompleted > moaNew) return "Focus on wrapping up existing projects. Increased intake of 'New' projects advised.";
+    return "Pipeline is active with new agreements outshining completions.";
+  }, [moaExisting, moaCompleted, moaNew]);
 
   return (
-    <Card className="border-border/50 bg-muted/10 shadow-sm">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-xs font-semibold">Overview Analytics</CardTitle>
-        <p className="text-[10px] text-muted-foreground">{scopeLabel}</p>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <StatCard
-            title="Registered Users"
-            value={users}
-            helper="Active coordinators and admins"
+    <TooltipProvider delayDuration={0}>
+      <div className="space-y-5">
+        {/* KPI Cards */}
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+          <CompactStatCard 
+            label="Total Personnel" 
+            value={users} 
+            sub="Active Coordinators"
             icon={Users}
+            tooltip="Consolidated count of registered super admins, college and unit coordinators."
           />
-          <StatCard
-            title="Internal Funding"
-            value={internalFunding}
-            helper="Projects tagged as internal"
+          <CompactStatCard 
+            label="Monetary Assets" 
+            value={formatCurrency(totalBudget)} 
+            sub={budgetTrend ? (
+              <span className={budgetTrend.up ? "text-emerald-600 flex items-center" : "text-rose-600 flex items-center"}>
+                {budgetTrend.up ? <ArrowUpRight className="h-2.5 w-2.5 mr-0.5" /> : <ArrowDownRight className="h-2.5 w-2.5 mr-0.5" />}
+                {budgetTrend.percent}% from prev month
+              </span>
+            ) : "Budget Overview"}
             icon={Wallet}
+            tooltip="The comprehensive sum of budgets from all visible projects and active proposals."
           />
-          <StatCard
-            title="External Funding"
-            value={externalFunding}
-            helper="Projects tagged as external"
-            icon={Wallet}
+          <CompactStatCard 
+            label="Project Matrix" 
+            value={internalFunding + externalFunding} 
+            sub="Live Submissions"
+            icon={Activity}
+            tooltip="Sum of all project records, excluding historical archived data."
           />
-          <StatCard
-            title="Trainings"
-            value={trainings}
-            helper="Training records logged"
+          <CompactStatCard 
+            label="Capability Building" 
+            value={trainings} 
+            sub={`${Math.round((trainingsShare / trainingsShareTotal) * 100)}% Activity Share`}
             icon={GraduationCap}
+            tooltip="Number of training and community improvement programs logged in the system."
           />
         </div>
 
-        <div className="grid gap-3 lg:grid-cols-[1.1fr,1fr]">
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-[11px] font-semibold">
-                Overall Budget Total
-              </CardTitle>
-              <p className="text-[10px] text-muted-foreground">
-                Combined funding across visible projects
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-xl font-semibold tracking-tight">
-                {formatCurrency(totalBudgetValue)}
-              </p>
-              <div className="space-y-2">
-                <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted/40">
-                  <div className="flex h-full w-full">
-                    {budgetSegments.map((segment) => (
-                      <div
-                        key={segment.label}
-                        className={segment.color}
-                        style={{
-                          width: `${(segment.value / budgetTotalForSegments) * 100}%`,
-                        }}
-                      />
-                    ))}
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-3 text-[10px] text-muted-foreground">
-                  {budgetSegments.map((segment) => (
-                    <span key={segment.label} className="flex items-center gap-1.5">
-                      <span className={`h-2 w-2 rounded-full ${segment.color}`} />
-                      {segment.label}: {formatCurrency(segment.value)}
-                    </span>
-                  ))}
-                </div>
+        {/* Analytics Visualization Grid */}
+        <div className="grid gap-4 lg:grid-cols-12 lg:grid-rows-2">
+          
+          {/* Activity Over Time (6 cols) */}
+          <Card className="lg:col-span-8 border-border/50 shadow-sm flex flex-col overflow-hidden bg-card/50">
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
+              <div className="space-y-0.5">
+                <CardTitle className="text-[13px] font-bold flex items-center gap-2">
+                  <TrendingUp className="h-3.5 w-3.5 text-emerald-600" />
+                  Growth Trajectory
+                </CardTitle>
+                <CardDescription className="text-[10px]">Monthly project generation and {activityBreakdownLabel} activity</CardDescription>
               </div>
-              <div className="pt-2">
-                <LineChart
-                  data={budgetSeries}
-                  label="Budget trend"
-                  valueFormatter={formatCurrency}
-                />
-                <p className="mt-2 text-[10px] text-muted-foreground">
-                  Budget is {budgetTrend >= 0 ? "up" : "down"} {Math.abs(budgetTrend)}% from last month.
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="h-7 w-7 rounded-full bg-emerald-100/50 dark:bg-emerald-900/30 flex items-center justify-center cursor-help">
+                    <Info className="h-3.5 w-3.5 text-emerald-600" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-[200px] p-2">
+                  <p className="font-bold text-[9px] uppercase mb-1">Interpretation</p>
+                  <p className="text-[10px] leading-relaxed">{activityInsight}</p>
+                </TooltipContent>
+              </Tooltip>
+            </CardHeader>
+            <CardContent className="flex-1">
+              <div className="h-[240px] w-full pt-4">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={activitySeries} margin={{ top: 0, right: 10, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="activityGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(142, 71%, 45%)" stopOpacity={0.15}/>
+                        <stop offset="95%" stopColor="hsl(142, 71%, 45%)" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" opacity={0.4} />
+                    <XAxis 
+                      dataKey="label" 
+                      fontSize={9} 
+                      tickLine={false} 
+                      axisLine={false} 
+                      tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                      tickFormatter={(val) => val.split(' ')[0]}
+                    />
+                    <YAxis 
+                      fontSize={9} 
+                      tickLine={false} 
+                      axisLine={false} 
+                      tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                    />
+                    <RechartsTooltip content={<CustomChartTooltip suffix=" projects" />} />
+                    <Area 
+                      type="monotone" 
+                      dataKey="value" 
+                      name="Volume"
+                      stroke="hsl(142, 71%, 45%)" 
+                      strokeWidth={2}
+                      fillOpacity={1} 
+                      fill="url(#activityGrad)" 
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Funding Pie (4 cols) */}
+          <Card className="lg:col-span-4 border-border/50 shadow-sm flex flex-col bg-card/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-[13px] font-bold flex items-center gap-2">
+                <Layers className="h-3.5 w-3.5 text-emerald-600" />
+                Funding Profile
+              </CardTitle>
+              <CardDescription className="text-[10px]">Strategic resource classification</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center">
+              <div className="h-[180px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={fundingShare}
+                      cx="50%" cy="50%"
+                      innerRadius={50} outerRadius={70}
+                      paddingAngle={8}
+                      dataKey="value" nameKey="label"
+                      stroke="none"
+                    >
+                      {fundingShare.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip content={<CustomChartTooltip suffix=" projects" />} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="w-full space-y-2 mt-2">
+                {fundingShare.map((item, index) => (
+                  <div key={item.label} className="flex items-center justify-between text-[10px]">
+                    <div className="flex items-center gap-1.5 font-medium text-muted-foreground">
+                      <div className="h-2 w-2 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                      {item.label}
+                    </div>
+                    <span className="font-bold">{item.value}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 w-full p-2.5 rounded-lg border border-border/50 bg-muted/20">
+                <p className="text-[10px] italic text-muted-foreground leading-snug">
+                  <span className="font-bold text-emerald-600 not-italic mr-1">Insight:</span>
+                  {fundingAnalysis}
                 </p>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-border/50 shadow-sm">
+          {/* Budget Bar (6 cols) */}
+          <Card className="lg:col-span-6 border-border/50 shadow-sm flex flex-col bg-card/50">
             <CardHeader className="pb-2">
-              <CardTitle className="text-[11px] font-semibold">
-                MOA Status Snapshot
+              <CardTitle className="text-[13px] font-bold flex items-center gap-2">
+                <Wallet className="h-3.5 w-3.5 text-emerald-600" />
+                Allocated Capital Trend
               </CardTitle>
-              <p className="text-[10px] text-muted-foreground">
-                Existing, completed, and new project agreements
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <BarChart
-                data={statusBars.map((item) => ({ label: item.label, value: item.value }))}
-                colorClass="bg-emerald-500/70"
-              />
-              <p className="text-[10px] text-muted-foreground">
-                Existing MOAs remain the largest share this period.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid gap-3 lg:grid-cols-[1.6fr,1fr]">
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-[11px] font-semibold">
-                Total Project Activity
-              </CardTitle>
-              <p className="text-[10px] text-muted-foreground">
-                Projects created in the last six months
-              </p>
+              <CardDescription className="text-[10px]">Funds injected into projects per period</CardDescription>
             </CardHeader>
             <CardContent>
-              <AreaChart
-                data={activitySeries}
-                breakdownLabel={activityBreakdownLabel}
-              />
-              <p className="mt-2 text-[10px] text-muted-foreground">
-                Peak activity in {activityPeak.label} with {activityPeak.value} projects logged.
-              </p>
-            </CardContent>
-          </Card>
-
-          <div className="space-y-3">
-            <Card className="border-border/50 shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-[11px] font-semibold">
-                  Funding Split
-                </CardTitle>
-                <p className="text-[10px] text-muted-foreground">
-                  Internal vs external projects
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <PieChart data={fundingShare} />
-                <p className="text-[10px] text-muted-foreground">
-                  {fundingLead} funding leads the project mix.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-border/50 shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-[11px] font-semibold">
-                  Training Share
-                </CardTitle>
-                <p className="text-[10px] text-muted-foreground">
-                  Trainings as a share of total activities
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <RadialChart value={trainingsPercent} />
-                <p className="text-[10px] text-muted-foreground">
-                  Trainings account for {trainingsPercent}% of logged activity.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        <div className="grid gap-3 lg:grid-cols-[1fr,1fr]">
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-[11px] font-semibold">
-                Internal vs External Radar
-              </CardTitle>
-              <p className="text-[10px] text-muted-foreground">
-                Project counts by month
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <RadarChart data={radarSeries} />
-              <p className="text-[10px] text-muted-foreground">
-                Compare internal and external momentum over time.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-[11px] font-semibold">
-                Funding Type Distribution
-              </CardTitle>
-              <p className="text-[10px] text-muted-foreground">
-                Share of internal vs external totals
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <BarChart
-                data={fundingShare.map((item) => ({ label: item.label, value: item.value }))}
-                colorClass="bg-emerald-600/60"
-                horizontal
-              />
-              <p className="text-[10px] text-muted-foreground">
-                Use this to balance funding pipelines.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function LineChart({
-  data,
-  label,
-  valueFormatter = (value: number) => String(value),
-}: {
-  data: { label: string; value: number }[];
-  label: string;
-  valueFormatter?: (value: number) => string;
-}) {
-  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
-  const width = 560;
-  const height = 160;
-  const padding = 24;
-  const maxValue = Math.max(1, ...data.map((item) => item.value));
-  const points = data.map((item, index) => {
-    const x =
-      padding +
-      (index * (width - padding * 2)) / Math.max(1, data.length - 1);
-    const y =
-      height -
-      padding -
-      (item.value / maxValue) * (height - padding * 2);
-    return { x, y };
-  });
-  const path = points
-    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
-    .join(" ");
-  const hovered = hoverIndex !== null ? data[hoverIndex] : null;
-
-  return (
-    <div className="relative">
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        className="w-full h-36"
-        onMouseLeave={() => setHoverIndex(null)}
-        onMouseMove={(event) => {
-          const rect = event.currentTarget.getBoundingClientRect();
-          const relativeX = event.clientX - rect.left;
-          const index = Math.round(
-            (relativeX / rect.width) * (data.length - 1)
-          );
-          const boundedIndex = Math.max(0, Math.min(data.length - 1, index));
-          setHoverIndex(boundedIndex);
-        }}
-      >
-        <path
-          d={path}
-          fill="none"
-          stroke="currentColor"
-          className="text-emerald-600/80"
-          strokeWidth="2"
-        />
-        {points.map((point, index) => (
-          <circle
-            key={data[index]?.label}
-            cx={point.x}
-            cy={point.y}
-            r={hoverIndex === index ? 4 : 2.5}
-            className="fill-emerald-600"
-          />
-        ))}
-      </svg>
-      {hovered && hoverIndex !== null && (
-        <div className="absolute left-0 top-2">
-          <div className="rounded-md border border-border/60 bg-background px-2 py-1 text-[10px] shadow-sm">
-            <p className="font-semibold">{label}</p>
-            <p className="text-muted-foreground">{hovered.label}</p>
-            <p className="font-medium">{valueFormatter(hovered.value)}</p>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function AreaChart({
-  data,
-  breakdownLabel,
-}: {
-  data: { label: string; value: number; breakdown: { name: string; count: number }[] }[];
-  breakdownLabel: string;
-}) {
-  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
-  const width = 640;
-  const height = 200;
-  const padding = 26;
-  const maxValue = Math.max(1, ...data.map((item) => item.value));
-  const points = data.map((item, index) => {
-    const x =
-      padding +
-      (index * (width - padding * 2)) / Math.max(1, data.length - 1);
-    const y =
-      height -
-      padding -
-      (item.value / maxValue) * (height - padding * 2);
-    return { x, y };
-  });
-  const linePath = points
-    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
-    .join(" ");
-  const areaPath = `${linePath} L ${points[points.length - 1]?.x ?? padding} ${
-    height - padding
-  } L ${points[0]?.x ?? padding} ${height - padding} Z`;
-  const hovered = hoverIndex !== null ? data[hoverIndex] : null;
-
-  return (
-    <div className="relative">
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        className="w-full h-44"
-        onMouseLeave={() => setHoverIndex(null)}
-        onMouseMove={(event) => {
-          const rect = event.currentTarget.getBoundingClientRect();
-          const relativeX = event.clientX - rect.left;
-          const index = Math.round(
-            (relativeX / rect.width) * (data.length - 1)
-          );
-          const boundedIndex = Math.max(0, Math.min(data.length - 1, index));
-          setHoverIndex(boundedIndex);
-        }}
-      >
-        <path
-          d={areaPath}
-          className="fill-emerald-600/10"
-          stroke="none"
-        />
-        <path
-          d={linePath}
-          fill="none"
-          stroke="currentColor"
-          className="text-emerald-600/80"
-          strokeWidth="2"
-        />
-        {points.map((point, index) => (
-          <circle
-            key={data[index]?.label}
-            cx={point.x}
-            cy={point.y}
-            r={hoverIndex === index ? 4 : 2.5}
-            className="fill-emerald-600"
-          />
-        ))}
-      </svg>
-      {hovered && hoverIndex !== null && (
-        <div className="absolute left-2 top-2 rounded-md border border-border/60 bg-background px-2 py-1 text-[10px] shadow-sm">
-          <p className="font-semibold">{hovered.label}</p>
-          <p className="text-muted-foreground">
-            {hovered.value} projects
-          </p>
-          <div className="pt-1">
-            <p className="text-[9px] text-muted-foreground">
-              {breakdownLabel} breakdown
-            </p>
-            {hovered.breakdown.slice(0, 3).map((entry) => (
-              <p key={entry.name} className="text-[9px]">
-                {entry.name}: {entry.count}
-              </p>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function BarChart({
-  data,
-  colorClass,
-  horizontal = false,
-}: {
-  data: { label: string; value: number }[];
-  colorClass: string;
-  horizontal?: boolean;
-}) {
-  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
-  const maxValue = Math.max(1, ...data.map((item) => item.value));
-  return (
-    <div className="relative">
-      <div className={`grid gap-3 ${horizontal ? "grid-rows-3" : "grid-cols-3"}`}>
-        {data.map((item, index) => {
-          const percent = (item.value / maxValue) * 100;
-          return (
-            <div
-              key={item.label}
-              className="flex flex-col items-center gap-2"
-              onMouseEnter={() => setHoverIndex(index)}
-              onMouseLeave={() => setHoverIndex(null)}
-            >
-              <div
-                className={`w-full ${horizontal ? "h-3" : "h-24"} rounded-md bg-muted/30 overflow-hidden`}
-              >
-                <div
-                  className={`${colorClass}`}
-                  style={
-                    horizontal
-                      ? { width: `${percent}%`, height: "100%" }
-                      : { height: `${percent}%`, width: "100%" }
-                  }
-                />
+              <div className="h-[200px] w-full pt-4">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={budgetSeries} margin={{ top: 0, right: 10, left: 10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" opacity={0.3} />
+                    <XAxis 
+                      dataKey="label" 
+                      fontSize={9} 
+                      tickLine={false} axisLine={false} 
+                      tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                      tickFormatter={(val) => val.split(' ')[0]}
+                    />
+                    <YAxis 
+                      fontSize={9} 
+                      tickLine={false} axisLine={false} 
+                      tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                      tickFormatter={(val) => `₱${val >= 1000 ? (val/1000).toFixed(0)+'k' : val}`}
+                    />
+                    <RechartsTooltip content={<CustomChartTooltip prefix="₱" />} />
+                    <Bar 
+                      dataKey="value" name="Allocation"
+                      fill="hsl(142, 71%, 45%)" 
+                      radius={[4, 4, 0, 0]} maxBarSize={30}
+                    >
+                      {budgetSeries.map((_, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={index === budgetSeries.length - 1 ? "hsl(142, 72%, 29%)" : "hsl(142, 71%, 45%)"} 
+                          fillOpacity={0.8}
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
-              <p className="text-[10px] text-muted-foreground text-center">
-                {item.label}
-              </p>
+            </CardContent>
+          </Card>
+
+          {/* MOA Radar (6 cols) */}
+          <Card className="lg:col-span-6 border-border/50 shadow-sm flex flex-col bg-card/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-[13px] font-bold flex items-center gap-2">
+                <Target className="h-3.5 w-3.5 text-emerald-600" />
+                Agreement Performance
+              </CardTitle>
+              <CardDescription className="text-[10px]">Lifecycle distribution of MOA/Project status</CardDescription>
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col lg:flex-row items-center gap-4">
+              <div className="h-[180px] w-full lg:w-3/5">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RadarChart cx="50%" cy="50%" outerRadius="70%" data={[
+                    { subject: 'Historical', value: moaExisting || 0 },
+                    { subject: 'Completed', value: moaCompleted || 0 },
+                    { subject: 'Propelled', value: moaNew || 0 },
+                  ]}>
+                    <PolarGrid stroke="hsl(var(--muted))" />
+                    <PolarAngleAxis dataKey="subject" fontSize={9} tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                    <Radar
+                      name="Agreements" dataKey="value"
+                      stroke="hsl(142, 71%, 45%)" fill="hsl(142, 71%, 45%)" fillOpacity={0.4}
+                    />
+                    <RechartsTooltip content={<CustomChartTooltip suffix=" projects" />} />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="w-full lg:w-2/5 p-3 rounded-lg bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100/50 dark:border-emerald-900/30">
+                <p className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 mb-1 flex items-center gap-1.5">
+                  <Info className="h-3 w-3" />
+                  Status Analysis
+                </p>
+                <p className="text-[10px] leading-relaxed text-emerald-800/80 dark:text-emerald-200/80 font-medium">
+                  {moaInsight}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+        </div>
+      </div>
+    </TooltipProvider>
+  );
+}
+
+function CompactStatCard({ label, value, sub, icon: Icon, tooltip }: any) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Card className="border-border/50 shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5 group bg-card/50">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="space-y-0.5">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground group-hover:text-emerald-600 transition-colors">{label}</p>
+              <h3 className="text-lg font-bold tracking-tight">{typeof value === 'number' ? value.toLocaleString() : value}</h3>
+              <p className="text-[9px] text-muted-foreground/80 font-medium flex items-center">{sub}</p>
             </div>
-          );
-        })}
-      </div>
-      {hoverIndex !== null && (
-        <div className="absolute right-0 top-0 rounded-md border border-border/60 bg-background px-2 py-1 text-[10px] shadow-sm">
-          <p className="font-semibold">{data[hoverIndex].label}</p>
-          <p className="text-muted-foreground">{data[hoverIndex].value} records</p>
-        </div>
-      )}
-    </div>
+            <div className="h-9 w-9 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300">
+              <Icon className="h-4.5 w-4.5" />
+            </div>
+          </CardContent>
+        </Card>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" className="text-[10px] bg-foreground text-background border-none px-3 py-1.5 shadow-xl font-medium">
+        {tooltip}
+      </TooltipContent>
+    </Tooltip>
   );
-}
-
-function PieChart({ data }: { data: { label: string; value: number }[] }) {
-  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
-  const total = Math.max(1, data.reduce((sum, item) => sum + item.value, 0));
-  const radius = 60;
-  const center = 70;
-  let startAngle = 0;
-  const colors = ["#159E44", "#3B8064", "#4B5563"];
-
-  const segments = data.map((item, index) => {
-    const angle = (item.value / total) * 360;
-    const endAngle = startAngle + angle;
-    const largeArc = angle > 180 ? 1 : 0;
-    const start = polarToCartesian(center, center, radius, endAngle);
-    const end = polarToCartesian(center, center, radius, startAngle);
-    const path = [
-      `M ${center} ${center}`,
-      `L ${start.x} ${start.y}`,
-      `A ${radius} ${radius} 0 ${largeArc} 0 ${end.x} ${end.y}`,
-      "Z",
-    ].join(" ");
-    const segment = { path, color: colors[index % colors.length], item, startAngle, endAngle };
-    startAngle = endAngle;
-    return segment;
-  });
-
-  return (
-    <div className="relative flex items-center gap-4">
-      <svg
-        viewBox={`0 0 ${center * 2} ${center * 2}`}
-        className="h-36 w-36"
-      >
-        {segments.map((segment, index) => (
-          <path
-            key={segment.item.label}
-            d={segment.path}
-            fill={segment.color}
-            fillOpacity={hoverIndex === index ? 0.9 : 0.6}
-            onMouseEnter={() => setHoverIndex(index)}
-            onMouseLeave={() => setHoverIndex(null)}
-          />
-        ))}
-      </svg>
-      <div className="space-y-2 text-[10px] text-muted-foreground">
-        {data.map((item, index) => (
-          <div key={item.label} className="flex items-center gap-2">
-            <span
-              className="h-2 w-2 rounded-full"
-              style={{ backgroundColor: colors[index % colors.length] }}
-            />
-            <span>
-              {item.label}: {item.value}
-            </span>
-          </div>
-        ))}
-      </div>
-      {hoverIndex !== null && (
-        <div className="absolute left-0 top-0 rounded-md border border-border/60 bg-background px-2 py-1 text-[10px] shadow-sm">
-          <p className="font-semibold">{data[hoverIndex].label}</p>
-          <p className="text-muted-foreground">{data[hoverIndex].value} projects</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function RadialChart({ value }: { value: number }) {
-  const [hovered, setHovered] = useState(false);
-  const radius = 54;
-  const circumference = 2 * Math.PI * radius;
-  const progress = Math.min(100, Math.max(0, value));
-  const offset = circumference - (progress / 100) * circumference;
-  return (
-    <div
-      className="relative flex items-center justify-center"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      <svg className="h-32 w-32" viewBox="0 0 140 140">
-        <circle
-          cx="70"
-          cy="70"
-          r={radius}
-          stroke="currentColor"
-          className="text-muted/30"
-          strokeWidth="10"
-          fill="none"
-        />
-        <circle
-          cx="70"
-          cy="70"
-          r={radius}
-          stroke="currentColor"
-          className="text-emerald-600/80"
-          strokeWidth="10"
-          fill="none"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-          transform="rotate(-90 70 70)"
-        />
-      </svg>
-      <div className="absolute text-center">
-        <p className="text-lg font-semibold">{progress}%</p>
-        <p className="text-[10px] text-muted-foreground">Trainings</p>
-      </div>
-      {hovered && (
-        <div className="absolute -top-2 right-0 rounded-md border border-border/60 bg-background px-2 py-1 text-[10px] shadow-sm">
-          Trainings share: {progress}%
-        </div>
-      )}
-    </div>
-  );
-}
-
-function RadarChart({
-  data,
-}: {
-  data: { label: string; internal: number; external: number }[];
-}) {
-  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
-  const size = 240;
-  const center = size / 2;
-  const radius = 80;
-  const maxValue = Math.max(
-    1,
-    ...data.flatMap((item) => [item.internal, item.external])
-  );
-  const angleStep = (Math.PI * 2) / data.length;
-
-  const buildPoints = (key: "internal" | "external") =>
-    data.map((item, index) => {
-      const value = item[key];
-      const angle = -Math.PI / 2 + index * angleStep;
-      const r = (value / maxValue) * radius;
-      return {
-        x: center + r * Math.cos(angle),
-        y: center + r * Math.sin(angle),
-      };
-    });
-
-  const internalPoints = buildPoints("internal");
-  const externalPoints = buildPoints("external");
-  return (
-    <div className="relative flex items-center justify-center">
-      <svg className="h-52 w-52" viewBox={`0 0 ${size} ${size}`}>
-        {[1, 2, 3, 4].map((step) => (
-          <polygon
-            key={step}
-            points={data
-              .map((_, index) => {
-                const angle = -Math.PI / 2 + index * angleStep;
-                const r = (radius * step) / 4;
-                return `${center + r * Math.cos(angle)},${center + r * Math.sin(angle)}`;
-              })
-              .join(" ")}
-            fill="none"
-            stroke="currentColor"
-            className="text-muted/30"
-            strokeWidth="1"
-          />
-        ))}
-        <polygon
-          points={internalPoints.map((point) => `${point.x},${point.y}`).join(" ")}
-          fill="rgba(21, 158, 68, 0.15)"
-          stroke="rgba(21, 158, 68, 0.6)"
-          strokeWidth="2"
-        />
-        <polygon
-          points={externalPoints.map((point) => `${point.x},${point.y}`).join(" ")}
-          fill="rgba(75, 85, 99, 0.15)"
-          stroke="rgba(75, 85, 99, 0.6)"
-          strokeWidth="2"
-        />
-        {data.map((item, index) => {
-          const angle = -Math.PI / 2 + index * angleStep;
-          const labelX = center + (radius + 18) * Math.cos(angle);
-          const labelY = center + (radius + 18) * Math.sin(angle);
-          return (
-            <text
-              key={item.label}
-              x={labelX}
-              y={labelY}
-              textAnchor="middle"
-              className="text-[8px] fill-muted-foreground"
-            >
-              {item.label.split(" ")[0]}
-            </text>
-          );
-        })}
-        {data.map((item, index) => (
-          <circle
-            key={item.label}
-            cx={internalPoints[index].x}
-            cy={internalPoints[index].y}
-            r={3}
-            className="fill-emerald-600"
-            onMouseEnter={() => setHoverIndex(index)}
-            onMouseLeave={() => setHoverIndex(null)}
-          />
-        ))}
-      </svg>
-      {hoverIndex !== null && (
-        <div className="absolute right-0 top-0 rounded-md border border-border/60 bg-background px-2 py-1 text-[10px] shadow-sm">
-          <p className="font-semibold">{data[hoverIndex].label}</p>
-          <p className="text-muted-foreground">Internal: {data[hoverIndex].internal}</p>
-          <p className="text-muted-foreground">External: {data[hoverIndex].external}</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function polarToCartesian(cx: number, cy: number, r: number, angle: number) {
-  const angleRad = ((angle - 90) * Math.PI) / 180.0;
-  return {
-    x: cx + r * Math.cos(angleRad),
-    y: cy + r * Math.sin(angleRad),
-  };
 }

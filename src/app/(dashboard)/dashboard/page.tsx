@@ -469,9 +469,10 @@ export default async function DashboardPage({
         if (type === "internal") acc.internal += budget;
         if (type === "external") acc.external += budget;
         const category = (project.category || "").toLowerCase();
-        if (category === "new") acc.moaNew += 1;
+        if (category === "new" || category === "on process" || category === "proposal") acc.moaNew += 1;
         if (category === "completed") acc.moaCompleted += 1;
         if (category === "existing" || category === "existing/ongoing") acc.moaExisting += 1;
+
         return acc;
       },
       { total: 0, internal: 0, external: 0, moaExisting: 0, moaCompleted: 0, moaNew: 0 }
@@ -549,9 +550,10 @@ export default async function DashboardPage({
         if (type === "internal") acc.internal += budget;
         if (type === "external") acc.external += budget;
         const category = (project.category || "").toLowerCase();
-        if (category === "new") acc.moaNew += 1;
+        if (category === "new" || category === "on process" || category === "proposal") acc.moaNew += 1;
         if (category === "completed") acc.moaCompleted += 1;
         if (category === "existing" || category === "existing/ongoing") acc.moaExisting += 1;
+
         return acc;
       },
       { total: 0, internal: 0, external: 0, moaExisting: 0, moaCompleted: 0, moaNew: 0 }
@@ -606,9 +608,10 @@ export default async function DashboardPage({
         if (type === "internal") acc.internal += budget;
         if (type === "external") acc.external += budget;
         const category = (project.category || "").toLowerCase();
-        if (category === "new") acc.moaNew += 1;
+        if (category === "new" || category === "on process" || category === "proposal") acc.moaNew += 1;
         if (category === "completed") acc.moaCompleted += 1;
         if (category === "existing" || category === "existing/ongoing") acc.moaExisting += 1;
+
         return acc;
       },
       { total: 0, internal: 0, external: 0, moaExisting: 0, moaCompleted: 0, moaNew: 0 }
