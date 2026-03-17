@@ -241,9 +241,10 @@ export function DashboardAnalytics({
                 </CardTitle>
                 <CardDescription className="text-[10px]">Monthly project generation and {activityBreakdownLabel} activity</CardDescription>
               </div>
-              <div className="h-7 w-7 rounded-full bg-emerald-100/50 dark:bg-emerald-900/30 flex items-center justify-center">
+              <div className="h-7 w-7 rounded-full bg-muted/40 flex items-center justify-center">
                 <Info className="h-3.5 w-3.5 text-emerald-600" />
               </div>
+
 
             </CardHeader>
             <CardContent className="flex-1">
@@ -332,12 +333,13 @@ export function DashboardAnalytics({
                   </div>
                 ))}
               </div>
-              <div className="mt-4 w-full p-2.5 rounded-lg border border-border/50 bg-muted/20">
+              <div className="mt-4 w-full p-2.5 rounded-lg border border-border/30 bg-muted/5">
                 <p className="text-[10px] italic text-muted-foreground leading-snug">
                   <span className="font-bold text-emerald-600 not-italic mr-1">Insight:</span>
                   {fundingAnalysis}
                 </p>
               </div>
+
             </CardContent>
           </Card>
 
@@ -425,15 +427,16 @@ export function DashboardAnalytics({
                   </RadarChart>
                 </ResponsiveContainer>
               </div>
-              <div className="w-full lg:w-2/5 p-3 rounded-lg bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100/50 dark:border-emerald-900/30">
-                <p className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 mb-1 flex items-center gap-1.5">
-                  <Info className="h-3 w-3" />
+              <div className="w-full lg:w-2/5 p-3 rounded-lg bg-muted/5 border border-border/30">
+                <p className="text-[11px] font-bold text-foreground mb-1 flex items-center gap-1.5">
+                  <Info className="h-3 w-3 text-emerald-600" />
                   Status Analysis
                 </p>
-                <p className="text-[10px] leading-relaxed text-emerald-800/80 dark:text-emerald-200/80 font-medium">
+                <p className="text-[10px] leading-relaxed text-muted-foreground font-medium">
                   {moaInsight}
                 </p>
               </div>
+
             </CardContent>
           </Card>
 
@@ -454,9 +457,10 @@ function CompactStatCard({ label, value, sub, icon: Icon, tooltip }: any) {
               <h3 className="text-lg font-bold tracking-tight">{typeof value === 'number' ? value.toLocaleString() : value}</h3>
               <p className="text-[9px] text-muted-foreground/80 font-medium flex items-center">{sub}</p>
             </div>
-            <div className="h-9 w-9 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300">
+            <div className="h-9 w-9 rounded-xl bg-muted/40 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300">
               <Icon className="h-4.5 w-4.5" />
             </div>
+
           </CardContent>
         </Card>
       </TooltipTrigger>

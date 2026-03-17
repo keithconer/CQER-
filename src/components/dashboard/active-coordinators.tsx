@@ -58,9 +58,10 @@ export function ActiveCoordinators({ coordinators, departments }: ActiveCoordina
         <div className="space-y-1">
           <CardTitle className="text-[14px] font-bold flex items-center gap-2">
             <Medal className="h-4 w-4 text-emerald-600" />
-            Top Engagement Leaders
+            Engagement Leaderboard
           </CardTitle>
-          <CardDescription className="text-[11px]">Most active extension coordinators across the university</CardDescription>
+          <CardDescription className="text-[11px]">Research and extension activity rankings</CardDescription>
+
         </div>
         <div className="flex items-center gap-2">
           <Select value={filter} onValueChange={setFilter}>
@@ -86,22 +87,23 @@ export function ActiveCoordinators({ coordinators, departments }: ActiveCoordina
               filteredCoordinators.map((coordinator, index) => (
                 <div 
                   key={coordinator.id} 
-                  className="flex items-center justify-between p-3.5 hover:bg-emerald-50/20 dark:hover:bg-emerald-950/10 transition-colors group"
+                  className="flex items-center justify-between p-3.5 hover:bg-muted/30 transition-colors group"
                 >
                   <div className="flex items-center gap-3">
                     <div className="relative">
-                      <Avatar className="h-9 w-9 border-2 border-background shadow-sm group-hover:border-emerald-500/30 transition-all">
+                      <Avatar className="h-9 w-9 border border-border/50 shadow-sm group-hover:border-emerald-500/50 transition-all">
                         <AvatarImage src={coordinator.avatar_url || ""} />
-                        <AvatarFallback className="bg-emerald-50 text-emerald-700 font-bold text-[11px] dark:bg-emerald-900/30 dark:text-emerald-400">
+                        <AvatarFallback className="bg-muted text-muted-foreground font-bold text-[11px]">
                           {coordinator.name.substring(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       {index < 3 && filter === "all" && (
-                        <div className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-emerald-600 flex items-center justify-center border-2 border-background">
+                        <div className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-emerald-600 flex items-center justify-center border-2 border-background z-10">
                           <span className="text-[8px] font-bold text-white leading-none">{index + 1}</span>
                         </div>
                       )}
                     </div>
+
                     <div className="space-y-0.5 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-[12px] font-bold text-foreground truncate max-w-[150px]">
@@ -111,22 +113,24 @@ export function ActiveCoordinators({ coordinators, departments }: ActiveCoordina
                           {coordinator.role.replace('_', ' ')}
                         </Badge>
                       </div>
-                      <p className="text-[10px] text-muted-foreground truncate max-w-[200px] font-medium">
+                      <p className="text-[10px] text-muted-foreground font-medium">
                         {coordinator.department || "No Department"}
                       </p>
+
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-1">
-                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-900/30">
-                      <span className="text-[12px] font-bold text-emerald-700 dark:text-emerald-400">{coordinator.projectCount}</span>
-                      <span className="text-[9px] text-emerald-600/70 dark:text-emerald-400/70 font-medium">Projects</span>
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/20 border border-border/30">
+                      <span className="text-[12px] font-bold text-foreground">{coordinator.projectCount}</span>
+                      <span className="text-[9px] text-muted-foreground font-medium">Projects</span>
                     </div>
                     {index === 0 && (
-                      <span className="text-[8px] font-bold uppercase tracking-widest text-emerald-600/60 flex items-center gap-0.5">
-                        <Medal className="h-2 w-2" /> Top Performer
+                      <span className="text-[8px] font-bold uppercase tracking-widest text-emerald-600/80 flex items-center gap-0.5">
+                        <Medal className="h-2 w-2" /> Tier 1 Contributor
                       </span>
                     )}
                   </div>
+
                 </div>
               ))
             ) : (
