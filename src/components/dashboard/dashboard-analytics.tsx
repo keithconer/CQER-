@@ -256,28 +256,33 @@ export function DashboardAnalytics({
             <CardContent className="flex-1">
               <div className="h-[240px] w-full pt-4">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={activitySeries} margin={{ top: 0, right: 10, left: -20, bottom: 0 }}>
+                  <AreaChart 
+                    data={activitySeries} 
+                    margin={{ top: 0, right: 10, left: -20, bottom: 0 }}
+                    className="[&_.recharts-cartesian-axis-tick-value]:fill-muted-foreground [&_.recharts-cartesian-grid-horizontal-line]:stroke-border [&_.recharts-cartesian-grid-vertical-line]:stroke-border"
+                  >
                     <defs>
                       <linearGradient id="activityGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="hsl(142, 71%, 45%)" stopOpacity={0.15}/>
                         <stop offset="95%" stopColor="hsl(142, 71%, 45%)" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" opacity={0.4} />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.6} />
                     <XAxis 
                       dataKey="label" 
                       fontSize={9} 
                       tickLine={false} 
                       axisLine={false} 
-                      tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                      tick={{ fill: 'currentColor' }}
                       tickFormatter={(val) => val.split(' ')[0]}
                     />
                     <YAxis 
                       fontSize={9} 
                       tickLine={false} 
                       axisLine={false} 
-                      tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                      tick={{ fill: 'currentColor' }}
                     />
+
                     <RechartsTooltip content={<CustomChartTooltip suffix=" projects" />} />
                     <Area 
                       type="monotone" 
@@ -355,21 +360,26 @@ export function DashboardAnalytics({
             <CardContent>
               <div className="h-[200px] w-full pt-4">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={budgetSeries} margin={{ top: 0, right: 10, left: 10, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" opacity={0.3} />
+                  <BarChart 
+                    data={budgetSeries} 
+                    margin={{ top: 0, right: 10, left: 10, bottom: 0 }}
+                    className="[&_.recharts-cartesian-axis-tick-value]:fill-muted-foreground [&_.recharts-cartesian-grid-horizontal-line]:stroke-border"
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
                     <XAxis 
                       dataKey="label" 
                       fontSize={9} 
                       tickLine={false} axisLine={false} 
-                      tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                      tick={{ fill: 'currentColor' }}
                       tickFormatter={(val) => val.split(' ')[0]}
                     />
                     <YAxis 
                       fontSize={9} 
                       tickLine={false} axisLine={false} 
-                      tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                      tick={{ fill: 'currentColor' }}
                       tickFormatter={(val) => `₱${val >= 1000 ? (val/1000).toFixed(0)+'k' : val}`}
                     />
+
                     <RechartsTooltip content={<CustomChartTooltip prefix="₱" />} />
                     <Bar 
                       dataKey="value" name="Allocation"
@@ -402,13 +412,18 @@ export function DashboardAnalytics({
             <CardContent className="flex-1 flex flex-col lg:flex-row items-center gap-4">
               <div className="h-[180px] w-full lg:w-3/5">
                 <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart cx="50%" cy="50%" outerRadius="70%" data={[
-                    { subject: 'Historical', value: moaExisting || 0 },
-                    { subject: 'Completed', value: moaCompleted || 0 },
-                    { subject: 'Propelled', value: moaNew || 0 },
-                  ]}>
-                    <PolarGrid stroke="hsl(var(--muted))" />
-                    <PolarAngleAxis dataKey="subject" fontSize={9} tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                  <RadarChart 
+                    cx="50%" cy="50%" outerRadius="70%" 
+                    data={[
+                      { subject: 'Historical', value: moaExisting || 0 },
+                      { subject: 'Completed', value: moaCompleted || 0 },
+                      { subject: 'Propelled', value: moaNew || 0 },
+                    ]}
+                    className="[&_.recharts-polar-angle-axis-tick-value]:fill-muted-foreground"
+                  >
+                    <PolarGrid className="stroke-border" />
+                    <PolarAngleAxis dataKey="subject" fontSize={9} tick={{ fill: 'currentColor' }} />
+
                     <Radar
                       name="Agreements" dataKey="value"
                       stroke="hsl(142, 71%, 45%)" fill="hsl(142, 71%, 45%)" fillOpacity={0.4}
