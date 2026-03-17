@@ -643,16 +643,28 @@ export default async function DashboardPage({
       .select("created_by")
       .not("created_by", "is", null);
       
-    const countMap = (projectCounts || []).reduce((acc, p) => {
+    // 2. Get training counts per creator
+    const { data: trainingCounts } = await adminClient
+      .from("trainings")
+      .select("created_by")
+      .not("created_by", "is", null);
+
+    const countMap = {} as Record<string, number>;
+    
+    (projectCounts || []).forEach(p => {
       const cid = p.created_by as string;
-      acc[cid] = (acc[cid] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+      countMap[cid] = (countMap[cid] || 0) + 1;
+    });
+
+    (trainingCounts || []).forEach(t => {
+      const cid = t.created_by as string;
+      countMap[cid] = (countMap[cid] || 0) + 1;
+    });
     
     const topCreatorIds = Object.keys(countMap);
     
     if (topCreatorIds.length > 0) {
-      // 2. Fetch profiles for these creators
+      // 3. Fetch profiles for these creators
       const { data: creatorProfiles } = await adminClient
         .from("profiles")
         .select("id, first_name, last_name, department, user_type, avatar_url")
@@ -667,6 +679,7 @@ export default async function DashboardPage({
         avatar_url: p.avatar_url
       })).sort((a, b) => b.projectCount - a.projectCount);
     }
+
   }
 
   const userType = profile.user_type;
