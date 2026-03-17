@@ -103,9 +103,12 @@ export default async function DashboardPage({
     resolvedSearchParams.view === "project-proposal" ? "project-proposal" : "project-registration";
   const accountView = accountViewParam === "transfer" ? "transfer" : "register";
   const hasEntitySelection =
-    activeProjectView === "project-registration" || activeProjectView === "project-proposal";
+    activePanel === "records" &&
+    (activeProjectView === "project-registration" || activeProjectView === "project-proposal");
   const accountPanelSelected = panelParam === "account-management" || panelParam === "accounts";
   const activePanel =
+    panelParam === "overview" ||
+    panelParam === "records" ||
     panelParam === "unit-coordinators" ||
     panelParam === "account-management" ||
     panelParam === "accounts" ||
@@ -115,15 +118,17 @@ export default async function DashboardPage({
     panelParam === "faculty-involvement" ||
     panelParam === "technologies-innovation" ||
     panelParam === "ordinance-resolutions" ||
-    panelParam === "trainings"
+    panelParam === "trainings" ||
+    panelParam === "projects"
       ? panelParam
-      : "records";
+      : "overview";
   const hasSuperAdminSelection =
     panelParam === "projects" || panelParam === "records";
   const superAdminPanel: "projects" | "trainings" =
     panelParam === "projects" || panelParam === "trainings"
       ? panelParam
       : "projects";
+  const showOverview = activePanel === "overview";
 
   const supabase = await createClient();
   const {
@@ -232,6 +237,12 @@ export default async function DashboardPage({
   let analyticsInternalFunding = 0;
   let analyticsExternalFunding = 0;
   let analyticsTrainings = 0;
+  let analyticsTotalBudget = 0;
+  let analyticsInternalBudget = 0;
+  let analyticsExternalBudget = 0;
+  let analyticsMoaExisting = 0;
+  let analyticsMoaCompleted = 0;
+  let analyticsMoaNew = 0;
   let analyticsScopeLabel = "Based on your current visibility.";
 
   if (profile.user_type === "super_admin") {
@@ -305,26 +316,53 @@ export default async function DashboardPage({
       projects = allProjects;
     }
 
-    const [{ count: usersCount }, { count: internalCount }, { count: externalCount }, { count: trainingsCount }] =
+    const { data: analyticsProjects } = await adminClient
+      .from("projects")
+      .select("id, funding_source, funding_data, budget_total, budget_requirements, category");
+    const resolvedAnalyticsProjects = (analyticsProjects as Project[] | null) || [];
+    const fundingCounts = countFunding(resolvedAnalyticsProjects);
+    analyticsInternalFunding = fundingCounts.internal;
+    analyticsExternalFunding = fundingCounts.external;
+    const budgetTotals = resolvedAnalyticsProjects.reduce(
+      (acc, project) => {
+        const budgetFromTotal =
+          typeof project.budget_total === "number" ? project.budget_total : 0;
+        const budgetFromItems = Array.isArray(project.budget_requirements)
+          ? project.budget_requirements.reduce(
+              (sum, item) => sum + (Number(item?.amount) || 0),
+              0
+            )
+          : 0;
+        const budget = budgetFromTotal > 0 ? budgetFromTotal : budgetFromItems;
+        acc.total += budget;
+        const type = getFundingType(project);
+        if (type === "internal") acc.internal += budget;
+        if (type === "external") acc.external += budget;
+        const category = (project.category || "").toLowerCase();
+        if (category === "new") acc.moaNew += 1;
+        if (category === "completed") acc.moaCompleted += 1;
+        if (category === "existing" || category === "existing/ongoing") acc.moaExisting += 1;
+        return acc;
+      },
+      { total: 0, internal: 0, external: 0, moaExisting: 0, moaCompleted: 0, moaNew: 0 }
+    );
+    analyticsTotalBudget = budgetTotals.total;
+    analyticsInternalBudget = budgetTotals.internal;
+    analyticsExternalBudget = budgetTotals.external;
+    analyticsMoaExisting = budgetTotals.moaExisting;
+    analyticsMoaCompleted = budgetTotals.moaCompleted;
+    analyticsMoaNew = budgetTotals.moaNew;
+
+    const [{ count: usersCount }, { count: trainingsCount }] =
       await Promise.all([
         adminClient
           .from("profiles")
           .select("id", { count: "exact", head: true })
           .in("user_type", ["super_admin", "college_coordinator", "unit_coordinator"]),
-        adminClient
-          .from("projects")
-          .select("id", { count: "exact", head: true })
-          .ilike("funding_source", "%internal%"),
-        adminClient
-          .from("projects")
-          .select("id", { count: "exact", head: true })
-          .ilike("funding_source", "%external%"),
         adminClient.from("trainings").select("id", { count: "exact", head: true }),
       ]);
 
     analyticsUsers = usersCount ?? 0;
-    analyticsInternalFunding = internalCount ?? 0;
-    analyticsExternalFunding = externalCount ?? 0;
     analyticsTrainings = trainingsCount ?? 0;
     analyticsScopeLabel = "University-wide activity and funding summary.";
   }
@@ -364,6 +402,35 @@ export default async function DashboardPage({
     const trainings =
       trainingRecords.length > 0 ? trainingRecords : (await getTrainings()).data || [];
     analyticsTrainings = trainings.length;
+    const budgetTotals = analyticsProjects.reduce(
+      (acc, project) => {
+        const budgetFromTotal =
+          typeof project.budget_total === "number" ? project.budget_total : 0;
+        const budgetFromItems = Array.isArray(project.budget_requirements)
+          ? project.budget_requirements.reduce(
+              (sum, item) => sum + (Number(item?.amount) || 0),
+              0
+            )
+          : 0;
+        const budget = budgetFromTotal > 0 ? budgetFromTotal : budgetFromItems;
+        acc.total += budget;
+        const type = getFundingType(project);
+        if (type === "internal") acc.internal += budget;
+        if (type === "external") acc.external += budget;
+        const category = (project.category || "").toLowerCase();
+        if (category === "new") acc.moaNew += 1;
+        if (category === "completed") acc.moaCompleted += 1;
+        if (category === "existing" || category === "existing/ongoing") acc.moaExisting += 1;
+        return acc;
+      },
+      { total: 0, internal: 0, external: 0, moaExisting: 0, moaCompleted: 0, moaNew: 0 }
+    );
+    analyticsTotalBudget = budgetTotals.total;
+    analyticsInternalBudget = budgetTotals.internal;
+    analyticsExternalBudget = budgetTotals.external;
+    analyticsMoaExisting = budgetTotals.moaExisting;
+    analyticsMoaCompleted = budgetTotals.moaCompleted;
+    analyticsMoaNew = budgetTotals.moaNew;
     analyticsScopeLabel = `Department view for ${profile.department}.`;
   }
 
@@ -391,6 +458,35 @@ export default async function DashboardPage({
     const trainings =
       trainingRecords.length > 0 ? trainingRecords : (await getTrainings()).data || [];
     analyticsTrainings = trainings.length;
+    const budgetTotals = analyticsProjects.reduce(
+      (acc, project) => {
+        const budgetFromTotal =
+          typeof project.budget_total === "number" ? project.budget_total : 0;
+        const budgetFromItems = Array.isArray(project.budget_requirements)
+          ? project.budget_requirements.reduce(
+              (sum, item) => sum + (Number(item?.amount) || 0),
+              0
+            )
+          : 0;
+        const budget = budgetFromTotal > 0 ? budgetFromTotal : budgetFromItems;
+        acc.total += budget;
+        const type = getFundingType(project);
+        if (type === "internal") acc.internal += budget;
+        if (type === "external") acc.external += budget;
+        const category = (project.category || "").toLowerCase();
+        if (category === "new") acc.moaNew += 1;
+        if (category === "completed") acc.moaCompleted += 1;
+        if (category === "existing" || category === "existing/ongoing") acc.moaExisting += 1;
+        return acc;
+      },
+      { total: 0, internal: 0, external: 0, moaExisting: 0, moaCompleted: 0, moaNew: 0 }
+    );
+    analyticsTotalBudget = budgetTotals.total;
+    analyticsInternalBudget = budgetTotals.internal;
+    analyticsExternalBudget = budgetTotals.external;
+    analyticsMoaExisting = budgetTotals.moaExisting;
+    analyticsMoaCompleted = budgetTotals.moaCompleted;
+    analyticsMoaNew = budgetTotals.moaNew;
     analyticsScopeLabel = profile.unit
       ? `Unit view for ${profile.unit}.`
       : "Unit activity overview.";
@@ -398,22 +494,48 @@ export default async function DashboardPage({
 
   const userType = profile.user_type;
   const firstName = profile.first_name || "User";
+  const panelTitleMap: Record<string, string> = {
+    overview: "Dashboard",
+    records: "Projects",
+    projects: "Projects",
+    funding: "Funding",
+    awards: "Awards",
+    "student-involvement": "Student Involvement",
+    "faculty-involvement": "Faculty Involvement",
+    "technologies-innovation": "Technologies",
+    "ordinance-resolutions": "Ordinance Resolutions",
+    trainings: "Trainings",
+    "unit-coordinators": "Unit Coordinators",
+    "account-management": "Account Management",
+    accounts: "Account Management",
+  };
+  const pageTitle = panelTitleMap[activePanel] || "Dashboard";
 
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-sm font-semibold text-foreground/90">Dashboard</h1>
-        <p className="text-xs text-muted-foreground">
-          Welcome back, {firstName}
-        </p>
+        <h1 className="text-sm font-semibold text-foreground/90">{pageTitle}</h1>
+        {showOverview && (
+          <p className="text-xs text-muted-foreground">
+            Welcome back, {firstName}
+          </p>
+        )}
       </div>
-      <DashboardAnalytics
-        users={analyticsUsers}
-        internalFunding={analyticsInternalFunding}
-        externalFunding={analyticsExternalFunding}
-        trainings={analyticsTrainings}
-        scopeLabel={analyticsScopeLabel}
-      />
+      {showOverview && (
+        <DashboardAnalytics
+          users={analyticsUsers}
+          internalFunding={analyticsInternalFunding}
+          externalFunding={analyticsExternalFunding}
+          trainings={analyticsTrainings}
+          totalBudget={analyticsTotalBudget}
+          internalBudget={analyticsInternalBudget}
+          externalBudget={analyticsExternalBudget}
+          moaExisting={analyticsMoaExisting}
+          moaCompleted={analyticsMoaCompleted}
+          moaNew={analyticsMoaNew}
+          scopeLabel={analyticsScopeLabel}
+        />
+      )}
 
       {userType === "super_admin" && (
         <div className="space-y-4">

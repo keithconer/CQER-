@@ -50,6 +50,7 @@ import {
   UserCog,
   UserPlus,
   ArrowRightLeft,
+  LayoutDashboard,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -101,6 +102,8 @@ export function Navbar({ user }: NavbarProps) {
   const activeAccountView = accountParam === "transfer" ? "transfer" : "register";
   const panelParam = searchParams.get("panel");
   const activePanel =
+    panelParam === "overview" ||
+    panelParam === "records" ||
     panelParam === "unit-coordinators" ||
     panelParam === "account-management" ||
     panelParam === "accounts" ||
@@ -114,10 +117,11 @@ export function Navbar({ user }: NavbarProps) {
     panelParam === "projects"
     || panelParam === "trainings"
       ? panelParam
-      : "records";
+      : "overview";
 
   useEffect(() => {
     router.prefetch("/dashboard");
+    router.prefetch("/dashboard?panel=overview");
     router.prefetch("/dashboard?panel=records&view=project-registration");
     router.prefetch("/dashboard?panel=records&view=project-proposal");
     router.prefetch("/dashboard?panel=unit-coordinators");
@@ -391,6 +395,25 @@ export function Navbar({ user }: NavbarProps) {
           <TooltipProvider delayDuration={150}>
             <ScrollArea className="h-[calc(100vh-48px)]">
               <div className={cn("space-y-1 py-3", sidebarOpen ? "px-2" : "px-0")}>
+              <div className="flex justify-center w-full">
+                {withTooltip(
+                  "Dashboard",
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      "transition-all duration-200",
+                      sidebarOpen ? "h-7 w-full justify-start px-3" : "h-10 w-10 p-0 rounded-xl",
+                      activePanel === "overview"
+                        ? "border border-border/40 bg-muted/30 text-foreground"
+                        : "border border-transparent text-foreground"
+                    )}
+                    onClick={() => goTo("/dashboard?panel=overview")}
+                  >
+                    <LayoutDashboard className={cn("shrink-0", sidebarOpen ? "mr-2 h-3 w-3" : "h-5 w-5")} />
+                    {sidebarOpen && <span className="text-[9px] font-medium">Dashboard</span>}
+                  </Button>
+                )}
+              </div>
               {(user.userType === "college_coordinator" || user.userType === "unit_coordinator") && (
                 <>
                   {!sidebarOpen ? (
