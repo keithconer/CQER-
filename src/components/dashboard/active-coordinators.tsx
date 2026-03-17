@@ -22,7 +22,14 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Medal, Search, Filter, ChevronLeft, ChevronRight } from "lucide-react";
+import { Medal, Search, Filter, ChevronLeft, ChevronRight, Projector, BookOpen } from "lucide-react";
+import { 
+  Tooltip, 
+  TooltipContent, 
+  TooltipProvider, 
+  TooltipTrigger 
+} from "@/components/ui/tooltip";
+
 
 
 export interface CoordinatorActivity {
@@ -31,8 +38,11 @@ export interface CoordinatorActivity {
   department: string;
   role: string;
   projectCount: number;
+  projects?: number;
+  trainings?: number;
   avatar_url: string | null;
 }
+
 
 interface ActiveCoordinatorsProps {
   coordinators: CoordinatorActivity[];
@@ -138,11 +148,37 @@ export function ActiveCoordinators({ coordinators, departments }: ActiveCoordina
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/20 border border-border/30">
-                        <span className="text-[12px] font-bold text-foreground">{coordinator.projectCount}</span>
-                        <span className="text-[9px] text-muted-foreground font-medium">Contributions</span>
-                      </div>
+                      <TooltipProvider>
+                        <Tooltip delayDuration={300}>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/20 border border-border/30 cursor-help hover:bg-muted/40 transition-colors">
+                              <span className="text-[12px] font-bold text-foreground">{coordinator.projectCount}</span>
+                              <span className="text-[9px] text-muted-foreground font-medium">Contributions</span>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent className="p-2 border-border/50 bg-background/95 backdrop-blur-md shadow-xl" side="left">
+                            <div className="space-y-1.5 min-w-[120px]">
+                              <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Activity Breakdown</p>
+                              <div className="flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-1.5">
+                                  <Projector className="h-3 w-3 text-emerald-600" />
+                                  <span className="text-[10px] font-medium">Projects</span>
+                                </div>
+                                <span className="text-[10px] font-bold">{coordinator.projects || 0}</span>
+                              </div>
+                              <div className="flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-1.5">
+                                  <BookOpen className="h-3 w-3 text-blue-500" />
+                                  <span className="text-[10px] font-medium">Trainings</span>
+                                </div>
+                                <span className="text-[10px] font-bold">{coordinator.trainings || 0}</span>
+                              </div>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                       {globalIndex === 0 && (
+
                         <span className="text-[8px] font-bold uppercase tracking-widest text-emerald-600/80 flex items-center gap-0.5">
                           <Medal className="h-2 w-2" /> Most Active Research Extension Employee
                         </span>

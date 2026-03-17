@@ -70,7 +70,10 @@ function extractPartnerAgencyNames(projects: Project[]) {
   return Array.from(values).sort((a, b) => a.localeCompare(b));
 }
 
-export type LeaderboardData = CoordinatorActivity;
+export type LeaderboardData = CoordinatorActivity & {
+  projects: number;
+  trainings: number;
+};
 
 type AnalyticsProject = Project & {
   created_at?: string | null;
@@ -649,19 +652,21 @@ export default async function DashboardPage({
       .select("created_by")
       .not("created_by", "is", null);
 
-    const countMap = {} as Record<string, number>;
+    const projectsMap = {} as Record<string, number>;
+    const trainingsMap = {} as Record<string, number>;
     
     (projectCounts || []).forEach(p => {
       const cid = p.created_by as string;
-      countMap[cid] = (countMap[cid] || 0) + 1;
+      projectsMap[cid] = (projectsMap[cid] || 0) + 1;
     });
 
     (trainingCounts || []).forEach(t => {
       const cid = t.created_by as string;
-      countMap[cid] = (countMap[cid] || 0) + 1;
+      trainingsMap[cid] = (trainingsMap[cid] || 0) + 1;
     });
     
-    const topCreatorIds = Object.keys(countMap);
+    const allCids = new Set([...Object.keys(projectsMap), ...Object.keys(trainingsMap)]);
+    const topCreatorIds = Array.from(allCids);
     
     if (topCreatorIds.length > 0) {
       // 3. Fetch profiles for these creators
@@ -670,15 +675,22 @@ export default async function DashboardPage({
         .select("id, first_name, last_name, department, user_type, avatar_url")
         .in("id", topCreatorIds);
         
-      leaderboard = (creatorProfiles || []).map(p => ({
-        id: p.id,
-        name: `${p.first_name || ""} ${p.last_name || ""}`.trim(),
-        department: p.department || "General",
-        role: p.user_type || "Coordinator",
-        projectCount: countMap[p.id] || 0,
-        avatar_url: p.avatar_url
-      })).sort((a, b) => b.projectCount - a.projectCount);
+      leaderboard = (creatorProfiles || []).map(p => {
+        const pCount = projectsMap[p.id] || 0;
+        const tCount = trainingsMap[p.id] || 0;
+        return {
+          id: p.id,
+          name: `${p.first_name || ""} ${p.last_name || ""}`.trim(),
+          department: p.department || "General",
+          role: p.user_type || "Coordinator",
+          projectCount: pCount + tCount,
+          projects: pCount,
+          trainings: tCount,
+          avatar_url: p.avatar_url
+        };
+      }).sort((a, b) => b.projectCount - a.projectCount);
     }
+
 
   }
 
