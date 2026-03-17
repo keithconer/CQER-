@@ -35,6 +35,11 @@ function validateEmailDomain(email: string): boolean {
     return email.toLowerCase().endsWith('@cvsu.edu.ph');
 }
 
+function validateCoordinatorEmailFormat(email: string): boolean {
+    const regex = /^main\.[a-zA-Z]+\.[a-zA-Z]+@cvsu\.edu\.ph$/;
+    return regex.test(email);
+}
+
 export async function registerCoordinators(coordinators: { email: string; department: string; unit?: string; userType: string }[]) {
     try {
         const supabase = await createClient();
@@ -71,6 +76,13 @@ export async function registerCoordinators(coordinators: { email: string; depart
         if (invalidEmails.length > 0) {
             return { 
                 error: `Invalid email domain. Only @cvsu.edu.ph emails are allowed: ${invalidEmails.map(c => c.email).join(', ')}` 
+            };
+        }
+
+        const invalidFormat = coordinators.filter(coord => !validateCoordinatorEmailFormat(coord.email));
+        if (invalidFormat.length > 0) {
+            return {
+                error: `Invalid email format. Use main.firstname.lastname@cvsu.edu.ph: ${invalidFormat.map(c => c.email).join(', ')}`
             };
         }
 

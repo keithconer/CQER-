@@ -41,6 +41,7 @@ import { TrainingsManagement } from "@/components/dashboard/trainings-management
 import { type TrainingRecord } from "@/components/dashboard/trainings-form";
 import { AccountsTable } from "@/components/dashboard/accounts-table";
 import { TransferCoordinatorPanel } from "@/components/dashboard/transfer-coordinator-panel";
+import { DashboardAnalytics } from "@/components/dashboard/dashboard-analytics";
 
 function extractPartnerAgencyNames(projects: Project[]) {
   const values = new Set<string>();
@@ -63,6 +64,31 @@ function extractPartnerAgencyNames(projects: Project[]) {
     });
   });
   return Array.from(values).sort((a, b) => a.localeCompare(b));
+}
+
+function getFundingType(project: Project) {
+  const source = (project.funding_source || "").toLowerCase();
+  if (source.includes("external")) return "external" as const;
+  if (source.includes("internal")) return "internal" as const;
+  const fundingData = (project.funding_data || {}) as Record<string, unknown>;
+  const hasExternalHints =
+    Number(fundingData.external_approved_budget_cvsu || 0) > 0 ||
+    Number(fundingData.external_counterpart_budget_cvsu || 0) > 0 ||
+    Boolean(fundingData.external_funding_agency) ||
+    Boolean(fundingData.external_function_nature);
+  return hasExternalHints ? "external" : "internal";
+}
+
+function countFunding(projects: Project[]) {
+  return projects.reduce(
+    (acc, project) => {
+      const type = getFundingType(project);
+      if (type === "internal") acc.internal += 1;
+      if (type === "external") acc.external += 1;
+      return acc;
+    },
+    { internal: 0, external: 0 }
+  );
 }
 
 export default async function DashboardPage({
@@ -202,6 +228,11 @@ export default async function DashboardPage({
   let availableUnitsForSuperAdmin: string[] = [];
 
   let allProjects: Project[] = [];
+  let analyticsUsers = 0;
+  let analyticsInternalFunding = 0;
+  let analyticsExternalFunding = 0;
+  let analyticsTrainings = 0;
+  let analyticsScopeLabel = "Based on your current visibility.";
 
   if (profile.user_type === "super_admin") {
     const adminClient = createAdminClient();
@@ -273,6 +304,29 @@ export default async function DashboardPage({
         }) || [];
       projects = allProjects;
     }
+
+    const [{ count: usersCount }, { count: internalCount }, { count: externalCount }, { count: trainingsCount }] =
+      await Promise.all([
+        adminClient
+          .from("profiles")
+          .select("id", { count: "exact", head: true })
+          .in("user_type", ["super_admin", "college_coordinator", "unit_coordinator"]),
+        adminClient
+          .from("projects")
+          .select("id", { count: "exact", head: true })
+          .ilike("funding_source", "%internal%"),
+        adminClient
+          .from("projects")
+          .select("id", { count: "exact", head: true })
+          .ilike("funding_source", "%external%"),
+        adminClient.from("trainings").select("id", { count: "exact", head: true }),
+      ]);
+
+    analyticsUsers = usersCount ?? 0;
+    analyticsInternalFunding = internalCount ?? 0;
+    analyticsExternalFunding = externalCount ?? 0;
+    analyticsTrainings = trainingsCount ?? 0;
+    analyticsScopeLabel = "University-wide activity and funding summary.";
   }
 
   if (profile.user_type === "college_coordinator" && profile.department) {
@@ -290,6 +344,56 @@ export default async function DashboardPage({
 
       collegeUnitCoordinatorAccounts = unitAccounts || [];
     }
+
+    const adminClient = createAdminClient();
+    const { count: usersCount } = await adminClient
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .in("user_type", ["college_coordinator", "unit_coordinator"])
+      .eq("department", profile.department);
+    analyticsUsers = usersCount ?? 0;
+
+    let analyticsProjects = projects;
+    if (analyticsProjects.length === 0) {
+      analyticsProjects = (await getCollegeProjects()).data || [];
+    }
+    const fundingCounts = countFunding(analyticsProjects);
+    analyticsInternalFunding = fundingCounts.internal;
+    analyticsExternalFunding = fundingCounts.external;
+
+    const trainings =
+      trainingRecords.length > 0 ? trainingRecords : (await getTrainings()).data || [];
+    analyticsTrainings = trainings.length;
+    analyticsScopeLabel = `Department view for ${profile.department}.`;
+  }
+
+  if (profile.user_type === "unit_coordinator") {
+    const adminClient = createAdminClient();
+    let userCountQuery = adminClient
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("department", profile.department)
+      .eq("user_type", "unit_coordinator");
+    if (profile.unit) {
+      userCountQuery = userCountQuery.eq("unit", profile.unit);
+    }
+    const { count: usersCount } = await userCountQuery;
+    analyticsUsers = usersCount ?? 0;
+
+    let analyticsProjects = unitProjects;
+    if (analyticsProjects.length === 0) {
+      analyticsProjects = (await getUnitProjects()).data || [];
+    }
+    const fundingCounts = countFunding(analyticsProjects);
+    analyticsInternalFunding = fundingCounts.internal;
+    analyticsExternalFunding = fundingCounts.external;
+
+    const trainings =
+      trainingRecords.length > 0 ? trainingRecords : (await getTrainings()).data || [];
+    analyticsTrainings = trainings.length;
+    analyticsScopeLabel = profile.unit
+      ? `Unit view for ${profile.unit}.`
+      : "Unit activity overview.";
   }
 
   const userType = profile.user_type;
@@ -303,6 +407,13 @@ export default async function DashboardPage({
           Welcome back, {firstName}
         </p>
       </div>
+      <DashboardAnalytics
+        users={analyticsUsers}
+        internalFunding={analyticsInternalFunding}
+        externalFunding={analyticsExternalFunding}
+        trainings={analyticsTrainings}
+        scopeLabel={analyticsScopeLabel}
+      />
 
       {userType === "super_admin" && (
         <div className="space-y-4">

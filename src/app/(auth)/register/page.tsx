@@ -62,9 +62,12 @@ function RegisterForm() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState(false);
   const [department, setDepartment] = useState("");
   const [unit, setUnit] = useState("");
   const [dietTrack, setDietTrack] = useState("");
+  const [googleVerified, setGoogleVerified] = useState(false);
+  const [googleEmail, setGoogleEmail] = useState("");
 
   const supabase = createClient();
 
@@ -77,8 +80,19 @@ function RegisterForm() {
     // If we're coming from OAuth, we might already have a user but no profile
     const checkUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user && user.email) {
+      if (!user) return;
+      const isGoogle =
+        user.app_metadata?.provider === "google" ||
+        (user.identities || []).some((identity) => identity.provider === "google");
+      if (!isGoogle) {
+        await supabase.auth.signOut();
+        setError("Please verify your account using Google Sign-in.");
+        return;
+      }
+      if (user.email) {
         setEmail(user.email);
+        setGoogleEmail(user.email);
+        setGoogleVerified(true);
         // If we are on step 1 but have a user, we should move to step 2
         if (!step || step === "1") {
           setCurrentStep(2);
@@ -88,10 +102,37 @@ function RegisterForm() {
     checkUser();
   }, [searchParams, supabase.auth]);
 
+  const handleGoogleVerify = async () => {
+    setError("");
+    setOauthLoading(true);
+    const redirectBase =
+      typeof window !== "undefined" ? window.location.origin : "";
+
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${redirectBase}/auth/callback?next=${encodeURIComponent("/register?step=2")}`,
+        queryParams: {
+          hd: "cvsu.edu.ph",
+          prompt: "select_account",
+        },
+      },
+    });
+
+    if (oauthError) {
+      setError(oauthError.message);
+      setOauthLoading(false);
+    }
+  };
+
   const handleNextStep = () => {
     setError("");
 
     if (currentStep === 1) {
+      if (!googleVerified) {
+        setError("Please verify your CvSU Google account to continue.");
+        return;
+      }
       if (!email) {
         setError("Please enter your CvSU email.");
         return;
@@ -100,6 +141,10 @@ function RegisterForm() {
         setError(
           "Please enter a valid CvSU email (main.firstname.lastname@cvsu.edu.ph)"
         );
+        return;
+      }
+      if (googleEmail && email.toLowerCase() !== googleEmail.toLowerCase()) {
+        setError("Use the same email as your verified Google account.");
         return;
       }
     }
@@ -192,6 +237,15 @@ function RegisterForm() {
 
       // Check if user is already authenticated (OAuth flow)
       const { data: { user } } = await supabase.auth.getUser();
+      const isGoogle =
+        user?.app_metadata?.provider === "google" ||
+        (user?.identities || []).some((identity) => identity.provider === "google");
+
+      if (!isGoogle) {
+        setError("Google verification is required before registration.");
+        setLoading(false);
+        return;
+      }
 
       if (user) {
         // User exists (OAuth), just create/update the profile
@@ -279,6 +333,34 @@ function RegisterForm() {
         {/* Step 1: Email */}
         {currentStep === 1 && (
           <div className="space-y-3">
+            <div className="rounded-lg border border-border/60 bg-muted/20 p-3 space-y-2">
+              <p className="text-[11px] font-semibold text-foreground/90">
+                Verify with Google
+              </p>
+              <p className="text-[10px] text-muted-foreground">
+                Registration requires a valid CvSU Google Workspace account.
+              </p>
+              <div className="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2">
+                <p className="text-[10px] text-amber-800">
+                  Non-existent emails cannot be verified. Use your real CvSU Google account.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-[11px] h-8"
+                onClick={handleGoogleVerify}
+                disabled={oauthLoading}
+              >
+                {oauthLoading ? "Verifying..." : "Verify with Google"}
+              </Button>
+              {googleVerified && (
+                <p className="text-[10px] text-[#159E44] font-medium">
+                  Google account verified.
+                </p>
+              )}
+            </div>
             <div className="space-y-1.5">
               <Label htmlFor="email" className="text-[11px] font-semibold text-foreground/90 ml-0.5">
                 CvSU Email
@@ -292,6 +374,7 @@ function RegisterForm() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value.toLowerCase())}
                   className="pl-8 h-9 text-[11px] bg-muted/10 border-border/80 placeholder:text-[11px] placeholder:text-muted-foreground/70"
+                  disabled={googleVerified}
                 />
               </div>
               <p className="text-[10px] text-muted-foreground/70 ml-0.5">
@@ -569,7 +652,7 @@ function RegisterForm() {
               size="sm"
               className="text-[11px] h-8 bg-[#159E44] hover:bg-[#128A3B] text-white"
               onClick={handleNextStep}
-              disabled={loading}
+              disabled={loading || oauthLoading}
             >
               {loading
                 ? "Creating..."

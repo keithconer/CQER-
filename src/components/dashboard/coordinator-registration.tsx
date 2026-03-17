@@ -25,6 +25,8 @@ import {
   isIndustrialEngineeringAndTechnologyDepartment,
 } from "@/lib/departments";
 
+const COORDINATOR_EMAIL_REGEX = /^main\.[a-zA-Z]+\.[a-zA-Z]+@cvsu\.edu\.ph$/;
+
 interface CoordinatorRegistrationProps {
   userType: "college_coordinator" | "unit_coordinator";
   title: string;
@@ -66,8 +68,14 @@ export function CoordinatorRegistration({ userType, title, description, departme
 
   const handleNext = () => {
     if (currentStep === 1) {
-      if (emails.some(e => !e || !e.includes("@"))) {
+      if (emails.some((e) => !e || !e.includes("@"))) {
         setError("Please enter valid emails for all fields.");
+        return;
+      }
+      if (emails.some((e) => !COORDINATOR_EMAIL_REGEX.test(e))) {
+        setError(
+          "Use a valid CvSU Google Workspace email (main.firstname.lastname@cvsu.edu.ph)."
+        );
         return;
       }
       setError("");
@@ -175,6 +183,19 @@ export function CoordinatorRegistration({ userType, title, description, departme
           <DialogTitle className="text-sm font-semibold">Add {title}</DialogTitle>
           <DialogDescription className="text-[10px]">{description}</DialogDescription>
         </DialogHeader>
+        <div className="rounded-lg border border-border/60 bg-muted/20 p-3 space-y-1.5">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-semibold text-foreground/90">
+              Google-verified only
+            </p>
+            <span className="text-[9px] font-semibold uppercase text-[#159E44] bg-[#159E44]/10 px-2 py-0.5 rounded">
+              Required
+            </span>
+          </div>
+          <p className="text-[10px] text-muted-foreground">
+            Only real CvSU Google Workspace accounts can sign in. Dummy emails will fail verification.
+          </p>
+        </div>
 
         <StepIndicator currentStep={currentStep} totalSteps={4} labels={steps} />
 
@@ -189,7 +210,7 @@ export function CoordinatorRegistration({ userType, title, description, departme
                     <Input
                       placeholder="email@cvsu.edu.ph"
                       value={email}
-                      onChange={(e) => handleEmailChange(index, e.target.value)}
+                      onChange={(e) => handleEmailChange(index, e.target.value.toLowerCase())}
                       className="pl-8 h-9 text-[11px]"
                     />
                   </div>
