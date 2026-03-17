@@ -42,6 +42,7 @@ import { type TrainingRecord } from "@/components/dashboard/trainings-form";
 import { AccountsTable } from "@/components/dashboard/accounts-table";
 import { TransferCoordinatorPanel } from "@/components/dashboard/transfer-coordinator-panel";
 import { DashboardAnalytics } from "@/components/dashboard/dashboard-analytics";
+import { format, startOfMonth, subMonths } from "date-fns";
 
 function extractPartnerAgencyNames(projects: Project[]) {
   const values = new Set<string>();
@@ -66,6 +67,12 @@ function extractPartnerAgencyNames(projects: Project[]) {
   return Array.from(values).sort((a, b) => a.localeCompare(b));
 }
 
+type AnalyticsProject = Project & {
+  created_at?: string | null;
+  created_by_department?: string | null;
+  created_by_unit?: string | null;
+};
+
 function getFundingType(project: Project) {
   const source = (project.funding_source || "").toLowerCase();
   if (source.includes("external")) return "external" as const;
@@ -89,6 +96,101 @@ function countFunding(projects: Project[]) {
     },
     { internal: 0, external: 0 }
   );
+}
+
+function getProjectBudget(project: Project) {
+  if (typeof project.budget_total === "number") return project.budget_total;
+  if (!Array.isArray(project.budget_requirements)) return 0;
+  return project.budget_requirements.reduce(
+    (sum, item) => sum + (Number(item?.amount) || 0),
+    0
+  );
+}
+
+function getMonthBuckets(months = 6) {
+  const now = new Date();
+  return Array.from({ length: months }, (_, index) => {
+    const date = startOfMonth(subMonths(now, months - 1 - index));
+    return {
+      key: format(date, "yyyy-MM"),
+      label: format(date, "MMM yyyy"),
+      date,
+    };
+  });
+}
+
+function buildActivitySeries(
+  projects: AnalyticsProject[],
+  getBreakdownLabel: (project: AnalyticsProject) => string
+) {
+  const buckets = getMonthBuckets();
+  const bucketMap = new Map(
+    buckets.map((bucket) => [bucket.key, { total: 0, breakdown: new Map<string, number>() }])
+  );
+
+  projects.forEach((project) => {
+    if (!project.created_at) return;
+    const key = format(startOfMonth(new Date(project.created_at)), "yyyy-MM");
+    const bucket = bucketMap.get(key);
+    if (!bucket) return;
+    bucket.total += 1;
+    const label = getBreakdownLabel(project) || "Unassigned";
+    bucket.breakdown.set(label, (bucket.breakdown.get(label) || 0) + 1);
+  });
+
+  return buckets.map((bucket) => {
+    const snapshot = bucketMap.get(bucket.key);
+    const breakdown =
+      snapshot
+        ? Array.from(snapshot.breakdown.entries())
+            .map(([name, count]) => ({ name, count }))
+            .sort((a, b) => b.count - a.count)
+        : [];
+    return {
+      label: bucket.label,
+      value: snapshot?.total || 0,
+      breakdown,
+    };
+  });
+}
+
+function buildBudgetSeries(projects: AnalyticsProject[]) {
+  const buckets = getMonthBuckets();
+  const bucketMap = new Map(buckets.map((bucket) => [bucket.key, 0]));
+  projects.forEach((project) => {
+    if (!project.created_at) return;
+    const key = format(startOfMonth(new Date(project.created_at)), "yyyy-MM");
+    if (!bucketMap.has(key)) return;
+    bucketMap.set(key, (bucketMap.get(key) || 0) + getProjectBudget(project));
+  });
+  return buckets.map((bucket) => ({
+    label: bucket.label,
+    value: bucketMap.get(bucket.key) || 0,
+  }));
+}
+
+function buildRadarSeries(projects: AnalyticsProject[]) {
+  const buckets = getMonthBuckets();
+  const bucketMap = new Map(
+    buckets.map((bucket) => [bucket.key, { internal: 0, external: 0 }])
+  );
+  projects.forEach((project) => {
+    if (!project.created_at) return;
+    const key = format(startOfMonth(new Date(project.created_at)), "yyyy-MM");
+    const bucket = bucketMap.get(key);
+    if (!bucket) return;
+    const type = getFundingType(project);
+    if (type === "internal") bucket.internal += 1;
+    if (type === "external") bucket.external += 1;
+  });
+  return buckets.map((bucket) => {
+    const snapshot = bucketMap.get(bucket.key) || { internal: 0, external: 0 };
+    return {
+      label: bucket.label,
+      internal: snapshot.internal,
+      external: snapshot.external,
+    };
+  });
 }
 
 export default async function DashboardPage({
@@ -233,6 +335,7 @@ export default async function DashboardPage({
   let availableUnitsForSuperAdmin: string[] = [];
 
   let allProjects: Project[] = [];
+  let analyticsProjects: AnalyticsProject[] = [];
   let analyticsUsers = 0;
   let analyticsInternalFunding = 0;
   let analyticsExternalFunding = 0;
@@ -316,10 +419,37 @@ export default async function DashboardPage({
       projects = allProjects;
     }
 
-    const { data: analyticsProjects } = await adminClient
+    const { data: analyticsProjectsData } = await adminClient
       .from("projects")
-      .select("id, funding_source, funding_data, budget_total, budget_requirements, category");
-    const resolvedAnalyticsProjects = (analyticsProjects as Project[] | null) || [];
+      .select(
+        "id, created_by, created_at, funding_source, funding_data, budget_total, budget_requirements, category"
+      );
+    const resolvedAnalyticsProjects = (analyticsProjectsData as AnalyticsProject[] | null) || [];
+    const creatorIds = Array.from(
+      new Set(resolvedAnalyticsProjects.map((project) => project.created_by).filter(Boolean))
+    ) as string[];
+    if (creatorIds.length > 0) {
+      const { data: creatorProfiles } = await adminClient
+        .from("profiles")
+        .select("id, department, unit")
+        .in("id", creatorIds);
+      const creatorMap = new Map(
+        (creatorProfiles || []).map((entry) => [
+          entry.id,
+          { department: entry.department, unit: entry.unit },
+        ])
+      );
+      analyticsProjects = resolvedAnalyticsProjects.map((project) => {
+        const creator = creatorMap.get(project.created_by as string);
+        return {
+          ...project,
+          created_by_department: creator?.department || null,
+          created_by_unit: creator?.unit || null,
+        };
+      });
+    } else {
+      analyticsProjects = resolvedAnalyticsProjects;
+    }
     const fundingCounts = countFunding(resolvedAnalyticsProjects);
     analyticsInternalFunding = fundingCounts.internal;
     analyticsExternalFunding = fundingCounts.external;
@@ -391,18 +521,19 @@ export default async function DashboardPage({
       .eq("department", profile.department);
     analyticsUsers = usersCount ?? 0;
 
-    let analyticsProjects = projects;
-    if (analyticsProjects.length === 0) {
-      analyticsProjects = (await getCollegeProjects()).data || [];
+    let resolvedProjects = projects as AnalyticsProject[];
+    if (resolvedProjects.length === 0) {
+      resolvedProjects = ((await getCollegeProjects()).data || []) as AnalyticsProject[];
     }
-    const fundingCounts = countFunding(analyticsProjects);
+    analyticsProjects = resolvedProjects;
+    const fundingCounts = countFunding(resolvedProjects);
     analyticsInternalFunding = fundingCounts.internal;
     analyticsExternalFunding = fundingCounts.external;
 
     const trainings =
       trainingRecords.length > 0 ? trainingRecords : (await getTrainings()).data || [];
     analyticsTrainings = trainings.length;
-    const budgetTotals = analyticsProjects.reduce(
+    const budgetTotals = resolvedProjects.reduce(
       (acc, project) => {
         const budgetFromTotal =
           typeof project.budget_total === "number" ? project.budget_total : 0;
@@ -447,18 +578,19 @@ export default async function DashboardPage({
     const { count: usersCount } = await userCountQuery;
     analyticsUsers = usersCount ?? 0;
 
-    let analyticsProjects = unitProjects;
-    if (analyticsProjects.length === 0) {
-      analyticsProjects = (await getUnitProjects()).data || [];
+    let resolvedProjects = unitProjects as AnalyticsProject[];
+    if (resolvedProjects.length === 0) {
+      resolvedProjects = ((await getUnitProjects()).data || []) as AnalyticsProject[];
     }
-    const fundingCounts = countFunding(analyticsProjects);
+    analyticsProjects = resolvedProjects;
+    const fundingCounts = countFunding(resolvedProjects);
     analyticsInternalFunding = fundingCounts.internal;
     analyticsExternalFunding = fundingCounts.external;
 
     const trainings =
       trainingRecords.length > 0 ? trainingRecords : (await getTrainings()).data || [];
     analyticsTrainings = trainings.length;
-    const budgetTotals = analyticsProjects.reduce(
+    const budgetTotals = resolvedProjects.reduce(
       (acc, project) => {
         const budgetFromTotal =
           typeof project.budget_total === "number" ? project.budget_total : 0;
@@ -510,6 +642,25 @@ export default async function DashboardPage({
     accounts: "Account Management",
   };
   const pageTitle = panelTitleMap[activePanel] || "Dashboard";
+  const activityBreakdownLabel =
+    profile.user_type === "super_admin"
+      ? "Department"
+      : profile.user_type === "college_coordinator"
+        ? "Unit"
+        : "Unit";
+  const activitySeries = buildActivitySeries(analyticsProjects, (project) => {
+    if (profile.user_type === "super_admin") {
+      return project.created_by_department || "Unassigned";
+    }
+    if (profile.user_type === "college_coordinator") {
+      return project.created_by_unit || "Unassigned";
+    }
+    return profile.unit || "Unit";
+  });
+  const budgetSeries = buildBudgetSeries(analyticsProjects);
+  const radarSeries = buildRadarSeries(analyticsProjects);
+  const totalActivities = analyticsProjects.length + analyticsTrainings;
+  const trainingShareTotal = totalActivities > 0 ? totalActivities : 1;
 
   return (
     <div className="space-y-4">
@@ -533,6 +684,16 @@ export default async function DashboardPage({
           moaExisting={analyticsMoaExisting}
           moaCompleted={analyticsMoaCompleted}
           moaNew={analyticsMoaNew}
+          activitySeries={activitySeries}
+          activityBreakdownLabel={activityBreakdownLabel}
+          budgetSeries={budgetSeries}
+          radarSeries={radarSeries}
+          trainingsShare={analyticsTrainings}
+          trainingsShareTotal={trainingShareTotal}
+          fundingShare={[
+            { label: "Internal", value: analyticsInternalFunding },
+            { label: "External", value: analyticsExternalFunding },
+          ]}
           scopeLabel={analyticsScopeLabel}
         />
       )}
