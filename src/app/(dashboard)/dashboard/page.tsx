@@ -43,6 +43,9 @@ import { AccountsTable } from "@/components/dashboard/accounts-table";
 import { TransferCoordinatorPanel } from "@/components/dashboard/transfer-coordinator-panel";
 import { DashboardAnalytics } from "@/components/dashboard/dashboard-analytics";
 import { format, startOfMonth, subMonths } from "date-fns";
+import { DEPARTMENTS } from "@/lib/departments";
+import { ActiveCoordinators, type CoordinatorActivity } from "@/components/dashboard/active-coordinators";
+
 
 function extractPartnerAgencyNames(projects: Project[]) {
   const values = new Set<string>();
@@ -66,6 +69,8 @@ function extractPartnerAgencyNames(projects: Project[]) {
   });
   return Array.from(values).sort((a, b) => a.localeCompare(b));
 }
+
+export type LeaderboardData = CoordinatorActivity;
 
 type AnalyticsProject = Project & {
   created_at?: string | null;
@@ -627,7 +632,45 @@ export default async function DashboardPage({
       : "Unit activity overview.";
   }
 
+  // --- Leaderboard Logic (University-wide) ---
+  let leaderboard: LeaderboardData[] = [];
+  if (showOverview) {
+    const adminClient = createAdminClient();
+    
+    // 1. Get project counts per creator
+    const { data: projectCounts } = await adminClient
+      .from("projects")
+      .select("created_by")
+      .not("created_by", "is", null);
+      
+    const countMap = (projectCounts || []).reduce((acc, p) => {
+      const cid = p.created_by as string;
+      acc[cid] = (acc[cid] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    const topCreatorIds = Object.keys(countMap);
+    
+    if (topCreatorIds.length > 0) {
+      // 2. Fetch profiles for these creators
+      const { data: creatorProfiles } = await adminClient
+        .from("profiles")
+        .select("id, first_name, last_name, department, user_type, avatar_url")
+        .in("id", topCreatorIds);
+        
+      leaderboard = (creatorProfiles || []).map(p => ({
+        id: p.id,
+        name: `${p.first_name || ""} ${p.last_name || ""}`.trim(),
+        department: p.department || "General",
+        role: p.user_type || "Coordinator",
+        projectCount: countMap[p.id] || 0,
+        avatar_url: p.avatar_url
+      })).sort((a, b) => b.projectCount - a.projectCount);
+    }
+  }
+
   const userType = profile.user_type;
+
   const firstName = profile.first_name || "User";
   const panelTitleMap: Record<string, string> = {
     overview: "Dashboard",
@@ -676,30 +719,42 @@ export default async function DashboardPage({
         )}
       </div>
       {showOverview && (
-        <DashboardAnalytics
-          users={analyticsUsers}
-          internalFunding={analyticsInternalFunding}
-          externalFunding={analyticsExternalFunding}
-          trainings={analyticsTrainings}
-          totalBudget={analyticsTotalBudget}
-          internalBudget={analyticsInternalBudget}
-          externalBudget={analyticsExternalBudget}
-          moaExisting={analyticsMoaExisting}
-          moaCompleted={analyticsMoaCompleted}
-          moaNew={analyticsMoaNew}
-          activitySeries={activitySeries}
-          activityBreakdownLabel={activityBreakdownLabel}
-          budgetSeries={budgetSeries}
-          radarSeries={radarSeries}
-          trainingsShare={analyticsTrainings}
-          trainingsShareTotal={trainingShareTotal}
-          fundingShare={[
-            { label: "Internal", value: analyticsInternalFunding },
-            { label: "External", value: analyticsExternalFunding },
-          ]}
-          scopeLabel={analyticsScopeLabel}
-        />
+        <div className="space-y-4">
+          <DashboardAnalytics
+            users={analyticsUsers}
+            internalFunding={analyticsInternalFunding}
+            externalFunding={analyticsExternalFunding}
+            trainings={analyticsTrainings}
+            totalBudget={analyticsTotalBudget}
+            internalBudget={analyticsInternalBudget}
+            externalBudget={analyticsExternalBudget}
+            moaExisting={analyticsMoaExisting}
+            moaCompleted={analyticsMoaCompleted}
+            moaNew={analyticsMoaNew}
+            activitySeries={activitySeries}
+            activityBreakdownLabel={activityBreakdownLabel}
+            budgetSeries={budgetSeries}
+            radarSeries={radarSeries}
+            trainingsShare={analyticsTrainings}
+            trainingsShareTotal={trainingShareTotal}
+            fundingShare={[
+              { label: "Internal", value: analyticsInternalFunding },
+              { label: "External", value: analyticsExternalFunding },
+            ]}
+            scopeLabel={analyticsScopeLabel}
+          />
+          
+          <div className="grid gap-4 lg:grid-cols-12">
+            <div className="lg:col-span-12">
+              <ActiveCoordinators 
+                coordinators={leaderboard} 
+                departments={[...DEPARTMENTS]} 
+              />
+            </div>
+          </div>
+        </div>
       )}
+
 
       {userType === "super_admin" && (
         <div className="space-y-4">

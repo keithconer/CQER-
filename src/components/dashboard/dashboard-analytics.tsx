@@ -112,7 +112,7 @@ const CustomChartTooltip = ({ active, payload, label, prefix = "", suffix = "" }
                 <div className="pl-3.5 space-y-1 border-l border-emerald-500/30 ml-1">
                   {entry.payload.breakdown.slice(0, 3).map((item: any, i: number) => (
                     <div key={i} className="flex justify-between text-[9px] text-muted-foreground/90">
-                      <span className="truncate max-w-[80px]">{item.name}</span>
+                      <span className="max-w-[150px]">{item.name}</span>
                       <span className="font-medium">{item.count}</span>
                     </div>
                   ))}
@@ -241,17 +241,10 @@ export function DashboardAnalytics({
                 </CardTitle>
                 <CardDescription className="text-[10px]">Monthly project generation and {activityBreakdownLabel} activity</CardDescription>
               </div>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="h-7 w-7 rounded-full bg-emerald-100/50 dark:bg-emerald-900/30 flex items-center justify-center cursor-help">
-                    <Info className="h-3.5 w-3.5 text-emerald-600" />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-[200px] p-2">
-                  <p className="font-bold text-[9px] uppercase mb-1">Interpretation</p>
-                  <p className="text-[10px] leading-relaxed">{activityInsight}</p>
-                </TooltipContent>
-              </Tooltip>
+              <div className="h-7 w-7 rounded-full bg-emerald-100/50 dark:bg-emerald-900/30 flex items-center justify-center">
+                <Info className="h-3.5 w-3.5 text-emerald-600" />
+              </div>
+
             </CardHeader>
             <CardContent className="flex-1">
               <div className="h-[240px] w-full pt-4">
