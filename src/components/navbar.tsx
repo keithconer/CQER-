@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/notification-bell";
+import { NavbarPageSearch, type NavbarSearchItem } from "@/components/navbar-page-search";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,6 +52,7 @@ import {
   UserPlus,
   ArrowRightLeft,
   LayoutDashboard,
+  type LucideIcon,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -66,6 +68,16 @@ interface NavbarProps {
     unit: string | null;
   };
 }
+
+type NavSearchConfig = {
+  id: string;
+  label: string;
+  href: string;
+  keywords?: string[];
+  description?: string;
+  icon: LucideIcon;
+  roles: string[];
+};
 
 export function Navbar({ user }: NavbarProps) {
   const router = useRouter();
@@ -201,6 +213,168 @@ export function Navbar({ user }: NavbarProps) {
   const navItemClass = (active: boolean) =>
     `dashboard-nav-item h-6 w-full justify-start text-[9px] border ${active ? "border-border/40 bg-muted/30" : "border-transparent"}`;
   const isAccountPanel = activePanel === "account-management" || activePanel === "accounts";
+  const collapsedButtonClass = "h-9 w-9 p-0 rounded-xl";
+  const collapsedIconClass = "h-4 w-4";
+  const commonPanelItems: {
+    panel: string;
+    icon: LucideIcon;
+    label: string;
+    roles: string[];
+  }[] = [
+    { panel: "trainings", icon: BookOpenCheck, label: "Trainings", roles: ["college_coordinator", "unit_coordinator", "extension_office"] },
+    { panel: "funding", icon: Database, label: "Funding", roles: ["college_coordinator", "unit_coordinator", "extension_office"] },
+    { panel: "awards", icon: Award, label: "Awards", roles: ["college_coordinator", "unit_coordinator", "extension_office"] },
+    { panel: "student-involvement", icon: UserRoundCheck, label: "Student Involvement", roles: ["college_coordinator", "unit_coordinator", "extension_office"] },
+    { panel: "faculty-involvement", icon: GraduationCap, label: "Faculty Involvement", roles: ["college_coordinator", "unit_coordinator", "extension_office"] },
+    { panel: "technologies-innovation", icon: Cpu, label: "Technologies", roles: ["college_coordinator", "unit_coordinator", "extension_office"] },
+    { panel: "ordinance-resolutions", icon: ScrollText, label: "Ordinance", roles: ["college_coordinator", "unit_coordinator", "extension_office"] },
+  ];
+  const superAdminRecordItems = [
+    { panel: "projects", icon: FolderKanban, label: "Projects" },
+    { panel: "trainings", icon: BookOpenCheck, label: "Trainings" },
+    { panel: "funding", icon: Database, label: "Funding" },
+    { panel: "awards", icon: Award, label: "Awards" },
+    { panel: "student-involvement", icon: UserRoundCheck, label: "Student Involvement" },
+    { panel: "faculty-involvement", icon: GraduationCap, label: "Faculty Involvement" },
+    { panel: "technologies-innovation", icon: Cpu, label: "Technologies" },
+    { panel: "ordinance-resolutions", icon: ScrollText, label: "Ordinance" },
+  ] as const;
+  const searchItems = useMemo<NavbarSearchItem[]>(() => {
+    const items: NavSearchConfig[] = [
+      {
+        id: "dashboard",
+        label: "Dashboard",
+        href: "/dashboard?panel=overview",
+        keywords: ["home", "overview", "main"],
+        description: "Go to the main dashboard overview.",
+        icon: LayoutDashboard,
+        roles: ["super_admin", "college_coordinator", "unit_coordinator", "extension_office", "project_leader"],
+      },
+      {
+        id: "account-management",
+        label: "Account Management",
+        href: "/dashboard?panel=account-management&account=register",
+        keywords: ["accounts", "register", "manage users"],
+        description: "Open the coordinator account management page.",
+        icon: UserCog,
+        roles: ["super_admin", "college_coordinator"],
+      },
+      {
+        id: "account-transfer",
+        label: user.userType === "super_admin" ? "Transfer College Coordinator Role" : "Transfer Unit Coordinator Role",
+        href: "/dashboard?panel=account-management&account=transfer",
+        keywords: ["transfer", "account handover", "role transfer"],
+        description: "Transfer coordinator responsibilities to another account.",
+        icon: ArrowRightLeft,
+        roles: ["super_admin", "college_coordinator"],
+      },
+      {
+        id: "records",
+        label: "Records",
+        href: "/dashboard?panel=records&view=project-registration",
+        keywords: ["records", "project registration", "proposal records"],
+        description: "Open the records section.",
+        icon: FolderPlus,
+        roles: ["college_coordinator", "unit_coordinator", "extension_office", "project_leader"],
+      },
+      {
+        id: "projects",
+        label: "Projects",
+        href: user.userType === "super_admin"
+          ? "/dashboard?panel=projects&view=project-registration"
+          : "/dashboard?panel=records&view=project-registration",
+        keywords: ["project registration", "projects folder", "project page"],
+        description: "Open the projects page.",
+        icon: FolderKanban,
+        roles: ["super_admin", "college_coordinator", "unit_coordinator", "extension_office", "project_leader"],
+      },
+      {
+        id: "project-proposals",
+        label: "Project Proposals",
+        href: user.userType === "super_admin"
+          ? "/dashboard?panel=projects&view=project-proposal"
+          : "/dashboard?panel=records&view=project-proposal",
+        keywords: ["proposal", "project proposal", "proposals"],
+        description: "Open the project proposal page.",
+        icon: FolderKanban,
+        roles: ["super_admin", "college_coordinator", "unit_coordinator", "extension_office", "project_leader"],
+      },
+      {
+        id: "trainings",
+        label: "Trainings",
+        href: "/dashboard?panel=trainings",
+        keywords: ["training", "seminar", "workshop"],
+        description: "Open trainings management.",
+        icon: BookOpenCheck,
+        roles: ["super_admin", "college_coordinator", "unit_coordinator", "extension_office"],
+      },
+      {
+        id: "funding",
+        label: "Funding",
+        href: "/dashboard?panel=funding",
+        keywords: ["budget", "finance", "funding"],
+        description: "Open funding records and analysis.",
+        icon: Database,
+        roles: ["super_admin", "college_coordinator", "unit_coordinator", "extension_office"],
+      },
+      {
+        id: "awards",
+        label: "Awards",
+        href: "/dashboard?panel=awards",
+        keywords: ["recognition", "awards"],
+        description: "Open awards management.",
+        icon: Award,
+        roles: ["super_admin", "college_coordinator", "unit_coordinator", "extension_office"],
+      },
+      {
+        id: "student-involvement",
+        label: "Student Involvement",
+        href: "/dashboard?panel=student-involvement",
+        keywords: ["students", "student activities"],
+        description: "Open student involvement records.",
+        icon: UserRoundCheck,
+        roles: ["super_admin", "college_coordinator", "unit_coordinator", "extension_office"],
+      },
+      {
+        id: "faculty-involvement",
+        label: "Faculty Involvement",
+        href: "/dashboard?panel=faculty-involvement",
+        keywords: ["faculty", "pool of experts", "faculty records"],
+        description: "Open faculty involvement records.",
+        icon: GraduationCap,
+        roles: ["super_admin", "college_coordinator", "unit_coordinator", "extension_office"],
+      },
+      {
+        id: "technologies",
+        label: "Technologies",
+        href: "/dashboard?panel=technologies-innovation",
+        keywords: ["technology", "innovation", "technologies"],
+        description: "Open technologies and innovations.",
+        icon: Cpu,
+        roles: ["super_admin", "college_coordinator", "unit_coordinator", "extension_office"],
+      },
+      {
+        id: "ordinance",
+        label: "Ordinance",
+        href: "/dashboard?panel=ordinance-resolutions",
+        keywords: ["ordinance", "resolution", "ordinances"],
+        description: "Open ordinance and resolution records.",
+        icon: ScrollText,
+        roles: ["super_admin", "college_coordinator", "unit_coordinator", "extension_office"],
+      },
+      {
+        id: "settings",
+        label: "Settings",
+        href: "/settings",
+        keywords: ["password", "preferences", "change password"],
+        description: "Open account settings.",
+        icon: Settings,
+        roles: ["super_admin", "college_coordinator", "unit_coordinator", "extension_office", "project_leader"],
+      },
+    ];
+
+    return items.filter((item) => item.roles.includes(user.userType));
+  }, [user.userType]);
 
   const withTooltip = (label: string, content: ReactNode) => {
     if (sidebarOpen) return content;
@@ -232,6 +406,7 @@ export function Navbar({ user }: NavbarProps) {
         </div>
 
         <div className="flex items-center gap-2">
+          <NavbarPageSearch items={searchItems} onNavigate={goTo} />
           <NotificationBell userId={user.id} />
           <Avatar className="h-7 w-7">
             <AvatarImage src={user.avatarUrl || undefined} alt={user.firstName} />
@@ -391,7 +566,7 @@ export function Navbar({ user }: NavbarProps) {
                 className="h-8 w-8"
                 onClick={() => setSidebarOpen(true)}
               >
-                <PanelLeftOpen className="h-4 w-4" />
+                <PanelLeftOpen className="h-3.5 w-3.5" />
               </Button>
             )}
           </div>
@@ -406,99 +581,18 @@ export function Navbar({ user }: NavbarProps) {
                     variant="ghost"
                     className={cn(
                       "transition-all duration-200",
-                      sidebarOpen ? "h-7 w-full justify-start px-3" : "h-10 w-10 p-0 rounded-xl",
+                      sidebarOpen ? "h-7 w-full justify-start px-3" : collapsedButtonClass,
                       activePanel === "overview"
                         ? "border border-border/40 bg-muted/30 text-foreground"
                         : "border border-transparent text-foreground"
                     )}
                     onClick={() => goTo("/dashboard?panel=overview")}
                   >
-                    <LayoutDashboard className={cn("shrink-0", sidebarOpen ? "mr-2 h-3 w-3" : "h-5 w-5")} />
+                    <LayoutDashboard className={cn("shrink-0", sidebarOpen ? "mr-2 h-3 w-3" : collapsedIconClass)} />
                     {sidebarOpen && <span className="text-[9px] font-medium">Dashboard</span>}
                   </Button>
                 )}
               </div>
-              {(["college_coordinator", "unit_coordinator", "extension_office", "project_leader"].includes(user.userType)) && (
-                <>
-                  {!sidebarOpen ? (
-                    <Popover>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="flex justify-center w-full">
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                className={cn(
-                                  "h-10 w-10 mx-auto flex p-0 rounded-xl transition-all duration-200",
-                                  (activePanel === "records" || createExpanded)
-                                    ? "border border-border/40 bg-muted/30 text-foreground"
-                                    : "border border-transparent text-foreground"
-                                )}
-                              >
-                                <FolderPlus className="h-5 w-5 shrink-0" />
-                              </Button>
-                            </PopoverTrigger>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent side="right">Projects</TooltipContent>
-                      </Tooltip>
-                      <PopoverContent side="right" align="start" className="w-48 p-2 ml-2 bg-background border border-border shadow-md rounded-lg">
-                        <div className="space-y-1">
-                          <Button
-                            variant="ghost"
-                            className={navItemClass(activePanel === "records" && activeView === "project-registration")}
-                            onClick={() => goTo("/dashboard?panel=records&view=project-registration")}
-                          >
-                            <FolderKanban className="mr-2 h-3 w-3" />
-                            Project Registration
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            className={navItemClass(activePanel === "records" && activeView === "project-proposal")}
-                            onClick={() => goTo("/dashboard?panel=records&view=project-proposal")}
-                          >
-                            <FolderKanban className="mr-2 h-3 w-3" />
-                            Project Proposal
-                          </Button>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  ) : (
-                    <Button
-                      variant="ghost"
-                      className={cn(
-                        "h-8 transition-all duration-200 w-full justify-start px-3",
-                        (activePanel === "records" || createExpanded) ? "border border-border/40 bg-muted/30" : "border border-transparent"
-                      )}
-                      onClick={() => setCreateExpanded((prev) => !prev)}
-                    >
-                      <FolderPlus className="mr-2 h-3.5 w-3.5 shrink-0" />
-                      <span className="text-[9px] font-medium">Projects</span>
-                    </Button>
-                  )}
-                  {createExpanded && sidebarOpen && (
-                    <div className="space-y-1 pl-2">
-                      <Button
-                        variant="ghost"
-                        className={navItemClass(activePanel === "records" && activeView === "project-registration")}
-                        onClick={() => goTo("/dashboard?panel=records&view=project-registration")}
-                      >
-                        <FolderKanban className="mr-2 h-3 w-3" />
-                        Project Registration
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className={navItemClass(activePanel === "records" && activeView === "project-proposal")}
-                        onClick={() => goTo("/dashboard?panel=records&view=project-proposal")}
-                      >
-                        <FolderKanban className="mr-2 h-3 w-3" />
-                        Project Proposal
-                      </Button>
-                    </div>
-                  )}
-                </>
-              )}
-
               {user.userType === "college_coordinator" && (
                 <>
                   {!sidebarOpen ? (
@@ -510,13 +604,13 @@ export function Navbar({ user }: NavbarProps) {
                               <Button
                                 variant="ghost"
                                 className={cn(
-                                  "transition-all duration-200 h-10 w-10 p-0 rounded-xl",
+                                  `transition-all duration-200 ${collapsedButtonClass}`,
                                   isAccountPanel
                                     ? "border border-border/40 bg-muted/30 text-foreground"
                                     : "border border-transparent text-foreground"
                                 )}
                               >
-                                <UserCog className="h-5 w-5 shrink-0" />
+                                <UserCog className={`${collapsedIconClass} shrink-0`} />
                               </Button>
                             </PopoverTrigger>
                           </div>
@@ -584,16 +678,89 @@ export function Navbar({ user }: NavbarProps) {
                 </>
               )}
 
+              {(["college_coordinator", "unit_coordinator", "extension_office", "project_leader"].includes(user.userType)) && (
+                <>
+                  {!sidebarOpen ? (
+                    <Popover>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex justify-center w-full">
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                className={cn(
+                                  `${collapsedButtonClass} mx-auto flex transition-all duration-200`,
+                                  (activePanel === "records" || createExpanded)
+                                    ? "border border-border/40 bg-muted/30 text-foreground"
+                                    : "border border-transparent text-foreground"
+                                )}
+                              >
+                                <FolderPlus className={`${collapsedIconClass} shrink-0`} />
+                              </Button>
+                            </PopoverTrigger>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">Records</TooltipContent>
+                      </Tooltip>
+                      <PopoverContent side="right" align="start" className="w-48 p-2 ml-2 bg-background border border-border shadow-md rounded-lg">
+                        <div className="space-y-1">
+                          <Button
+                            variant="ghost"
+                            className={navItemClass(activePanel === "records" && activeView === "project-registration")}
+                            onClick={() => goTo("/dashboard?panel=records&view=project-registration")}
+                          >
+                            <FolderKanban className="mr-2 h-3 w-3" />
+                            Project Registration
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            className={navItemClass(activePanel === "records" && activeView === "project-proposal")}
+                            onClick={() => goTo("/dashboard?panel=records&view=project-proposal")}
+                          >
+                            <FolderKanban className="mr-2 h-3 w-3" />
+                            Project Proposal
+                          </Button>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      className={cn(
+                        "h-8 transition-all duration-200 w-full justify-start px-3",
+                        (activePanel === "records" || createExpanded) ? "border border-border/40 bg-muted/30" : "border border-transparent"
+                      )}
+                      onClick={() => setCreateExpanded((prev) => !prev)}
+                    >
+                      <FolderPlus className="mr-2 h-3.5 w-3.5 shrink-0" />
+                      <span className="text-[9px] font-medium">Records</span>
+                    </Button>
+                  )}
+                  {createExpanded && sidebarOpen && (
+                    <div className="space-y-1 pl-2">
+                      <Button
+                        variant="ghost"
+                        className={navItemClass(activePanel === "records" && activeView === "project-registration")}
+                        onClick={() => goTo("/dashboard?panel=records&view=project-registration")}
+                      >
+                        <FolderKanban className="mr-2 h-3 w-3" />
+                        Project Registration
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className={navItemClass(activePanel === "records" && activeView === "project-proposal")}
+                        onClick={() => goTo("/dashboard?panel=records&view=project-proposal")}
+                      >
+                        <FolderKanban className="mr-2 h-3 w-3" />
+                        Project Proposal
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+
               {/* Simplified loop for common items */}
-              {[
-                { panel: "funding", icon: Database, label: "Funding", roles: ["college_coordinator", "unit_coordinator", "extension_office"] },
-                { panel: "awards", icon: Award, label: "Awards", roles: ["college_coordinator", "unit_coordinator", "extension_office"] },
-                { panel: "student-involvement", icon: UserRoundCheck, label: "Student Involvement", roles: ["college_coordinator", "unit_coordinator", "extension_office"] },
-                { panel: "faculty-involvement", icon: GraduationCap, label: "Faculty Involvement", roles: ["college_coordinator", "unit_coordinator", "extension_office"] },
-                { panel: "technologies-innovation", icon: Cpu, label: "Technologies", roles: ["college_coordinator", "unit_coordinator", "extension_office"] },
-                { panel: "ordinance-resolutions", icon: ScrollText, label: "Ordinance", roles: ["college_coordinator", "unit_coordinator", "extension_office"] },
-                { panel: "trainings", icon: BookOpenCheck, label: "Trainings", roles: ["college_coordinator", "unit_coordinator", "extension_office"] },
-              ].map((item) => (
+              {commonPanelItems.map((item) => (
                 item.roles.includes(user.userType) && (
                   <div key={item.panel} className="flex justify-center w-full">
                     {withTooltip(
@@ -602,14 +769,14 @@ export function Navbar({ user }: NavbarProps) {
                         variant="ghost"
                         className={cn(
                           "transition-all duration-200",
-                          sidebarOpen ? "h-7 w-full justify-start px-3" : "h-10 w-10 p-0 rounded-xl",
+                          sidebarOpen ? "h-7 w-full justify-start px-3" : collapsedButtonClass,
                           activePanel === item.panel
                             ? "border border-border/40 bg-muted/30 text-foreground"
                             : "border border-transparent text-foreground"
                         )}
                         onClick={() => goTo(`/dashboard?panel=${item.panel}`)}
                       >
-                        <item.icon className={cn("shrink-0", sidebarOpen ? "mr-2 h-3 w-3" : "h-5 w-5")} />
+                        <item.icon className={cn("shrink-0", sidebarOpen ? "mr-2 h-3 w-3" : collapsedIconClass)} />
                         {sidebarOpen && <span className="text-[9px]">{item.label}</span>}
                       </Button>
                     )}
@@ -628,13 +795,13 @@ export function Navbar({ user }: NavbarProps) {
                               <Button
                                 variant="ghost"
                                 className={cn(
-                                  "transition-all duration-200 h-10 w-10 p-0 rounded-xl",
+                                  `transition-all duration-200 ${collapsedButtonClass}`,
                                   isAccountPanel
                                     ? "border border-border/40 bg-muted/30 text-foreground"
                                     : "border border-transparent text-foreground"
                                 )}
                               >
-                                <UserCog className="h-5 w-5 shrink-0" />
+                                <UserCog className={`${collapsedIconClass} shrink-0`} />
                               </Button>
                             </PopoverTrigger>
                           </div>
@@ -671,12 +838,12 @@ export function Navbar({ user }: NavbarProps) {
                       variant="ghost"
                       className={cn(
                         "h-8 transition-all duration-200",
-                        sidebarOpen ? "w-full justify-start px-3" : "w-10 h-10 mx-auto flex p-0 rounded-xl",
+                        sidebarOpen ? "w-full justify-start px-3" : `${collapsedButtonClass} mx-auto flex`,
                         isAccountPanel ? "border border-border/40 bg-muted/30" : "border border-transparent"
                       )}
                       onClick={() => setAccountExpanded((prev) => !prev)}
                     >
-                      <UserCog className={cn("shrink-0", sidebarOpen ? "mr-2 h-3.5 w-3.5" : "h-5 w-5")} />
+                      <UserCog className={cn("shrink-0", sidebarOpen ? "mr-2 h-3.5 w-3.5" : collapsedIconClass)} />
                       {sidebarOpen && <span className="text-[9px] font-medium">Account Management</span>}
                     </Button>
                   )}
@@ -706,12 +873,12 @@ export function Navbar({ user }: NavbarProps) {
                       variant="ghost"
                       className={cn(
                         "h-8 transition-all duration-200",
-                        sidebarOpen ? "w-full justify-start px-3" : "w-10 h-10 mx-auto flex p-0 rounded-xl",
+                        sidebarOpen ? "w-full justify-start px-3" : `${collapsedButtonClass} mx-auto flex`,
                         recordsExpanded && !sidebarOpen ? "border border-border/40 bg-muted/30" : "border border-transparent"
                       )}
                       onClick={() => setRecordsExpanded((prev) => !prev)}
                     >
-                      <Database className={cn("shrink-0", sidebarOpen ? "mr-2 h-3.5 w-3.5" : "h-5 w-5")} />
+                      <Database className={cn("shrink-0", sidebarOpen ? "mr-2 h-3.5 w-3.5" : collapsedIconClass)} />
                       {sidebarOpen && <span className="text-[9px] font-medium">Records</span>}
                     </Button>
                   )}
@@ -719,16 +886,7 @@ export function Navbar({ user }: NavbarProps) {
                   {/* Super admin flattened items when collapsed, nested when expanded */}
                   {(recordsExpanded || !sidebarOpen) && (
                     <div className={cn(sidebarOpen ? "space-y-1 pl-2" : "space-y-1")}>
-                      {[
-                        { panel: "projects", icon: FolderKanban, label: "Projects" },
-                        { panel: "funding", icon: Database, label: "Funding" },
-                        { panel: "awards", icon: Award, label: "Awards" },
-                        { panel: "student-involvement", icon: UserRoundCheck, label: "Student Involvement" },
-                        { panel: "faculty-involvement", icon: GraduationCap, label: "Faculty Involvement" },
-                        { panel: "technologies-innovation", icon: Cpu, label: "Technologies" },
-                        { panel: "ordinance-resolutions", icon: ScrollText, label: "Ordinance" },
-                        { panel: "trainings", icon: BookOpenCheck, label: "Trainings" },
-                      ].map((item) => (
+                      {superAdminRecordItems.map((item) => (
                         <div key={item.panel} className="w-full">
                           <div className="flex justify-center w-full">
                             {item.panel === "projects" && !sidebarOpen ? (
@@ -740,13 +898,13 @@ export function Navbar({ user }: NavbarProps) {
                                       <Button
                                         variant="ghost"
                                         className={cn(
-                                          "transition-all duration-200 h-10 w-10 p-0 rounded-xl",
+                                          `transition-all duration-200 ${collapsedButtonClass}`,
                                           (activePanel === "projects" && (activeView === "project-registration" || activeView === "project-proposal"))
                                             ? "border border-border/40 bg-muted/30 text-foreground"
                                             : "border border-transparent text-foreground"
                                         )}
                                       >
-                                        <item.icon className="shrink-0 h-5 w-5" />
+                                        <item.icon className={`shrink-0 ${collapsedIconClass}`} />
                                       </Button>
                                     </PopoverTrigger>
                                   </div>
@@ -781,7 +939,7 @@ export function Navbar({ user }: NavbarProps) {
                                 variant="ghost"
                                 className={cn(
                                   "transition-all duration-200",
-                                  sidebarOpen ? "h-6 w-full justify-start px-2" : "h-10 w-10 p-0 rounded-xl",
+                                  sidebarOpen ? "h-6 w-full justify-start px-2" : collapsedButtonClass,
                                   activePanel === item.panel 
                                     ? "border border-border/40 bg-muted/30 text-foreground"
                                     : "border border-transparent text-foreground"
@@ -790,7 +948,7 @@ export function Navbar({ user }: NavbarProps) {
                                   ? setSuperProjectsExpanded(!superProjectsExpanded) 
                                   : goTo(`/dashboard?panel=${item.panel}`)}
                               >
-                                <item.icon className={cn("shrink-0", sidebarOpen ? "mr-2 h-3 w-3" : "h-5 w-5")} />
+                                <item.icon className={cn("shrink-0", sidebarOpen ? "mr-2 h-3 w-3" : collapsedIconClass)} />
                                 {sidebarOpen && <span className="text-[9px]">{item.label}</span>}
                               </Button>
                             )
