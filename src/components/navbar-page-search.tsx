@@ -59,6 +59,13 @@ function normalizeText(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
 }
 
+function extractTranscript(results: ArrayLike<SpeechRecognitionResultShape>) {
+  return Array.from(results)
+    .map((result) => result[0]?.transcript || "")
+    .join(" ")
+    .trim();
+}
+
 function getBestMatch(items: NavbarSearchItem[], query: string) {
   const normalizedQuery = normalizeText(query);
   if (!normalizedQuery) return null;
@@ -141,23 +148,22 @@ export function NavbarPageSearch({
     const recognition = new Recognition();
     recognition.lang = "en-US";
     recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.interimResults = true;
     recognition.maxAlternatives = 1;
 
     setListening(true);
     setOpen(true);
+    setQuery("");
 
     recognition.onresult = (event) => {
-      const transcript = Array.from(event.results)
-        .map((result) => result[0]?.transcript || "")
-        .join(" ")
-        .trim();
+      const transcript = extractTranscript(event.results);
 
       if (!transcript) return;
 
       setQuery(transcript);
+      const lastResult = event.results[event.results.length - 1];
       const matchedItem = getBestMatch(items, transcript);
-      if (matchedItem) {
+      if (lastResult?.isFinal && matchedItem) {
         handleSelect(matchedItem);
       }
     };
@@ -178,17 +184,20 @@ export function NavbarPageSearch({
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="flex h-8 w-[8.75rem] items-center gap-2 rounded-md border border-border/60 bg-background px-2.5 text-left shadow-sm transition-colors hover:bg-muted/20 sm:w-[12rem] md:w-[15rem]"
+          className="flex h-8 w-[8.75rem] items-center gap-2 rounded-md border border-white/10 bg-[#111111] px-2.5 text-left text-white shadow-sm transition-colors hover:bg-[#181818] sm:w-[12rem] md:w-[15rem]"
         >
-          <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
-          <span className="truncate text-[10px] text-muted-foreground">
+          <Search className="h-3.5 w-3.5 shrink-0 text-white/60" />
+          <span className="truncate text-[10px] text-white/60">
             Search pages or speak...
           </span>
         </button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-[20rem] p-0 sm:w-[22rem]">
-        <div className="flex items-center gap-2 border-b px-2 py-2">
-          <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
+      <PopoverContent
+        align="end"
+        className="w-[20rem] border border-white/10 bg-[#111111] p-0 text-white shadow-2xl sm:w-[22rem]"
+      >
+        <div className="flex items-center gap-2 border-b border-white/10 px-2 py-2">
+          <Search className="h-3.5 w-3.5 shrink-0 text-white/60" />
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -198,8 +207,8 @@ export function NavbarPageSearch({
                 handleSubmitTopMatch();
               }
             }}
-            placeholder="Search pages..."
-            className="h-7 border-0 bg-transparent px-0 text-[10px] shadow-none focus-visible:ring-0"
+            placeholder={listening ? "Listening..." : "Search pages..."}
+            className="h-7 border-0 bg-transparent px-0 text-[10px] text-white shadow-none placeholder:text-white/45 focus-visible:ring-0"
             autoFocus
           />
           <Button
@@ -207,7 +216,7 @@ export function NavbarPageSearch({
             variant="ghost"
             size="icon"
             className={cn(
-              "h-7 w-7 shrink-0",
+              "h-7 w-7 shrink-0 text-white/70 hover:bg-white/10 hover:text-white",
               listening && "text-[#159E44]"
             )}
             onClick={handleVoiceSearch}
@@ -221,24 +230,24 @@ export function NavbarPageSearch({
             )}
           </Button>
         </div>
-        <Command shouldFilter={false}>
+        <Command shouldFilter={false} className="bg-[#111111] text-white">
           <CommandList className="max-h-72">
-            <CommandEmpty className="py-4 text-[10px] text-muted-foreground">
+            <CommandEmpty className="py-4 text-[10px] text-white/55">
               No matching pages found.
             </CommandEmpty>
-            <CommandGroup heading="Pages" className="[&_[cmdk-group-heading]]:text-[9px]">
+            <CommandGroup heading="Pages" className="[&_[cmdk-group-heading]]:text-[9px] [&_[cmdk-group-heading]]:text-white/45">
               {filteredItems.map((item) => (
                 <CommandItem
                   key={item.id}
                   value={`${item.label} ${(item.keywords || []).join(" ")}`}
                   onSelect={() => handleSelect(item)}
-                  className="gap-2 px-2 py-2"
+                  className="gap-2 px-2 py-2 text-white data-[selected=true]:bg-white/10 data-[selected=true]:text-white"
                 >
-                  <item.icon className="h-3.5 w-3.5 text-muted-foreground" />
+                  <item.icon className="h-3.5 w-3.5 text-white/60" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[10px] font-medium">{item.label}</p>
                     {item.description ? (
-                      <p className="truncate text-[9px] text-muted-foreground">
+                      <p className="truncate text-[9px] text-white/50">
                         {item.description}
                       </p>
                     ) : null}
