@@ -13,9 +13,17 @@ type NotificationItem = {
   id: string;
   actor_name: string;
   actor_avatar_url: string | null;
-  entity_kind: "project" | "proposal" | "program" | "training";
+  entity_kind: "project" | "proposal" | "program" | "training" | "announcement" | "community_comment";
   entity_title: string;
-  action_type: "created" | "updated" | "document_uploaded" | "assigned";
+  action_type:
+    | "created"
+    | "updated"
+    | "document_uploaded"
+    | "assigned"
+    | "community_post"
+    | "mentioned"
+    | "commented"
+    | "replied";
   route: string;
   created_at: string;
   read_at: string | null;
@@ -66,6 +74,22 @@ function buildMessage(item: NotificationItem) {
     return `${actorName} has assigned you on a project as a project leader`;
   }
 
+  if (item.action_type === "mentioned") {
+    return `${actorName} mentioned you in a CQER Community announcement`;
+  }
+
+  if (item.action_type === "commented") {
+    return `${actorName} commented on your CQER Community announcement`;
+  }
+
+  if (item.action_type === "replied") {
+    return `${actorName} replied to your CQER Community comment`;
+  }
+
+  if (item.action_type === "community_post") {
+    return `${actorName} shared a new public post from CQER Community: "${item.entity_title}"`;
+  }
+
   if (item.action_type === "updated") {
     return `${actorName} updated ${objectLabel} "${item.entity_title}"`;
   }
@@ -81,10 +105,6 @@ export function NotificationBell({ userId }: NotificationBellProps) {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showAll, setShowAll] = useState(false);
-
-  useEffect(() => {
-    if (!open) setShowAll(false);
-  }, [open]);
 
   useEffect(() => {
     let active = true;
@@ -194,7 +214,15 @@ export function NotificationBell({ userId }: NotificationBellProps) {
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+        if (!nextOpen) {
+          setShowAll(false);
+        }
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           type="button"

@@ -52,6 +52,7 @@ import {
   UserPlus,
   ArrowRightLeft,
   LayoutDashboard,
+  Users2,
   type LucideIcon,
 } from "lucide-react";
 import Image from "next/image";
@@ -123,6 +124,7 @@ export function Navbar({ user }: NavbarProps) {
     panelParam === "awards" ||
     panelParam === "student-involvement" ||
     panelParam === "faculty-involvement" ||
+    panelParam === "community" ||
     panelParam === "technologies-innovation" ||
     panelParam === "ordinance-resolutions" ||
     panelParam === "trainings" ||
@@ -134,6 +136,7 @@ export function Navbar({ user }: NavbarProps) {
   useEffect(() => {
     router.prefetch("/dashboard");
     router.prefetch("/dashboard?panel=overview");
+    router.prefetch("/dashboard?panel=community");
     router.prefetch("/dashboard?panel=records&view=project-registration");
     router.prefetch("/dashboard?panel=records&view=project-proposal");
     router.prefetch("/dashboard?panel=unit-coordinators");
@@ -249,6 +252,15 @@ export function Navbar({ user }: NavbarProps) {
         description: "Go to the main dashboard overview.",
         icon: LayoutDashboard,
         roles: ["super_admin", "college_coordinator", "unit_coordinator", "extension_office", "project_leader"],
+      },
+      {
+        id: "community",
+        label: "CQER Community",
+        href: "/dashboard?panel=community",
+        keywords: ["community", "announcements", "social", "feed", "ceit"],
+        description: "Open the CQER Community announcement feed.",
+        icon: Users2,
+        roles: ["super_admin", "college_coordinator", "unit_coordinator", "extension_office"],
       },
       {
         id: "account-management",
@@ -593,6 +605,27 @@ export function Navbar({ user }: NavbarProps) {
                   </Button>
                 )}
               </div>
+              {["super_admin", "college_coordinator", "unit_coordinator", "extension_office"].includes(user.userType) && (
+                <div className="flex justify-center w-full">
+                  {withTooltip(
+                    "CQER Community",
+                    <Button
+                      variant="ghost"
+                      className={cn(
+                        "transition-all duration-200",
+                        sidebarOpen ? "h-7 w-full justify-start px-3" : collapsedButtonClass,
+                        activePanel === "community"
+                          ? "border border-border/40 bg-muted/30 text-foreground"
+                          : "border border-transparent text-foreground"
+                      )}
+                      onClick={() => goTo("/dashboard?panel=community")}
+                    >
+                      <Users2 className={cn("shrink-0", sidebarOpen ? "mr-2 h-3 w-3" : collapsedIconClass)} />
+                      {sidebarOpen && <span className="text-[9px] font-medium">CQER Community</span>}
+                    </Button>
+                  )}
+                </div>
+              )}
               {user.userType === "college_coordinator" && (
                 <>
                   {!sidebarOpen ? (

@@ -687,6 +687,66 @@ with check (
 -- ============================================
 
 -- ============================================================
+-- START COPY: CQER Community Storage
+-- ============================================================
+-- Manual step in Supabase Dashboard:
+-- 1. Create bucket: cqer-community
+-- 2. Public: OFF
+-- 3. Allowed MIME types: image/*, application/pdf, application/msword,
+--    application/vnd.openxmlformats-officedocument.wordprocessingml.document
+-- 4. Max file size: 8388608 (8MB)
+
+drop policy if exists "Allow community authenticated uploads" on storage.objects;
+create policy "Allow community authenticated uploads"
+on storage.objects for insert
+to authenticated
+with check (
+  bucket_id = 'cqer-community' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+
+drop policy if exists "Allow community authenticated reads" on storage.objects;
+create policy "Allow community authenticated reads"
+on storage.objects for select
+to authenticated
+using (
+  bucket_id = 'cqer-community'
+);
+
+drop policy if exists "Allow community owner delete" on storage.objects;
+create policy "Allow community owner delete"
+on storage.objects for delete
+to authenticated
+using (
+  bucket_id = 'cqer-community' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+
+drop policy if exists "Allow community super admin full access" on storage.objects;
+create policy "Allow community super admin full access"
+on storage.objects for all
+to authenticated
+using (
+  bucket_id = 'cqer-community' AND
+  exists (
+    select 1 from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.user_type = 'super_admin'
+  )
+)
+with check (
+  bucket_id = 'cqer-community' AND
+  exists (
+    select 1 from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.user_type = 'super_admin'
+  )
+);
+-- ============================================================
+-- END COPY: CQER Community Storage
+-- ============================================================
+
+-- ============================================================
 -- START COPY: Awards Module (College and Unit Coordinators)
 -- ============================================================
 create table if not exists public.awards (
@@ -1411,17 +1471,155 @@ $$;
 -- ============================================================
 -- START COPY: Navbar Notifications
 -- ============================================================
+create table if not exists public.community_posts (
+  id uuid primary key default gen_random_uuid(),
+  author_id uuid not null references public.profiles(id) on delete cascade,
+  content text not null,
+  visibility text not null check (visibility in ('public', 'department')),
+  department text,
+  attachment_files jsonb not null default '[]',
+  mentioned_user_ids uuid[] not null default '{}',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  edited_at timestamptz,
+  constraint community_posts_department_required
+    check (
+      (visibility = 'public' and department is null)
+      or (visibility = 'department' and department is not null)
+    )
+);
+
+create table if not exists public.community_comments (
+  id uuid primary key default gen_random_uuid(),
+  post_id uuid not null references public.community_posts(id) on delete cascade,
+  parent_id uuid references public.community_comments(id) on delete cascade,
+  author_id uuid not null references public.profiles(id) on delete cascade,
+  content text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  edited_at timestamptz
+);
+
+create index if not exists idx_community_posts_created_at
+on public.community_posts (created_at desc);
+
+create index if not exists idx_community_posts_visibility_department
+on public.community_posts (visibility, department, created_at desc);
+
+create index if not exists idx_community_comments_post_created_at
+on public.community_comments (post_id, created_at asc);
+
+alter table public.community_posts enable row level security;
+alter table public.community_comments enable row level security;
+
+drop policy if exists "Users can view visible community posts" on public.community_posts;
+create policy "Users can view visible community posts" on public.community_posts
+for select using (
+  visibility = 'public'
+  or exists (
+    select 1
+    from public.profiles viewer
+    where viewer.id = auth.uid()
+      and viewer.department is not distinct from community_posts.department
+  )
+);
+
+drop policy if exists "Users can create own community posts" on public.community_posts;
+create policy "Users can create own community posts" on public.community_posts
+for insert with check (auth.uid() = author_id);
+
+drop policy if exists "Users can update own community posts" on public.community_posts;
+create policy "Users can update own community posts" on public.community_posts
+for update using (auth.uid() = author_id)
+with check (auth.uid() = author_id);
+
+drop policy if exists "Users can delete own community posts" on public.community_posts;
+create policy "Users can delete own community posts" on public.community_posts
+for delete using (auth.uid() = author_id);
+
+drop policy if exists "Users can view visible community comments" on public.community_comments;
+create policy "Users can view visible community comments" on public.community_comments
+for select using (
+  exists (
+    select 1
+    from public.community_posts post
+    left join public.profiles viewer on viewer.id = auth.uid()
+    where post.id = community_comments.post_id
+      and (
+        post.visibility = 'public'
+        or viewer.department is not distinct from post.department
+      )
+  )
+);
+
+drop policy if exists "Users can create own community comments" on public.community_comments;
+create policy "Users can create own community comments" on public.community_comments
+for insert with check (
+  auth.uid() = author_id
+  and exists (
+    select 1
+    from public.community_posts post
+    left join public.profiles viewer on viewer.id = auth.uid()
+    where post.id = community_comments.post_id
+      and (
+        post.visibility = 'public'
+        or viewer.department is not distinct from post.department
+      )
+  )
+);
+
+drop policy if exists "Users can update own community comments" on public.community_comments;
+create policy "Users can update own community comments" on public.community_comments
+for update using (auth.uid() = author_id)
+with check (auth.uid() = author_id);
+
+drop policy if exists "Users can delete own community comments" on public.community_comments;
+create policy "Users can delete own community comments" on public.community_comments
+for delete using (auth.uid() = author_id);
+
+create or replace function public.set_community_posts_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  new.edited_at = now();
+  return new;
+end;
+$$;
+
+drop trigger if exists community_posts_set_updated_at on public.community_posts;
+create trigger community_posts_set_updated_at
+before update on public.community_posts
+for each row execute function public.set_community_posts_updated_at();
+
+create or replace function public.set_community_comments_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  new.edited_at = now();
+  return new;
+end;
+$$;
+
+drop trigger if exists community_comments_set_updated_at on public.community_comments;
+create trigger community_comments_set_updated_at
+before update on public.community_comments
+for each row execute function public.set_community_comments_updated_at();
+
 create table if not exists public.notifications (
   id uuid primary key default gen_random_uuid(),
   recipient_id uuid not null references public.profiles(id) on delete cascade,
   actor_id uuid references public.profiles(id) on delete cascade,
   actor_name text not null,
   actor_avatar_url text,
-  entity_table text not null check (entity_table in ('projects', 'trainings')),
+  entity_table text not null check (entity_table in ('projects', 'trainings', 'community_posts', 'community_comments')),
   entity_id uuid not null,
-  entity_kind text not null check (entity_kind in ('project', 'proposal', 'program', 'training')),
+  entity_kind text not null check (entity_kind in ('project', 'proposal', 'program', 'training', 'announcement', 'community_comment')),
   entity_title text not null,
-  action_type text not null check (action_type in ('created', 'updated', 'document_uploaded', 'assigned')),
+  action_type text not null check (action_type in ('created', 'updated', 'document_uploaded', 'assigned', 'community_post', 'mentioned', 'commented', 'replied')),
   route text not null,
   read_at timestamptz,
   created_at timestamptz not null default now()
@@ -1437,6 +1635,32 @@ on public.notifications (recipient_id, read_at, created_at desc);
 do $$
 begin
   if exists (
+    select 1 from pg_constraint where conname = 'notifications_entity_table_check'
+  ) then
+    alter table public.notifications drop constraint notifications_entity_table_check;
+  end if;
+  if not exists (
+    select 1 from pg_constraint where conname = 'notifications_entity_table_check'
+  ) then
+    alter table public.notifications
+      add constraint notifications_entity_table_check
+      check (entity_table in ('projects', 'trainings', 'community_posts', 'community_comments'));
+  end if;
+
+  if exists (
+    select 1 from pg_constraint where conname = 'notifications_entity_kind_check'
+  ) then
+    alter table public.notifications drop constraint notifications_entity_kind_check;
+  end if;
+  if not exists (
+    select 1 from pg_constraint where conname = 'notifications_entity_kind_check'
+  ) then
+    alter table public.notifications
+      add constraint notifications_entity_kind_check
+      check (entity_kind in ('project', 'proposal', 'program', 'training', 'announcement', 'community_comment'));
+  end if;
+
+  if exists (
     select 1 from pg_constraint where conname = 'notifications_action_type_check'
   ) then
     alter table public.notifications drop constraint notifications_action_type_check;
@@ -1446,7 +1670,7 @@ begin
   ) then
     alter table public.notifications
       add constraint notifications_action_type_check
-      check (action_type in ('created', 'updated', 'document_uploaded', 'assigned'));
+      check (action_type in ('created', 'updated', 'document_uploaded', 'assigned', 'community_post', 'mentioned', 'commented', 'replied'));
   end if;
 end
 $$;

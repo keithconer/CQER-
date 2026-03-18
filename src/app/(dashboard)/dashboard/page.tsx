@@ -45,6 +45,8 @@ import { DashboardAnalytics } from "@/components/dashboard/dashboard-analytics";
 import { format, startOfMonth, subMonths } from "date-fns";
 import { DEPARTMENTS } from "@/lib/departments";
 import { ActiveCoordinators, type CoordinatorActivity } from "@/components/dashboard/active-coordinators";
+import { CommunityPanel } from "@/components/dashboard/community-panel";
+import { getCommunityBootstrap, type CommunityPost } from "@/lib/actions/community";
 
 
 function extractPartnerAgencyNames(projects: Project[]) {
@@ -223,6 +225,7 @@ export default async function DashboardPage({
     panelParam === "awards" ||
     panelParam === "student-involvement" ||
     panelParam === "faculty-involvement" ||
+    panelParam === "community" ||
     panelParam === "technologies-innovation" ||
     panelParam === "ordinance-resolutions" ||
     panelParam === "trainings" ||
@@ -269,6 +272,9 @@ export default async function DashboardPage({
   let ordinanceRecords: OrdinanceRecord[] = [];
   let trainingRecords: TrainingRecord[] = [];
   let trainingPartnerAgencyOptions: string[] = [];
+  let publicCommunityPosts: CommunityPost[] = [];
+  let departmentCommunityPosts: CommunityPost[] = [];
+  let communityUsers = [] as Awaited<ReturnType<typeof getCommunityBootstrap>>["mentionableUsers"];
   let collegeUnitCoordinatorAccounts: {
     id: string;
     email: string | null;
@@ -281,7 +287,12 @@ export default async function DashboardPage({
   }[] = [];
 
   if (profile.user_type === "unit_coordinator" || profile.user_type === "extension_office") {
-    if (activePanel === "awards") {
+    if (activePanel === "community") {
+      const communityData = await getCommunityBootstrap(profile.department);
+      publicCommunityPosts = communityData.publicPosts;
+      departmentCommunityPosts = communityData.departmentPosts;
+      communityUsers = communityData.mentionableUsers;
+    } else if (activePanel === "awards") {
       awards = (await getAwards()).data || [];
     } else if (activePanel === "student-involvement") {
       studentInvolvementRecords = (await getStudentInvolvement()).data || [];
@@ -314,7 +325,12 @@ export default async function DashboardPage({
     profile.user_type === "college_coordinator" &&
     activePanel !== "unit-coordinators"
   ) {
-    if (activePanel === "awards") {
+    if (activePanel === "community") {
+      const communityData = await getCommunityBootstrap(profile.department);
+      publicCommunityPosts = communityData.publicPosts;
+      departmentCommunityPosts = communityData.departmentPosts;
+      communityUsers = communityData.mentionableUsers;
+    } else if (activePanel === "awards") {
       awards = (await getAwards()).data || [];
     } else if (activePanel === "student-involvement") {
       studentInvolvementRecords = (await getStudentInvolvement()).data || [];
@@ -334,7 +350,12 @@ export default async function DashboardPage({
       projects = (await getCollegeProjects()).data || [];
     }
   } else if (profile.user_type === "project_leader") {
-    if (hasEntitySelection) {
+    if (activePanel === "community") {
+      const communityData = await getCommunityBootstrap(profile.department);
+      publicCommunityPosts = communityData.publicPosts;
+      departmentCommunityPosts = communityData.departmentPosts;
+      communityUsers = communityData.mentionableUsers;
+    } else if (hasEntitySelection) {
       const [leaderProjectsResult, unitProjectsResult] = await Promise.all([
         getProjectLeaderProjects(),
         getUnitProjects(),
@@ -399,7 +420,12 @@ export default async function DashboardPage({
 
     availableUnitsForSuperAdmin = getAllUnits();
 
-    if (activePanel === "awards") {
+    if (activePanel === "community") {
+      const communityData = await getCommunityBootstrap(profile.department);
+      publicCommunityPosts = communityData.publicPosts;
+      departmentCommunityPosts = communityData.departmentPosts;
+      communityUsers = communityData.mentionableUsers;
+    } else if (activePanel === "awards") {
       awards = (await getAwards()).data || [];
     } else if (activePanel === "student-involvement") {
       studentInvolvementRecords = (await getStudentInvolvement()).data || [];
@@ -727,6 +753,7 @@ export default async function DashboardPage({
     overview: "Dashboard",
     records: "Projects",
     projects: "Projects",
+    community: "CQER Community",
     funding: "Funding",
     awards: "Awards",
     "student-involvement": "Student Involvement",
@@ -806,8 +833,28 @@ export default async function DashboardPage({
         </div>
       )}
 
+      {activePanel === "community" && (
+        <CommunityPanel
+          currentUser={{
+            id: profile.id,
+            firstName: profile.first_name || "User",
+            lastName: profile.last_name || "",
+            avatarUrl:
+              profile.avatar_url ||
+              user.user_metadata?.avatar_url ||
+              user.user_metadata?.picture ||
+              null,
+            department: profile.department || null,
+            userType: profile.user_type,
+          }}
+          publicPosts={publicCommunityPosts}
+          departmentPosts={departmentCommunityPosts}
+          mentionableUsers={communityUsers}
+        />
+      )}
 
-      {userType === "super_admin" && (
+
+      {userType === "super_admin" && activePanel !== "community" && (
         <div className="space-y-4">
           {accountPanelSelected ? (
             accountView === "transfer" ? (
@@ -923,7 +970,7 @@ export default async function DashboardPage({
         </div>
       )}
 
-      {userType === "college_coordinator" && (
+      {userType === "college_coordinator" && activePanel !== "community" && (
         <div className="space-y-4">
           {activePanel === "unit-coordinators" || accountPanelSelected ? (
             accountView === "transfer" ? (
@@ -1020,7 +1067,7 @@ export default async function DashboardPage({
         </div>
       )}
 
-      {userType === "unit_coordinator" && (
+      {userType === "unit_coordinator" && activePanel !== "community" && (
         activePanel === "awards" ? (
           <AwardsManagement
             initialAwards={awards}
@@ -1103,7 +1150,7 @@ export default async function DashboardPage({
         ) : null
       )}
 
-      {userType === "extension_office" && (
+      {userType === "extension_office" && activePanel !== "community" && (
         activePanel === "awards" ? (
           <AwardsManagement
             initialAwards={awards}
@@ -1194,7 +1241,7 @@ export default async function DashboardPage({
         ) : null
       )}
 
-      {userType === "project_leader" && (
+      {userType === "project_leader" && activePanel !== "community" && (
         hasEntitySelection ? (
           activeProjectView === "project-proposal" ? (
             <ProjectProposalManagement
