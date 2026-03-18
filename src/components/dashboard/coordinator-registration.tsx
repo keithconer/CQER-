@@ -48,6 +48,7 @@ export function CoordinatorRegistration({ userType, title, description, departme
   const [departments, setDepartments] = useState<Record<string, string>>({});
   const [units, setUnits] = useState<Record<string, string>>({});
   const [dietTracks, setDietTracks] = useState<Record<string, string>>({});
+  const [roles, setRoles] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [results, setResults] = useState<RegistrationResult[]>([]);
@@ -58,12 +59,30 @@ export function CoordinatorRegistration({ userType, title, description, departme
     const newEmails = [...emails];
     newEmails.splice(index, 1);
     setEmails(newEmails);
+    setRoles((prev) => {
+      const next = { ...prev };
+      const removed = emails[index];
+      if (removed) {
+        delete next[removed];
+      }
+      return next;
+    });
   };
 
   const handleEmailChange = (index: number, value: string) => {
     const newEmails = [...emails];
+    const previous = newEmails[index];
     newEmails[index] = value;
     setEmails(newEmails);
+    if (previous && previous !== value) {
+      setRoles((prev) => {
+        const next = { ...prev };
+        const existing = next[previous];
+        delete next[previous];
+        if (existing) next[value] = existing;
+        return next;
+      });
+    }
   };
 
   const handleNext = () => {
@@ -123,7 +142,7 @@ export function CoordinatorRegistration({ userType, title, description, departme
           userType === "unit_coordinator"
             ? buildUnitValue(units[email], dietTracks[email])
             : undefined,
-        userType
+        userType: roles[email] || userType
       }));
 
       const response = await registerCoordinators(payload);
@@ -168,6 +187,7 @@ export function CoordinatorRegistration({ userType, title, description, departme
         setDepartments({});
         setUnits({});
         setDietTracks({});
+        setRoles({});
         setError("");
         setResults([]);
       }
@@ -271,6 +291,23 @@ export function CoordinatorRegistration({ userType, title, description, departme
                       </select>
                     </div>
                   )}
+                  {userType === "unit_coordinator" && (
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] font-semibold">Role (Optional)</Label>
+                      <select
+                        value={roles[email] || ""}
+                        onChange={(e) => setRoles({ ...roles, [email]: e.target.value })}
+                        className="flex h-8 w-full rounded-md border border-border/80 bg-background px-3 py-1 text-[11px] shadow-sm focus:outline-none"
+                      >
+                        <option value="">Unit Coordinator</option>
+                        <option value="project_leader">Project Leader</option>
+                        <option value="extension_office">Extension Office</option>
+                      </select>
+                      <p className="text-[9px] text-muted-foreground">
+                        Leave as Unit Coordinator unless assigning a Project Leader or Extension Office role.
+                      </p>
+                    </div>
+                  )}
 
                   {userType === "unit_coordinator" &&
                     (fixedDepartment || departments[email]) ===
@@ -309,7 +346,7 @@ export function CoordinatorRegistration({ userType, title, description, departme
               <div className="space-y-1">
                 <p className="text-[11px] font-semibold">Ready to register {emails.length} coordinators</p>
                 <p className="text-[10px] text-muted-foreground px-4">
-                  Temporary passwords will be generated and sent via email.
+                  Temporary passwords will be given after this page.
                 </p>
               </div>
             </div>

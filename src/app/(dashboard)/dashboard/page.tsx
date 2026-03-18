@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { UnitProjectsManagement } from "@/components/dashboard/unit-projects-management";
 import { CoordinatorRegistration } from "@/components/dashboard/coordinator-registration";
-import { getCollegeProjects, getProjects, getUnitProjects } from "@/lib/actions/projects";
+import { getCollegeProjects, getProjects, getProjectLeaderProjects, getUnitProjects } from "@/lib/actions/projects";
 import { getAwards } from "@/lib/actions/awards";
 import { getStudentInvolvement } from "@/lib/actions/student-involvement";
 import { getFacultyModuleData } from "@/lib/actions/faculty-involvement";
@@ -274,13 +274,13 @@ export default async function DashboardPage({
     email: string | null;
     first_name: string | null;
     last_name: string | null;
-    user_type: "unit_coordinator";
+    user_type: "unit_coordinator" | "project_leader" | "extension_office";
     department: string | null;
     unit: string | null;
     created_at: string | null;
   }[] = [];
 
-  if (profile.user_type === "unit_coordinator") {
+  if (profile.user_type === "unit_coordinator" || profile.user_type === "extension_office") {
     if (activePanel === "awards") {
       awards = (await getAwards()).data || [];
     } else if (activePanel === "student-involvement") {
@@ -298,12 +298,17 @@ export default async function DashboardPage({
       const visibleProjects = (await getUnitProjects()).data || [];
       trainingPartnerAgencyOptions = extractPartnerAgencyNames(visibleProjects);
     } else if (activePanel === "funding" || hasEntitySelection) {
-      const [myProjectsResult, unitProjectsResult] = await Promise.all([
-        getProjects(),
-        getUnitProjects(),
-      ]);
-      projects = myProjectsResult.data || [];
-      unitProjects = unitProjectsResult.data || [];
+      if (profile.user_type === "unit_coordinator") {
+        const [myProjectsResult, unitProjectsResult] = await Promise.all([
+          getProjects(),
+          getUnitProjects(),
+        ]);
+        projects = myProjectsResult.data || [];
+        unitProjects = unitProjectsResult.data || [];
+      } else {
+        unitProjects = (await getUnitProjects()).data || [];
+        projects = [];
+      }
     }
   } else if (
     profile.user_type === "college_coordinator" &&
@@ -328,6 +333,10 @@ export default async function DashboardPage({
     } else if (activePanel === "funding" || hasEntitySelection) {
       projects = (await getCollegeProjects()).data || [];
     }
+  } else if (profile.user_type === "project_leader") {
+    if (hasEntitySelection) {
+      projects = (await getProjectLeaderProjects()).data || [];
+    }
   }
 
   let allAccounts: {
@@ -335,7 +344,7 @@ export default async function DashboardPage({
     email: string | null;
     first_name: string | null;
     last_name: string | null;
-    user_type: "super_admin" | "college_coordinator" | "unit_coordinator";
+    user_type: "super_admin" | "college_coordinator" | "unit_coordinator" | "project_leader" | "extension_office";
     department: string | null;
     unit: string | null;
   }[] = [];
@@ -368,7 +377,9 @@ export default async function DashboardPage({
         (account) =>
           account.user_type === "super_admin" ||
           account.user_type === "college_coordinator" ||
-          account.user_type === "unit_coordinator"
+          account.user_type === "unit_coordinator" ||
+          account.user_type === "project_leader" ||
+          account.user_type === "extension_office"
       ) || [];
 
     availableUnitsForSuperAdmin = getAllUnits();
@@ -400,7 +411,7 @@ export default async function DashboardPage({
       );
       let creatorMap = new Map<
         string,
-        { user_type: "super_admin" | "college_coordinator" | "unit_coordinator"; unit: string | null }
+        { user_type: "super_admin" | "college_coordinator" | "unit_coordinator" | "project_leader" | "extension_office"; unit: string | null }
       >();
       if (creatorIds.length > 0) {
         const { data: creatorProfiles } = await adminClient
@@ -497,7 +508,7 @@ export default async function DashboardPage({
         adminClient
           .from("profiles")
           .select("id", { count: "exact", head: true })
-          .in("user_type", ["super_admin", "college_coordinator", "unit_coordinator"]),
+        .in("user_type", ["super_admin", "college_coordinator", "unit_coordinator", "project_leader", "extension_office"]),
         adminClient.from("trainings").select("id", { count: "exact", head: true }),
       ]);
 
@@ -515,7 +526,7 @@ export default async function DashboardPage({
       const { data: unitAccounts } = await adminClient
         .from("profiles")
         .select("id, email, first_name, last_name, user_type, department, unit, created_at")
-        .eq("user_type", "unit_coordinator")
+        .in("user_type", ["unit_coordinator", "project_leader", "extension_office"])
         .eq("department", profile.department)
         .order("created_at", { ascending: false });
 
@@ -526,7 +537,7 @@ export default async function DashboardPage({
     const { count: usersCount } = await adminClient
       .from("profiles")
       .select("id", { count: "exact", head: true })
-      .in("user_type", ["college_coordinator", "unit_coordinator"])
+      .in("user_type", ["college_coordinator", "unit_coordinator", "project_leader", "extension_office"])
       .eq("department", profile.department);
     analyticsUsers = usersCount ?? 0;
 
@@ -575,7 +586,7 @@ export default async function DashboardPage({
     analyticsScopeLabel = `Department view for ${profile.department}.`;
   }
 
-  if (profile.user_type === "unit_coordinator") {
+  if (profile.user_type === "unit_coordinator" || profile.user_type === "extension_office") {
     const adminClient = createAdminClient();
     let userCountQuery = adminClient
       .from("profiles")
@@ -1072,6 +1083,123 @@ export default async function DashboardPage({
               unit={profile.unit}
               unitOptions={[]}
               currentUserId={user.id}
+            />
+          )
+        ) : null
+      )}
+
+      {userType === "extension_office" && (
+        activePanel === "awards" ? (
+          <AwardsManagement
+            initialAwards={awards}
+            department={profile.department}
+            userType={userType}
+            currentUserId={user.id}
+            isViewOnly
+          />
+        ) : activePanel === "funding" ? (
+          <FundingManagement
+            projects={unitProjects}
+            title="Funding"
+            description="Filter funding rows by Internal or External."
+          />
+        ) : activePanel === "student-involvement" ? (
+          <StudentInvolvementManagement
+            initialRecords={studentInvolvementRecords}
+            department={profile.department}
+            userType={userType}
+            unit={profile.unit}
+            unitOptions={[]}
+            currentUserId={user.id}
+            isViewOnly
+          />
+        ) : activePanel === "faculty-involvement" ? (
+          <FacultyInvolvementManagement
+            department={profile.department}
+            userType={userType}
+            facultyRecords={facultyInvolvementRecords}
+            poolRecords={poolExpertRecords}
+            currentUserId={user.id}
+            isViewOnly
+          />
+        ) : activePanel === "technologies-innovation" ? (
+          <TechnologiesManagement
+            initialRecords={technologyRecords}
+            department={profile.department}
+            userType={userType}
+            unit={profile.unit}
+            unitOptions={[]}
+            currentUserId={user.id}
+            isViewOnly
+          />
+        ) : activePanel === "ordinance-resolutions" ? (
+          <OrdinanceResolutionsManagement
+            initialRecords={ordinanceRecords}
+            department={profile.department}
+            userType={userType}
+            unit={profile.unit}
+            unitOptions={[]}
+            currentUserId={user.id}
+            isViewOnly
+          />
+        ) : activePanel === "trainings" ? (
+          <TrainingsManagement
+            initialRecords={trainingRecords}
+            department={profile.department}
+            userType={userType}
+            unit={profile.unit}
+            unitOptions={[]}
+            partnerAgencyOptions={trainingPartnerAgencyOptions}
+            currentUserId={user.id}
+            isViewOnly
+          />
+        ) : hasEntitySelection ? (
+          activeProjectView === "project-proposal" ? (
+            <UnitProjectProposalsManagement
+              myProjects={projects}
+              unitProjects={unitProjects}
+              userType={userType}
+              department={profile.department}
+              unit={profile.unit}
+              currentUserId={user.id}
+              readOnly
+            />
+          ) : (
+            <UnitProjectsManagement
+              myProjects={projects}
+              unitProjects={unitProjects}
+              userType={userType}
+              department={profile.department}
+              unit={profile.unit}
+              unitOptions={[]}
+              currentUserId={user.id}
+              readOnly
+            />
+          )
+        ) : null
+      )}
+
+      {userType === "project_leader" && (
+        hasEntitySelection ? (
+          activeProjectView === "project-proposal" ? (
+            <ProjectProposalManagement
+              initialProjects={projects as ProjectProposal[]}
+              userType={userType}
+              department={profile.department}
+              unit={profile.unit}
+              unitOptions={[]}
+              currentUserId={user.id}
+              readOnly
+            />
+          ) : (
+            <ProjectManagement
+              initialProjects={projects}
+              userType={userType}
+              department={profile.department}
+              unit={profile.unit}
+              unitOptions={[]}
+              currentUserId={user.id}
+              readOnly
             />
           )
         ) : null

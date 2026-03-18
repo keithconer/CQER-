@@ -48,6 +48,7 @@ import { createProject, updateProject } from "@/lib/actions/projects";
 import { FileUpload } from "./file-upload";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DEPARTMENTS, getUnitsByDepartment } from "@/lib/departments";
+import { ProjectLeaderInput } from "./project-leader-input";
 
 const agendaOptions = [
   "Agri-Fisheries and Food Security",
@@ -94,6 +95,7 @@ const schema = z
     project_title: z.string().min(1, "Required"),
     agenda_classification: z.array(z.string()).min(1, "Select at least one"),
     project_leader: z.string().min(1, "Required"),
+    project_leader_id: z.string().uuid().nullable().optional(),
     co_project_leaders: z.array(z.object({ name: z.string().min(1) })).default([]),
     project_assistants: z.array(z.object({ name: z.string().min(1) })).default([]),
     department_label: z.string().min(1),
@@ -132,6 +134,7 @@ interface LooseProposal {
   id?: string;
   title?: string | null;
   project_title?: string | null;
+  project_leader_id?: string | null;
   classification?: string[] | null;
   proponents?: { name?: string | null }[] | null;
   co_project_leaders?: { name?: string | null }[] | null;
@@ -152,7 +155,7 @@ interface ProjectProposalFormProps {
   onSuccess?: () => void;
   proposal?: LooseProposal;
   isViewOnly?: boolean;
-  currentUserType?: "super_admin" | "college_coordinator" | "unit_coordinator";
+  currentUserType?: "super_admin" | "college_coordinator" | "unit_coordinator" | "extension_office" | "project_leader";
   currentDepartment?: string | null;
   currentUnit?: string | null;
   unitOptions?: string[];
@@ -256,6 +259,7 @@ export function ProjectProposalForm({
       project_title: proposal?.project_title || proposal?.title || "",
       agenda_classification: normalizeStringArray(proposal?.classification),
       project_leader: proposal?.proponents?.[0]?.name || "",
+      project_leader_id: proposal?.project_leader_id || null,
       co_project_leaders: Array.isArray(proposal?.co_project_leaders)
         ? proposal.co_project_leaders.map((item) => ({ name: item?.name || "" }))
         : [],
@@ -307,7 +311,11 @@ export function ProjectProposalForm({
 
   const selectedBeneficiaries = form.watch("target_beneficiaries");
   const watchedDepartment = form.watch("proposal_department");
+  const watchedUnit = form.watch("proposal_unit");
+  const projectLeaderId = form.watch("project_leader_id");
   const watchedVisibilityScope = form.watch("visibility_scope");
+  const projectLeaderDepartment = watchedDepartment || currentDepartment;
+  const projectLeaderUnit = watchedUnit || currentUnit;
   const availableUnits = React.useMemo(
     () =>
       isSuperAdmin
@@ -343,6 +351,7 @@ export function ProjectProposalForm({
         title: values.project_title,
         project_title: values.project_title,
         classification: values.agenda_classification,
+        project_leader_id: values.project_leader_id ?? null,
         proponents: [{ name: values.project_leader }],
         co_project_leaders: values.co_project_leaders,
         project_assistants: values.project_assistants,
@@ -441,7 +450,18 @@ export function ProjectProposalForm({
                   <FormItem>
                     <FormLabel className="text-[10px]">Project leader</FormLabel>
                     <FormControl>
-                      <Input {...field} className="h-8 text-[10px] placeholder:text-[10px]" placeholder="Full name" disabled={isViewOnly} />
+                      <ProjectLeaderInput
+                        value={field.value || ""}
+                        onValueChange={field.onChange}
+                        selectedId={projectLeaderId || null}
+                        onSelectedIdChange={(id) =>
+                          form.setValue("project_leader_id", id, { shouldDirty: true })
+                        }
+                        department={projectLeaderDepartment}
+                        unit={projectLeaderUnit}
+                        disabled={isViewOnly}
+                        placeholder="Type to mention"
+                      />
                     </FormControl>
                     <FormMessage className="text-[10px]" />
                   </FormItem>

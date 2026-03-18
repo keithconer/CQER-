@@ -61,8 +61,9 @@ export async function registerCoordinators(coordinators: { email: string; depart
         }
 
         if (profile?.user_type === "college_coordinator") {
-            if (coordinators.some((coord) => coord.userType !== "unit_coordinator")) {
-                return { error: "College coordinators can only register unit coordinators." };
+            const allowedTypes = new Set(["unit_coordinator", "project_leader", "extension_office"]);
+            if (coordinators.some((coord) => !allowedTypes.has(coord.userType))) {
+                return { error: "College coordinators can only register unit-based accounts." };
             }
             if (!profile.department) {
                 return { error: "College coordinator department is not configured." };
@@ -83,6 +84,15 @@ export async function registerCoordinators(coordinators: { email: string; depart
         if (invalidFormat.length > 0) {
             return {
                 error: `Invalid email format. Use main.firstname.lastname@cvsu.edu.ph: ${invalidFormat.map(c => c.email).join(', ')}`
+            };
+        }
+
+        const missingUnits = coordinators.filter(
+            (coord) => ["unit_coordinator", "project_leader", "extension_office"].includes(coord.userType) && !coord.unit
+        );
+        if (missingUnits.length > 0) {
+            return {
+                error: `Unit is required for: ${missingUnits.map(c => c.email).join(", ")}`
             };
         }
 

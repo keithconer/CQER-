@@ -57,6 +57,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { FileUpload } from "./file-upload";
+import { ProjectLeaderInput } from "./project-leader-input";
 
 const sdgOptions = [
   { id: "Goal 1", label: "Goal 1 - No Poverty" },
@@ -111,6 +112,7 @@ const schema = z.object({
   project_title: z.string().min(1),
   project_no: z.string().min(1),
   project_leader: z.string().min(1),
+  project_leader_id: z.string().uuid().nullable().optional(),
   co_project_leaders: z.array(z.object({ name: z.string().min(1) })).default([]),
   project_assistants: z.array(z.object({ name: z.string().min(1) })).default([]),
   moa_no: z.string().optional().refine((v) => !v || /^\d+$/.test(v), "Numbers only"),
@@ -159,6 +161,7 @@ interface LooseProject {
   title?: string | null;
   project_title?: string | null;
   project_no?: string | null;
+  project_leader_id?: string | null;
   entry_type?: "project" | "project_proposal" | null;
   category?: string | null;
   moa_no?: string | null;
@@ -184,7 +187,7 @@ interface ProjectFormProps {
   onSuccess?: () => void;
   project?: LooseProject;
   isViewOnly?: boolean;
-  currentUserType?: "super_admin" | "college_coordinator" | "unit_coordinator";
+  currentUserType?: "super_admin" | "college_coordinator" | "unit_coordinator" | "extension_office" | "project_leader";
   currentDepartment?: string | null;
   currentUnit?: string | null;
   unitOptions?: string[];
@@ -305,6 +308,7 @@ function buildPayload(values: FormValues) {
     title: values.project_title,
     project_title: values.project_title,
     project_no: values.project_no,
+    project_leader_id: values.project_leader_id ?? null,
     classification: thematicAreas,
     sdg_goals: sdgs,
     academic_program: values.related_curricular_offerings[0] || "N/A",
@@ -428,6 +432,7 @@ export function ProjectForm({
       project_title: project?.project_title || project?.title || "",
       project_no: project?.project_no || (typeof fundingData.project_no === "string" ? fundingData.project_no : autoProjectNo),
       project_leader: project?.proponents?.[0]?.name || "",
+      project_leader_id: project?.project_leader_id || null,
       co_project_leaders: Array.isArray(project?.co_project_leaders)
         ? project.co_project_leaders.map((item) => ({ name: item?.name || "" }))
         : [],
@@ -512,6 +517,12 @@ export function ProjectForm({
       documents: project?.documents || [],
     },
   });
+  const watchedLeadUnits = useWatch({ control: form.control, name: "lead_units" });
+  const projectLeaderId = useWatch({ control: form.control, name: "project_leader_id" });
+  const projectLeaderDepartment =
+    Array.isArray(watchedLeadUnits) && watchedLeadUnits.length > 0
+      ? watchedLeadUnits[0]
+      : currentDepartment;
 
   const [showSuccess, setShowSuccess] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -646,7 +657,20 @@ export function ProjectForm({
               <FormField control={form.control} name="project_leader" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-[10px]">Project leader</FormLabel>
-                  <FormControl><Input {...field} className="h-8 text-[10px] placeholder:text-[10px]" placeholder="Full name" disabled={isViewOnly} /></FormControl>
+                  <FormControl>
+                    <ProjectLeaderInput
+                      value={field.value || ""}
+                      onValueChange={field.onChange}
+                      selectedId={projectLeaderId || null}
+                      onSelectedIdChange={(id) =>
+                        form.setValue("project_leader_id", id, { shouldDirty: true })
+                      }
+                      department={projectLeaderDepartment}
+                      unit={currentUnit}
+                      disabled={isViewOnly}
+                      placeholder="Type to mention"
+                    />
+                  </FormControl>
                   <FormMessage className="text-[10px]" />
                 </FormItem>
               )} />
@@ -1012,7 +1036,12 @@ export function ProjectForm({
                   <FormItem><FormLabel className="text-[10px]">Location</FormLabel><FormControl><Input {...field} className="h-8 text-[10px]" disabled={isViewOnly} /></FormControl></FormItem>
                 )} />
                 <FormField control={form.control} name="funding_types_of_clientele" render={({ field }) => (
-                  <FormItem><FormLabel className="text-[10px]">Types of Clientele</FormLabel><FormControl><Input {...field} className="h-8 text-[10px]" disabled={isViewOnly} /></FormControl></FormItem>
+                  <FormItem className="md:col-span-2">
+                    <FormLabel className="text-[10px]">Types of Clientele</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} className="min-h-[64px] text-[10px]" disabled={isViewOnly} />
+                    </FormControl>
+                  </FormItem>
                 )} />
                 <FormField control={form.control} name="funding_number_of_clientele" render={({ field }) => (
                   <FormItem><FormLabel className="text-[10px]">Number of Clientele</FormLabel><FormControl><Input type="number" value={typeof field.value === "number" ? field.value : ""} onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))} className="h-8 text-[10px]" disabled={isViewOnly} /></FormControl></FormItem>

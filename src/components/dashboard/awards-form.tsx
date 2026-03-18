@@ -56,7 +56,7 @@ type AwardsFormOutput = z.output<typeof awardsSchema>;
 
 interface AwardsFormProps {
   department: string;
-  userType?: "super_admin" | "college_coordinator" | "unit_coordinator";
+  userType?: "super_admin" | "college_coordinator" | "unit_coordinator" | "extension_office" | "project_leader";
   award?: {
     id: string;
     department: string;

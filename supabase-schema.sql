@@ -9,13 +9,26 @@ create table if not exists public.profiles (
   email text not null,
   first_name text,
   last_name text,
-  user_type text check (user_type in ('super_admin', 'college_coordinator', 'unit_coordinator')) not null,
+  user_type text check (user_type in ('super_admin', 'college_coordinator', 'unit_coordinator', 'project_leader', 'extension_office')) not null,
   department text,
   unit text,
   avatar_url text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
+
+do $$
+begin
+  if exists (select 1 from pg_constraint where conname = 'profiles_user_type_check') then
+    alter table public.profiles drop constraint profiles_user_type_check;
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'profiles_user_type_check') then
+    alter table public.profiles
+      add constraint profiles_user_type_check
+      check (user_type in ('super_admin', 'college_coordinator', 'unit_coordinator', 'project_leader', 'extension_office'));
+  end if;
+end
+$$;
 
 -- Enable Row Level Security
 alter table public.profiles enable row level security;
@@ -136,6 +149,7 @@ create policy "Super admins can manage all projects" on public.projects
 -- Helpful indexes for scalable unit-based lookups
 create index if not exists idx_profiles_department_unit_type on public.profiles (department, unit, user_type);
 create index if not exists idx_projects_created_by on public.projects (created_by);
+create index if not exists idx_projects_project_leader_id on public.projects (project_leader_id);
 
 -- Realtime support for unit project visibility (safe to run multiple times)
 do $$
@@ -1376,7 +1390,7 @@ create table if not exists public.notifications (
   entity_id uuid not null,
   entity_kind text not null check (entity_kind in ('project', 'proposal', 'program', 'training')),
   entity_title text not null,
-  action_type text not null check (action_type in ('created', 'updated', 'document_uploaded')),
+  action_type text not null check (action_type in ('created', 'updated', 'document_uploaded', 'assigned')),
   route text not null,
   read_at timestamptz,
   created_at timestamptz not null default now()
@@ -1387,6 +1401,24 @@ on public.notifications (recipient_id, created_at desc);
 
 create index if not exists idx_notifications_unread
 on public.notifications (recipient_id, read_at, created_at desc);
+
+-- Ensure action_type check includes assignment notifications
+do $$
+begin
+  if exists (
+    select 1 from pg_constraint where conname = 'notifications_action_type_check'
+  ) then
+    alter table public.notifications drop constraint notifications_action_type_check;
+  end if;
+  if not exists (
+    select 1 from pg_constraint where conname = 'notifications_action_type_check'
+  ) then
+    alter table public.notifications
+      add constraint notifications_action_type_check
+      check (action_type in ('created', 'updated', 'document_uploaded', 'assigned'));
+  end if;
+end
+$$;
 
 alter table public.notifications enable row level security;
 
@@ -1615,6 +1647,100 @@ drop trigger if exists project_notifications_after_update on public.projects;
 create trigger project_notifications_after_update
 after update on public.projects
 for each row execute function public.push_project_notification();
+
+create or replace function public.push_project_leader_assignment_notification()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  actor_record public.profiles%rowtype;
+  route_target text;
+  title_value text;
+  kind_value text;
+begin
+  if new.project_leader_id is null then
+    return new;
+  end if;
+
+  if tg_op = 'UPDATE' and new.project_leader_id is not distinct from old.project_leader_id then
+    return new;
+  end if;
+
+  select *
+  into actor_record
+  from public.profiles
+  where id = new.created_by;
+
+  if actor_record.id is null then
+    return new;
+  end if;
+
+  if not exists (
+    select 1
+    from public.profiles
+    where id = new.project_leader_id
+      and user_type = 'project_leader'
+  ) then
+    return new;
+  end if;
+
+  if new.project_leader_id = actor_record.id then
+    return new;
+  end if;
+
+  kind_value := case coalesce(new.entry_type, 'project')
+    when 'project_proposal' then 'proposal'
+    when 'program' then 'program'
+    else 'project'
+  end;
+
+  title_value := coalesce(nullif(trim(new.project_title), ''), nullif(trim(new.title), ''), 'Untitled');
+  route_target := case
+    when coalesce(new.entry_type, 'project') = 'project_proposal'
+      then '/dashboard?panel=records&view=project-proposal'
+    else '/dashboard?panel=records&view=project-registration'
+  end;
+
+  insert into public.notifications (
+    recipient_id,
+    actor_id,
+    actor_name,
+    actor_avatar_url,
+    entity_table,
+    entity_id,
+    entity_kind,
+    entity_title,
+    action_type,
+    route
+  )
+  values (
+    new.project_leader_id,
+    actor_record.id,
+    trim(concat(coalesce(actor_record.first_name, ''), ' ', coalesce(actor_record.last_name, ''))),
+    actor_record.avatar_url,
+    'projects',
+    new.id,
+    kind_value,
+    title_value,
+    'assigned',
+    route_target
+  );
+
+  return new;
+end;
+$$;
+
+drop trigger if exists project_leader_assignment_after_insert on public.projects;
+create trigger project_leader_assignment_after_insert
+after insert on public.projects
+for each row execute function public.push_project_leader_assignment_notification();
+
+drop trigger if exists project_leader_assignment_after_update on public.projects;
+create trigger project_leader_assignment_after_update
+after update on public.projects
+for each row execute function public.push_project_leader_assignment_notification();
 
 create or replace function public.push_training_notification()
 returns trigger
@@ -2254,7 +2380,8 @@ add column if not exists visible_departments jsonb default '[]'::jsonb;
 alter table public.projects
 add column if not exists visibility_scope text default 'public',
 add column if not exists visible_units jsonb default '[]'::jsonb,
-add column if not exists visible_departments jsonb default '[]'::jsonb;
+add column if not exists visible_departments jsonb default '[]'::jsonb,
+add column if not exists project_leader_id uuid references public.profiles(id);
 
 -- Ensure constraints (optional but good for data integrity)
 do $$

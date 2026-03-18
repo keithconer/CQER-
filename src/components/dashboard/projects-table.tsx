@@ -45,7 +45,7 @@ import { DocumentPreview } from "./document-preview";
 export interface Project {
   id: string;
   created_by?: string | null;
-  created_by_user_type?: "super_admin" | "college_coordinator" | "unit_coordinator" | null;
+  created_by_user_type?: "super_admin" | "college_coordinator" | "unit_coordinator" | "project_leader" | "extension_office" | null;
   created_by_unit?: string | null;
   entry_type?: "project" | "project_proposal" | null;
   project_no?: string | null;
@@ -86,7 +86,7 @@ interface ProjectsTableProps {
   paginationAlign?: "between" | "right";
   allowViewOnlyAction?: boolean;
   formContext?: {
-    userType?: "super_admin" | "college_coordinator" | "unit_coordinator";
+    userType?: "super_admin" | "college_coordinator" | "unit_coordinator" | "extension_office" | "project_leader";
     department?: string | null;
     unit?: string | null;
     unitOptions?: string[];

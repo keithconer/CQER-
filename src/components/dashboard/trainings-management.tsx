@@ -27,11 +27,12 @@ import { formatThematicAreaLetters } from "@/lib/thematic-area";
 interface TrainingsManagementProps {
   initialRecords: TrainingRecord[];
   department: string | null;
-  userType?: "super_admin" | "college_coordinator" | "unit_coordinator";
+  userType?: "super_admin" | "college_coordinator" | "unit_coordinator" | "extension_office" | "project_leader";
   unit?: string | null;
   unitOptions?: string[];
   partnerAgencyOptions?: string[];
   currentUserId: string;
+  isViewOnly?: boolean;
 }
 
 function formatList(value: string[] | null): string {
@@ -83,6 +84,7 @@ export function TrainingsManagement({
   unitOptions = [],
   partnerAgencyOptions = [],
   currentUserId,
+  isViewOnly = false,
 }: TrainingsManagementProps) {
   const [searchTerm, setSearchTerm] = React.useState("");
   const [createOpen, setCreateOpen] = React.useState(false);
@@ -420,14 +422,16 @@ export function TrainingsManagement({
                 Manage training records and monitor participant metrics.
               </CardDescription>
             </div>
-            <Button
-              size="sm"
-              className="h-8 text-[10px] bg-[#159E44] hover:bg-[#128A3B] text-white"
-              onClick={() => setCreateOpen(true)}
-            >
-              <Plus className="h-3 w-3 mr-1" />
-              Create Training
-            </Button>
+            {!isViewOnly && (
+              <Button
+                size="sm"
+                className="h-8 text-[10px] bg-[#159E44] hover:bg-[#128A3B] text-white"
+                onClick={() => setCreateOpen(true)}
+              >
+                <Plus className="h-3 w-3 mr-1" />
+                Create Training
+              </Button>
+            )}
           </div>
 
           <div className="flex items-center justify-between gap-2">
@@ -538,29 +542,33 @@ export function TrainingsManagement({
                           >
                             <Eye className="h-3 w-3" />
                           </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            className="h-7 w-7 border-border/50"
-                            title="Update"
-                            aria-label="Update training record"
-                            onClick={() => setEditRecord(record)}
-                          >
-                            <Pencil className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            className="h-7 w-7 border-border/50 text-destructive"
-                            title="Delete"
-                            aria-label="Delete training record"
-                            disabled={isDeletingId === record.id}
-                            onClick={() => handleDelete(record)}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
+                          {!isViewOnly && (
+                            <>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-7 w-7 border-border/50"
+                                title="Update"
+                                aria-label="Update training record"
+                                onClick={() => setEditRecord(record)}
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-7 w-7 border-border/50 text-destructive"
+                                title="Delete"
+                                aria-label="Delete training record"
+                                disabled={isDeletingId === record.id}
+                                onClick={() => handleDelete(record)}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -578,50 +586,54 @@ export function TrainingsManagement({
         </CardContent>
       </Card>
 
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="sm:max-w-[920px] p-6 max-h-[90vh] overflow-hidden">
-          <DialogHeader className="pb-2">
-            <DialogTitle className="text-xs font-semibold flex items-center gap-1.5">
-              <GraduationCap className="h-4 w-4" /> Create Training
-            </DialogTitle>
-            <DialogDescription className="text-[10px]">
-              Fill out the training form below.
-            </DialogDescription>
-          </DialogHeader>
-          <TrainingsForm
-            department={department || ""}
-            userType={userType}
-            unit={unit}
-            unitOptions={unitOptions}
-            existingPartnerAgencies={partnerAgencyOptions}
-            onSuccess={handleSuccess}
-          />
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!editRecord} onOpenChange={(open) => !open && setEditRecord(null)}>
-        <DialogContent className="sm:max-w-[920px] p-6 max-h-[90vh] overflow-hidden">
-          <DialogHeader className="pb-2">
-            <DialogTitle className="text-sm font-semibold flex items-center gap-1.5">
-              <GraduationCap className="h-4 w-4" /> Update Training
-            </DialogTitle>
-            <DialogDescription className="text-[10px]">
-              Update this training record.
-            </DialogDescription>
-          </DialogHeader>
-          {editRecord && (
+      {!isViewOnly && (
+        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+          <DialogContent className="sm:max-w-[920px] p-6 max-h-[90vh] overflow-hidden">
+            <DialogHeader className="pb-2">
+              <DialogTitle className="text-xs font-semibold flex items-center gap-1.5">
+                <GraduationCap className="h-4 w-4" /> Create Training
+              </DialogTitle>
+              <DialogDescription className="text-[10px]">
+                Fill out the training form below.
+              </DialogDescription>
+            </DialogHeader>
             <TrainingsForm
               department={department || ""}
               userType={userType}
               unit={unit}
               unitOptions={unitOptions}
               existingPartnerAgencies={partnerAgencyOptions}
-              record={editRecord}
               onSuccess={handleSuccess}
             />
-          )}
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {!isViewOnly && (
+        <Dialog open={!!editRecord} onOpenChange={(open) => !open && setEditRecord(null)}>
+          <DialogContent className="sm:max-w-[920px] p-6 max-h-[90vh] overflow-hidden">
+            <DialogHeader className="pb-2">
+              <DialogTitle className="text-sm font-semibold flex items-center gap-1.5">
+                <GraduationCap className="h-4 w-4" /> Update Training
+              </DialogTitle>
+              <DialogDescription className="text-[10px]">
+                Update this training record.
+              </DialogDescription>
+            </DialogHeader>
+            {editRecord && (
+              <TrainingsForm
+                department={department || ""}
+                userType={userType}
+                unit={unit}
+                unitOptions={unitOptions}
+                existingPartnerAgencies={partnerAgencyOptions}
+                record={editRecord}
+                onSuccess={handleSuccess}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
 
       <Dialog open={!!viewRecord} onOpenChange={(open) => !open && setViewRecord(null)}>
         <DialogContent className="sm:max-w-[920px] p-6 max-h-[90vh] overflow-hidden">

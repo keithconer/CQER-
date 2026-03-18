@@ -33,7 +33,7 @@ import { ProjectProposalsTable, type ProjectProposal } from "./project-proposals
 interface ProjectProposalManagementProps {
   initialProjects: ProjectProposal[];
   readOnly?: boolean;
-  userType?: "super_admin" | "college_coordinator" | "unit_coordinator";
+  userType?: "super_admin" | "college_coordinator" | "unit_coordinator" | "extension_office" | "project_leader";
   department?: string | null;
   unit?: string | null;
   unitOptions?: string[];
@@ -207,6 +207,7 @@ export function ProjectProposalManagement({
           <ProjectProposalsTable
             proposals={scopedRecords}
             readOnly={readOnly}
+            allowViewOnlyAction={readOnly}
             currentUserId={currentUserId}
             searchTerm={searchTerm}
             onSearchTermChange={setSearchTerm}

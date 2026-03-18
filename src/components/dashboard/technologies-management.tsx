@@ -106,10 +106,11 @@ export interface TechnologyRecord {
 interface TechnologiesManagementProps {
   initialRecords: TechnologyRecord[];
   department: string | null;
-  userType?: "super_admin" | "college_coordinator" | "unit_coordinator";
+  userType?: "super_admin" | "college_coordinator" | "unit_coordinator" | "extension_office" | "project_leader";
   unit?: string | null;
   unitOptions?: string[];
   currentUserId: string;
+  isViewOnly?: boolean;
 }
 
 function TechnologyForm({
@@ -122,7 +123,7 @@ function TechnologyForm({
   onSuccess,
 }: {
   department: string;
-  userType?: "super_admin" | "college_coordinator" | "unit_coordinator";
+  userType?: "super_admin" | "college_coordinator" | "unit_coordinator" | "extension_office" | "project_leader";
   unit?: string | null;
   unitOptions?: string[];
   record?: TechnologyRecord | null;
@@ -460,6 +461,7 @@ export function TechnologiesManagement({
   unit,
   unitOptions = [],
   currentUserId,
+  isViewOnly = false,
 }: TechnologiesManagementProps) {
   const [searchTerm, setSearchTerm] = React.useState("");
   const [createOpen, setCreateOpen] = React.useState(false);
@@ -549,10 +551,12 @@ export function TechnologiesManagement({
               <CardTitle className="text-xs font-semibold">Technologies/Innovation Adapted</CardTitle>
               <CardDescription className="text-[10px]">Manage technologies and innovations adapted/commercialized.</CardDescription>
             </div>
-            <Button size="sm" className="h-8 text-xs bg-[#159E44] hover:bg-[#128A3B] text-white" onClick={() => setCreateOpen(true)}>
-              <Plus className="h-3 w-3 mr-1" />
-              Create Technology
-            </Button>
+            {!isViewOnly && (
+              <Button size="sm" className="h-8 text-xs bg-[#159E44] hover:bg-[#128A3B] text-white" onClick={() => setCreateOpen(true)}>
+                <Plus className="h-3 w-3 mr-1" />
+                Create Technology
+              </Button>
+            )}
           </div>
           <div className="flex items-center justify-between gap-2">
             <div className="relative max-w-sm w-full">
@@ -626,12 +630,16 @@ export function TechnologiesManagement({
                           <Button type="button" variant="outline" size="icon" className="h-7 w-7 border-border/50" title="View" aria-label="View" onClick={() => setViewRecord(item)}>
                             <Eye className="h-3 w-3" />
                           </Button>
-                          <Button type="button" variant="outline" size="icon" className="h-7 w-7 border-border/50" title="Update" aria-label="Update" onClick={() => setEditRecord(item)}>
-                            <Pencil className="h-3 w-3" />
-                          </Button>
-                          <Button type="button" variant="outline" size="icon" className="h-7 w-7 border-border/50 text-destructive" title="Delete" aria-label="Delete" disabled={deletingId === item.id} onClick={() => handleDelete(item.id)}>
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
+                          {!isViewOnly && (
+                            <>
+                              <Button type="button" variant="outline" size="icon" className="h-7 w-7 border-border/50" title="Update" aria-label="Update" onClick={() => setEditRecord(item)}>
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                              <Button type="button" variant="outline" size="icon" className="h-7 w-7 border-border/50 text-destructive" title="Delete" aria-label="Delete" disabled={deletingId === item.id} onClick={() => handleDelete(item.id)}>
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -649,25 +657,29 @@ export function TechnologiesManagement({
         </CardContent>
       </Card>
 
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="sm:max-w-[760px] max-h-[90vh] overflow-y-auto p-6">
-          <DialogHeader className="pb-2">
-            <DialogTitle className="text-sm font-semibold">Create Technology</DialogTitle>
-            <DialogDescription className="text-[10px]">Fill out the form below.</DialogDescription>
-          </DialogHeader>
-          <TechnologyForm department={department || ""} userType={userType} unit={unit} unitOptions={unitOptions} onSuccess={closeAndRefresh} />
-        </DialogContent>
-      </Dialog>
+      {!isViewOnly && (
+        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+          <DialogContent className="sm:max-w-[760px] max-h-[90vh] overflow-y-auto p-6">
+            <DialogHeader className="pb-2">
+              <DialogTitle className="text-sm font-semibold">Create Technology</DialogTitle>
+              <DialogDescription className="text-[10px]">Fill out the form below.</DialogDescription>
+            </DialogHeader>
+            <TechnologyForm department={department || ""} userType={userType} unit={unit} unitOptions={unitOptions} onSuccess={closeAndRefresh} />
+          </DialogContent>
+        </Dialog>
+      )}
 
-      <Dialog open={!!editRecord} onOpenChange={(open) => !open && setEditRecord(null)}>
-        <DialogContent className="sm:max-w-[760px] max-h-[90vh] overflow-y-auto p-6">
-          <DialogHeader className="pb-2">
-            <DialogTitle className="text-sm font-semibold">Update Technology</DialogTitle>
-            <DialogDescription className="text-[10px]">Update record details.</DialogDescription>
-          </DialogHeader>
-          {editRecord && <TechnologyForm department={department || ""} userType={userType} unit={unit} unitOptions={unitOptions} record={editRecord} onSuccess={closeAndRefresh} />}
-        </DialogContent>
-      </Dialog>
+      {!isViewOnly && (
+        <Dialog open={!!editRecord} onOpenChange={(open) => !open && setEditRecord(null)}>
+          <DialogContent className="sm:max-w-[760px] max-h-[90vh] overflow-y-auto p-6">
+            <DialogHeader className="pb-2">
+              <DialogTitle className="text-sm font-semibold">Update Technology</DialogTitle>
+              <DialogDescription className="text-[10px]">Update record details.</DialogDescription>
+            </DialogHeader>
+            {editRecord && <TechnologyForm department={department || ""} userType={userType} unit={unit} unitOptions={unitOptions} record={editRecord} onSuccess={closeAndRefresh} />}
+          </DialogContent>
+        </Dialog>
+      )}
 
       <Dialog open={!!viewRecord} onOpenChange={(open) => !open && setViewRecord(null)}>
         <DialogContent className="sm:max-w-[760px] max-h-[90vh] overflow-y-auto p-6">

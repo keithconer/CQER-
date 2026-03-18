@@ -7,7 +7,7 @@ interface UnitCoordinatorAccount {
   email: string | null;
   first_name: string | null;
   last_name: string | null;
-  user_type?: "unit_coordinator";
+  user_type?: "unit_coordinator" | "project_leader" | "extension_office";
   department: string | null;
   unit: string | null;
   created_at: string | null;

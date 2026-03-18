@@ -113,10 +113,11 @@ export interface PoolExpertRecord {
 
 interface FacultyInvolvementManagementProps {
   department: string | null;
-  userType?: "super_admin" | "college_coordinator" | "unit_coordinator";
+  userType?: "super_admin" | "college_coordinator" | "unit_coordinator" | "extension_office" | "project_leader";
   facultyRecords: FacultyInvolvementRecord[];
   poolRecords: PoolExpertRecord[];
   currentUserId: string;
+  isViewOnly?: boolean;
 }
 
 const facultySchema = z.object({
@@ -161,7 +162,7 @@ function FacultyForm({
   onSuccess,
 }: {
   department: string;
-  userType?: "super_admin" | "college_coordinator" | "unit_coordinator";
+  userType?: "super_admin" | "college_coordinator" | "unit_coordinator" | "extension_office" | "project_leader";
   record?: FacultyInvolvementRecord | null;
   isViewOnly?: boolean;
   onSuccess: () => void;
@@ -447,7 +448,7 @@ function PoolForm({
   onSuccess,
 }: {
   department: string;
-  userType?: "super_admin" | "college_coordinator" | "unit_coordinator";
+  userType?: "super_admin" | "college_coordinator" | "unit_coordinator" | "extension_office" | "project_leader";
   facultyRecords: FacultyInvolvementRecord[];
   record?: PoolExpertRecord | null;
   isViewOnly?: boolean;
@@ -808,6 +809,7 @@ export function FacultyInvolvementManagement({
   facultyRecords,
   poolRecords,
   currentUserId,
+  isViewOnly = false,
 }: FacultyInvolvementManagementProps) {
   const [activeTab, setActiveTab] = React.useState<"faculty" | "pool">("faculty");
   const [searchTerm, setSearchTerm] = React.useState("");
@@ -942,14 +944,16 @@ export function FacultyInvolvementManagement({
               <CardTitle className="text-xs font-semibold">Faculty Involvement in ESCE</CardTitle>
               <CardDescription className="text-[10px]">Manage faculty involvement and pool of experts.</CardDescription>
             </div>
-            <Button
-              size="sm"
-              className="h-8 text-xs bg-[#159E44] hover:bg-[#128A3B] text-white"
-              onClick={() => (activeTab === "faculty" ? setCreateFacultyOpen(true) : setCreatePoolOpen(true))}
-            >
-              <Plus className="h-3 w-3 mr-1" />
-              {activeTab === "faculty" ? "Create Faculty Involvement" : "Create Pool Expert"}
-            </Button>
+            {!isViewOnly && (
+              <Button
+                size="sm"
+                className="h-8 text-xs bg-[#159E44] hover:bg-[#128A3B] text-white"
+                onClick={() => (activeTab === "faculty" ? setCreateFacultyOpen(true) : setCreatePoolOpen(true))}
+              >
+                <Plus className="h-3 w-3 mr-1" />
+                {activeTab === "faculty" ? "Create Faculty Involvement" : "Create Pool Expert"}
+              </Button>
+            )}
           </div>
 
           <div className="inline-flex rounded-md border border-border/60 p-0.5 bg-muted/20">
@@ -1054,12 +1058,16 @@ export function FacultyInvolvementManagement({
                             <Button type="button" variant="outline" size="icon" className="h-7 w-7 border-border/50" title="View" aria-label="View" onClick={() => setViewFaculty(item)}>
                               <Eye className="h-3 w-3" />
                             </Button>
-                            <Button type="button" variant="outline" size="icon" className="h-7 w-7 border-border/50" title="Update" aria-label="Update" onClick={() => setEditFaculty(item)}>
-                              <Pencil className="h-3 w-3" />
-                            </Button>
-                            <Button type="button" variant="outline" size="icon" className="h-7 w-7 border-border/50 text-destructive" title="Delete" aria-label="Delete" disabled={deletingFacultyId === item.id} onClick={() => handleDeleteFaculty(item.id)}>
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
+                            {!isViewOnly && (
+                              <>
+                                <Button type="button" variant="outline" size="icon" className="h-7 w-7 border-border/50" title="Update" aria-label="Update" onClick={() => setEditFaculty(item)}>
+                                  <Pencil className="h-3 w-3" />
+                                </Button>
+                                <Button type="button" variant="outline" size="icon" className="h-7 w-7 border-border/50 text-destructive" title="Delete" aria-label="Delete" disabled={deletingFacultyId === item.id} onClick={() => handleDeleteFaculty(item.id)}>
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -1109,12 +1117,16 @@ export function FacultyInvolvementManagement({
                             <Button type="button" variant="outline" size="icon" className="h-7 w-7 border-border/50" title="View" aria-label="View" onClick={() => setViewPool(item)}>
                               <Eye className="h-3 w-3" />
                             </Button>
-                            <Button type="button" variant="outline" size="icon" className="h-7 w-7 border-border/50" title="Update" aria-label="Update" onClick={() => setEditPool(item)}>
-                              <Pencil className="h-3 w-3" />
-                            </Button>
-                            <Button type="button" variant="outline" size="icon" className="h-7 w-7 border-border/50 text-destructive" title="Delete" aria-label="Delete" disabled={deletingPoolId === item.id} onClick={() => handleDeletePool(item.id)}>
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
+                            {!isViewOnly && (
+                              <>
+                                <Button type="button" variant="outline" size="icon" className="h-7 w-7 border-border/50" title="Update" aria-label="Update" onClick={() => setEditPool(item)}>
+                                  <Pencil className="h-3 w-3" />
+                                </Button>
+                                <Button type="button" variant="outline" size="icon" className="h-7 w-7 border-border/50 text-destructive" title="Delete" aria-label="Delete" disabled={deletingPoolId === item.id} onClick={() => handleDeletePool(item.id)}>
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -1133,25 +1145,29 @@ export function FacultyInvolvementManagement({
         </CardContent>
       </Card>
 
-      <Dialog open={createFacultyOpen} onOpenChange={setCreateFacultyOpen}>
-        <DialogContent className="sm:max-w-[760px] max-h-[90vh] overflow-y-auto p-6">
-          <DialogHeader className="pb-2">
-            <DialogTitle className="text-sm font-semibold">Create Faculty Involvement</DialogTitle>
-            <DialogDescription className="text-[10px]">Fill out the form below.</DialogDescription>
-          </DialogHeader>
-          <FacultyForm department={department || ""} userType={userType} onSuccess={closeDialogsAndRefresh} />
-        </DialogContent>
-      </Dialog>
+      {!isViewOnly && (
+        <Dialog open={createFacultyOpen} onOpenChange={setCreateFacultyOpen}>
+          <DialogContent className="sm:max-w-[760px] max-h-[90vh] overflow-y-auto p-6">
+            <DialogHeader className="pb-2">
+              <DialogTitle className="text-sm font-semibold">Create Faculty Involvement</DialogTitle>
+              <DialogDescription className="text-[10px]">Fill out the form below.</DialogDescription>
+            </DialogHeader>
+            <FacultyForm department={department || ""} userType={userType} onSuccess={closeDialogsAndRefresh} />
+          </DialogContent>
+        </Dialog>
+      )}
 
-      <Dialog open={!!editFaculty} onOpenChange={(open) => !open && setEditFaculty(null)}>
-        <DialogContent className="sm:max-w-[760px] max-h-[90vh] overflow-y-auto p-6">
-          <DialogHeader className="pb-2">
-            <DialogTitle className="text-sm font-semibold">Update Faculty Involvement</DialogTitle>
-            <DialogDescription className="text-[10px]">Update record details.</DialogDescription>
-          </DialogHeader>
-          {editFaculty && <FacultyForm department={department || ""} userType={userType} record={editFaculty} onSuccess={closeDialogsAndRefresh} />}
-        </DialogContent>
-      </Dialog>
+      {!isViewOnly && (
+        <Dialog open={!!editFaculty} onOpenChange={(open) => !open && setEditFaculty(null)}>
+          <DialogContent className="sm:max-w-[760px] max-h-[90vh] overflow-y-auto p-6">
+            <DialogHeader className="pb-2">
+              <DialogTitle className="text-sm font-semibold">Update Faculty Involvement</DialogTitle>
+              <DialogDescription className="text-[10px]">Update record details.</DialogDescription>
+            </DialogHeader>
+            {editFaculty && <FacultyForm department={department || ""} userType={userType} record={editFaculty} onSuccess={closeDialogsAndRefresh} />}
+          </DialogContent>
+        </Dialog>
+      )}
 
       <Dialog open={!!viewFaculty} onOpenChange={(open) => !open && setViewFaculty(null)}>
         <DialogContent className="sm:max-w-[760px] max-h-[90vh] overflow-y-auto p-6">
@@ -1163,25 +1179,29 @@ export function FacultyInvolvementManagement({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={createPoolOpen} onOpenChange={setCreatePoolOpen}>
-        <DialogContent className="sm:max-w-[760px] max-h-[90vh] overflow-y-auto p-6">
-          <DialogHeader className="pb-2">
-            <DialogTitle className="text-sm font-semibold">Create Pool Expert</DialogTitle>
-            <DialogDescription className="text-[10px]">Fill out the form below.</DialogDescription>
-          </DialogHeader>
-          <PoolForm department={department || ""} userType={userType} facultyRecords={facultyRecords} onSuccess={closeDialogsAndRefresh} />
-        </DialogContent>
-      </Dialog>
+      {!isViewOnly && (
+        <Dialog open={createPoolOpen} onOpenChange={setCreatePoolOpen}>
+          <DialogContent className="sm:max-w-[760px] max-h-[90vh] overflow-y-auto p-6">
+            <DialogHeader className="pb-2">
+              <DialogTitle className="text-sm font-semibold">Create Pool Expert</DialogTitle>
+              <DialogDescription className="text-[10px]">Fill out the form below.</DialogDescription>
+            </DialogHeader>
+            <PoolForm department={department || ""} userType={userType} facultyRecords={facultyRecords} onSuccess={closeDialogsAndRefresh} />
+          </DialogContent>
+        </Dialog>
+      )}
 
-      <Dialog open={!!editPool} onOpenChange={(open) => !open && setEditPool(null)}>
-        <DialogContent className="sm:max-w-[760px] max-h-[90vh] overflow-y-auto p-6">
-          <DialogHeader className="pb-2">
-            <DialogTitle className="text-sm font-semibold">Update Pool Expert</DialogTitle>
-            <DialogDescription className="text-[10px]">Update record details.</DialogDescription>
-          </DialogHeader>
-          {editPool && <PoolForm department={department || ""} userType={userType} facultyRecords={facultyRecords} record={editPool} onSuccess={closeDialogsAndRefresh} />}
-        </DialogContent>
-      </Dialog>
+      {!isViewOnly && (
+        <Dialog open={!!editPool} onOpenChange={(open) => !open && setEditPool(null)}>
+          <DialogContent className="sm:max-w-[760px] max-h-[90vh] overflow-y-auto p-6">
+            <DialogHeader className="pb-2">
+              <DialogTitle className="text-sm font-semibold">Update Pool Expert</DialogTitle>
+              <DialogDescription className="text-[10px]">Update record details.</DialogDescription>
+            </DialogHeader>
+            {editPool && <PoolForm department={department || ""} userType={userType} facultyRecords={facultyRecords} record={editPool} onSuccess={closeDialogsAndRefresh} />}
+          </DialogContent>
+        </Dialog>
+      )}
 
       <Dialog open={!!viewPool} onOpenChange={(open) => !open && setViewPool(null)}>
         <DialogContent className="sm:max-w-[760px] max-h-[90vh] overflow-y-auto p-6">

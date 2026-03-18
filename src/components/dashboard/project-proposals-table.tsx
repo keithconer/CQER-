@@ -35,7 +35,7 @@ import { ProjectProposalForm } from "./project-proposal-form";
 export interface ProjectProposal {
   id: string;
   created_by?: string | null;
-  created_by_user_type?: "super_admin" | "college_coordinator" | "unit_coordinator" | null;
+  created_by_user_type?: "super_admin" | "college_coordinator" | "unit_coordinator" | "project_leader" | "extension_office" | null;
   created_by_unit?: string | null;
   entry_type?: "project_proposal" | string | null;
   title?: string | null;
@@ -64,8 +64,9 @@ interface ProjectProposalsTableProps {
   onSearchTermChange?: (value: string) => void;
   showSearch?: boolean;
   paginationAlign?: "between" | "right";
+  allowViewOnlyAction?: boolean;
   formContext?: {
-    userType?: "super_admin" | "college_coordinator" | "unit_coordinator";
+    userType?: "super_admin" | "college_coordinator" | "unit_coordinator" | "extension_office" | "project_leader";
     department?: string | null;
     unit?: string | null;
     unitOptions?: string[];
@@ -149,6 +150,7 @@ export function ProjectProposalsTable({
   onSearchTermChange,
   showSearch = true,
   paginationAlign = "between",
+  allowViewOnlyAction = false,
   formContext,
 }: ProjectProposalsTableProps) {
   const [internalSearchTerm, setInternalSearchTerm] = React.useState("");
@@ -161,6 +163,7 @@ export function ProjectProposalsTable({
   const [isDeleting, setIsDeleting] = React.useState(false);
   const router = useRouter();
   const itemsPerPage = 5;
+  const showActionsColumn = !readOnly || allowViewOnlyAction;
 
   const filtered = React.useMemo(() => {
     const term = searchTerm.toLowerCase();
@@ -257,7 +260,7 @@ export function ProjectProposalsTable({
               <TableHead className="text-[10px] font-semibold h-9">Collaborating Agency</TableHead>
               <TableHead className="text-[10px] font-semibold h-9">Target Beneficiary</TableHead>
               <TableHead className="text-[10px] font-semibold h-9">Target Budget</TableHead>
-              {!readOnly && <TableHead className="text-[10px] font-semibold h-9 text-right">Actions</TableHead>}
+              {showActionsColumn && <TableHead className="text-[10px] font-semibold h-9 text-right">Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -287,7 +290,7 @@ export function ProjectProposalsTable({
                       ? new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(proposal.budget_total)
                       : "-"}
                   </TableCell>
-                  {!readOnly && (
+                  {showActionsColumn && (
                     <TableCell className="py-2.5 px-3 text-right">
                       <div className="flex justify-end gap-1">
                         <Button
@@ -300,7 +303,7 @@ export function ProjectProposalsTable({
                         >
                           <Eye className="h-3 w-3" />
                         </Button>
-                        {(!currentUserId || proposal.created_by === currentUserId) && (
+                        {!readOnly && (!currentUserId || proposal.created_by === currentUserId) && (
                           <>
                             <Button
                               variant="outline"
@@ -331,7 +334,7 @@ export function ProjectProposalsTable({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={readOnly ? 7 : 8} className="h-24 text-center text-[10px] text-muted-foreground">
+                <TableCell colSpan={showActionsColumn ? 8 : 7} className="h-24 text-center text-[10px] text-muted-foreground">
                   No project proposals found.
                 </TableCell>
               </TableRow>

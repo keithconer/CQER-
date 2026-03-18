@@ -20,7 +20,7 @@ import {
 } from "@/lib/actions/accounts";
 import { useRouter } from "next/navigation";
 
-type RoleType = "super_admin" | "college_coordinator" | "unit_coordinator";
+type RoleType = "super_admin" | "college_coordinator" | "unit_coordinator" | "project_leader" | "extension_office";
 type TransferMode = "unit" | "college";
 
 export interface TransferAccount {
@@ -42,6 +42,8 @@ interface TransferCoordinatorPanelProps {
 function formatRole(role: RoleType) {
   if (role === "super_admin") return "Super Admin";
   if (role === "college_coordinator") return "College Coordinator";
+  if (role === "project_leader") return "Project Leader";
+  if (role === "extension_office") return "Extension Office";
   return "Unit Coordinator";
 }
 

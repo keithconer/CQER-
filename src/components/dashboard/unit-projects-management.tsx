@@ -34,11 +34,12 @@ import { ProjectsTable, type Project } from "./projects-table";
 interface UnitProjectsManagementProps {
   myProjects: Project[];
   unitProjects: Project[];
-  userType?: "super_admin" | "college_coordinator" | "unit_coordinator";
+  userType?: "super_admin" | "college_coordinator" | "unit_coordinator" | "extension_office" | "project_leader";
   department?: string | null;
   unit?: string | null;
   unitOptions?: string[];
   currentUserId: string;
+  readOnly?: boolean;
 }
 
 export function UnitProjectsManagement({
@@ -49,6 +50,7 @@ export function UnitProjectsManagement({
   unit,
   unitOptions = [],
   currentUserId,
+  readOnly = false,
 }: UnitProjectsManagementProps) {
   const [open, setOpen] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState("");
@@ -145,14 +147,16 @@ export function UnitProjectsManagement({
                 Manage projects from your unit, including ones you&apos;ve created.
               </CardDescription>
             </div>
-            <Button
-              size="sm"
-              className="h-8 text-[10px] bg-[#159E44] hover:bg-[#128A3B] text-white"
-              onClick={() => setOpen(true)}
-            >
-              <Plus className="h-3 w-3 mr-1" />
-              Create {recordLabel}
-            </Button>
+            {!readOnly && (
+              <Button
+                size="sm"
+                className="h-8 text-[10px] bg-[#159E44] hover:bg-[#128A3B] text-white"
+                onClick={() => setOpen(true)}
+              >
+                <Plus className="h-3 w-3 mr-1" />
+                Create {recordLabel}
+              </Button>
+            )}
           </div>
           <div className="flex items-center justify-between gap-2">
             <div className="relative max-w-sm w-full">
@@ -199,7 +203,8 @@ export function UnitProjectsManagement({
         <CardContent className="px-4 pb-4">
           <ProjectsTable
             projects={scopedRecords}
-            readOnly={false}
+            readOnly={readOnly}
+            allowViewOnlyAction={readOnly}
             currentUserId={currentUserId}
             searchTerm={searchTerm}
             onSearchTermChange={setSearchTerm}
@@ -210,25 +215,27 @@ export function UnitProjectsManagement({
         </CardContent>
       </Card>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-[800px] p-6 max-h-[90vh] overflow-hidden">
-          <DialogHeader className="pb-2">
-            <DialogTitle className="text-xs font-semibold">
-              {recordLabel} Registration Form
-            </DialogTitle>
-            <DialogDescription className="text-[10px]">
-              Fill out the registration form below.
-            </DialogDescription>
-          </DialogHeader>
-          <ProjectForm
-            onSuccess={handleSuccess}
-            currentUserType={userType}
-            currentDepartment={department}
-            currentUnit={unit}
-            unitOptions={unitOptions}
-          />
-        </DialogContent>
-      </Dialog>
+      {!readOnly && (
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogContent className="sm:max-w-[800px] p-6 max-h-[90vh] overflow-hidden">
+            <DialogHeader className="pb-2">
+              <DialogTitle className="text-xs font-semibold">
+                {recordLabel} Registration Form
+              </DialogTitle>
+              <DialogDescription className="text-[10px]">
+                Fill out the registration form below.
+              </DialogDescription>
+            </DialogHeader>
+            <ProjectForm
+              onSuccess={handleSuccess}
+              currentUserType={userType}
+              currentDepartment={department}
+              currentUnit={unit}
+              unitOptions={unitOptions}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

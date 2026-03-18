@@ -37,10 +37,11 @@ export interface StudentInvolvementRecord {
 interface StudentInvolvementManagementProps {
   initialRecords: StudentInvolvementRecord[];
   department: string | null;
-  userType?: "super_admin" | "college_coordinator" | "unit_coordinator";
+  userType?: "super_admin" | "college_coordinator" | "unit_coordinator" | "extension_office" | "project_leader";
   unit?: string | null;
   unitOptions?: string[];
   currentUserId: string;
+  isViewOnly?: boolean;
 }
 
 export function StudentInvolvementManagement({
@@ -50,6 +51,7 @@ export function StudentInvolvementManagement({
   unit,
   unitOptions = [],
   currentUserId,
+  isViewOnly = false,
 }: StudentInvolvementManagementProps) {
   const [searchTerm, setSearchTerm] = React.useState("");
   const [createOpen, setCreateOpen] = React.useState(false);
@@ -151,14 +153,16 @@ export function StudentInvolvementManagement({
                 Manage student involvement records for extension activities.
               </CardDescription>
             </div>
-            <Button
-              size="sm"
-              className="h-8 text-xs bg-[#159E44] hover:bg-[#128A3B] text-white"
-              onClick={() => setCreateOpen(true)}
-            >
-              <Plus className="h-3 w-3 mr-1" />
-              Create Student Involvement
-            </Button>
+            {!isViewOnly && (
+              <Button
+                size="sm"
+                className="h-8 text-xs bg-[#159E44] hover:bg-[#128A3B] text-white"
+                onClick={() => setCreateOpen(true)}
+              >
+                <Plus className="h-3 w-3 mr-1" />
+                Create Student Involvement
+              </Button>
+            )}
           </div>
 
           <div className="flex items-center justify-between gap-2">
@@ -247,29 +251,33 @@ export function StudentInvolvementManagement({
                           >
                             <Eye className="h-3 w-3" />
                           </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            className="h-7 w-7 border-border/50"
-                            title="Update"
-                            aria-label="Update student involvement record"
-                            onClick={() => setEditRecord(record)}
-                          >
-                            <Pencil className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            className="h-7 w-7 border-border/50 text-destructive"
-                            title="Delete"
-                            aria-label="Delete student involvement record"
-                            disabled={isDeletingId === record.id}
-                            onClick={() => handleDelete(record)}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
+                          {!isViewOnly && (
+                            <>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-7 w-7 border-border/50"
+                                title="Update"
+                                aria-label="Update student involvement record"
+                                onClick={() => setEditRecord(record)}
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-7 w-7 border-border/50 text-destructive"
+                                title="Delete"
+                                aria-label="Delete student involvement record"
+                                disabled={isDeletingId === record.id}
+                                onClick={() => handleDelete(record)}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -287,44 +295,48 @@ export function StudentInvolvementManagement({
         </CardContent>
       </Card>
 
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="sm:max-w-[760px] p-6 max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="pb-2">
-            <DialogTitle className="text-sm font-semibold">Create Student Involvement</DialogTitle>
-            <DialogDescription className="text-[10px]">
-              Fill out the form below to create a student involvement record.
-            </DialogDescription>
-          </DialogHeader>
-          <StudentInvolvementForm
-            department={department || ""}
-            userType={userType}
-            unit={unit}
-            unitOptions={unitOptions}
-            onSuccess={handleSuccess}
-          />
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!editRecord} onOpenChange={(open) => !open && setEditRecord(null)}>
-        <DialogContent className="sm:max-w-[760px] p-6 max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="pb-2">
-            <DialogTitle className="text-sm font-semibold">Update Student Involvement</DialogTitle>
-            <DialogDescription className="text-[10px]">
-              Update this student involvement record.
-            </DialogDescription>
-          </DialogHeader>
-          {editRecord && (
+      {!isViewOnly && (
+        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+          <DialogContent className="sm:max-w-[760px] p-6 max-h-[90vh] overflow-y-auto">
+            <DialogHeader className="pb-2">
+              <DialogTitle className="text-sm font-semibold">Create Student Involvement</DialogTitle>
+              <DialogDescription className="text-[10px]">
+                Fill out the form below to create a student involvement record.
+              </DialogDescription>
+            </DialogHeader>
             <StudentInvolvementForm
               department={department || ""}
               userType={userType}
               unit={unit}
               unitOptions={unitOptions}
-              record={editRecord}
               onSuccess={handleSuccess}
             />
-          )}
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {!isViewOnly && (
+        <Dialog open={!!editRecord} onOpenChange={(open) => !open && setEditRecord(null)}>
+          <DialogContent className="sm:max-w-[760px] p-6 max-h-[90vh] overflow-y-auto">
+            <DialogHeader className="pb-2">
+              <DialogTitle className="text-sm font-semibold">Update Student Involvement</DialogTitle>
+              <DialogDescription className="text-[10px]">
+                Update this student involvement record.
+              </DialogDescription>
+            </DialogHeader>
+            {editRecord && (
+              <StudentInvolvementForm
+                department={department || ""}
+                userType={userType}
+                unit={unit}
+                unitOptions={unitOptions}
+                record={editRecord}
+                onSuccess={handleSuccess}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
 
       <Dialog open={!!viewRecord} onOpenChange={(open) => !open && setViewRecord(null)}>
         <DialogContent className="sm:max-w-[760px] p-6 max-h-[90vh] overflow-y-auto">

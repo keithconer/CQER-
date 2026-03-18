@@ -22,10 +22,11 @@ import { ProjectProposalsTable, type ProjectProposal } from "./project-proposals
 interface UnitProjectProposalsManagementProps {
   myProjects: ProjectProposal[];
   unitProjects: ProjectProposal[];
-  userType?: "super_admin" | "college_coordinator" | "unit_coordinator";
+  userType?: "super_admin" | "college_coordinator" | "unit_coordinator" | "extension_office" | "project_leader";
   department?: string | null;
   unit?: string | null;
   currentUserId: string;
+  readOnly?: boolean;
 }
 
 export function UnitProjectProposalsManagement({
@@ -35,6 +36,7 @@ export function UnitProjectProposalsManagement({
   department,
   unit,
   currentUserId,
+  readOnly = false,
 }: UnitProjectProposalsManagementProps) {
   const [open, setOpen] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState("");
@@ -105,10 +107,12 @@ export function UnitProjectProposalsManagement({
               <CardTitle className="text-xs font-semibold">Project Proposals</CardTitle>
               <CardDescription className="text-[10px]">Manage project proposals from your unit, including your own records.</CardDescription>
             </div>
-            <Button size="sm" className="h-8 text-[10px] bg-[#159E44] hover:bg-[#128A3B] text-white" onClick={() => setOpen(true)}>
-              <Plus className="h-3 w-3 mr-1" />
-              Create Project Proposal
-            </Button>
+            {!readOnly && (
+              <Button size="sm" className="h-8 text-[10px] bg-[#159E44] hover:bg-[#128A3B] text-white" onClick={() => setOpen(true)}>
+                <Plus className="h-3 w-3 mr-1" />
+                Create Project Proposal
+              </Button>
+            )}
           </div>
           <div className="flex items-center justify-between gap-2">
             <div className="relative max-w-sm w-full">
@@ -138,7 +142,8 @@ export function UnitProjectProposalsManagement({
         <CardContent className="px-4 pb-4">
           <ProjectProposalsTable
             proposals={scopedRecords}
-            readOnly={false}
+            readOnly={readOnly}
+            allowViewOnlyAction={readOnly}
             currentUserId={currentUserId}
             searchTerm={searchTerm}
             onSearchTermChange={setSearchTerm}
@@ -149,20 +154,22 @@ export function UnitProjectProposalsManagement({
         </CardContent>
       </Card>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-[800px] p-6 max-h-[90vh] overflow-hidden">
-          <DialogHeader className="pb-2">
-            <DialogTitle className="text-xs font-semibold">Project Proposal Form</DialogTitle>
-            <DialogDescription className="text-[10px]">Fill out the project proposal form below.</DialogDescription>
-          </DialogHeader>
-          <ProjectProposalForm
-            onSuccess={handleSuccess}
-            currentUserType={userType}
-            currentDepartment={department}
-            currentUnit={unit}
-          />
-        </DialogContent>
-      </Dialog>
+      {!readOnly && (
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogContent className="sm:max-w-[800px] p-6 max-h-[90vh] overflow-hidden">
+            <DialogHeader className="pb-2">
+              <DialogTitle className="text-xs font-semibold">Project Proposal Form</DialogTitle>
+              <DialogDescription className="text-[10px]">Fill out the project proposal form below.</DialogDescription>
+            </DialogHeader>
+            <ProjectProposalForm
+              onSuccess={handleSuccess}
+              currentUserType={userType}
+              currentDepartment={department}
+              currentUnit={unit}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 
-type RoleType = "super_admin" | "college_coordinator" | "unit_coordinator";
+type RoleType = "super_admin" | "college_coordinator" | "unit_coordinator" | "project_leader" | "extension_office";
 
 export interface AccountRow {
   id: string;
@@ -38,6 +38,8 @@ const ITEMS_PER_PAGE = 8;
 function formatRole(role?: RoleType | null) {
   if (role === "super_admin") return "Super Admin";
   if (role === "college_coordinator") return "College Coordinator";
+  if (role === "project_leader") return "Project Leader";
+  if (role === "extension_office") return "Extension Office";
   return "Unit Coordinator";
 }
 

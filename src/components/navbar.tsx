@@ -189,7 +189,11 @@ export function Navbar({ user }: NavbarProps) {
       ? "Super Admin"
       : user.userType === "college_coordinator"
         ? "College Coordinator"
-        : "Unit Coordinator";
+        : user.userType === "project_leader"
+          ? "Project Leader"
+          : user.userType === "extension_office"
+            ? "Extension Office"
+            : "Unit Coordinator";
   const deptUnitLabel = user.department
     ? `${user.department}${user.unit ? ` • ${user.unit}` : ""}`
     : null;
@@ -414,7 +418,7 @@ export function Navbar({ user }: NavbarProps) {
                   </Button>
                 )}
               </div>
-              {(user.userType === "college_coordinator" || user.userType === "unit_coordinator") && (
+              {(["college_coordinator", "unit_coordinator", "extension_office", "project_leader"].includes(user.userType)) && (
                 <>
                   {!sidebarOpen ? (
                     <Popover>
@@ -582,13 +586,13 @@ export function Navbar({ user }: NavbarProps) {
 
               {/* Simplified loop for common items */}
               {[
-                { panel: "funding", icon: Database, label: "Funding", roles: ["college_coordinator", "unit_coordinator"] },
-                { panel: "awards", icon: Award, label: "Awards", roles: ["college_coordinator", "unit_coordinator"] },
-                { panel: "student-involvement", icon: UserRoundCheck, label: "Student Involvement", roles: ["college_coordinator", "unit_coordinator"] },
-                { panel: "faculty-involvement", icon: GraduationCap, label: "Faculty Involvement", roles: ["college_coordinator", "unit_coordinator"] },
-                { panel: "technologies-innovation", icon: Cpu, label: "Technologies", roles: ["college_coordinator", "unit_coordinator"] },
-                { panel: "ordinance-resolutions", icon: ScrollText, label: "Ordinance", roles: ["college_coordinator", "unit_coordinator"] },
-                { panel: "trainings", icon: BookOpenCheck, label: "Trainings", roles: ["college_coordinator", "unit_coordinator"] },
+                { panel: "funding", icon: Database, label: "Funding", roles: ["college_coordinator", "unit_coordinator", "extension_office"] },
+                { panel: "awards", icon: Award, label: "Awards", roles: ["college_coordinator", "unit_coordinator", "extension_office"] },
+                { panel: "student-involvement", icon: UserRoundCheck, label: "Student Involvement", roles: ["college_coordinator", "unit_coordinator", "extension_office"] },
+                { panel: "faculty-involvement", icon: GraduationCap, label: "Faculty Involvement", roles: ["college_coordinator", "unit_coordinator", "extension_office"] },
+                { panel: "technologies-innovation", icon: Cpu, label: "Technologies", roles: ["college_coordinator", "unit_coordinator", "extension_office"] },
+                { panel: "ordinance-resolutions", icon: ScrollText, label: "Ordinance", roles: ["college_coordinator", "unit_coordinator", "extension_office"] },
+                { panel: "trainings", icon: BookOpenCheck, label: "Trainings", roles: ["college_coordinator", "unit_coordinator", "extension_office"] },
               ].map((item) => (
                 item.roles.includes(user.userType) && (
                   <div key={item.panel} className="flex justify-center w-full">

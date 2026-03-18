@@ -33,7 +33,7 @@ import { useRouter } from "next/navigation";
 interface ProjectManagementProps {
   initialProjects: Project[];
   readOnly?: boolean;
-  userType?: "super_admin" | "college_coordinator" | "unit_coordinator";
+  userType?: "super_admin" | "college_coordinator" | "unit_coordinator" | "extension_office" | "project_leader";
   department?: string | null;
   unit?: string | null;
   unitOptions?: string[];
@@ -220,6 +220,7 @@ export function ProjectManagement({
           <ProjectsTable
             projects={scopedRecords}
             readOnly={readOnly}
+            allowViewOnlyAction={readOnly}
             currentUserId={currentUserId}
             searchTerm={searchTerm}
             onSearchTermChange={setSearchTerm}

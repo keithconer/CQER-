@@ -80,6 +80,8 @@ export async function GET(request: NextRequest) {
         "super_admin",
         "college_coordinator",
         "unit_coordinator",
+        "project_leader",
+        "extension_office",
     ]);
 
     if (!allowedTypes.has(profile.user_type)) {

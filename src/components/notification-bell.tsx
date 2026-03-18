@@ -15,7 +15,7 @@ type NotificationItem = {
   actor_avatar_url: string | null;
   entity_kind: "project" | "proposal" | "program" | "training";
   entity_title: string;
-  action_type: "created" | "updated" | "document_uploaded";
+  action_type: "created" | "updated" | "document_uploaded" | "assigned";
   route: string;
   created_at: string;
   read_at: string | null;
@@ -60,6 +60,10 @@ function buildMessage(item: NotificationItem) {
 
   if (item.action_type === "document_uploaded") {
     return `${actorName} uploaded document(s) to ${objectLabel} "${item.entity_title}"`;
+  }
+
+  if (item.action_type === "assigned") {
+    return `${actorName} has assigned you on a project as a project leader`;
   }
 
   if (item.action_type === "updated") {

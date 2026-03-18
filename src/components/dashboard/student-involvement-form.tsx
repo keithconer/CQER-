@@ -67,7 +67,7 @@ interface StudentInvolvementRecord {
 
 interface StudentInvolvementFormProps {
   department: string;
-  userType?: "super_admin" | "college_coordinator" | "unit_coordinator";
+  userType?: "super_admin" | "college_coordinator" | "unit_coordinator" | "extension_office" | "project_leader";
   unit?: string | null;
   unitOptions?: string[];
   record?: StudentInvolvementRecord;

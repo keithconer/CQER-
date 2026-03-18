@@ -38,11 +38,12 @@ export interface AwardRecord {
 interface AwardsManagementProps {
   initialAwards: AwardRecord[];
   department: string | null;
-  userType?: "super_admin" | "college_coordinator" | "unit_coordinator";
+  userType?: "super_admin" | "college_coordinator" | "unit_coordinator" | "extension_office" | "project_leader";
   currentUserId: string;
+  isViewOnly?: boolean;
 }
 
-export function AwardsManagement({ initialAwards, department, userType, currentUserId }: AwardsManagementProps) {
+export function AwardsManagement({ initialAwards, department, userType, currentUserId, isViewOnly = false }: AwardsManagementProps) {
   const [createOpen, setCreateOpen] = React.useState(false);
   const [editAward, setEditAward] = React.useState<AwardRecord | null>(null);
   const [viewAward, setViewAward] = React.useState<AwardRecord | null>(null);
@@ -142,14 +143,16 @@ export function AwardsManagement({ initialAwards, department, userType, currentU
                 Manage award and recognition records.
               </CardDescription>
             </div>
-            <Button
-              size="sm"
-              className="h-8 text-xs bg-[#159E44] hover:bg-[#128A3B] text-white"
-              onClick={() => setCreateOpen(true)}
-            >
-              <Plus className="h-3 w-3 mr-1" />
-              Create Awards
-            </Button>
+            {!isViewOnly && (
+              <Button
+                size="sm"
+                className="h-8 text-xs bg-[#159E44] hover:bg-[#128A3B] text-white"
+                onClick={() => setCreateOpen(true)}
+              >
+                <Plus className="h-3 w-3 mr-1" />
+                Create Awards
+              </Button>
+            )}
           </div>
 
           <div className="flex items-center justify-between gap-2">
@@ -244,29 +247,33 @@ export function AwardsManagement({ initialAwards, department, userType, currentU
                           >
                             <Eye className="h-3 w-3" />
                           </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            className="h-7 w-7 border-border/50"
-                            onClick={() => setEditAward(award)}
-                            title="Update"
-                            aria-label="Update award"
-                          >
-                            <Pencil className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            className="h-7 w-7 text-destructive border-border/50"
-                            onClick={() => handleDelete(award)}
-                            disabled={isDeletingId === award.id}
-                            title="Delete"
-                            aria-label="Delete award"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
+                          {!isViewOnly && (
+                            <>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-7 w-7 border-border/50"
+                                onClick={() => setEditAward(award)}
+                                title="Update"
+                                aria-label="Update award"
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-7 w-7 text-destructive border-border/50"
+                                onClick={() => handleDelete(award)}
+                                disabled={isDeletingId === award.id}
+                                title="Delete"
+                                aria-label="Delete award"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -284,31 +291,35 @@ export function AwardsManagement({ initialAwards, department, userType, currentU
         </CardContent>
       </Card>
 
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="sm:max-w-[760px] p-6 max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="pb-2">
-            <DialogTitle className="text-sm font-semibold">Create Awards</DialogTitle>
-            <DialogDescription className="text-[10px]">
-              Fill out the form below to register an award or recognition.
-            </DialogDescription>
-          </DialogHeader>
-          <AwardsForm department={department || ""} userType={userType} onSuccess={handleSuccess} />
-        </DialogContent>
-      </Dialog>
+      {!isViewOnly && (
+        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+          <DialogContent className="sm:max-w-[760px] p-6 max-h-[90vh] overflow-y-auto">
+            <DialogHeader className="pb-2">
+              <DialogTitle className="text-sm font-semibold">Create Awards</DialogTitle>
+              <DialogDescription className="text-[10px]">
+                Fill out the form below to register an award or recognition.
+              </DialogDescription>
+            </DialogHeader>
+            <AwardsForm department={department || ""} userType={userType} onSuccess={handleSuccess} />
+          </DialogContent>
+        </Dialog>
+      )}
 
-      <Dialog open={!!editAward} onOpenChange={(open) => !open && setEditAward(null)}>
-        <DialogContent className="sm:max-w-[760px] p-6 max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="pb-2">
-            <DialogTitle className="text-sm font-semibold">Update Award</DialogTitle>
-            <DialogDescription className="text-[10px]">
-              Update the details for this award record.
-            </DialogDescription>
-          </DialogHeader>
-          {editAward && (
-            <AwardsForm department={department || ""} userType={userType} award={editAward} onSuccess={handleSuccess} />
-          )}
-        </DialogContent>
-      </Dialog>
+      {!isViewOnly && (
+        <Dialog open={!!editAward} onOpenChange={(open) => !open && setEditAward(null)}>
+          <DialogContent className="sm:max-w-[760px] p-6 max-h-[90vh] overflow-y-auto">
+            <DialogHeader className="pb-2">
+              <DialogTitle className="text-sm font-semibold">Update Award</DialogTitle>
+              <DialogDescription className="text-[10px]">
+                Update the details for this award record.
+              </DialogDescription>
+            </DialogHeader>
+            {editAward && (
+              <AwardsForm department={department || ""} userType={userType} award={editAward} onSuccess={handleSuccess} />
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
 
       <Dialog open={!!viewAward} onOpenChange={(open) => !open && setViewAward(null)}>
         <DialogContent className="sm:max-w-[760px] p-6 max-h-[90vh] overflow-y-auto">

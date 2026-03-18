@@ -82,6 +82,9 @@ export async function createProject(formData: object) {
         .select("user_type, unit, department")
         .eq("id", user.id)
         .single();
+    if (!profile || !["unit_coordinator", "college_coordinator", "super_admin"].includes(profile.user_type)) {
+        return { error: "Insufficient permissions to create projects." };
+    }
 
     const payload = { ...(formData as Record<string, unknown>) };
     normalizePartnerAgencyCount(payload);
@@ -310,7 +313,7 @@ export async function getUnitProjects() {
 
     if (
         !profile ||
-        profile.user_type !== "unit_coordinator" ||
+        !["unit_coordinator", "extension_office"].includes(profile.user_type) ||
         !profile.department ||
         !profile.unit
     ) {
@@ -387,6 +390,69 @@ export async function getUnitProjects() {
 
     return { data: filtered };
 }
+
+export async function getProjectLeaderProjects() {
+    const supabase = await createClient();
+    const adminClient = createAdminClient();
+
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+        return { error: "Unauthorized" };
+    }
+
+    const { data: profile } = await supabase
+        .from("profiles")
+        .select("user_type")
+        .eq("id", user.id)
+        .single();
+
+    if (!profile || profile.user_type !== "project_leader") {
+        return { data: [] };
+    }
+
+    const { data, error } = await adminClient
+        .from("projects")
+        .select("*")
+        .eq("project_leader_id", user.id)
+        .order("created_at", { ascending: false });
+
+    if (error) {
+        console.error("Error fetching project leader projects:", error);
+        return { error: error.message };
+    }
+
+    const creatorIds = Array.from(
+        new Set((data || []).map((project) => project.created_by).filter(Boolean))
+    ) as string[];
+
+    let creatorMap = new Map<string, { user_type: string | null; unit: string | null }>();
+    if (creatorIds.length > 0) {
+        const { data: creatorProfiles } = await adminClient
+            .from("profiles")
+            .select("id, user_type, unit")
+            .in("id", creatorIds);
+        creatorMap = new Map(
+            (creatorProfiles || []).map((entry) => [
+                entry.id,
+                { user_type: entry.user_type, unit: entry.unit },
+            ])
+        );
+    }
+
+    const enriched =
+        (data || []).map((project) => {
+            const creator = creatorMap.get(project.created_by);
+            return {
+                ...project,
+                created_by_user_type: creator?.user_type || null,
+                created_by_unit: creator?.unit || null,
+            };
+        }) || [];
+
+    return { data: enriched };
+}
 export async function updateProject(id: string, formData: object) {
     const supabase = await createClient();
     const adminClient = createAdminClient();
@@ -403,6 +469,9 @@ export async function updateProject(id: string, formData: object) {
         .single();
     if (!profile) {
         return { error: "Profile not found" };
+    }
+    if (!["unit_coordinator", "college_coordinator", "super_admin"].includes(profile.user_type)) {
+        return { error: "Insufficient permissions to update this record" };
     }
 
     const { data: existingProject, error: existingProjectError } = await adminClient
@@ -545,6 +614,9 @@ export async function deleteProject(id: string) {
         .single();
     if (!profile) {
         return { error: "Profile not found" };
+    }
+    if (!["unit_coordinator", "college_coordinator", "super_admin"].includes(profile.user_type)) {
+        return { error: "Insufficient permissions to delete this record" };
     }
 
     const { data: existingProject, error: existingProjectError } = await adminClient
