@@ -335,7 +335,22 @@ export default async function DashboardPage({
     }
   } else if (profile.user_type === "project_leader") {
     if (hasEntitySelection) {
-      projects = (await getProjectLeaderProjects()).data || [];
+      const [leaderProjectsResult, unitProjectsResult] = await Promise.all([
+        getProjectLeaderProjects(),
+        getUnitProjects(),
+      ]);
+      const leaderProjects = leaderProjectsResult.data || [];
+      const unitProjectsResultData = unitProjectsResult.data || [];
+      const merged = new Map<string, Project>();
+      leaderProjects.forEach((project) => {
+        if (project?.id) merged.set(project.id, project as Project);
+      });
+      unitProjectsResultData.forEach((project) => {
+        if (project?.id && !merged.has(project.id)) {
+          merged.set(project.id, project as Project);
+        }
+      });
+      projects = Array.from(merged.values());
     }
   }
 

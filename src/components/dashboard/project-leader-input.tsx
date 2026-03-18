@@ -3,9 +3,10 @@
 import * as React from "react";
 import { Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
+import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import { searchProjectLeaders, type ProjectLeaderOption } from "@/lib/actions/project-leaders";
 
 interface ProjectLeaderInputProps {
@@ -33,6 +34,7 @@ export function ProjectLeaderInput({
   const [query, setQuery] = React.useState(value);
   const [options, setOptions] = React.useState<ProjectLeaderOption[]>([]);
   const [loading, setLoading] = React.useState(false);
+  const [hasSearched, setHasSearched] = React.useState(false);
 
   React.useEffect(() => {
     setQuery(value);
@@ -43,6 +45,7 @@ export function ProjectLeaderInput({
     const trimmed = query.trim();
     if (!trimmed) {
       setOptions([]);
+      setHasSearched(false);
       return;
     }
 
@@ -58,6 +61,7 @@ export function ProjectLeaderInput({
       } else {
         setOptions([]);
       }
+      setHasSearched(true);
       setLoading(false);
     }, 250);
 
@@ -83,6 +87,14 @@ export function ProjectLeaderInput({
     return pieces.length > 0 ? pieces.join(" • ") : "No unit";
   };
 
+  const getInitials = (name: string) =>
+    name
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() || "")
+      .join("");
+
   return (
     <Popover open={open && !disabled} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -100,6 +112,8 @@ export function ProjectLeaderInput({
       <PopoverContent
         align="start"
         className="w-[--radix-popover-trigger-width] p-0"
+        onOpenAutoFocus={(event) => event.preventDefault()}
+        onCloseAutoFocus={(event) => event.preventDefault()}
       >
         <Command shouldFilter={false}>
           <CommandList>
@@ -108,10 +122,10 @@ export function ProjectLeaderInput({
                 <Loader2 className="h-3 w-3 animate-spin" />
                 Loading project leaders...
               </div>
-            ) : options.length === 0 ? (
-              <CommandEmpty className="text-[10px]">
+            ) : hasSearched && options.length === 0 ? (
+              <div className="px-3 py-2 text-[10px] text-muted-foreground">
                 No project leaders found.
-              </CommandEmpty>
+              </div>
             ) : (
               <CommandGroup heading="Project Leaders">
                 {options.map((option) => (
@@ -121,11 +135,19 @@ export function ProjectLeaderInput({
                     onSelect={() => handleSelect(option)}
                     className="flex items-center justify-between text-[10px]"
                   >
-                    <div className="flex flex-col">
+                    <div className="flex items-center gap-2">
+                      <Avatar data-size="sm">
+                        <AvatarImage src={option.avatar_url || undefined} alt={option.name} />
+                        <AvatarFallback className="text-[9px]">
+                          {getInitials(option.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col">
                       <span className="text-[10px] font-medium">{option.name}</span>
                       <span className="text-[9px] text-muted-foreground">
                         {formatMeta(option)}
                       </span>
+                      </div>
                     </div>
                     <Check
                       className={cn(

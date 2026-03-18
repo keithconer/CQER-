@@ -313,7 +313,7 @@ export async function getUnitProjects() {
 
     if (
         !profile ||
-        !["unit_coordinator", "extension_office"].includes(profile.user_type) ||
+        !["unit_coordinator", "extension_office", "project_leader"].includes(profile.user_type) ||
         !profile.department ||
         !profile.unit
     ) {

@@ -7,6 +7,7 @@ export type ProjectLeaderOption = {
   id: string;
   name: string;
   email: string | null;
+  avatar_url: string | null;
   department: string | null;
   unit: string | null;
 };
@@ -55,7 +56,7 @@ export async function searchProjectLeaders(params: {
 
   let queryBuilder = adminClient
     .from("profiles")
-    .select("id, first_name, last_name, email, department, unit")
+    .select("id, first_name, last_name, email, department, unit, avatar_url")
     .eq("user_type", "project_leader");
 
   if (unitFilter) {
@@ -83,6 +84,7 @@ export async function searchProjectLeaders(params: {
       id: leader.id,
       name: `${leader.first_name || ""} ${leader.last_name || ""}`.trim() || leader.email || "Unnamed",
       email: leader.email,
+      avatar_url: leader.avatar_url,
       department: leader.department,
       unit: leader.unit,
     })) || [];
