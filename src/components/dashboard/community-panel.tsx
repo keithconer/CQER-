@@ -29,6 +29,7 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   addCommunityComment,
   createCommunityPost,
@@ -103,8 +104,14 @@ function MentionSelector({
                     onSelect={() => toggle(user.id)}
                     className="px-2 py-2"
                   >
-                    <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
-                      <div className="min-w-0">
+                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                      <Avatar className="h-6 w-6 border border-border/40 shrink-0">
+                        <AvatarImage src={user.avatar_url || undefined} alt={label} />
+                        <AvatarFallback className="text-[8px]">
+                          {`${user.first_name?.[0] || ""}${user.last_name?.[0] || ""}`.toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
                         <p className="truncate text-[10px] font-medium">{label}</p>
                         <p className="truncate text-[9px] text-muted-foreground">
                           {user.department || "No department"}
@@ -412,10 +419,10 @@ export function CommunityPanel({
 
   return (
     <div className="grid gap-4 xl:grid-cols-[220px_minmax(0,1fr)]">
-      <Card className="border-border/50 bg-card text-card-foreground shadow-sm xl:sticky xl:top-4 xl:h-fit">
+      <Card className="border-border/50 bg-gradient-to-b from-[#0a421c] via-[#0f682c] to-[#159e44] text-white shadow-sm xl:sticky xl:top-4 xl:h-fit">
         <CardHeader className="space-y-1 pb-3">
           <CardTitle className="text-xs font-semibold">CQER Community</CardTitle>
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-[10px] text-white/80">
             Share announcements, files, and updates with the CQER community.
           </p>
         </CardHeader>
@@ -425,7 +432,7 @@ export function CommunityPanel({
             onClick={() => setActiveScope("ceit")}
             className={cn(
               "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[10px] transition-colors",
-              activeScope === "ceit" ? "bg-secondary text-secondary-foreground" : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
+              activeScope === "ceit" ? "bg-white/20 text-white" : "text-white/70 hover:bg-white/10 hover:text-white"
             )}
           >
             <Globe2 className="h-4 w-4 shrink-0" />
@@ -439,7 +446,7 @@ export function CommunityPanel({
             onClick={() => setActiveScope("department")}
             className={cn(
               "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[10px] transition-colors",
-              activeScope === "department" ? "bg-secondary text-secondary-foreground" : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
+              activeScope === "department" ? "bg-white/20 text-white" : "text-white/70 hover:bg-white/10 hover:text-white"
             )}
           >
             <Building2 className="h-4 w-4 shrink-0" />
@@ -453,39 +460,38 @@ export function CommunityPanel({
 
       <div className="space-y-4">
         <Card className="border-border/50 shadow-sm">
-          <CardHeader className="pb-3 pt-3">
+          <CardHeader className="pb-3">
             <div className="flex items-center gap-3">
-              <Avatar className="h-9 w-9 border border-border/40 shrink-0">
+              <Avatar className="h-10 w-10 border border-border/40 shrink-0">
                 <AvatarImage src={currentUser.avatarUrl || undefined} alt={currentUser.firstName} />
-                <AvatarFallback className="text-[9px]">
+                <AvatarFallback className="text-[10px]">
                   {`${currentUser.firstName?.[0] || ""}${currentUser.lastName?.[0] || ""}`.toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              {!isComposerOpen ? (
-                <button
-                  type="button"
-                  onClick={() => setIsComposerOpen(true)}
-                  className="flex h-9 w-full items-center rounded-full border border-border/50 bg-muted/30 px-4 text-[10px] text-muted-foreground transition-colors hover:bg-muted/50"
-                >
-                  What's on your mind, {currentUser.firstName}?
-                </button>
-              ) : (
-                <div className="min-w-0">
-                  <p className="text-[11px] font-semibold">Create Post</p>
-                  <p className="text-[9px] text-muted-foreground truncate">
-                    Share to public or specific department
-                  </p>
-                </div>
-              )}
+              <div className="min-w-0">
+                <p className="text-xs font-semibold truncate">What do you want to announce, {currentUser.firstName}?</p>
+                <p className="text-[10px] text-muted-foreground truncate">
+                  Publish to everyone or target a specific department.
+                </p>
+              </div>
             </div>
           </CardHeader>
 
-          {isComposerOpen && (
-            <CardContent className="space-y-3 pt-0 pb-3">
+          <CardContent className="space-y-3 pt-0 pb-3">
+            {!isComposerOpen ? (
+              <button
+                type="button"
+                onClick={() => setIsComposerOpen(true)}
+                className="flex min-h-[50px] w-full items-start rounded-md border border-border/50 bg-muted/20 p-3 text-[10px] text-muted-foreground transition-colors hover:bg-muted/30 text-left"
+              >
+                Share an update with the CQER community...
+              </button>
+            ) : (
+             <div className="space-y-3">
               <Textarea
                 value={content}
                 onChange={(event) => setContent(event.target.value)}
-                placeholder={`What's on your mind, ${currentUser.firstName}?`}
+                placeholder={`What do you want to announce, ${currentUser.firstName}?`}
                 className="min-h-[80px] text-[10px] resize-none"
                 autoFocus
               />
@@ -493,30 +499,31 @@ export function CommunityPanel({
             <div className="grid gap-3 md:grid-cols-[140px_minmax(0,1fr)]">
               <div className="space-y-1.5">
                 <Label className="text-[10px] font-semibold">Visibility</Label>
-                <select
-                  value={visibility}
-                  onChange={(event) => setVisibility(event.target.value as "public" | "department")}
-                  className="flex h-8 w-full rounded-md border border-border/80 bg-background px-3 py-1 text-[10px] shadow-sm focus:outline-none"
-                >
-                  <option value="public">All (Public)</option>
-                  <option value="department">Specific Department</option>
-                </select>
+                <Select value={visibility} onValueChange={(val) => setVisibility(val as "public" | "department")}>
+                  <SelectTrigger className="h-8 w-full text-[10px]">
+                    <SelectValue placeholder="Select visibility" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="public" className="text-[10px]"><span className="flex items-center gap-2"><Globe2 className="h-3 w-3" /> All (Public)</span></SelectItem>
+                    <SelectItem value="department" className="text-[10px]"><span className="flex items-center gap-2"><Building2 className="h-3 w-3" /> Specific Department</span></SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               {visibility === "department" ? (
                 <div className="space-y-1.5">
                   <Label className="text-[10px] font-semibold">Department</Label>
-                  <select
-                    value={targetDepartment}
-                    onChange={(event) => setTargetDepartment(event.target.value)}
-                    className="flex h-8 w-full rounded-md border border-border/80 bg-background px-3 py-1 text-[10px] shadow-sm focus:outline-none"
-                  >
-                    <option value="" disabled>Select Department</option>
-                    {DEPARTMENTS.map((department) => (
-                      <option key={department} value={department}>
-                        {department}
-                      </option>
-                    ))}
-                  </select>
+                  <Select value={targetDepartment} onValueChange={setTargetDepartment}>
+                    <SelectTrigger className="h-8 w-full text-[10px]">
+                      <SelectValue placeholder="Select Department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DEPARTMENTS.map((department) => (
+                        <SelectItem key={department} value={department} className="text-[10px]">
+                          {department}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               ) : null}
             </div>
@@ -555,18 +562,16 @@ export function CommunityPanel({
                 Comments and replies are enabled on every announcement.
               </div>
               <div className="flex gap-2">
-                {editingPostId ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-8 text-[10px]"
-                    onClick={resetComposer}
-                    disabled={isPending}
-                  >
-                    Cancel Edit
-                  </Button>
-                ) : null}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-[10px]"
+                  onClick={resetComposer}
+                  disabled={isPending}
+                >
+                  Cancel
+                </Button>
                 <Button
                   type="button"
                   size="sm"
@@ -579,8 +584,9 @@ export function CommunityPanel({
                 </Button>
               </div>
             </div>
-          </CardContent>
+          </div>
           )}
+          </CardContent>
         </Card>
 
         <div className="space-y-4">

@@ -788,14 +788,16 @@ export default async function DashboardPage({
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-sm font-semibold text-foreground/90">{pageTitle}</h1>
-        {showOverview && (
-          <p className="text-xs text-muted-foreground">
-            Welcome back, {firstName}
-          </p>
-        )}
-      </div>
+      {activePanel !== "community" && (
+        <div>
+          <h1 className="text-sm font-semibold text-foreground/90">{pageTitle}</h1>
+          {showOverview && (
+            <p className="text-xs text-muted-foreground">
+              Welcome back, {firstName}
+            </p>
+          )}
+        </div>
+      )}
       {showOverview && (
         <div className="space-y-4">
           <DashboardAnalytics
