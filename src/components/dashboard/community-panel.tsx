@@ -440,7 +440,7 @@ export function CommunityPanel({
                 Share an update with the CQER community...
               </button>
             ) : (
-             <div className="max-w-[52rem] space-y-3">
+             <div className="w-full space-y-3">
               <Textarea
                 value={content}
                 onChange={(event) => setContent(event.target.value)}
