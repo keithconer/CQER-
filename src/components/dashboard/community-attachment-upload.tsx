@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { FileImage, FileText, Loader2, Paperclip, Upload, X } from "lucide-react";
+import { FileText, Loader2, Paperclip, Upload, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -14,9 +14,6 @@ export type CommunityAttachmentInput = {
 
 const BUCKET = "cqer-community";
 const ACCEPTED_TYPES = [
-  "image/png",
-  "image/jpeg",
-  "image/webp",
   "application/pdf",
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -41,7 +38,7 @@ export function CommunityAttachmentUpload({
 
     const invalid = files.find((file) => !ACCEPTED_TYPES.includes(file.type));
     if (invalid) {
-      alert("Only images, PDF, DOC, and DOCX files are allowed.");
+      alert("Only PDF, DOC, and DOCX files are allowed.");
       return;
     }
 
@@ -101,7 +98,7 @@ export function CommunityAttachmentUpload({
         type="file"
         multiple
         className="hidden"
-        accept=".png,.jpg,.jpeg,.webp,.pdf,.doc,.docx"
+        accept=".pdf,.doc,.docx"
         onChange={handleUpload}
         disabled={disabled || uploading}
       />
@@ -115,13 +112,12 @@ export function CommunityAttachmentUpload({
         )}
       >
         {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-        {uploading ? "Uploading attachments..." : "Attach images, PDF, DOC, or DOCX"}
+        {uploading ? "Uploading attachments..." : "Attach PDF, DOC, or DOCX"}
       </button>
 
       {value.length > 0 && (
         <div className="space-y-2">
           {value.map((attachment) => {
-            const isImage = attachment.type.startsWith("image/");
             return (
               <div
                 key={attachment.path}
@@ -129,17 +125,11 @@ export function CommunityAttachmentUpload({
               >
                 <div className="flex min-w-0 items-center gap-2">
                   <div className="rounded-md bg-muted/40 p-1.5">
-                    {isImage ? (
-                      <FileImage className="h-3.5 w-3.5 text-muted-foreground" />
-                    ) : (
-                      <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-                    )}
+                    <FileText className="h-3.5 w-3.5 text-muted-foreground" />
                   </div>
                   <div className="min-w-0">
                     <p className="truncate text-[10px] font-medium">{attachment.name}</p>
-                    <p className="text-[9px] text-muted-foreground">
-                      {isImage ? "Image attachment" : "Document attachment"}
-                    </p>
+                    <p className="text-[9px] text-muted-foreground">Document attachment</p>
                   </div>
                 </div>
                 <Button

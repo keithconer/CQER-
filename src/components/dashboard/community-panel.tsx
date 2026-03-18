@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import {
   BellRing,
   Globe2,
@@ -15,7 +14,6 @@ import {
   Building2,
   Paperclip,
   FileText,
-  ImageIcon,
   UserPlus2,
   MessagesSquare,
 } from "lucide-react";
@@ -140,28 +138,6 @@ function AttachmentPreview({
   attachment: CommunityAttachmentInput;
 }) {
   const supabase = React.useMemo(() => createClient(), []);
-  const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
-  const isImage = attachment.type.startsWith("image/");
-
-  React.useEffect(() => {
-    let active = true;
-    if (!isImage) return;
-
-    const loadPreview = async () => {
-      const { data } = await supabase.storage
-        .from("cqer-community")
-        .createSignedUrl(attachment.path, 3600);
-      if (active) {
-        setPreviewUrl(data?.signedUrl || null);
-      }
-    };
-
-    void loadPreview();
-
-    return () => {
-      active = false;
-    };
-  }, [attachment.path, isImage, supabase]);
 
   const openAttachment = async () => {
     const { data } = await supabase.storage
@@ -171,29 +147,6 @@ function AttachmentPreview({
       window.open(data.signedUrl, "_blank", "noopener,noreferrer");
     }
   };
-
-  if (isImage && previewUrl) {
-    return (
-      <button
-        type="button"
-        onClick={() => void openAttachment()}
-        className="overflow-hidden rounded-xl border border-border/50 bg-muted/10 text-left w-fit max-w-[240px]"
-      >
-        <Image
-          src={previewUrl}
-          alt={attachment.name}
-          width={240}
-          height={240}
-          unoptimized
-          className="h-32 w-full object-cover"
-        />
-        <div className="flex items-center gap-2 px-3 py-2">
-          <ImageIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-          <span className="truncate text-[10px] font-medium">{attachment.name}</span>
-        </div>
-      </button>
-    );
-  }
 
   return (
     <button
