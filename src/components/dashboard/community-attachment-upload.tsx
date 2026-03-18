@@ -110,7 +110,7 @@ export function CommunityAttachmentUpload({
         onClick={() => inputRef.current?.click()}
         disabled={disabled || uploading}
         className={cn(
-          "flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border/60 bg-muted/20 px-3 py-3 text-[10px] text-muted-foreground transition-colors",
+          "inline-flex w-auto items-center justify-center gap-2 rounded-lg border border-dashed border-border/60 bg-muted/20 px-4 py-3 text-[10px] text-muted-foreground transition-colors",
           disabled || uploading ? "cursor-not-allowed opacity-60" : "hover:bg-muted/35"
         )}
       >

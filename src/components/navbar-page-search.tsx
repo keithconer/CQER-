@@ -184,20 +184,20 @@ export function NavbarPageSearch({
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="flex h-8 w-[8.75rem] items-center gap-2 rounded-md border border-white/10 bg-[#111111] px-2.5 text-left text-white shadow-sm transition-colors hover:bg-[#181818] sm:w-[12rem] md:w-[15rem]"
+          className="flex h-8 w-[8.75rem] items-center gap-2 rounded-md border border-border/60 bg-background px-2.5 text-left text-foreground shadow-sm transition-colors hover:bg-muted/20 dark:border-white/10 dark:bg-[#111111] dark:text-white dark:hover:bg-[#181818] sm:w-[12rem] md:w-[15rem]"
         >
-          <Search className="h-3.5 w-3.5 shrink-0 text-white/60" />
-          <span className="truncate text-[10px] text-white/60">
+          <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground dark:text-white/60" />
+          <span className="truncate text-[10px] text-muted-foreground dark:text-white/60">
             Search pages or speak...
           </span>
         </button>
       </PopoverTrigger>
       <PopoverContent
         align="end"
-        className="w-[20rem] border border-white/10 bg-[#111111] p-0 text-white shadow-2xl sm:w-[22rem]"
+        className="w-[20rem] border border-border/60 bg-popover p-0 text-popover-foreground shadow-2xl dark:border-white/10 dark:bg-[#111111] dark:text-white sm:w-[22rem]"
       >
-        <div className="flex items-center gap-2 border-b border-white/10 px-2 py-2">
-          <Search className="h-3.5 w-3.5 shrink-0 text-white/60" />
+        <div className="flex items-center gap-2 border-b border-border/60 px-2 py-2 dark:border-white/10">
+          <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground dark:text-white/60" />
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -208,7 +208,7 @@ export function NavbarPageSearch({
               }
             }}
             placeholder={listening ? "Listening..." : "Search pages..."}
-            className="h-7 border-0 bg-transparent px-0 text-[10px] text-white shadow-none placeholder:text-white/45 focus-visible:ring-0"
+            className="h-7 border-0 bg-transparent px-0 text-[10px] text-foreground shadow-none placeholder:text-muted-foreground focus-visible:ring-0 dark:text-white dark:placeholder:text-white/45"
             autoFocus
           />
           <Button
@@ -216,7 +216,7 @@ export function NavbarPageSearch({
             variant="ghost"
             size="icon"
             className={cn(
-              "h-7 w-7 shrink-0 text-white/70 hover:bg-white/10 hover:text-white",
+              "h-7 w-7 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white",
               listening && "text-[#159E44]"
             )}
             onClick={handleVoiceSearch}
@@ -230,24 +230,24 @@ export function NavbarPageSearch({
             )}
           </Button>
         </div>
-        <Command shouldFilter={false} className="bg-[#111111] text-white">
+        <Command shouldFilter={false} className="bg-popover text-popover-foreground dark:bg-[#111111] dark:text-white">
           <CommandList className="max-h-72">
-            <CommandEmpty className="py-4 text-[10px] text-white/55">
+            <CommandEmpty className="py-4 text-[10px] text-muted-foreground dark:text-white/55">
               No matching pages found.
             </CommandEmpty>
-            <CommandGroup heading="Pages" className="[&_[cmdk-group-heading]]:text-[9px] [&_[cmdk-group-heading]]:text-white/45">
+            <CommandGroup heading="Pages" className="[&_[cmdk-group-heading]]:text-[9px] [&_[cmdk-group-heading]]:text-muted-foreground dark:[&_[cmdk-group-heading]]:text-white/45">
               {filteredItems.map((item) => (
                 <CommandItem
                   key={item.id}
                   value={`${item.label} ${(item.keywords || []).join(" ")}`}
                   onSelect={() => handleSelect(item)}
-                  className="gap-2 px-2 py-2 text-white data-[selected=true]:bg-white/10 data-[selected=true]:text-white"
+                  className="gap-2 px-2 py-2 text-foreground data-[selected=true]:bg-muted data-[selected=true]:text-foreground dark:text-white dark:data-[selected=true]:bg-white/10 dark:data-[selected=true]:text-white"
                 >
-                  <item.icon className="h-3.5 w-3.5 text-white/60" />
+                  <item.icon className="h-3.5 w-3.5 text-muted-foreground dark:text-white/60" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[10px] font-medium">{item.label}</p>
                     {item.description ? (
-                      <p className="truncate text-[9px] text-white/50">
+                      <p className="truncate text-[9px] text-muted-foreground dark:text-white/50">
                         {item.description}
                       </p>
                     ) : null}

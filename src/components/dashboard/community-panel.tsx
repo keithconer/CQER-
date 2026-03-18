@@ -418,8 +418,8 @@ export function CommunityPanel({
   const selectedMentionUsers = mentionableUsers.filter((user) => mentionedUserIds.includes(user.id));
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[220px_minmax(0,1fr)]">
-      <Card className="border-border/50 bg-gradient-to-b from-[#0a421c] via-[#0f682c] to-[#159e44] text-white shadow-sm xl:sticky xl:top-4 xl:h-fit">
+    <div className="grid gap-4 xl:grid-cols-[250px_minmax(0,1fr)]">
+      <Card className="border-0 bg-[linear-gradient(155deg,#0b2f25_0%,#106c4f_42%,#1ca96c_78%,#9ce2b2_100%)] text-white shadow-[0_16px_40px_rgba(21,158,68,0.25)] xl:sticky xl:top-4 xl:h-fit">
         <CardHeader className="space-y-1 pb-3">
           <CardTitle className="text-xs font-semibold">CQER Community</CardTitle>
           <p className="text-[10px] text-white/80">
@@ -431,28 +431,28 @@ export function CommunityPanel({
             type="button"
             onClick={() => setActiveScope("ceit")}
             className={cn(
-              "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[10px] transition-colors",
+              "flex w-full items-start gap-2 rounded-lg px-3 py-2.5 text-left text-[10px] transition-colors",
               activeScope === "ceit" ? "bg-white/20 text-white" : "text-white/70 hover:bg-white/10 hover:text-white"
             )}
           >
-            <Globe2 className="h-4 w-4 shrink-0" />
-            <div className="min-w-0">
-              <p className="font-semibold truncate">CEIT</p>
-              <p className="text-[9px] opacity-80 truncate">Public community announcements</p>
+            <Globe2 className="mt-0.5 h-4 w-4 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold">CEIT</p>
+              <p className="text-[9px] leading-4 opacity-80">Public community announcements</p>
             </div>
           </button>
           <button
             type="button"
             onClick={() => setActiveScope("department")}
             className={cn(
-              "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[10px] transition-colors",
+              "flex w-full items-start gap-2 rounded-lg px-3 py-2.5 text-left text-[10px] transition-colors",
               activeScope === "department" ? "bg-white/20 text-white" : "text-white/70 hover:bg-white/10 hover:text-white"
             )}
           >
-            <Building2 className="h-4 w-4 shrink-0" />
-            <div className="min-w-0">
-              <p className="font-semibold truncate">{currentUser.department || "Department"}</p>
-              <p className="text-[9px] opacity-80 truncate">Department-only announcements</p>
+            <Building2 className="mt-0.5 h-4 w-4 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold">{currentUser.department || "Department"}</p>
+              <p className="text-[9px] leading-4 opacity-80">Department-only announcements</p>
             </div>
           </button>
         </CardContent>
@@ -487,12 +487,12 @@ export function CommunityPanel({
                 Share an update with the CQER community...
               </button>
             ) : (
-             <div className="space-y-3">
+             <div className="max-w-[52rem] space-y-3">
               <Textarea
                 value={content}
                 onChange={(event) => setContent(event.target.value)}
                 placeholder={`What do you want to announce, ${currentUser.firstName}?`}
-                className="min-h-[80px] text-[10px] resize-none"
+                className="min-h-[120px] text-[10px] resize-none"
                 autoFocus
               />
 
