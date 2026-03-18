@@ -170,18 +170,18 @@ function AttachmentPreview({
       <button
         type="button"
         onClick={() => void openAttachment()}
-        className="overflow-hidden rounded-xl border border-border/50 bg-muted/10 text-left"
+        className="overflow-hidden rounded-xl border border-border/50 bg-muted/10 text-left w-fit max-w-[240px]"
       >
         <Image
           src={previewUrl}
           alt={attachment.name}
-          width={640}
-          height={360}
+          width={240}
+          height={240}
           unoptimized
-          className="h-48 w-full object-cover"
+          className="h-32 w-full object-cover"
         />
         <div className="flex items-center gap-2 px-3 py-2">
-          <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
+          <ImageIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           <span className="truncate text-[10px] font-medium">{attachment.name}</span>
         </div>
       </button>
@@ -192,9 +192,9 @@ function AttachmentPreview({
     <button
       type="button"
       onClick={() => void openAttachment()}
-      className="flex w-full items-center gap-2 rounded-xl border border-border/50 bg-muted/10 px-3 py-2 text-left"
+      className="flex w-fit max-w-[240px] items-center gap-2 rounded-xl border border-border/50 bg-muted/10 px-3 py-2 text-left"
     >
-      <FileText className="h-4 w-4 text-muted-foreground" />
+      <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
       <div className="min-w-0">
         <p className="truncate text-[10px] font-medium">{attachment.name}</p>
         <p className="text-[9px] text-muted-foreground">Open attachment</p>
@@ -240,7 +240,7 @@ function CommentThread({
               <p className="mt-1 whitespace-pre-wrap text-[10px] leading-4">{comment.content}</p>
               <button
                 type="button"
-                className="mt-2 text-[9px] font-medium text-[#159E44]"
+                className="mt-2 text-[9px] font-medium text-foreground hover:underline"
                 onClick={() => setOpenReplyId((current) => (current === comment.id ? null : comment.id))}
               >
                 Reply
@@ -326,6 +326,7 @@ export function CommunityPanel({
   const [mentionedUserIds, setMentionedUserIds] = React.useState<string[]>([]);
   const [editingPostId, setEditingPostId] = React.useState<string | null>(null);
   const [commentDrafts, setCommentDrafts] = React.useState<Record<string, string>>({});
+  const [isComposerOpen, setIsComposerOpen] = React.useState(false);
 
   const visiblePosts = activeScope === "department" ? departmentPosts : publicPosts;
 
@@ -336,6 +337,7 @@ export function CommunityPanel({
     setAttachments([]);
     setMentionedUserIds([]);
     setEditingPostId(null);
+    setIsComposerOpen(false);
   };
 
   const submitPost = () => {
@@ -369,6 +371,7 @@ export function CommunityPanel({
     setTargetDepartment(post.department || currentUser.department || "");
     setAttachments(post.attachments);
     setMentionedUserIds(post.mentioned_users.map((user) => user.id));
+    setIsComposerOpen(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -409,10 +412,10 @@ export function CommunityPanel({
 
   return (
     <div className="grid gap-4 xl:grid-cols-[220px_minmax(0,1fr)]">
-      <Card className="border-border/50 bg-gradient-to-b from-[#0f172a] via-[#111827] to-[#172554] text-white shadow-sm xl:sticky xl:top-4 xl:h-fit">
+      <Card className="border-border/50 bg-card text-card-foreground shadow-sm xl:sticky xl:top-4 xl:h-fit">
         <CardHeader className="space-y-1 pb-3">
           <CardTitle className="text-xs font-semibold">CQER Community</CardTitle>
-          <p className="text-[10px] text-white/70">
+          <p className="text-[10px] text-muted-foreground">
             Share announcements, files, and updates with the CQER community.
           </p>
         </CardHeader>
@@ -422,13 +425,13 @@ export function CommunityPanel({
             onClick={() => setActiveScope("ceit")}
             className={cn(
               "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[10px] transition-colors",
-              activeScope === "ceit" ? "bg-white/14 text-white" : "bg-white/5 text-white/75 hover:bg-white/10"
+              activeScope === "ceit" ? "bg-secondary text-secondary-foreground" : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
             )}
           >
-            <Globe2 className="h-4 w-4" />
-            <div>
-              <p className="font-semibold">CEIT</p>
-              <p className="text-[9px] text-white/55">Public community announcements</p>
+            <Globe2 className="h-4 w-4 shrink-0" />
+            <div className="min-w-0">
+              <p className="font-semibold truncate">CEIT</p>
+              <p className="text-[9px] opacity-80 truncate">Public community announcements</p>
             </div>
           </button>
           <button
@@ -436,13 +439,13 @@ export function CommunityPanel({
             onClick={() => setActiveScope("department")}
             className={cn(
               "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[10px] transition-colors",
-              activeScope === "department" ? "bg-white/14 text-white" : "bg-white/5 text-white/75 hover:bg-white/10"
+              activeScope === "department" ? "bg-secondary text-secondary-foreground" : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
             )}
           >
-            <Building2 className="h-4 w-4" />
-            <div>
-              <p className="font-semibold">{currentUser.department || "Department"}</p>
-              <p className="text-[9px] text-white/55">Department-only announcements</p>
+            <Building2 className="h-4 w-4 shrink-0" />
+            <div className="min-w-0">
+              <p className="font-semibold truncate">{currentUser.department || "Department"}</p>
+              <p className="text-[9px] opacity-80 truncate">Department-only announcements</p>
             </div>
           </button>
         </CardContent>
@@ -450,29 +453,42 @@ export function CommunityPanel({
 
       <div className="space-y-4">
         <Card className="border-border/50 shadow-sm">
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-3 pt-3">
             <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10 border border-border/40">
+              <Avatar className="h-9 w-9 border border-border/40 shrink-0">
                 <AvatarImage src={currentUser.avatarUrl || undefined} alt={currentUser.firstName} />
-                <AvatarFallback className="text-[10px]">
+                <AvatarFallback className="text-[9px]">
                   {`${currentUser.firstName?.[0] || ""}${currentUser.lastName?.[0] || ""}`.toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              <div>
-                <CardTitle className="text-xs font-semibold">What to announce something?</CardTitle>
-                <p className="text-[10px] text-muted-foreground">
-                  Publish to everyone or target a specific department.
-                </p>
-              </div>
+              {!isComposerOpen ? (
+                <button
+                  type="button"
+                  onClick={() => setIsComposerOpen(true)}
+                  className="flex h-9 w-full items-center rounded-full border border-border/50 bg-muted/30 px-4 text-[10px] text-muted-foreground transition-colors hover:bg-muted/50"
+                >
+                  What's on your mind, {currentUser.firstName}?
+                </button>
+              ) : (
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold">Create Post</p>
+                  <p className="text-[9px] text-muted-foreground truncate">
+                    Share to public or specific department
+                  </p>
+                </div>
+              )}
             </div>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <Textarea
-              value={content}
-              onChange={(event) => setContent(event.target.value)}
-              placeholder="Share an update with the CQER community..."
-              className="min-h-28 text-[10px]"
-            />
+
+          {isComposerOpen && (
+            <CardContent className="space-y-3 pt-0 pb-3">
+              <Textarea
+                value={content}
+                onChange={(event) => setContent(event.target.value)}
+                placeholder={`What's on your mind, ${currentUser.firstName}?`}
+                className="min-h-[80px] text-[10px] resize-none"
+                autoFocus
+              />
 
             <div className="grid gap-3 md:grid-cols-[140px_minmax(0,1fr)]">
               <div className="space-y-1.5">
@@ -554,16 +570,17 @@ export function CommunityPanel({
                 <Button
                   type="button"
                   size="sm"
-                  className="h-8 text-[10px] bg-[#159E44] hover:bg-[#128A3B]"
+                  className="h-8 text-[10px]"
                   onClick={submitPost}
-                  disabled={isPending}
+                  disabled={isPending || (content.trim().length === 0 && attachments.length === 0)}
                 >
                   <Send className="mr-1.5 h-3.5 w-3.5" />
-                  {editingPostId ? "Save Post" : "Publish Announcement"}
+                  {editingPostId ? "Save" : "Post"}
                 </Button>
               </div>
             </div>
           </CardContent>
+          )}
         </Card>
 
         <div className="space-y-4">
@@ -638,7 +655,7 @@ export function CommunityPanel({
                   ) : null}
 
                   {post.attachments.length > 0 ? (
-                    <div className="grid gap-3 md:grid-cols-2">
+                    <div className="flex flex-wrap gap-2">
                       {post.attachments.map((attachment) => (
                         <AttachmentPreview key={attachment.path} attachment={attachment} />
                       ))}
