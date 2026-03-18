@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, X, ArrowRight, ArrowLeft, Mail, CheckCircle2, Copy, Check } from "lucide-react";
+import { Plus, X, ArrowRight, ArrowLeft, Mail, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,7 +38,7 @@ interface RegistrationResult {
   email: string;
   success: boolean;
   error?: string;
-  tempPassword?: string | null;
+  activationRequired?: boolean;
 }
 
 export function CoordinatorRegistration({ userType, title, description, department: fixedDepartment }: CoordinatorRegistrationProps) {
@@ -52,7 +52,6 @@ export function CoordinatorRegistration({ userType, title, description, departme
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [results, setResults] = useState<RegistrationResult[]>([]);
-  const [copied, setCopied] = useState<string | null>(null);
 
   const handleAddEmail = () => setEmails([...emails, ""]);
   const handleRemoveEmail = (index: number) => {
@@ -167,12 +166,6 @@ export function CoordinatorRegistration({ userType, title, description, departme
     } finally {
       setLoading(false);
     }
-  };
-
-  const copyToClipboard = (text: string, id: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(id);
-    setTimeout(() => setCopied(null), 2000);
   };
 
   const steps = ["Emails", "Details", "Preview", "Success"];
@@ -346,7 +339,7 @@ export function CoordinatorRegistration({ userType, title, description, departme
               <div className="space-y-1">
                 <p className="text-[11px] font-semibold">Ready to register {emails.length} coordinators</p>
                 <p className="text-[10px] text-muted-foreground px-4">
-                  Temporary passwords will be given after this page.
+                  Invited users will need to sign in with their real CvSU Google account to activate access.
                 </p>
               </div>
             </div>
@@ -355,9 +348,9 @@ export function CoordinatorRegistration({ userType, title, description, departme
           {currentStep === 4 && (
             <div className="space-y-4">
               <div className="text-center space-y-1 pb-2">
-                <p className="text-[11px] font-semibold text-[#159E44]">Registration Successful</p>
+                <p className="text-[11px] font-semibold text-[#159E44]">Invitations Saved</p>
                 <div className="px-6">
-                   <p className="text-[10px] text-muted-foreground">Share the temporary passwords below with each coordinator.</p>
+                   <p className="text-[10px] text-muted-foreground">Each coordinator must use Google Sign-in with the same CvSU email to activate their account.</p>
                 </div>
               </div>
 
@@ -367,29 +360,17 @@ export function CoordinatorRegistration({ userType, title, description, departme
                     <div className="flex justify-between items-center">
                       <p className="text-[10px] font-bold truncate flex-grow mr-2">{result.email}</p>
                       {result.success ? (
-                         <span className="text-[9px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 font-bold uppercase">Created</span>
+                         <span className="text-[9px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 font-bold uppercase">Invited</span>
                       ) : (
                         <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-bold uppercase">Error</span>
                       )}
                     </div>
-                    {result.success && result.tempPassword && (
+                    {result.success && (
                       <div className="bg-muted/30 border border-border rounded p-2 space-y-1">
-                        <p className="text-[9px] text-muted-foreground font-semibold uppercase">Temporary Password</p>
-                        <div className="flex items-center justify-between gap-2">
-                          <code className="text-[11px] font-mono text-foreground font-bold break-all">{result.tempPassword}</code>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 flex-shrink-0"
-                            onClick={() => copyToClipboard(result.tempPassword || "", result.email)}
-                          >
-                            {copied === result.email ? (
-                              <Check className="h-3 w-3 text-[#159E44]" />
-                            ) : (
-                              <Copy className="h-3 w-3" />
-                            )}
-                          </Button>
-                        </div>
+                        <p className="text-[9px] text-muted-foreground font-semibold uppercase">Activation</p>
+                        <p className="text-[10px] text-foreground">
+                          This email can sign in only after a successful Google login with the same CvSU account.
+                        </p>
                       </div>
                     )}
                     {!result.success && (
@@ -400,7 +381,7 @@ export function CoordinatorRegistration({ userType, title, description, departme
               </div>
               <div className="bg-muted/50 border border-border rounded-lg p-3">
                 <p className="text-[10px] text-muted-foreground leading-relaxed">
-                  Note: Copy each password and send it to the coordinator via email or messaging.
+                  Note: Tell invited coordinators to click Sign-in with Google and use the exact same CvSU email that was registered for them.
                 </p>
               </div>
               <Button className="w-full h-9 text-[11px] font-bold bg-[#159E44] hover:bg-[#128A3B]" onClick={() => setOpen(false)}>
@@ -429,7 +410,7 @@ export function CoordinatorRegistration({ userType, title, description, departme
               onClick={handleNext}
               disabled={loading}
             >
-              {loading ? "Registering..." : currentStep === 3 ? "Register Now" : "Continue"}
+              {loading ? "Saving..." : currentStep === 3 ? "Save Invitation" : "Continue"}
               {!loading && currentStep < 3 && <ArrowRight className="h-3 w-3 ml-1" />}
             </Button>
           </div>

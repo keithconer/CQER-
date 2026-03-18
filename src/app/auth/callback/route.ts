@@ -56,7 +56,9 @@ export async function GET(request: NextRequest) {
         .eq("id", user.id)
         .maybeSingle();
 
-    if (!profile) {
+    let resolvedProfile = profile;
+
+    if (!resolvedProfile) {
         if (SUPER_ADMIN_EMAIL && user.email?.toLowerCase() === SUPER_ADMIN_EMAIL) {
             await supabase.from("profiles").upsert({
                 id: user.id,
@@ -67,13 +69,55 @@ export async function GET(request: NextRequest) {
             });
             return response;
         }
-        try {
-            await createAdminClient().auth.admin.deleteUser(user.id);
-        } catch {
-            // Best effort cleanup to avoid orphaned OAuth accounts.
+
+        const normalizedEmail = user.email?.toLowerCase();
+        if (normalizedEmail) {
+            const adminClient = createAdminClient();
+            const { data: invitation } = await adminClient
+                .from("coordinator_invitations")
+                .select("id, email, first_name, last_name, user_type, department, unit")
+                .eq("email", normalizedEmail)
+                .maybeSingle();
+
+            if (invitation) {
+                const googleAvatar =
+                    user.user_metadata?.avatar_url ?? user.user_metadata?.picture ?? null;
+
+                const { error: profileInsertError } = await supabase.from("profiles").upsert({
+                    id: user.id,
+                    email: normalizedEmail,
+                    first_name: invitation.first_name,
+                    last_name: invitation.last_name,
+                    user_type: invitation.user_type,
+                    department: invitation.department,
+                    unit: invitation.unit,
+                    avatar_url: googleAvatar,
+                });
+
+                if (!profileInsertError) {
+                    await adminClient
+                        .from("coordinator_invitations")
+                        .delete()
+                        .eq("id", invitation.id);
+
+                    resolvedProfile = {
+                        id: user.id,
+                        user_type: invitation.user_type,
+                        avatar_url: googleAvatar,
+                    };
+                }
+            }
         }
-        await supabase.auth.signOut();
-        return NextResponse.redirect(`${origin}/login?error=unregistered_oauth`);
+
+        if (!resolvedProfile) {
+            try {
+                await createAdminClient().auth.admin.deleteUser(user.id);
+            } catch {
+                // Best effort cleanup to avoid orphaned OAuth accounts.
+            }
+            await supabase.auth.signOut();
+            return NextResponse.redirect(`${origin}/login?error=unregistered_oauth`);
+        }
     }
 
     const allowedTypes = new Set([
@@ -84,7 +128,7 @@ export async function GET(request: NextRequest) {
         "extension_office",
     ]);
 
-    if (!allowedTypes.has(profile.user_type)) {
+    if (!allowedTypes.has(resolvedProfile.user_type)) {
         try {
             await createAdminClient().auth.admin.deleteUser(user.id);
         } catch {
@@ -96,7 +140,7 @@ export async function GET(request: NextRequest) {
 
     const googleAvatar =
         user.user_metadata?.avatar_url ?? user.user_metadata?.picture ?? null;
-    if (googleAvatar && profile.avatar_url !== googleAvatar) {
+    if (googleAvatar && resolvedProfile.avatar_url !== googleAvatar) {
         await supabase
             .from("profiles")
             .update({ avatar_url: googleAvatar })

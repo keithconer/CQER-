@@ -75,6 +75,37 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
+-- Coordinator invitations
+create table if not exists public.coordinator_invitations (
+  id uuid default gen_random_uuid() primary key,
+  email text not null unique,
+  first_name text,
+  last_name text,
+  user_type text not null,
+  department text,
+  unit text,
+  invited_by uuid references public.profiles(id) on delete set null,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  constraint coordinator_invitations_user_type_check
+    check (user_type in ('college_coordinator', 'unit_coordinator', 'project_leader', 'extension_office'))
+);
+
+alter table public.coordinator_invitations enable row level security;
+
+create or replace function public.set_coordinator_invitations_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists coordinator_invitations_set_updated_at on public.coordinator_invitations;
+create trigger coordinator_invitations_set_updated_at
+  before update on public.coordinator_invitations
+  for each row execute function public.set_coordinator_invitations_updated_at();
+
 -- Create projects table
 create table if not exists public.projects (
   id uuid default gen_random_uuid() primary key,

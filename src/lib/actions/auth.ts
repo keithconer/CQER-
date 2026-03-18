@@ -1,35 +1,7 @@
 "use server";
 
-import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import crypto from "crypto";
-
-function generateTempPassword(): string {
-    const lowercase = 'abcdefghijklmnopqrstuvwxyz';
-    const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const numbers = '0123456789';
-    const special = '!@#$%^&*()_+-=[]{}|;:,.<>?';
-    
-    const allChars = lowercase + uppercase + numbers + special;
-    
-    let password = '';
-    password += lowercase[crypto.randomInt(0, lowercase.length)];
-    password += uppercase[crypto.randomInt(0, uppercase.length)];
-    password += numbers[crypto.randomInt(0, numbers.length)];
-    password += special[crypto.randomInt(0, special.length)];
-    
-    for (let i = 0; i < 8; i++) {
-        password += allChars[crypto.randomInt(0, allChars.length)];
-    }
-    
-    const passwordArray = password.split('');
-    for (let i = passwordArray.length - 1; i > 0; i--) {
-        const j = crypto.randomInt(0, i + 1);
-        [passwordArray[i], passwordArray[j]] = [passwordArray[j], passwordArray[i]];
-    }
-    
-    return passwordArray.join('');
-}
+import { createAdminClient } from "@/lib/supabase/admin";
 
 function validateEmailDomain(email: string): boolean {
     return email.toLowerCase().endsWith('@cvsu.edu.ph');
@@ -96,11 +68,28 @@ export async function registerCoordinators(coordinators: { email: string; depart
             };
         }
 
+        const normalizedEmails = coordinators.map((coord) => coord.email.toLowerCase());
+        const duplicateEmails = normalizedEmails.filter((email, index) => normalizedEmails.indexOf(email) !== index);
+        if (duplicateEmails.length > 0) {
+            return {
+                error: `Duplicate emails are not allowed: ${Array.from(new Set(duplicateEmails)).join(", ")}`
+            };
+        }
+
+        const { data: existingProfiles, error: existingProfilesError } = await adminClient
+            .from("profiles")
+            .select("email")
+            .in("email", normalizedEmails);
+
+        if (existingProfilesError) {
+            return { error: "Failed to validate existing accounts." };
+        }
+
+        const existingProfileEmails = new Set((existingProfiles || []).map((profile) => profile.email?.toLowerCase()));
+
         const results = [];
 
         for (const coord of coordinators) {
-            const tempPassword = generateTempPassword();
-
             const emailNamePart = coord.email.split("@")[0];
             const parts = emailNamePart.split(".");
             let firstName = "";
@@ -113,38 +102,51 @@ export async function registerCoordinators(coordinators: { email: string; depart
                 firstName = parts[1].charAt(0).toUpperCase() + parts[1].slice(1);
             }
 
-            const { data, error } = await adminClient.auth.admin.createUser({
-                email: coord.email,
-                password: tempPassword,
-                email_confirm: true,
-                user_metadata: {
+            if (existingProfileEmails.has(coord.email.toLowerCase())) {
+                results.push({
+                    email: coord.email,
+                    success: false,
+                    error: "This account already exists and can already sign in."
+                });
+                continue;
+            }
+
+            const { error } = await adminClient
+                .from("coordinator_invitations")
+                .upsert({
+                    email: coord.email.toLowerCase(),
                     first_name: firstName,
                     last_name: lastName,
                     user_type: coord.userType,
                     department: coord.department,
                     unit: coord.unit || null,
-                },
-            });
+                    invited_by: currentUser.id,
+                }, {
+                    onConflict: "email",
+                });
 
             if (error) {
                 results.push({ 
                     email: coord.email, 
                     success: false, 
                     error: error.message,
-                    tempPassword: null 
                 });
             } else {
                 results.push({ 
                     email: coord.email, 
                     success: true,
-                    tempPassword: tempPassword
+                    activationRequired: true,
                 });
             }
         }
 
         return { results };
-    } catch (err: any) {
-        return { error: err.message || "An unexpected error occurred during registration" };
+    } catch (err: unknown) {
+        return {
+            error: err instanceof Error
+                ? err.message
+                : "An unexpected error occurred during registration"
+        };
     }
 }
 
