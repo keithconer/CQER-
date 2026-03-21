@@ -7,7 +7,7 @@ const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL?.toLowerCase() ?? "";
 
 export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
-    const origin = request.nextUrl.origin;
+    const origin = process.env.NEXT_PUBLIC_SITE_URL!;
     const code = searchParams.get("code");
     const next = searchParams.get("next") ?? "/dashboard";
 
@@ -15,9 +15,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.redirect(`${origin}/login?error=auth_callback_error`);
     }
 
-    const redirectUrl = `${origin}/oauth-loading?next=${encodeURIComponent(
-        next
-    )}`;
+    const redirectUrl = `${origin}/oauth-loading?next=${encodeURIComponent(next)}`;
     const response = NextResponse.redirect(redirectUrl);
 
     const supabase = createServerClient(
