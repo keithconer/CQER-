@@ -18,6 +18,8 @@ import { ProjectManagement } from "@/components/dashboard/project-management";
 import { type ProjectProposal } from "@/components/dashboard/project-proposals-table";
 import { FundingManagement } from "@/components/dashboard/funding-management";
 import { UnitCoordinatorsPanel } from "@/components/dashboard/unit-coordinators-panel";
+import { NeedsAssessmentManagement } from "@/components/dashboard/needs-assessment-management";
+import { getNeedsAssessments, type NeedsAssessment } from "@/lib/actions/needs-assessment";
 import { AwardsManagement, type AwardRecord } from "@/components/dashboard/awards-management";
 import { type Project } from "@/components/dashboard/projects-table";
 import {
@@ -211,8 +213,13 @@ export default async function DashboardPage({
   const resolvedSearchParams = (await searchParams) || {};
   const panelParam = resolvedSearchParams.panel;
   const accountViewParam = resolvedSearchParams.account;
+  const viewParam = resolvedSearchParams.view;
   const activeProjectView =
-    resolvedSearchParams.view === "project-proposal" ? "project-proposal" : "project-registration";
+    viewParam === "project-proposal"
+      ? "project-proposal"
+      : viewParam === "needs-assessment"
+      ? "needs-assessment"
+      : "project-registration";
   const accountView = accountViewParam === "transfer" ? "transfer" : "register";
   const accountPanelSelected = panelParam === "account-management" || panelParam === "accounts";
   const activePanel =
@@ -234,7 +241,7 @@ export default async function DashboardPage({
       : "overview";
   const hasEntitySelection =
     activePanel === "records" &&
-    (activeProjectView === "project-registration" || activeProjectView === "project-proposal");
+    (activeProjectView === "project-registration" || activeProjectView === "project-proposal" || activeProjectView === "needs-assessment");
   const hasSuperAdminSelection =
     panelParam === "projects" || panelParam === "records";
   const superAdminPanel: "projects" | "trainings" =
@@ -266,6 +273,7 @@ export default async function DashboardPage({
   let unitProjects: Project[] = [];
   let awards: AwardRecord[] = [];
   let studentInvolvementRecords: StudentInvolvementRecord[] = [];
+  let needsAssessmentsList: NeedsAssessment[] = [];
   let facultyInvolvementRecords: FacultyInvolvementRecord[] = [];
   let poolExpertRecords: PoolExpertRecord[] = [];
   let technologyRecords: TechnologyRecord[] = [];
@@ -372,6 +380,10 @@ export default async function DashboardPage({
         }
       });
       projects = Array.from(merged.values());
+      
+      if (activeProjectView === "needs-assessment") {
+        needsAssessmentsList = await getNeedsAssessments();
+      }
     }
   }
 
@@ -1245,7 +1257,13 @@ export default async function DashboardPage({
 
       {userType === "project_leader" && activePanel !== "community" && (
         hasEntitySelection ? (
-          activeProjectView === "project-proposal" ? (
+          activeProjectView === "needs-assessment" ? (
+            <NeedsAssessmentManagement
+              initialAssessments={needsAssessmentsList}
+              assignedProjects={projects}
+              readOnly={false}
+            />
+          ) : activeProjectView === "project-proposal" ? (
             <ProjectProposalManagement
               initialProjects={projects as ProjectProposal[]}
               userType={userType}

@@ -109,7 +109,7 @@ export function Navbar({ user }: NavbarProps) {
   const viewParam = searchParams.get("view");
   const accountParam = searchParams.get("account");
   const activeView =
-    viewParam === "project-registration" || viewParam === "project-proposal"
+    viewParam === "project-registration" || viewParam === "project-proposal" || viewParam === "needs-assessment"
       ? viewParam
       : "project-registration";
   const activeAccountView = accountParam === "transfer" ? "transfer" : "register";
@@ -139,6 +139,7 @@ export function Navbar({ user }: NavbarProps) {
     router.prefetch("/dashboard?panel=community");
     router.prefetch("/dashboard?panel=records&view=project-registration");
     router.prefetch("/dashboard?panel=records&view=project-proposal");
+    router.prefetch("/dashboard?panel=records&view=needs-assessment");
     router.prefetch("/dashboard?panel=unit-coordinators");
     router.prefetch("/dashboard?panel=funding");
     router.prefetch("/dashboard?panel=awards");
@@ -751,8 +752,19 @@ export function Navbar({ user }: NavbarProps) {
                             onClick={() => goTo("/dashboard?panel=records&view=project-proposal")}
                           >
                             <FolderKanban className="mr-2 h-3 w-3" />
+                            <FolderKanban className="mr-2 h-3 w-3" />
                             Project Proposal
                           </Button>
+                          {user.userType === "project_leader" && (
+                            <Button
+                              variant="ghost"
+                              className={navItemClass(activePanel === "records" && activeView === "needs-assessment")}
+                              onClick={() => goTo("/dashboard?panel=records&view=needs-assessment")}
+                            >
+                              <FolderKanban className="mr-2 h-3 w-3" />
+                              Needs Assessment
+                            </Button>
+                          )}
                         </div>
                       </PopoverContent>
                     </Popover>
@@ -785,8 +797,19 @@ export function Navbar({ user }: NavbarProps) {
                         onClick={() => goTo("/dashboard?panel=records&view=project-proposal")}
                       >
                         <FolderKanban className="mr-2 h-3 w-3" />
+                        <FolderKanban className="mr-2 h-3 w-3" />
                         Project Proposal
                       </Button>
+                      {user.userType === "project_leader" && (
+                        <Button
+                          variant="ghost"
+                          className={navItemClass(activePanel === "records" && activeView === "needs-assessment")}
+                          onClick={() => goTo("/dashboard?panel=records&view=needs-assessment")}
+                        >
+                          <FolderKanban className="mr-2 h-3 w-3" />
+                          Needs Assessment
+                        </Button>
+                      )}
                     </div>
                   )}
                 </>

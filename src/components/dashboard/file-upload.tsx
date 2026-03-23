@@ -12,11 +12,11 @@ interface FileUploadProps {
   onChange: (value: { url: string; name: string }[]) => void;
   disabled?: boolean;
   maxFiles?: number;
+  bucket?: string;
+  accept?: string;
 }
 
-const BUCKET = "cqer-projects_pdfs";
-
-export function FileUpload({ value = [], onChange, disabled, maxFiles = 5 }: FileUploadProps) {
+export function FileUpload({ value = [], onChange, disabled, maxFiles = 5, bucket = "cqer-projects_pdfs", accept }: FileUploadProps) {
   const [uploading, setUploading] = React.useState(false);
   const [progress, setProgress] = React.useState(0);
   const [openingIndex, setOpeningIndex] = React.useState<number | null>(null);
@@ -54,7 +54,7 @@ export function FileUpload({ value = [], onChange, disabled, maxFiles = 5 }: Fil
       const filePath = `${user.id}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from(BUCKET)
+        .from(bucket)
         .upload(filePath, file, {
           upsert: true,
           cacheControl: "3600",
@@ -97,7 +97,7 @@ export function FileUpload({ value = [], onChange, disabled, maxFiles = 5 }: Fil
       }
 
       const { data, error } = await supabase.storage
-        .from(BUCKET)
+        .from(bucket)
         .createSignedUrl(file.url, 3600);
 
       if (error || !data?.signedUrl) {
@@ -176,7 +176,7 @@ export function FileUpload({ value = [], onChange, disabled, maxFiles = 5 }: Fil
             type="file"
             ref={fileInputRef}
             onChange={handleFileChange}
-            accept=".pdf"
+            accept={accept || ".pdf"}
             className="hidden"
             disabled={disabled || uploading}
           />
