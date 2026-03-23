@@ -122,15 +122,15 @@ export function NeedsAssessmentTable({
         </div>
       )}
 
-      <div className="rounded-md border border-border/50 bg-background overflow-hidden">
+      <div className="rounded-md border border-border/50 overflow-hidden">
         <Table>
-          <TableHeader className="bg-muted/50">
-            <TableRow className="hover:bg-transparent border-b-border/50 text-[10px]">
-              <TableHead className="font-medium h-9 w-[100px]">Project No.</TableHead>
-              <TableHead className="font-medium h-9 max-w-[200px]">Project Title</TableHead>
-              <TableHead className="font-medium h-9">Category</TableHead>
-              <TableHead className="font-medium h-9">Date Conducted</TableHead>
-              <TableHead className="font-medium h-9 text-right">Actions</TableHead>
+          <TableHeader className="bg-muted/30">
+            <TableRow className="hover:bg-transparent border-border/50">
+              <TableHead className="text-[10px] font-semibold h-9 w-[100px]">Project No.</TableHead>
+              <TableHead className="text-[10px] font-semibold h-9 max-w-[200px]">Project Title</TableHead>
+              <TableHead className="text-[10px] font-semibold h-9">Category</TableHead>
+              <TableHead className="text-[10px] font-semibold h-9">Date Conducted</TableHead>
+              <TableHead className="text-[10px] font-semibold h-9 text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -142,20 +142,20 @@ export function NeedsAssessmentTable({
               </TableRow>
             ) : (
               currentData.map((assessment) => (
-                <TableRow key={assessment.id} className="border-b-border/50 text-[10px]">
-                  <TableCell className="font-medium truncate" title={assessment.project_no}>
+                <TableRow key={assessment.id} className="hover:bg-muted/10 border-border/30 text-[10px]">
+                  <TableCell className="py-2.5 px-3 font-medium truncate" title={assessment.project_no}>
                     {assessment.project_no}
                   </TableCell>
-                  <TableCell className="truncate max-w-[200px]" title={assessment.project_title}>
+                  <TableCell className="py-2.5 px-3 truncate max-w-[200px]" title={assessment.project_title}>
                     {assessment.project_title}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="py-2.5 px-3">
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium text-[9px]">
                       {assessment.category}
                     </span>
                   </TableCell>
-                  <TableCell>{format(new Date(assessment.date_conducted), "MMM d, yyyy")}</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="py-2.5 px-3">{format(new Date(assessment.date_conducted), "MMM d, yyyy")}</TableCell>
+                  <TableCell className="py-2.5 px-3 text-right">
                     <div className="flex justify-end gap-1">
                       <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted/80" onClick={() => handleView(assessment)} title="View records">
                         <Eye className="h-3.5 w-3.5" />
