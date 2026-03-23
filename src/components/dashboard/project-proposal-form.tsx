@@ -487,7 +487,16 @@ export function ProjectProposalForm({
                         render={({ field }) => (
                           <FormItem className="flex-1">
                             <FormControl>
-                              <Input {...field} className="h-8 text-[10px] placeholder:text-[10px]" placeholder="Full name" disabled={isViewOnly} />
+                              <ProjectLeaderInput
+                                value={field.value || ""}
+                                onValueChange={field.onChange}
+                                selectedId={null}
+                                onSelectedIdChange={() => {}}
+                                department={projectLeaderDepartment}
+                                unit={projectLeaderUnit}
+                                disabled={isViewOnly}
+                                placeholder="Type to mention co-leader"
+                              />
                             </FormControl>
                             <FormMessage className="text-[10px]" />
                           </FormItem>
@@ -522,7 +531,16 @@ export function ProjectProposalForm({
                         render={({ field }) => (
                           <FormItem className="flex-1">
                             <FormControl>
-                              <Input {...field} className="h-8 text-[10px] placeholder:text-[10px]" placeholder="Full name" disabled={isViewOnly} />
+                              <ProjectLeaderInput
+                                value={field.value || ""}
+                                onValueChange={field.onChange}
+                                selectedId={null}
+                                onSelectedIdChange={() => {}}
+                                department={projectLeaderDepartment}
+                                unit={projectLeaderUnit}
+                                disabled={isViewOnly}
+                                placeholder="Type to mention assistant"
+                              />
                             </FormControl>
                             <FormMessage className="text-[10px]" />
                           </FormItem>

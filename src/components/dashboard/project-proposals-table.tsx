@@ -40,6 +40,7 @@ export interface ProjectProposal {
   entry_type?: "project_proposal" | string | null;
   title?: string | null;
   project_title?: string | null;
+  project_leader_id?: string | null;
   classification?: string[] | null;
   proponents?: { name?: string }[] | null;
   co_project_leaders?: { name?: string }[] | null;

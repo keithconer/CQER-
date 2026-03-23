@@ -49,6 +49,7 @@ export interface Project {
   created_by_unit?: string | null;
   entry_type?: "project" | "project_proposal" | null;
   project_no?: string | null;
+  project_leader_id?: string | null;
   moa_no?: string | null;
   collaborating_agencies?: string | null;
   funding_data?: Record<string, unknown> | null;

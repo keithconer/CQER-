@@ -2782,3 +2782,100 @@ $$;
 -- ============================================================
 -- END: Rate Limiting (Write Operations)
 -- ============================================================
+
+-- ============================================================
+-- START: Needs Assessment Module
+-- ============================================================
+create table if not exists public.needs_assessments (
+  id uuid default gen_random_uuid() primary key,
+  project_no text not null,
+  project_title text not null,
+  category text not null check (category in ('Internal', 'External')),
+  needs_assessment text not null,
+  date_conducted date not null,
+  place_conducted text not null,
+  results_used text not null,
+  document_url text,
+  created_by uuid references public.profiles(id) on delete cascade not null,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+alter table public.needs_assessments enable row level security;
+
+drop policy if exists "Users can view own needs assessments" on public.needs_assessments;
+create policy "Users can view own needs assessments" on public.needs_assessments
+  for select using (auth.uid() = created_by);
+
+drop policy if exists "Super admins can manage all needs assessments" on public.needs_assessments;
+create policy "Super admins can manage all needs assessments" on public.needs_assessments
+  for all using (
+    exists (
+      select 1 from public.profiles
+      where profiles.id = auth.uid()
+        and profiles.user_type = 'super_admin'
+    )
+  );
+
+drop policy if exists "Users can create own needs assessments" on public.needs_assessments;
+create policy "Users can create own needs assessments" on public.needs_assessments
+  for insert with check (auth.uid() = created_by);
+
+drop policy if exists "Users can update own needs assessments" on public.needs_assessments;
+create policy "Users can update own needs assessments" on public.needs_assessments
+  for update using (auth.uid() = created_by);
+
+drop policy if exists "Users can delete own needs assessments" on public.needs_assessments;
+create policy "Users can delete own needs assessments" on public.needs_assessments
+  for delete using (auth.uid() = created_by);
+
+create index if not exists idx_needs_assessments_created_by on public.needs_assessments (created_by);
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'needs_assessments'
+  ) then
+    alter publication supabase_realtime add table public.needs_assessments;
+  end if;
+end
+$$;
+
+-- Enable Realtime for needs_assessments
+-- Setting up storage for Needs Assessment PDFs
+insert into storage.buckets (id, name, public)
+values ('cqer-needs-assessment-pdfs', 'cqer-needs-assessment-pdfs', true)
+on conflict (id) do nothing;
+
+drop policy if exists "Needs Assessment PDFs allow public reads" on storage.objects;
+create policy "Needs Assessment PDFs allow public reads"
+on storage.objects for select
+to public
+using (
+  bucket_id = 'cqer-needs-assessment-pdfs'
+);
+
+drop policy if exists "Needs Assessment PDFs allow authenticated uploads" on storage.objects;
+create policy "Needs Assessment PDFs allow authenticated uploads"
+on storage.objects for insert
+to authenticated
+with check (
+  bucket_id = 'cqer-needs-assessment-pdfs' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+
+drop policy if exists "Needs Assessment PDFs owner delete" on storage.objects;
+create policy "Needs Assessment PDFs owner delete"
+on storage.objects for delete
+to authenticated
+using (
+  bucket_id = 'cqer-needs-assessment-pdfs' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+-- ============================================================
+-- END: Needs Assessment Module
+-- ============================================================
