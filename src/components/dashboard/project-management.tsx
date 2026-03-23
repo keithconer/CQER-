@@ -168,61 +168,59 @@ export function ProjectManagement({
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 text-[10px] border-border/50 bg-muted/20"
-                >
-                  <SlidersHorizontal className="h-3 w-3 mr-1" />
-                  Filter
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                {userType !== "project_leader" && (
-                  <>
-                    <DropdownMenuLabel className="text-[10px]">Results Filter</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuCheckboxItem
-                      className="text-[10px]"
-                      checked={selectedScopes.includes("created_by_me")}
-                      onCheckedChange={() => toggleScopeFilter("created_by_me")}
-                    >
-                      Created by me
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem
-                      className="text-[10px]"
-                      checked={selectedScopes.includes("department_files")}
-                      onCheckedChange={() => toggleScopeFilter("department_files")}
-                    >
-                      All files from departments
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuSeparator />
-                  </>
-                )}
-                <DropdownMenuLabel className="text-[10px]">Department Units</DropdownMenuLabel>
-                <DropdownMenuCheckboxItem
-                  className="text-[10px]"
-                  checked={selectedUnits.length === 0}
-                  onCheckedChange={(checked) => {
-                    if (checked) setSelectedUnits([]);
-                  }}
-                >
-                  All Units
-                </DropdownMenuCheckboxItem>
-                {unitOptions.map((unitOption) => (
-                  <DropdownMenuCheckboxItem
-                    key={unitOption}
-                    className="text-[10px]"
-                    checked={selectedUnits.includes(unitOption)}
-                    onCheckedChange={() => toggleUnitFilter(unitOption)}
+            {userType !== "project_leader" && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-[10px] border-border/50 bg-muted/20"
                   >
-                    {unitOption}
+                    <SlidersHorizontal className="h-3 w-3 mr-1" />
+                    Filter
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel className="text-[10px]">Results Filter</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuCheckboxItem
+                    className="text-[10px]"
+                    checked={selectedScopes.includes("created_by_me")}
+                    onCheckedChange={() => toggleScopeFilter("created_by_me")}
+                  >
+                    Created by me
                   </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  <DropdownMenuCheckboxItem
+                    className="text-[10px]"
+                    checked={selectedScopes.includes("department_files")}
+                    onCheckedChange={() => toggleScopeFilter("department_files")}
+                  >
+                    All files from departments
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-[10px]">Department Units</DropdownMenuLabel>
+                  <DropdownMenuCheckboxItem
+                    className="text-[10px]"
+                    checked={selectedUnits.length === 0}
+                    onCheckedChange={(checked) => {
+                      if (checked) setSelectedUnits([]);
+                    }}
+                  >
+                    All Units
+                  </DropdownMenuCheckboxItem>
+                  {unitOptions.map((unitOption) => (
+                    <DropdownMenuCheckboxItem
+                      key={unitOption}
+                      className="text-[10px]"
+                      checked={selectedUnits.includes(unitOption)}
+                      onCheckedChange={() => toggleUnitFilter(unitOption)}
+                    >
+                      {unitOption}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </CardHeader>
         <CardContent className="px-4 pb-4">

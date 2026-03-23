@@ -657,3 +657,66 @@ export async function deleteProject(id: string) {
     revalidatePath("/dashboard");
     return { success: true };
 }
+
+export async function getProjectLeaderProposals() {
+    const supabase = await createClient();
+    const adminClient = createAdminClient();
+
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+        return { error: 'Unauthorized' };
+    }
+
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('user_type')
+        .eq('id', user.id)
+        .single();
+
+    if (!profile || profile.user_type !== 'project_leader') {
+        return { data: [] };
+    }
+
+    const { data, error } = await adminClient
+        .from('project_proposals')
+        .select('*')
+        .eq('project_leader_id', user.id)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching project leader proposals:', error);
+        return { error: error.message };
+    }
+
+    const creatorIds = Array.from(
+        new Set((data || []).map((proposal) => proposal.created_by).filter(Boolean))
+    ) as string[];
+
+    let creatorMap = new Map<string, { user_type: string | null; unit: string | null }>();
+    if (creatorIds.length > 0) {
+        const { data: creatorProfiles } = await adminClient
+            .from('profiles')
+            .select('id, user_type, unit')
+            .in('id', creatorIds);
+        creatorMap = new Map(
+            (creatorProfiles || []).map((entry) => [
+                entry.id,
+                { user_type: entry.user_type, unit: entry.unit },
+            ])
+        );
+    }
+
+    const enriched =
+        (data || []).map((proposal) => {
+            const creator = creatorMap.get(proposal.created_by);
+            return {
+                ...proposal,
+                created_by_user_type: creator?.user_type || null,
+                created_by_unit: creator?.unit || null,
+            };
+        });
+
+    return { data: enriched };
+}

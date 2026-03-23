@@ -752,7 +752,6 @@ export function Navbar({ user }: NavbarProps) {
                             onClick={() => goTo("/dashboard?panel=records&view=project-proposal")}
                           >
                             <FolderKanban className="mr-2 h-3 w-3" />
-                            <FolderKanban className="mr-2 h-3 w-3" />
                             Project Proposal
                           </Button>
                           {user.userType === "project_leader" && (
@@ -796,7 +795,6 @@ export function Navbar({ user }: NavbarProps) {
                         className={navItemClass(activePanel === "records" && activeView === "project-proposal")}
                         onClick={() => goTo("/dashboard?panel=records&view=project-proposal")}
                       >
-                        <FolderKanban className="mr-2 h-3 w-3" />
                         <FolderKanban className="mr-2 h-3 w-3" />
                         Project Proposal
                       </Button>

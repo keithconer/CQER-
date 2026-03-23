@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { UnitProjectsManagement } from "@/components/dashboard/unit-projects-management";
 import { CoordinatorRegistration } from "@/components/dashboard/coordinator-registration";
-import { getCollegeProjects, getProjects, getProjectLeaderProjects, getUnitProjects } from "@/lib/actions/projects";
+import { getCollegeProjects, getProjects, getProjectLeaderProjects, getProjectLeaderProposals, getUnitProjects } from "@/lib/actions/projects";
 import { getAwards } from "@/lib/actions/awards";
 import { getStudentInvolvement } from "@/lib/actions/student-involvement";
 import { getFacultyModuleData } from "@/lib/actions/faculty-involvement";
@@ -364,22 +364,13 @@ export default async function DashboardPage({
       departmentCommunityPosts = communityData.departmentPosts;
       communityUsers = communityData.mentionableUsers;
     } else if (hasEntitySelection) {
-      const [leaderProjectsResult, unitProjectsResult] = await Promise.all([
-        getProjectLeaderProjects(),
-        getUnitProjects(),
-      ]);
-      const leaderProjects = leaderProjectsResult.data || [];
-      const unitProjectsResultData = unitProjectsResult.data || [];
-      const merged = new Map<string, Project>();
-      leaderProjects.forEach((project) => {
-        if (project?.id) merged.set(project.id, project as Project);
-      });
-      unitProjectsResultData.forEach((project) => {
-        if (project?.id && !merged.has(project.id)) {
-          merged.set(project.id, project as Project);
-        }
-      });
-      projects = Array.from(merged.values());
+      if (activeProjectView === "project-proposal") {
+        const leaderProposalsResult = await getProjectLeaderProposals();
+        projects = (leaderProposalsResult.data || []) as unknown as Project[];
+      } else {
+        const leaderProjectsResult = await getProjectLeaderProjects();
+        projects = (leaderProjectsResult.data || []) as Project[];
+      }
       
       if (activeProjectView === "needs-assessment") {
         needsAssessmentsList = await getNeedsAssessments();

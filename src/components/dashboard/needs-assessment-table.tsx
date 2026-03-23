@@ -135,8 +135,8 @@ export function NeedsAssessmentTable({
           </TableHeader>
           <TableBody>
             {currentData.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center text-[10px] text-muted-foreground">
+              <TableRow className="hover:bg-transparent">
+                <TableCell colSpan={5} className="h-24 text-center text-[10px] text-muted-foreground bg-muted/30">
                   No needs assessments found.
                 </TableCell>
               </TableRow>
