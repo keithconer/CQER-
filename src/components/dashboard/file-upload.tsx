@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+import { getSignedStorageUrl } from "@/lib/actions/storage";
 
 interface FileUploadProps {
   value: { url: string; name: string }[];
@@ -96,16 +97,15 @@ export function FileUpload({ value = [], onChange, disabled, maxFiles = 5, bucke
         return;
       }
 
-      const { data, error } = await supabase.storage
-        .from(bucket)
-        .createSignedUrl(file.url, 3600);
+      // Use server action with service role to reliably create signed URL
+      const signedUrl = await getSignedStorageUrl(bucket, file.url);
 
-      if (error || !data?.signedUrl) {
+      if (!signedUrl) {
         alert("Could not generate a link for this file. Please try again.");
         return;
       }
 
-      window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+      window.open(signedUrl, "_blank", "noopener,noreferrer");
     } catch {
       alert("Something went wrong opening the file.");
     } finally {
