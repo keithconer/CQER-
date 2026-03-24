@@ -750,24 +750,40 @@ export function Navbar({ user }: NavbarProps) {
                       <PopoverContent side="right" align="start" className="w-48 p-2 ml-2 bg-background border border-border shadow-md rounded-lg">
                         <div className="space-y-1">
                           {user.userType === "project_leader" && (
-                            <Button
-                              variant="ghost"
-                              className={navItemClass(activePanel === "records" && activeView === "needs-assessment")}
-                              onClick={() => goTo("/dashboard?panel=records&view=needs-assessment")}
-                            >
-                              <FolderKanban className="mr-2 h-3 w-3" />
-                              Needs Assessment
-                            </Button>
-                          )}
-                          {user.userType === "project_leader" && (
-                            <Button
-                              variant="ghost"
-                              className={navItemClass(activePanel === "records" && activeView === "consultancy-extension")}
-                              onClick={() => goTo("/dashboard?panel=records&view=consultancy-extension")}
-                            >
-                              <FolderKanban className="mr-2 h-3 w-3" />
-                              Consultancy Extension
-                            </Button>
+                            <>
+                              <Button
+                                variant="ghost"
+                                className={navItemClass(activePanel === "records" && activeView === "project-registration")}
+                                onClick={() => goTo("/dashboard?panel=records&view=project-registration")}
+                              >
+                                <FolderKanban className="mr-2 h-3 w-3" />
+                                Project Registration
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                className={navItemClass(activePanel === "records" && activeView === "project-proposal")}
+                                onClick={() => goTo("/dashboard?panel=records&view=project-proposal")}
+                              >
+                                <FolderKanban className="mr-2 h-3 w-3" />
+                                Project Proposal
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                className={navItemClass(activePanel === "records" && activeView === "needs-assessment")}
+                                onClick={() => goTo("/dashboard?panel=records&view=needs-assessment")}
+                              >
+                                <FolderKanban className="mr-2 h-3 w-3" />
+                                Needs Assessment
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                className={navItemClass(activePanel === "records" && activeView === "consultancy-extension")}
+                                onClick={() => goTo("/dashboard?panel=records&view=consultancy-extension")}
+                              >
+                                <FolderKanban className="mr-2 h-3 w-3" />
+                                Consultancy Extension
+                              </Button>
+                            </>
                           )}
                         </div>
                       </PopoverContent>

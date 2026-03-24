@@ -49,7 +49,7 @@ const formSchema = z.object({
   consultancy_project_title: z.string().default(""),
   base_agency: z.string().min(1, "Base agency is required"),
   nature_of_consultancy: z.string().min(1, "Nature of consultancy is required"),
-  status: z.enum(["On-going", "Completed"]),
+  status: z.enum(["On-going", "Completed"]).nullable(),
   document_url: z.string().nullable().default(null),
 });
 
@@ -88,11 +88,11 @@ export function ConsultancyExtensionForm({
           project_no: "",
           project_title: "",
           category: "",
-          is_part_of_project: true,
+          is_part_of_project: false,
           consultancy_project_title: "",
           base_agency: "",
           nature_of_consultancy: "",
-          status: "On-going",
+          status: null,
           document_url: null,
         },
   });
@@ -125,9 +125,9 @@ export function ConsultancyExtensionForm({
     try {
       setIsSubmitting(true);
       if (initialData?.id) {
-        await updateConsultancyExtension(initialData.id, data);
+        await updateConsultancyExtension(initialData.id, data as any);
       } else {
-        await createConsultancyExtension(data);
+        await createConsultancyExtension(data as any);
       }
       onSuccess?.();
     } catch (error) {
@@ -240,18 +240,7 @@ export function ConsultancyExtensionForm({
           )}
         />
 
-        {isPartOfProject ? (
-          <FormItem>
-            <FormLabel className="text-[10px]">Title of project</FormLabel>
-            <FormControl>
-              <Input
-                value={form.getValues("project_title")}
-                className="h-8 text-[10px] bg-muted/50"
-                readOnly
-              />
-            </FormControl>
-          </FormItem>
-        ) : (
+        {!isPartOfProject && (
           <FormField
             control={form.control as any}
             name="consultancy_project_title"
