@@ -1265,7 +1265,7 @@ export default async function DashboardPage({
             />
           ) : activeProjectView === "consultancy-extension" ? (
             <ConsultancyExtensionManagement
-              initialRecords={consultancyExtensionsList}
+              initialExtensions={consultancyExtensionsList}
               assignedProjects={projects}
             />
           ) : activeProjectView === "project-proposal" ? (
