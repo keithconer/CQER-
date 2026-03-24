@@ -91,13 +91,13 @@ export function FileUpload({ value = [], onChange, disabled, maxFiles = 5, bucke
   const handleOpen = async (file: { url: string; name: string }, index: number) => {
     setOpeningIndex(index);
     try {
-      // If the url is already a full http URL (legacy), open directly
+      // Stored as a full signed or public URL — open directly
       if (file.url.startsWith("http")) {
         window.open(file.url, "_blank", "noopener,noreferrer");
         return;
       }
 
-      // Use server action with service role to reliably create signed URL
+      // Legacy: raw path stored — try to generate signed URL via server action
       const signedUrl = await getSignedStorageUrl(bucket, file.url);
 
       if (!signedUrl) {
