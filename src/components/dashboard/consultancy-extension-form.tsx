@@ -368,18 +368,6 @@ export function ConsultancyExtensionForm({
 
         {!isViewOnly && (
           <div className="flex justify-end gap-2 pt-4">
-            {initialData && (
-              <Button
-                type="button"
-                variant="destructive"
-                className="h-8 text-[10px]"
-                onClick={handleDelete}
-                disabled={isSubmitting}
-              >
-                <Trash2 className="h-3 w-3 mr-1" />
-                Delete
-              </Button>
-            )}
             <Button
               type="submit"
               className="h-8 text-[10px] bg-[#159E44] hover:bg-[#128A3B] text-white"

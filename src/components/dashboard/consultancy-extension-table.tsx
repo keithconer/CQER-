@@ -160,12 +160,7 @@ export function ConsultancyExtensionTable({
                     {extension.base_agency}
                   </TableCell>
                   <TableCell className="py-2.5 px-3">
-                    <span className={cn(
-                      "inline-flex items-center px-2 py-0.5 rounded-full font-medium text-[8px]",
-                      extension.status === "Completed" 
-                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                        : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                    )}>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-muted/50 text-muted-foreground border border-border/50 font-medium text-[9px]">
                       {extension.status}
                     </span>
                   </TableCell>
