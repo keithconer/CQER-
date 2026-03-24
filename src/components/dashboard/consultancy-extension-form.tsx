@@ -45,7 +45,7 @@ const formSchema = z.object({
   project_no: z.string().min(1, "Project number is required"),
   project_title: z.string().min(1, "Project title is required"),
   category: z.string().min(1, "Category is required"),
-  is_part_of_project: z.boolean().default(true),
+  is_part_of_project: z.boolean().nullable().default(null),
   consultancy_project_title: z.string().default(""),
   base_agency: z.string().min(1, "Base agency is required"),
   nature_of_consultancy: z.string().min(1, "Nature of consultancy is required"),
@@ -223,24 +223,36 @@ export function ConsultancyExtensionForm({
           control={form.control as any}
           name="is_part_of_project"
           render={({ field }) => (
-            <FormItem className="flex flex-row items-center space-x-2 space-y-0 rounded-md border p-2">
-              <FormControl>
-                <Checkbox
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                  disabled={isViewOnly}
-                />
-              </FormControl>
-              <div className="space-y-1 leading-none">
-                <FormLabel className="text-[10px]">
-                  Part of project?
-                </FormLabel>
+            <FormItem className="space-y-1">
+              <FormLabel className="text-[10px]">Part of project?</FormLabel>
+              <div className="flex flex-row space-x-4">
+                <FormItem className="flex items-center space-x-2 space-y-0">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value === true}
+                      onCheckedChange={() => field.onChange(true)}
+                      disabled={isViewOnly}
+                    />
+                  </FormControl>
+                  <FormLabel className="text-[10px] font-normal">Yes</FormLabel>
+                </FormItem>
+                <FormItem className="flex items-center space-x-2 space-y-0">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value === false}
+                      onCheckedChange={() => field.onChange(false)}
+                      disabled={isViewOnly}
+                    />
+                  </FormControl>
+                  <FormLabel className="text-[10px] font-normal">No</FormLabel>
+                </FormItem>
               </div>
+              <FormMessage className="text-[10px]" />
             </FormItem>
           )}
         />
 
-        {!isPartOfProject && (
+        {isPartOfProject === false && (
           <FormField
             control={form.control as any}
             name="consultancy_project_title"
