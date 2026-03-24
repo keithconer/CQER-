@@ -263,7 +263,7 @@ export function Navbar({ user }: NavbarProps) {
         keywords: ["community", "announcements", "social", "feed", "ceit"],
         description: "Open the CQER Community announcement feed.",
         icon: Users2,
-        roles: ["super_admin", "college_coordinator", "unit_coordinator", "extension_office"],
+        roles: ["super_admin", "college_coordinator", "unit_coordinator", "extension_office", "project_leader"],
       },
       {
         id: "account-management",
@@ -617,7 +617,7 @@ export function Navbar({ user }: NavbarProps) {
                   </Button>
                 )}
               </div>
-              {["super_admin", "college_coordinator", "unit_coordinator", "extension_office"].includes(user.userType) && (
+              {["super_admin", "college_coordinator", "unit_coordinator", "extension_office", "project_leader"].includes(user.userType) && (
                 <div className="flex justify-center w-full">
                   {withTooltip(
                     "CQER Community",

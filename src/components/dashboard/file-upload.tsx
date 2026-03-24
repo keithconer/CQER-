@@ -131,7 +131,7 @@ export function FileUpload({ value = [], onChange, disabled, maxFiles = 5, bucke
                   <button
                     type="button"
                     onClick={() => void handleOpen(file, index)}
-                    disabled={disabled || openingIndex === index}
+                    disabled={openingIndex === index}
                     className="flex items-center gap-1 text-left text-xs font-medium truncate max-w-[200px] hover:text-primary hover:underline transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     title={`Open ${file.name}`}
                   >
