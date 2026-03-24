@@ -20,6 +20,8 @@ import { FundingManagement } from "@/components/dashboard/funding-management";
 import { UnitCoordinatorsPanel } from "@/components/dashboard/unit-coordinators-panel";
 import { NeedsAssessmentManagement } from "@/components/dashboard/needs-assessment-management";
 import { getNeedsAssessments, type NeedsAssessment } from "@/lib/actions/needs-assessment";
+import { ConsultancyExtensionManagement } from "@/components/dashboard/consultancy-extension-management";
+import { getConsultancyExtensions, type ConsultancyExtension } from "@/lib/actions/consultancy-extension";
 import { AwardsManagement, type AwardRecord } from "@/components/dashboard/awards-management";
 import { type Project } from "@/components/dashboard/projects-table";
 import {
@@ -219,6 +221,8 @@ export default async function DashboardPage({
       ? "project-proposal"
       : viewParam === "needs-assessment"
       ? "needs-assessment"
+      : viewParam === "consultancy-extension"
+      ? "consultancy-extension"
       : "project-registration";
   const accountView = accountViewParam === "transfer" ? "transfer" : "register";
   const accountPanelSelected = panelParam === "account-management" || panelParam === "accounts";
@@ -241,7 +245,7 @@ export default async function DashboardPage({
       : "overview";
   const hasEntitySelection =
     activePanel === "records" &&
-    (activeProjectView === "project-registration" || activeProjectView === "project-proposal" || activeProjectView === "needs-assessment");
+    (activeProjectView === "project-registration" || activeProjectView === "project-proposal" || activeProjectView === "needs-assessment" || activeProjectView === "consultancy-extension");
   const hasSuperAdminSelection =
     panelParam === "projects" || panelParam === "records";
   const superAdminPanel: "projects" | "trainings" =
@@ -274,6 +278,7 @@ export default async function DashboardPage({
   let awards: AwardRecord[] = [];
   let studentInvolvementRecords: StudentInvolvementRecord[] = [];
   let needsAssessmentsList: NeedsAssessment[] = [];
+  let consultancyExtensionsList: ConsultancyExtension[] = [];
   let facultyInvolvementRecords: FacultyInvolvementRecord[] = [];
   let poolExpertRecords: PoolExpertRecord[] = [];
   let technologyRecords: TechnologyRecord[] = [];
@@ -374,6 +379,10 @@ export default async function DashboardPage({
       
       if (activeProjectView === "needs-assessment") {
         needsAssessmentsList = await getNeedsAssessments();
+      }
+
+      if (activeProjectView === "consultancy-extension") {
+        consultancyExtensionsList = await getConsultancyExtensions();
       }
     }
   }
@@ -1253,6 +1262,11 @@ export default async function DashboardPage({
               initialAssessments={needsAssessmentsList}
               assignedProjects={projects}
               readOnly={false}
+            />
+          ) : activeProjectView === "consultancy-extension" ? (
+            <ConsultancyExtensionManagement
+              initialRecords={consultancyExtensionsList}
+              assignedProjects={projects}
             />
           ) : activeProjectView === "project-proposal" ? (
             <ProjectProposalManagement

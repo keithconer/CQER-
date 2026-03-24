@@ -39,6 +39,7 @@ import {
   Type,
   FolderPlus,
   FolderKanban,
+  ChevronRight,
   Database,
   Award,
   UserRoundCheck,
@@ -109,7 +110,7 @@ export function Navbar({ user }: NavbarProps) {
   const viewParam = searchParams.get("view");
   const accountParam = searchParams.get("account");
   const activeView =
-    viewParam === "project-registration" || viewParam === "project-proposal" || viewParam === "needs-assessment"
+    viewParam === "project-registration" || viewParam === "project-proposal" || viewParam === "needs-assessment" || viewParam === "consultancy-extension"
       ? viewParam
       : "project-registration";
   const activeAccountView = accountParam === "transfer" ? "transfer" : "register";
@@ -140,6 +141,7 @@ export function Navbar({ user }: NavbarProps) {
     router.prefetch("/dashboard?panel=records&view=project-registration");
     router.prefetch("/dashboard?panel=records&view=project-proposal");
     router.prefetch("/dashboard?panel=records&view=needs-assessment");
+    router.prefetch("/dashboard?panel=records&view=consultancy-extension");
     router.prefetch("/dashboard?panel=unit-coordinators");
     router.prefetch("/dashboard?panel=funding");
     router.prefetch("/dashboard?panel=awards");
@@ -311,6 +313,15 @@ export function Navbar({ user }: NavbarProps) {
         description: "Open the project proposal page.",
         icon: FolderKanban,
         roles: ["super_admin", "college_coordinator", "unit_coordinator", "extension_office", "project_leader"],
+      },
+      {
+        id: "consultancy-extension",
+        label: "Consultancy Extension",
+        href: "/dashboard?panel=records&view=consultancy-extension",
+        keywords: ["consultancy", "extension", "consultation"],
+        description: "Open the consultancy extension page.",
+        icon: FolderKanban,
+        roles: ["project_leader"],
       },
       {
         id: "trainings",
@@ -738,22 +749,6 @@ export function Navbar({ user }: NavbarProps) {
                       </Tooltip>
                       <PopoverContent side="right" align="start" className="w-48 p-2 ml-2 bg-background border border-border shadow-md rounded-lg">
                         <div className="space-y-1">
-                          <Button
-                            variant="ghost"
-                            className={navItemClass(activePanel === "records" && activeView === "project-registration")}
-                            onClick={() => goTo("/dashboard?panel=records&view=project-registration")}
-                          >
-                            <FolderKanban className="mr-2 h-3 w-3" />
-                            Project Registration
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            className={navItemClass(activePanel === "records" && activeView === "project-proposal")}
-                            onClick={() => goTo("/dashboard?panel=records&view=project-proposal")}
-                          >
-                            <FolderKanban className="mr-2 h-3 w-3" />
-                            Project Proposal
-                          </Button>
                           {user.userType === "project_leader" && (
                             <Button
                               variant="ghost"
@@ -762,6 +757,16 @@ export function Navbar({ user }: NavbarProps) {
                             >
                               <FolderKanban className="mr-2 h-3 w-3" />
                               Needs Assessment
+                            </Button>
+                          )}
+                          {user.userType === "project_leader" && (
+                            <Button
+                              variant="ghost"
+                              className={navItemClass(activePanel === "records" && activeView === "consultancy-extension")}
+                              onClick={() => goTo("/dashboard?panel=records&view=consultancy-extension")}
+                            >
+                              <FolderKanban className="mr-2 h-3 w-3" />
+                              Consultancy Extension
                             </Button>
                           )}
                         </div>
@@ -778,6 +783,7 @@ export function Navbar({ user }: NavbarProps) {
                     >
                       <FolderPlus className="mr-2 h-3.5 w-3.5 shrink-0" />
                       <span className="text-[9px] font-medium">Records</span>
+                      <ChevronRight className={cn("ml-auto h-3 w-3 transition-transform duration-200", createExpanded && "rotate-90")} />
                     </Button>
                   )}
                   {createExpanded && sidebarOpen && (
@@ -806,6 +812,16 @@ export function Navbar({ user }: NavbarProps) {
                         >
                           <FolderKanban className="mr-2 h-3 w-3" />
                           Needs Assessment
+                        </Button>
+                      )}
+                      {user.userType === "project_leader" && (
+                        <Button
+                          variant="ghost"
+                          className={navItemClass(activePanel === "records" && activeView === "consultancy-extension")}
+                          onClick={() => goTo("/dashboard?panel=records&view=consultancy-extension")}
+                        >
+                          <FolderKanban className="mr-2 h-3 w-3" />
+                          Consultancy Extension
                         </Button>
                       )}
                     </div>
