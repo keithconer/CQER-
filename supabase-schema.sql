@@ -2879,3 +2879,127 @@ using (
 -- ============================================================
 -- END: Needs Assessment Module
 -- ============================================================
+
+-- ============================================================
+-- START: Technical Advisory Services Module
+-- ============================================================
+create table if not exists public.technical_advisory_services (
+  id uuid default gen_random_uuid() primary key,
+  project_no text not null,
+  project_title text not null,
+  lead_unit text not null,
+  college text not null default 'CEIT',
+  contact_person text not null,
+  related_curricular_offerings jsonb not null default '[]'::jsonb,
+  department text,
+  unit text,
+  advisory_date date not null,
+  venue text not null,
+  service_persons jsonb not null default '[]'::jsonb,
+  service_provided text not null check (
+    service_provided in (
+      'Technical assistance',
+      'Consultation',
+      'Resource person',
+      'Technology promotion',
+      'Value adding',
+      'Others'
+    )
+  ),
+  service_provided_other text,
+  clients jsonb not null default '[]'::jsonb,
+  quality_score integer check (quality_score between 1 and 5),
+  relevance_score integer check (relevance_score between 1 and 5),
+  timeliness_score integer check (timeliness_score between 1 and 5),
+  overall_satisfaction_score integer check (overall_satisfaction_score between 1 and 5),
+  comments_suggestions text,
+  document_url text,
+  created_by uuid references public.profiles(id) on delete cascade not null,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+alter table public.technical_advisory_services enable row level security;
+
+drop policy if exists "Users can view own technical advisory services" on public.technical_advisory_services;
+create policy "Users can view own technical advisory services" on public.technical_advisory_services
+  for select using (auth.uid() = created_by);
+
+drop policy if exists "Users can create own technical advisory services" on public.technical_advisory_services;
+create policy "Users can create own technical advisory services" on public.technical_advisory_services
+  for insert with check (auth.uid() = created_by);
+
+drop policy if exists "Users can update own technical advisory services" on public.technical_advisory_services;
+create policy "Users can update own technical advisory services" on public.technical_advisory_services
+  for update using (auth.uid() = created_by);
+
+drop policy if exists "Users can delete own technical advisory services" on public.technical_advisory_services;
+create policy "Users can delete own technical advisory services" on public.technical_advisory_services
+  for delete using (auth.uid() = created_by);
+
+drop policy if exists "Super admins can manage all technical advisory services" on public.technical_advisory_services;
+create policy "Super admins can manage all technical advisory services" on public.technical_advisory_services
+  for all using (
+    exists (
+      select 1 from public.profiles
+      where profiles.id = auth.uid()
+        and profiles.user_type = 'super_admin'
+    )
+  );
+
+create index if not exists idx_technical_advisory_services_created_by
+  on public.technical_advisory_services (created_by);
+
+create index if not exists idx_technical_advisory_services_department_unit
+  on public.technical_advisory_services (department, unit);
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'technical_advisory_services'
+  ) then
+    alter publication supabase_realtime add table public.technical_advisory_services;
+  end if;
+end
+$$;
+
+insert into storage.buckets (id, name, public)
+values (
+  'cqer-technical-advisory-services-pdfs',
+  'cqer-technical-advisory-services-pdfs',
+  true
+)
+on conflict (id) do nothing;
+
+drop policy if exists "Technical Advisory Services PDFs allow public reads" on storage.objects;
+create policy "Technical Advisory Services PDFs allow public reads"
+on storage.objects for select
+to public
+using (
+  bucket_id = 'cqer-technical-advisory-services-pdfs'
+);
+
+drop policy if exists "Technical Advisory Services PDFs allow authenticated uploads" on storage.objects;
+create policy "Technical Advisory Services PDFs allow authenticated uploads"
+on storage.objects for insert
+to authenticated
+with check (
+  bucket_id = 'cqer-technical-advisory-services-pdfs' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+
+drop policy if exists "Technical Advisory Services PDFs owner delete" on storage.objects;
+create policy "Technical Advisory Services PDFs owner delete"
+on storage.objects for delete
+to authenticated
+using (
+  bucket_id = 'cqer-technical-advisory-services-pdfs' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+-- ============================================================
+-- END: Technical Advisory Services Module
+-- ============================================================

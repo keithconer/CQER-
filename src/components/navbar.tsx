@@ -39,6 +39,7 @@ import {
   Type,
   FolderPlus,
   FolderKanban,
+  Briefcase,
   ChevronRight,
   Database,
   Award,
@@ -122,6 +123,7 @@ export function Navbar({ user }: NavbarProps) {
     panelParam === "account-management" ||
     panelParam === "accounts" ||
     panelParam === "funding" ||
+    panelParam === "technical-advisory-services" ||
     panelParam === "awards" ||
     panelParam === "student-involvement" ||
     panelParam === "faculty-involvement" ||
@@ -144,6 +146,7 @@ export function Navbar({ user }: NavbarProps) {
     router.prefetch("/dashboard?panel=records&view=consultancy-extension");
     router.prefetch("/dashboard?panel=unit-coordinators");
     router.prefetch("/dashboard?panel=funding");
+    router.prefetch("/dashboard?panel=technical-advisory-services");
     router.prefetch("/dashboard?panel=awards");
     router.prefetch("/dashboard?panel=student-involvement");
     router.prefetch("/dashboard?panel=faculty-involvement");
@@ -229,6 +232,7 @@ export function Navbar({ user }: NavbarProps) {
   }[] = [
     { panel: "trainings", icon: BookOpenCheck, label: "Trainings", roles: ["college_coordinator", "unit_coordinator", "extension_office"] },
     { panel: "funding", icon: Database, label: "Funding", roles: ["college_coordinator", "unit_coordinator", "extension_office"] },
+    { panel: "technical-advisory-services", icon: Briefcase, label: "Technical Advisory Services", roles: ["college_coordinator", "unit_coordinator"] },
     { panel: "awards", icon: Award, label: "Awards", roles: ["college_coordinator", "unit_coordinator", "extension_office"] },
     { panel: "student-involvement", icon: UserRoundCheck, label: "Student Involvement", roles: ["college_coordinator", "unit_coordinator", "extension_office"] },
     { panel: "faculty-involvement", icon: GraduationCap, label: "Faculty Involvement", roles: ["college_coordinator", "unit_coordinator", "extension_office"] },
@@ -239,6 +243,7 @@ export function Navbar({ user }: NavbarProps) {
     { panel: "projects", icon: FolderKanban, label: "Projects" },
     { panel: "trainings", icon: BookOpenCheck, label: "Trainings" },
     { panel: "funding", icon: Database, label: "Funding" },
+    { panel: "technical-advisory-services", icon: Briefcase, label: "Technical Advisory Services" },
     { panel: "awards", icon: Award, label: "Awards" },
     { panel: "student-involvement", icon: UserRoundCheck, label: "Student Involvement" },
     { panel: "faculty-involvement", icon: GraduationCap, label: "Faculty Involvement" },
@@ -340,6 +345,15 @@ export function Navbar({ user }: NavbarProps) {
         description: "Open funding records and analysis.",
         icon: Database,
         roles: ["super_admin", "college_coordinator", "unit_coordinator", "extension_office"],
+      },
+      {
+        id: "technical-advisory-services",
+        label: "Technical Advisory Services",
+        href: "/dashboard?panel=technical-advisory-services",
+        keywords: ["technical advisory", "advisory services", "technical services"],
+        description: "Open technical advisory services management.",
+        icon: Briefcase,
+        roles: ["super_admin", "college_coordinator", "unit_coordinator"],
       },
       {
         id: "awards",

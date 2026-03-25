@@ -17,6 +17,7 @@ import { ProjectProposalManagement } from "@/components/dashboard/project-propos
 import { ProjectManagement } from "@/components/dashboard/project-management";
 import { type ProjectProposal } from "@/components/dashboard/project-proposals-table";
 import { FundingManagement } from "@/components/dashboard/funding-management";
+import { TechnicalAdvisoryServicesManagement } from "@/components/dashboard/technical-advisory-services-management";
 import { UnitCoordinatorsPanel } from "@/components/dashboard/unit-coordinators-panel";
 import { NeedsAssessmentManagement } from "@/components/dashboard/needs-assessment-management";
 import { getNeedsAssessments, type NeedsAssessment } from "@/lib/actions/needs-assessment";
@@ -51,6 +52,10 @@ import { DEPARTMENTS } from "@/lib/departments";
 import { ActiveCoordinators, type CoordinatorActivity } from "@/components/dashboard/active-coordinators";
 import { CommunityPanel } from "@/components/dashboard/community-panel";
 import { getCommunityBootstrap, type CommunityPost } from "@/lib/actions/community";
+import {
+  getTechnicalAdvisoryServices,
+  type TechnicalAdvisoryServiceRecord,
+} from "@/lib/actions/technical-advisory-services";
 
 
 function extractPartnerAgencyNames(projects: Project[]) {
@@ -233,6 +238,7 @@ export default async function DashboardPage({
     panelParam === "account-management" ||
     panelParam === "accounts" ||
     panelParam === "funding" ||
+    panelParam === "technical-advisory-services" ||
     panelParam === "awards" ||
     panelParam === "student-involvement" ||
     panelParam === "faculty-involvement" ||
@@ -279,6 +285,7 @@ export default async function DashboardPage({
   let studentInvolvementRecords: StudentInvolvementRecord[] = [];
   let needsAssessmentsList: NeedsAssessment[] = [];
   let consultancyExtensionsList: ConsultancyExtension[] = [];
+  let technicalAdvisoryServicesList: TechnicalAdvisoryServiceRecord[] = [];
   let facultyInvolvementRecords: FacultyInvolvementRecord[] = [];
   let poolExpertRecords: PoolExpertRecord[] = [];
   let technologyRecords: TechnologyRecord[] = [];
@@ -321,6 +328,18 @@ export default async function DashboardPage({
       trainingRecords = (await getTrainings()).data || [];
       const visibleProjects = (await getUnitProjects()).data || [];
       trainingPartnerAgencyOptions = extractPartnerAgencyNames(visibleProjects);
+    } else if (activePanel === "technical-advisory-services") {
+      technicalAdvisoryServicesList = await getTechnicalAdvisoryServices();
+      if (profile.user_type === "unit_coordinator") {
+        const [myProjectsResult, unitProjectsResult] = await Promise.all([
+          getProjects(),
+          getUnitProjects(),
+        ]);
+        projects = myProjectsResult.data || [];
+        unitProjects = unitProjectsResult.data || [];
+      } else {
+        unitProjects = (await getUnitProjects()).data || [];
+      }
     } else if (activePanel === "funding" || hasEntitySelection) {
       if (profile.user_type === "unit_coordinator") {
         const [myProjectsResult, unitProjectsResult] = await Promise.all([
@@ -359,6 +378,9 @@ export default async function DashboardPage({
       trainingRecords = (await getTrainings()).data || [];
       const visibleProjects = (await getCollegeProjects()).data || [];
       trainingPartnerAgencyOptions = extractPartnerAgencyNames(visibleProjects);
+    } else if (activePanel === "technical-advisory-services") {
+      technicalAdvisoryServicesList = await getTechnicalAdvisoryServices();
+      projects = (await getCollegeProjects()).data || [];
     } else if (activePanel === "funding" || hasEntitySelection) {
       projects = (await getCollegeProjects()).data || [];
     }
@@ -453,6 +475,13 @@ export default async function DashboardPage({
       trainingRecords = (await getTrainings()).data || [];
       const { data: projectsData } = await adminClient.from("projects").select("*");
       trainingPartnerAgencyOptions = extractPartnerAgencyNames((projectsData as Project[] | null) || []);
+    } else if (activePanel === "technical-advisory-services") {
+      technicalAdvisoryServicesList = await getTechnicalAdvisoryServices();
+      const { data: projectsData } = await adminClient
+        .from("projects")
+        .select("*")
+        .order("created_at", { ascending: false });
+      projects = (projectsData as Project[] | null) || [];
     } else if (activePanel === "funding" || hasEntitySelection || superAdminPanel === "projects") {
       const { data: projectsData } = await adminClient
         .from("projects")
@@ -767,6 +796,7 @@ export default async function DashboardPage({
     projects: "Projects",
     community: "CQER Community",
     funding: "Funding",
+    "technical-advisory-services": "Technical Advisory Services",
     awards: "Awards",
     "student-involvement": "Student Involvement",
     "faculty-involvement": "Faculty Involvement",
@@ -903,6 +933,14 @@ export default async function DashboardPage({
               title="Funding"
               description="Filter funding rows by Internal or External."
             />
+          ) : activePanel === "technical-advisory-services" ? (
+            <TechnicalAdvisoryServicesManagement
+              initialRecords={technicalAdvisoryServicesList}
+              assignedProjects={projects}
+              currentUserId={user.id}
+              userType={userType}
+              department={profile.department}
+            />
           ) : activePanel === "student-involvement" ? (
             <StudentInvolvementManagement
               initialRecords={studentInvolvementRecords}
@@ -1012,6 +1050,14 @@ export default async function DashboardPage({
               title="Funding"
               description="Filter funding rows by Internal or External."
             />
+          ) : activePanel === "technical-advisory-services" ? (
+            <TechnicalAdvisoryServicesManagement
+              initialRecords={technicalAdvisoryServicesList}
+              assignedProjects={projects}
+              currentUserId={user.id}
+              userType={userType}
+              department={profile.department}
+            />
           ) : activePanel === "student-involvement" ? (
             <StudentInvolvementManagement
               initialRecords={studentInvolvementRecords}
@@ -1094,6 +1140,14 @@ export default async function DashboardPage({
             projects={unitProjects}
             title="Funding"
             description="Filter funding rows by Internal or External."
+          />
+        ) : activePanel === "technical-advisory-services" ? (
+          <TechnicalAdvisoryServicesManagement
+            initialRecords={technicalAdvisoryServicesList}
+            assignedProjects={unitProjects}
+            currentUserId={user.id}
+            userType={userType}
+            department={profile.department}
           />
         ) : activePanel === "student-involvement" ? (
           <StudentInvolvementManagement
