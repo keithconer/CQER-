@@ -55,6 +55,7 @@ import {
   ArrowRightLeft,
   LayoutDashboard,
   Users2,
+  Download,
   type LucideIcon,
 } from "lucide-react";
 import Image from "next/image";
@@ -128,6 +129,7 @@ export function Navbar({ user }: NavbarProps) {
     panelParam === "student-involvement" ||
     panelParam === "faculty-involvement" ||
     panelParam === "community" ||
+    panelParam === "backup" ||
     panelParam === "technologies-innovation" ||
     panelParam === "ordinance-resolutions" ||
     panelParam === "trainings" ||
@@ -140,6 +142,7 @@ export function Navbar({ user }: NavbarProps) {
     router.prefetch("/dashboard");
     router.prefetch("/dashboard?panel=overview");
     router.prefetch("/dashboard?panel=community");
+    router.prefetch("/dashboard?panel=backup");
     router.prefetch("/dashboard?panel=records&view=project-registration");
     router.prefetch("/dashboard?panel=records&view=project-proposal");
     router.prefetch("/dashboard?panel=records&view=needs-assessment");
@@ -222,6 +225,11 @@ export function Navbar({ user }: NavbarProps) {
   const navItemClass = (active: boolean) =>
     `dashboard-nav-item h-6 w-full justify-start text-[9px] border ${active ? "border-border/40 bg-muted/30" : "border-transparent"}`;
   const isAccountPanel = activePanel === "account-management" || activePanel === "accounts";
+  const canAccessBackup =
+    user.userType === "super_admin" ||
+    user.userType === "college_coordinator" ||
+    user.userType === "unit_coordinator" ||
+    user.userType === "project_leader";
   const collapsedButtonClass = "h-9 w-9 p-0 rounded-xl";
   const collapsedIconClass = "h-4 w-4";
   const commonPanelItems: {
@@ -408,6 +416,15 @@ export function Navbar({ user }: NavbarProps) {
         description: "Open account settings.",
         icon: Settings,
         roles: ["super_admin", "college_coordinator", "unit_coordinator", "extension_office", "project_leader"],
+      },
+      {
+        id: "backup",
+        label: "Create Backup",
+        href: "/dashboard?panel=backup",
+        keywords: ["backup", "restore", "import", "export"],
+        description: "Export your created records and import them later.",
+        icon: Download,
+        roles: ["super_admin", "college_coordinator", "unit_coordinator", "project_leader"],
       },
     ];
 
@@ -883,6 +900,28 @@ export function Navbar({ user }: NavbarProps) {
                   </div>
                 )
               ))}
+
+              {canAccessBackup && (
+                <div className="flex justify-center w-full">
+                  {withTooltip(
+                    "Create Backup",
+                    <Button
+                      variant="ghost"
+                      className={cn(
+                        "transition-all duration-200",
+                        sidebarOpen ? "h-7 w-full justify-start px-3" : collapsedButtonClass,
+                        activePanel === "backup"
+                          ? "border border-border/40 bg-muted/30 text-foreground"
+                          : "border border-transparent text-foreground"
+                      )}
+                      onClick={() => goTo("/dashboard?panel=backup")}
+                    >
+                      <Download className={cn("shrink-0", sidebarOpen ? "mr-2 h-3 w-3" : collapsedIconClass)} />
+                      {sidebarOpen && <span className="text-[9px]">Create Backup</span>}
+                    </Button>
+                  )}
+                </div>
+              )}
 
               {user.userType === "super_admin" && (
                 <>

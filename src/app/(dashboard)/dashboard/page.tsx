@@ -56,6 +56,8 @@ import {
   getTechnicalAdvisoryServices,
   type TechnicalAdvisoryServiceRecord,
 } from "@/lib/actions/technical-advisory-services";
+import { getBackupSummary, type BackupDatasetSummary } from "@/lib/actions/backup";
+import { BackupManagement } from "@/components/dashboard/backup-management";
 
 
 function extractPartnerAgencyNames(projects: Project[]) {
@@ -243,6 +245,7 @@ export default async function DashboardPage({
     panelParam === "student-involvement" ||
     panelParam === "faculty-involvement" ||
     panelParam === "community" ||
+    panelParam === "backup" ||
     panelParam === "technologies-innovation" ||
     panelParam === "ordinance-resolutions" ||
     panelParam === "trainings" ||
@@ -295,6 +298,7 @@ export default async function DashboardPage({
   let publicCommunityPosts: CommunityPost[] = [];
   let departmentCommunityPosts: CommunityPost[] = [];
   let communityUsers = [] as Awaited<ReturnType<typeof getCommunityBootstrap>>["mentionableUsers"];
+  let backupDatasets: BackupDatasetSummary[] = [];
   let collegeUnitCoordinatorAccounts: {
     id: string;
     email: string | null;
@@ -307,7 +311,9 @@ export default async function DashboardPage({
   }[] = [];
 
   if (profile.user_type === "unit_coordinator" || profile.user_type === "extension_office") {
-    if (activePanel === "community") {
+    if (activePanel === "backup" && profile.user_type === "unit_coordinator") {
+      backupDatasets = (await getBackupSummary()).datasets;
+    } else if (activePanel === "community") {
       const communityData = await getCommunityBootstrap(profile.department);
       publicCommunityPosts = communityData.publicPosts;
       departmentCommunityPosts = communityData.departmentPosts;
@@ -357,7 +363,9 @@ export default async function DashboardPage({
     profile.user_type === "college_coordinator" &&
     activePanel !== "unit-coordinators"
   ) {
-    if (activePanel === "community") {
+    if (activePanel === "backup") {
+      backupDatasets = (await getBackupSummary()).datasets;
+    } else if (activePanel === "community") {
       const communityData = await getCommunityBootstrap(profile.department);
       publicCommunityPosts = communityData.publicPosts;
       departmentCommunityPosts = communityData.departmentPosts;
@@ -385,7 +393,9 @@ export default async function DashboardPage({
       projects = (await getCollegeProjects()).data || [];
     }
   } else if (profile.user_type === "project_leader") {
-    if (activePanel === "community") {
+    if (activePanel === "backup") {
+      backupDatasets = (await getBackupSummary()).datasets;
+    } else if (activePanel === "community") {
       const communityData = await getCommunityBootstrap(profile.department);
       publicCommunityPosts = communityData.publicPosts;
       departmentCommunityPosts = communityData.departmentPosts;
@@ -454,7 +464,9 @@ export default async function DashboardPage({
 
     availableUnitsForSuperAdmin = getAllUnits();
 
-    if (activePanel === "community") {
+    if (activePanel === "backup") {
+      backupDatasets = (await getBackupSummary()).datasets;
+    } else if (activePanel === "community") {
       const communityData = await getCommunityBootstrap(profile.department);
       publicCommunityPosts = communityData.publicPosts;
       departmentCommunityPosts = communityData.departmentPosts;
@@ -795,6 +807,7 @@ export default async function DashboardPage({
     records: "Projects",
     projects: "Projects",
     community: "CQER Community",
+    backup: "Create Backup",
     funding: "Funding",
     "technical-advisory-services": "Technical Advisory Services",
     awards: "Awards",
@@ -927,6 +940,8 @@ export default async function DashboardPage({
               userType={userType}
               currentUserId={user.id}
             />
+          ) : activePanel === "backup" ? (
+            <BackupManagement datasets={backupDatasets} />
           ) : activePanel === "funding" ? (
             <FundingManagement
               projects={projects}
@@ -1044,6 +1059,8 @@ export default async function DashboardPage({
               userType={userType}
               currentUserId={user.id}
             />
+          ) : activePanel === "backup" ? (
+            <BackupManagement datasets={backupDatasets} />
           ) : activePanel === "funding" ? (
             <FundingManagement
               projects={projects}
@@ -1135,6 +1152,8 @@ export default async function DashboardPage({
             userType={userType}
             currentUserId={user.id}
           />
+        ) : activePanel === "backup" ? (
+          <BackupManagement datasets={backupDatasets} />
         ) : activePanel === "funding" ? (
           <FundingManagement
             projects={unitProjects}
@@ -1310,7 +1329,9 @@ export default async function DashboardPage({
       )}
 
       {userType === "project_leader" && activePanel !== "community" && (
-        hasEntitySelection ? (
+        activePanel === "backup" ? (
+          <BackupManagement datasets={backupDatasets} />
+        ) : hasEntitySelection ? (
           activeProjectView === "needs-assessment" ? (
             <NeedsAssessmentManagement
               initialAssessments={needsAssessmentsList}
