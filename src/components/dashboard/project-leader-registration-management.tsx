@@ -296,26 +296,26 @@ export function ProjectLeaderRegistrationManagement({
             <Table>
               <TableHeader className="bg-muted/30">
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="h-12 text-sm font-semibold">Project Title</TableHead>
-                  <TableHead className="h-12 text-sm font-semibold">Department / Unit</TableHead>
-                  <TableHead className="h-12 text-sm font-semibold">Beneficiaries</TableHead>
-                  <TableHead className="h-12 text-sm font-semibold">Inclusive Dates</TableHead>
-                  <TableHead className="h-12 text-sm font-semibold">Duration</TableHead>
-                  <TableHead className="h-12 text-sm font-semibold">Budget Total</TableHead>
-                  <TableHead className="h-12 text-sm font-semibold">Documents</TableHead>
-                  <TableHead className="h-12 text-right text-sm font-semibold">Actions</TableHead>
+                  <TableHead className="h-12 text-base font-semibold">Project Title</TableHead>
+                  <TableHead className="h-12 text-base font-semibold">Department / Unit</TableHead>
+                  <TableHead className="h-12 text-base font-semibold">Beneficiaries</TableHead>
+                  <TableHead className="h-12 text-base font-semibold">Inclusive Dates</TableHead>
+                  <TableHead className="h-12 text-base font-semibold">Duration</TableHead>
+                  <TableHead className="h-12 text-base font-semibold">Budget Total</TableHead>
+                  <TableHead className="h-12 text-base font-semibold">Documents</TableHead>
+                  <TableHead className="h-12 text-right text-base font-semibold">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredProjects.length > 0 ? (
                   filteredProjects.map((project) => (
                     <TableRow key={project.id}>
-                      <TableCell className="py-4 text-sm font-medium">{project.title}</TableCell>
-                      <TableCell className="py-4 text-sm">{getDepartmentUnit(project)}</TableCell>
-                      <TableCell className="py-4 text-sm">{getBeneficiaries(project)}</TableCell>
-                      <TableCell className="py-4 text-sm">{getDateRange(project)}</TableCell>
-                      <TableCell className="py-4 text-sm">{getDuration(project)}</TableCell>
-                      <TableCell className="py-4 text-sm font-medium">
+                      <TableCell className="py-4 text-base font-medium">{project.title}</TableCell>
+                      <TableCell className="py-4 text-base">{getDepartmentUnit(project)}</TableCell>
+                      <TableCell className="py-4 text-base">{getBeneficiaries(project)}</TableCell>
+                      <TableCell className="py-4 text-base">{getDateRange(project)}</TableCell>
+                      <TableCell className="py-4 text-base">{getDuration(project)}</TableCell>
+                      <TableCell className="py-4 text-base font-medium">
                         PHP {getBudget(project).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell className="py-4 text-sm"><DocumentPreview documents={project.documents} /></TableCell>
@@ -336,7 +336,7 @@ export function ProjectLeaderRegistrationManagement({
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} className="h-28 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={8} className="h-28 text-center text-base text-muted-foreground">
                       No project registrations match the current search or filter.
                     </TableCell>
                   </TableRow>
@@ -348,7 +348,7 @@ export function ProjectLeaderRegistrationManagement({
       </Card>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent showCloseButton={false} className="fixed inset-0 left-0 top-0 h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 rounded-none border-0 p-0 shadow-none">
+        <DialogContent showCloseButton={false} className="fixed inset-0 left-0 top-0 h-[100dvh] w-screen max-w-none sm:max-w-none translate-x-0 translate-y-0 rounded-none border-0 p-0 shadow-none">
           <ProjectLeaderRegistrationForm
             currentUserId={currentUserId}
             currentUserName={currentUserName}
@@ -361,7 +361,7 @@ export function ProjectLeaderRegistrationManagement({
       </Dialog>
 
       <Dialog open={!!selectedProject} onOpenChange={(open) => !open && setSelectedProject(null)}>
-        <DialogContent showCloseButton={false} className="fixed inset-0 left-0 top-0 h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 rounded-none border-0 p-0 shadow-none">
+        <DialogContent showCloseButton={false} className="fixed inset-0 left-0 top-0 h-[100dvh] w-screen max-w-none sm:max-w-none translate-x-0 translate-y-0 rounded-none border-0 p-0 shadow-none">
           {selectedProject && (
             <ProjectLeaderRegistrationForm
               project={selectedProject}
@@ -378,7 +378,7 @@ export function ProjectLeaderRegistrationManagement({
       </Dialog>
 
       <Dialog open={!!editingProject} onOpenChange={(open) => !open && setEditingProject(null)}>
-        <DialogContent showCloseButton={false} className="fixed inset-0 left-0 top-0 h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 rounded-none border-0 p-0 shadow-none">
+        <DialogContent showCloseButton={false} className="fixed inset-0 left-0 top-0 h-[100dvh] w-screen max-w-none sm:max-w-none translate-x-0 translate-y-0 rounded-none border-0 p-0 shadow-none">
           {editingProject && (
             <ProjectLeaderRegistrationForm
               project={editingProject}
