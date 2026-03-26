@@ -478,19 +478,19 @@ function CheckboxGrid({
   disabled?: boolean;
 }) {
   return (
-    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+    <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
       {options.map((option) => {
         const checked = values.includes(option);
         return (
           <label
             key={option}
             className={cn(
-              "flex min-h-14 items-start gap-3 rounded-2xl border border-border/50 bg-background px-4 py-3 text-sm",
-              checked && "border-[#159E44]/60 bg-[#159E44]/5"
+              "flex min-h-14 items-start gap-3 rounded-2xl border border-border/40 bg-background px-4 py-3 text-sm",
+              checked && "border-[#159E44]/50 bg-muted/20"
             )}
           >
             <Checkbox checked={checked} onCheckedChange={() => onToggle(option)} disabled={disabled} className="mt-0.5" />
-            <span className="leading-5">{option}</span>
+            <span className="leading-5 text-[13px] sm:text-sm">{option}</span>
           </label>
         );
       })}
@@ -508,15 +508,15 @@ function SdgGrid({
   disabled?: boolean;
 }) {
   return (
-    <div className="grid grid-cols-4 gap-3 sm:grid-cols-6 lg:grid-cols-9">
+    <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 xl:grid-cols-9">
       {sdgOptions.map((option) => {
         const checked = values.includes(option);
         return (
           <label
             key={option}
             className={cn(
-              "flex items-center justify-center gap-2 rounded-xl border border-border/50 px-3 py-3 text-sm font-medium",
-              checked && "border-[#159E44]/60 bg-[#159E44]/5 text-[#0f6a2d]"
+              "flex items-center justify-center gap-2 rounded-xl border border-border/40 px-2 py-2.5 text-xs font-medium sm:text-sm",
+              checked && "border-[#159E44]/50 bg-muted/20 text-foreground"
             )}
           >
             <Checkbox checked={checked} onCheckedChange={() => onToggle(option)} disabled={disabled} />
@@ -542,7 +542,7 @@ function StaffListFields({
   const { fields, append, remove } = useFieldArray({ control, name });
 
   return (
-    <div className="space-y-3 rounded-2xl border border-border/50 bg-muted/10 p-4">
+    <div className="space-y-3 rounded-2xl border border-border/40 bg-muted/10 p-4">
       <div className="flex items-center justify-between gap-3">
         <div>
           <Label className="text-sm font-semibold">{label}</Label>
@@ -563,7 +563,7 @@ function StaffListFields({
       ) : (
         <div className="space-y-3">
           {fields.map((field, index) => (
-            <div key={field.id} className="grid gap-3 rounded-xl border border-border/50 bg-background p-4 lg:grid-cols-[minmax(0,1fr)_220px_44px]">
+            <div key={field.id} className="grid gap-3 rounded-xl border border-border/40 bg-background p-4 xl:grid-cols-[minmax(0,1fr)_220px_44px]">
               <FormField
                 control={control}
                 name={`${name}.${index}.name`}
@@ -639,7 +639,7 @@ function PartnerAgencyFields({
   }) as unknown as (typeof natureOptions)[number];
 
   return (
-    <Card className="rounded-3xl border-border/60 shadow-none">
+    <Card className="rounded-3xl border-border/40 shadow-none">
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between gap-3">
           <div>
@@ -1021,16 +1021,16 @@ export function ProjectLeaderRegistrationForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit as never)} className="flex h-full flex-col bg-background">
-        <div className="border-b border-border/50 bg-background px-5 py-5 sm:px-7 lg:px-10">
-          <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-5 2xl:flex-row 2xl:items-start 2xl:justify-between">
+        <div className="border-b border-border/40 bg-background px-4 py-4 sm:px-6 lg:px-8">
+          <div className="mx-auto w-full max-w-[1760px] space-y-5">
             <div className="flex items-start justify-between gap-4">
-              <div className="space-y-2">
+              <div className="max-w-4xl space-y-2">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#159E44]">Project Registration</p>
               <div>
-                <h2 className="max-w-3xl text-2xl font-semibold text-foreground sm:text-3xl">
+                <h2 className="max-w-4xl text-2xl font-semibold text-foreground sm:text-[2rem]">
                   {project?.id ? (isViewOnly ? "Project Registration Details" : "Update Project Registration") : "Register a New Project"}
                 </h2>
-                <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
+                <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
                   A full-screen, step-by-step submission for Project Leaders with summary, partnership, staffing, and budget details.
                 </p>
               </div>
@@ -1041,43 +1041,50 @@ export function ProjectLeaderRegistrationForm({
                 </Button>
               )}
             </div>
-            <div className="w-full rounded-3xl border border-border/50 bg-muted/20 px-5 py-4 text-sm text-muted-foreground 2xl:max-w-[360px]">
-              <p className="text-base font-semibold leading-7 text-foreground">{form.getValues("department_unit")}</p>
-              <p className="mt-2">Duration: {getDurationLabel(inclusiveDates)}</p>
-              <p className="mt-1">
-                Budget Summary Total: PHP{" "}
-                {budgetGrandTotal.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </p>
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px_260px]">
+              <div className="rounded-2xl border border-border/40 bg-muted/10 px-5 py-4 text-sm text-muted-foreground">
+                <p className="text-sm font-semibold leading-6 text-foreground">{form.getValues("department_unit")}</p>
+              </div>
+              <div className="rounded-2xl border border-border/40 bg-muted/10 px-5 py-4 text-sm text-muted-foreground">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/80">Duration</p>
+                <p className="mt-2 text-sm font-medium text-foreground">{getDurationLabel(inclusiveDates)}</p>
+              </div>
+              <div className="rounded-2xl border border-border/40 bg-muted/10 px-5 py-4 text-sm text-muted-foreground">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/80">Budget Summary Total</p>
+                <p className="mt-2 text-sm font-medium text-foreground">
+                  PHP {budgetGrandTotal.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              </div>
             </div>
           </div>
-          <div className="mx-auto mt-6 w-full max-w-[1500px]">
+          <div className="mx-auto mt-5 w-full max-w-[1760px]">
             <StepIndicator currentStep={currentStep} totalSteps={4} labels={stepLabels} />
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto bg-muted/20 px-4 py-5 sm:px-6 lg:px-10">
-          <div className="mx-auto w-full max-w-[1500px]">
+        <div className="flex-1 overflow-y-auto bg-background px-4 py-5 sm:px-6 lg:px-8">
+          <div className="mx-auto w-full max-w-[1760px]">
           {currentStep === 1 && (
             <div className="space-y-6">
-              <Card className="rounded-3xl border-border/60 shadow-none">
+              <Card className="rounded-3xl border-border/50 shadow-none">
                 <CardHeader>
-                  <CardTitle className="text-xl">Project Overview</CardTitle>
+                  <CardTitle className="text-lg">Project Overview</CardTitle>
                   <CardDescription className="text-sm">Capture the core project definition before moving into the partnership details.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="grid gap-5 lg:grid-cols-2">
                     <FormField control={form.control} name="project_title" render={({ field }) => (
-                      <FormItem><FormLabel className="text-xs">Project Title</FormLabel><FormControl><Input {...field} disabled={isViewOnly} className="h-12 rounded-xl text-base" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                      <FormItem className="min-w-0"><FormLabel className="text-xs">Project Title</FormLabel><FormControl><Input {...field} disabled={isViewOnly} className="h-11 rounded-xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
                     )} />
                     <FormField control={form.control} name="budget" render={({ field }) => (
-                      <FormItem><FormLabel className="text-xs">Budget</FormLabel><FormControl><Input {...field} type="number" min="0" disabled={isViewOnly} className="h-12 rounded-xl text-base" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                      <FormItem className="min-w-0"><FormLabel className="text-xs">Budget</FormLabel><FormControl><Input {...field} type="number" min="0" disabled={isViewOnly} className="h-11 rounded-xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
                     )} />
                   </div>
-                  <div className="grid gap-5 2xl:grid-cols-[minmax(0,1.4fr)_320px]">
+                  <div className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_220px]">
                     <FormField control={form.control} name="inclusive_dates" render={({ field }) => (
-                      <FormItem><FormLabel className="text-xs">Inclusive Date</FormLabel><FormControl><MultiDatePicker value={field.value} onChange={field.onChange} disabled={isViewOnly} placeholder="Select inclusive dates" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                      <FormItem className="min-w-0"><FormLabel className="text-xs">Inclusive Date</FormLabel><FormControl><MultiDatePicker value={field.value} onChange={field.onChange} disabled={isViewOnly} placeholder="Select inclusive dates" /></FormControl><FormMessage className="text-xs" /></FormItem>
                     )} />
-                    <FormItem><FormLabel className="text-xs">Duration</FormLabel><Input value={getDurationLabel(inclusiveDates)} readOnly className="h-12 rounded-xl bg-muted/30 text-base" /></FormItem>
+                    <FormItem><FormLabel className="text-xs">Duration</FormLabel><Input value={getDurationLabel(inclusiveDates)} readOnly className="h-11 rounded-xl bg-muted/20 text-sm" /></FormItem>
                   </div>
                   <div className="space-y-3">
                     <div><Label className="text-xs">University Extension Agenda</Label><p className="text-xs text-muted-foreground">Select one or more agenda areas for this registration.</p></div>
@@ -1087,15 +1094,15 @@ export function ProjectLeaderRegistrationForm({
                     )}
                   </div>
                   <div className="grid gap-6 2xl:grid-cols-2">
-                    <div className="space-y-3"><div><Label className="text-xs">SDG Main</Label><p className="text-xs text-muted-foreground">Choose the primary SDGs linked to this project.</p></div><SdgGrid values={form.getValues("sdg_main")} onToggle={(value) => handleToggleValue("sdg_main", value)} disabled={isViewOnly} />{form.formState.errors.sdg_main?.message && <p className="text-xs font-medium text-destructive">{form.formState.errors.sdg_main.message}</p>}</div>
-                    <div className="space-y-3"><div><Label className="text-xs">SDG Sub</Label><p className="text-xs text-muted-foreground">Choose the supporting SDGs linked to this project.</p></div><SdgGrid values={form.getValues("sdg_sub")} onToggle={(value) => handleToggleValue("sdg_sub", value)} disabled={isViewOnly} />{form.formState.errors.sdg_sub?.message && <p className="text-xs font-medium text-destructive">{form.formState.errors.sdg_sub.message}</p>}</div>
+                    <div className="min-w-0 space-y-3"><div><Label className="text-xs">SDG Main</Label><p className="text-xs text-muted-foreground">Choose the primary SDGs linked to this project.</p></div><SdgGrid values={form.getValues("sdg_main")} onToggle={(value) => handleToggleValue("sdg_main", value)} disabled={isViewOnly} />{form.formState.errors.sdg_main?.message && <p className="text-xs font-medium text-destructive">{form.formState.errors.sdg_main.message}</p>}</div>
+                    <div className="min-w-0 space-y-3"><div><Label className="text-xs">SDG Sub</Label><p className="text-xs text-muted-foreground">Choose the supporting SDGs linked to this project.</p></div><SdgGrid values={form.getValues("sdg_sub")} onToggle={(value) => handleToggleValue("sdg_sub", value)} disabled={isViewOnly} />{form.formState.errors.sdg_sub?.message && <p className="text-xs font-medium text-destructive">{form.formState.errors.sdg_sub.message}</p>}</div>
                   </div>
                   <div className="grid gap-5 lg:grid-cols-2">
                     <FormField control={form.control} name="target_beneficiaries" render={({ field }) => (
-                      <FormItem><FormLabel className="text-xs">Target Beneficiaries</FormLabel><FormControl><Input {...field} disabled={isViewOnly} placeholder="Example: 50 female" className="h-12 rounded-xl text-base" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                      <FormItem className="min-w-0"><FormLabel className="text-xs">Target Beneficiaries</FormLabel><FormControl><Input {...field} disabled={isViewOnly} placeholder="Example: 50 female" className="h-11 rounded-xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
                     )} />
                     <FormField control={form.control} name="department_unit" render={({ field }) => (
-                      <FormItem><FormLabel className="text-xs">Department / Unit</FormLabel><FormControl><Input {...field} readOnly className="h-12 rounded-xl bg-muted/30 text-base" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                      <FormItem className="min-w-0"><FormLabel className="text-xs">Department / Unit</FormLabel><FormControl><Input {...field} readOnly className="h-11 rounded-xl bg-muted/20 text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
                     )} />
                   </div>
                 </CardContent>
@@ -1143,7 +1150,7 @@ export function ProjectLeaderRegistrationForm({
 
           {currentStep === 3 && (
             <div className="space-y-6">
-              <Card className="rounded-3xl border-border/60 shadow-none">
+              <Card className="rounded-3xl border-border/40 shadow-none">
                 <CardHeader>
                   <CardTitle className="text-xl">Project Design</CardTitle>
                   <CardDescription className="text-sm">Define the rationale, objectives, strategies, and expected outcomes.</CardDescription>
@@ -1171,7 +1178,7 @@ export function ProjectLeaderRegistrationForm({
                     </div>
                     <div className="space-y-4">
                       {strategiesArray.fields.map((field, index) => (
-                        <div key={field.id} className="rounded-2xl border border-border/50 bg-background p-4">
+                        <div key={field.id} className="rounded-2xl border border-border/40 bg-background p-4">
                           <div className="mb-4 flex items-center justify-between">
                             <p className="text-sm font-semibold">Strategy {index + 1}</p>
                             {!isViewOnly && strategiesArray.fields.length > 1 && (
@@ -1209,7 +1216,7 @@ export function ProjectLeaderRegistrationForm({
                         ["economic_impact_text", "economic_impact_count", "Economic Impact"],
                         ["environmental_impact_text", "environmental_impact_count", "Environmental Impact"],
                       ].map(([textName, countName, label]) => (
-                        <div key={label} className="rounded-2xl border border-border/50 bg-background p-4">
+                        <div key={label} className="rounded-2xl border border-border/40 bg-background p-4">
                           <div className="space-y-4">
                             <FormField control={form.control} name={textName as never} render={({ field }) => (
                               <FormItem><FormLabel className="text-xs">{label}</FormLabel><FormControl><Textarea value={String(field.value ?? "")} onChange={field.onChange} onBlur={field.onBlur} name={field.name} ref={field.ref} disabled={isViewOnly} className="min-h-24 rounded-2xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
@@ -1229,13 +1236,13 @@ export function ProjectLeaderRegistrationForm({
 
           {currentStep === 4 && (
             <div className="space-y-6">
-              <Card className="rounded-3xl border-border/60 shadow-none">
+              <Card className="rounded-3xl border-border/40 shadow-none">
                 <CardHeader>
                   <CardTitle className="text-xl">Organization and Staffing</CardTitle>
                   <CardDescription className="text-sm">Complete the team structure, budget summary, needs assessment, and optional document uploads.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="rounded-2xl border border-border/50 bg-muted/10 p-4">
+                  <div className="rounded-2xl border border-border/40 bg-muted/10 p-4">
                     <div className="mb-4"><h4 className="text-base font-semibold">Project Leader</h4><p className="text-sm text-muted-foreground">This is the primary owner of the registration.</p></div>
                     <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_260px]">
                       <FormField control={form.control} name="project_leader_name" render={({ field }) => (
@@ -1247,7 +1254,7 @@ export function ProjectLeaderRegistrationForm({
                           <FormControl>
                             <RadioGroup value={field.value} onValueChange={field.onChange} disabled={isViewOnly} className="grid grid-cols-2 gap-2 pt-2">
                               {employmentOptions.map((option) => (
-                                <label key={option} className={cn("flex items-center justify-center rounded-xl border border-border/50 px-3 py-3 text-sm", field.value === option && "border-[#159E44]/60 bg-[#159E44]/5")}>
+                                <label key={option} className={cn("flex items-center justify-center rounded-xl border border-border/40 px-3 py-3 text-sm", field.value === option && "border-[#159E44]/50 bg-muted/20")}>
                                   <RadioGroupItem value={option} className="sr-only" />
                                   {option}
                                 </label>
@@ -1264,11 +1271,11 @@ export function ProjectLeaderRegistrationForm({
                   <StaffListFields control={typedControl} name="project_facilitators" label="Project Facilitators" disabled={isViewOnly} />
                   <StaffListFields control={typedControl} name="project_assistants" label="Project Assistants" disabled={isViewOnly} />
 
-                  <Card className="rounded-3xl border-border/60 shadow-none">
+                  <Card className="rounded-3xl border-border/40 shadow-none">
                     <CardHeader><CardTitle className="text-base">Budget Summary</CardTitle><CardDescription className="text-sm">Budget rows are automatically generated from the inclusive dates and grouped by year.</CardDescription></CardHeader>
                     <CardContent className="space-y-4">
                       {budgetYearsArray.fields.map((field, index) => (
-                        <div key={field.id} className="rounded-2xl border border-border/50 bg-background p-4">
+                        <div key={field.id} className="rounded-2xl border border-border/40 bg-background p-4">
                           <div className="mb-4 flex items-center justify-between">
                             <p className="text-base font-semibold">Year {form.getValues(`budget_summary.${index}.year`)}</p>
                             <p className="text-sm font-medium text-[#159E44]">Total: PHP {getBudgetRowTotal(budgetSummary[index]).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
@@ -1288,11 +1295,11 @@ export function ProjectLeaderRegistrationForm({
                           </div>
                         </div>
                       ))}
-                      <div className="rounded-2xl border border-[#159E44]/20 bg-[#159E44]/5 px-4 py-3 text-sm"><span className="font-semibold text-[#0f6a2d]">Grand Total:</span> PHP {budgetGrandTotal.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                      <div className="rounded-2xl border border-border/40 bg-muted/10 px-4 py-3 text-sm"><span className="font-semibold text-foreground">Grand Total:</span> PHP {budgetGrandTotal.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                     </CardContent>
                   </Card>
 
-                  <Card className="rounded-3xl border-border/60 shadow-none">
+                  <Card className="rounded-3xl border-border/40 shadow-none">
                     <CardHeader><CardTitle className="text-base">Needs Assessment Section</CardTitle><CardDescription className="text-sm">This can be completed now or updated later with supporting files.</CardDescription></CardHeader>
                     <CardContent className="space-y-5">
                       <div className="grid gap-4 lg:grid-cols-2">
@@ -1312,7 +1319,7 @@ export function ProjectLeaderRegistrationForm({
                     </CardContent>
                   </Card>
 
-                  <Card className="rounded-3xl border-border/60 shadow-none">
+                  <Card className="rounded-3xl border-border/40 shadow-none">
                     <CardHeader><CardTitle className="text-base">Upload Documents</CardTitle><CardDescription className="text-sm">Optional PDF uploads. The code uses the `cqer-projects_pdfs` Supabase bucket.</CardDescription></CardHeader>
                     <CardContent>
                       <FormField control={form.control} name="documents" render={({ field }) => (
