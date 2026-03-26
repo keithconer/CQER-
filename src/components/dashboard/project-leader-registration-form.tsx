@@ -13,6 +13,10 @@ import {
   Plus,
   Save,
   Trash2,
+  FolderOpen,
+  Users,
+  Target,
+  Briefcase
 } from "lucide-react";
 
 import { StepIndicator } from "@/components/step-indicator";
@@ -445,7 +449,7 @@ function MultiDatePicker({
           type="button"
           variant="outline"
           className={cn(
-            "h-11 w-full justify-start rounded-xl border-border/60 bg-background px-3 text-left text-sm font-normal",
+            "h-9 w-full justify-start rounded-xl border-border/60 bg-background px-3 text-left text-xs font-normal",
             value.length === 0 && "text-muted-foreground"
           )}
           disabled={disabled}
@@ -485,8 +489,8 @@ function CheckboxGrid({
           <label
             key={option}
             className={cn(
-              "flex min-h-14 items-start gap-3 rounded-2xl border border-border/40 bg-background px-4 py-3 text-sm",
-              checked && "border-[#159E44]/50 bg-muted/20"
+              "flex min-h-12 items-start gap-3 rounded-2xl border border-border/40 bg-background px-4 py-3 text-sm",
+              checked && "border-primary/50 bg-primary/5"
             )}
           >
             <Checkbox checked={checked} onCheckedChange={() => onToggle(option)} disabled={disabled} className="mt-0.5" />
@@ -515,8 +519,8 @@ function SdgGrid({
           <label
             key={option}
             className={cn(
-              "flex items-center justify-center gap-2 rounded-xl border border-border/40 px-2 py-2.5 text-xs font-medium sm:text-sm",
-              checked && "border-[#159E44]/50 bg-muted/20 text-foreground"
+              "flex items-center justify-center gap-2 rounded-xl border border-border/40 px-2 py-2.5 text-xs font-medium",
+              checked && "border-primary/50 bg-primary/5 text-primary"
             )}
           >
             <Checkbox checked={checked} onCheckedChange={() => onToggle(option)} disabled={disabled} />
@@ -571,7 +575,7 @@ function StaffListFields({
                   <FormItem>
                     <FormLabel className="text-xs">Name</FormLabel>
                     <FormControl>
-                      <Input {...field} disabled={disabled} className="h-11 rounded-xl text-sm" />
+                      <Input {...field} disabled={disabled} className="h-9 rounded-xl text-xs" />
                     </FormControl>
                     <FormMessage className="text-xs" />
                   </FormItem>
@@ -589,8 +593,8 @@ function StaffListFields({
                           <label
                             key={option}
                             className={cn(
-                              "flex items-center justify-center rounded-xl border border-border/50 px-3 py-3 text-sm",
-                              field.value === option && "border-[#159E44]/60 bg-[#159E44]/5"
+                              "flex items-center justify-center rounded-xl border border-border/50 px-3 py-2 text-xs",
+                              field.value === option && "border-primary/50 bg-primary/5 text-primary"
                             )}
                           >
                             <RadioGroupItem value={option} className="sr-only" />
@@ -605,7 +609,7 @@ function StaffListFields({
               />
               <div className="flex items-end">
                 {!disabled && (
-                  <Button type="button" variant="outline" size="icon" className="h-11 w-11 rounded-xl text-destructive" onClick={() => remove(index)}>
+                  <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-xl text-destructive" onClick={() => remove(index)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 )}
@@ -643,8 +647,11 @@ function PartnerAgencyFields({
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <CardTitle className="text-base">Partner Agency {index + 1}</CardTitle>
-            <CardDescription className="text-sm">Capture the agency, partnership, and signatory details.</CardDescription>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Users className="h-4 w-4 text-primary" />
+              Partner Agency {index + 1}
+            </CardTitle>
+            <CardDescription className="text-xs">Capture the agency, partnership, and signatory details.</CardDescription>
           </div>
           {!disabled && (
             <Button type="button" variant="outline" className="rounded-xl text-destructive" onClick={onRemove}>
@@ -657,19 +664,19 @@ function PartnerAgencyFields({
       <CardContent className="space-y-5">
         <div className="grid gap-4 lg:grid-cols-2">
           <FormField control={control} name={`partner_agencies.${index}.name`} render={({ field }) => (
-            <FormItem><FormLabel className="text-xs">Name of Partner Agency</FormLabel><FormControl><Input {...field} disabled={disabled} className="h-11 rounded-xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
+            <FormItem><FormLabel className="text-xs">Name of Partner Agency</FormLabel><FormControl><Input {...field} disabled={disabled} className="h-9 rounded-xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
           )} />
           <FormField control={control} name={`partner_agencies.${index}.location`} render={({ field }) => (
-            <FormItem><FormLabel className="text-xs">Location</FormLabel><FormControl><Input {...field} disabled={disabled} className="h-11 rounded-xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
+            <FormItem><FormLabel className="text-xs">Location</FormLabel><FormControl><Input {...field} disabled={disabled} className="h-9 rounded-xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
           )} />
           <FormField control={control} name={`partner_agencies.${index}.head_designation`} render={({ field }) => (
-            <FormItem><FormLabel className="text-xs">Designation of the Head of Agency</FormLabel><FormControl><Input {...field} disabled={disabled} className="h-11 rounded-xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
+            <FormItem><FormLabel className="text-xs">Designation of the Head of Agency</FormLabel><FormControl><Input {...field} disabled={disabled} className="h-9 rounded-xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
           )} />
           <FormField control={control} name={`partner_agencies.${index}.contact_details`} render={({ field }) => (
-            <FormItem><FormLabel className="text-xs">Contact Details</FormLabel><FormControl><Input {...field} disabled={disabled} className="h-11 rounded-xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
+            <FormItem><FormLabel className="text-xs">Contact Details</FormLabel><FormControl><Input {...field} disabled={disabled} className="h-9 rounded-xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
           )} />
           <FormField control={control} name={`partner_agencies.${index}.level_of_partnership`} render={({ field }) => (
-            <FormItem><FormLabel className="text-xs">Level of Partnership</FormLabel><FormControl><Input {...field} disabled={disabled} className="h-11 rounded-xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
+            <FormItem><FormLabel className="text-xs">Level of Partnership</FormLabel><FormControl><Input {...field} disabled={disabled} className="h-9 rounded-xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
           )} />
 
           <FormField
@@ -680,13 +687,13 @@ function PartnerAgencyFields({
                 <FormLabel className="text-xs">Category of Agency</FormLabel>
                 <Select value={field.value} onValueChange={field.onChange} disabled={disabled}>
                   <FormControl>
-                    <SelectTrigger className="h-11 rounded-xl text-sm">
+                    <SelectTrigger className="h-9 rounded-xl text-xs">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
                     {agencyCategoryOptions.map((option) => (
-                      <SelectItem key={option} value={option} className="text-sm capitalize">
+                      <SelectItem key={option} value={option} className="text-xs capitalize">
                         {option}
                       </SelectItem>
                     ))}
@@ -705,13 +712,13 @@ function PartnerAgencyFields({
                 <FormLabel className="text-xs">Nature of Partnership</FormLabel>
                 <Select value={field.value} onValueChange={field.onChange} disabled={disabled}>
                   <FormControl>
-                    <SelectTrigger className="h-11 rounded-xl text-sm">
+                    <SelectTrigger className="h-9 rounded-xl text-xs">
                       <SelectValue placeholder="Select partnership nature" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
                     {natureOptions.map((option) => (
-                      <SelectItem key={option} value={option} className="text-sm">
+                      <SelectItem key={option} value={option} className="text-xs">
                         {option}
                       </SelectItem>
                     ))}
@@ -730,13 +737,13 @@ function PartnerAgencyFields({
                 <FormLabel className="text-xs">Type of Partnership</FormLabel>
                 <Select value={field.value} onValueChange={field.onChange} disabled={disabled}>
                   <FormControl>
-                    <SelectTrigger className="h-11 rounded-xl text-sm">
+                    <SelectTrigger className="h-9 rounded-xl text-xs">
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
                     {partnershipTypeOptions.map((option) => (
-                      <SelectItem key={option} value={option} className="text-sm">
+                      <SelectItem key={option} value={option} className="text-xs">
                         {option}
                       </SelectItem>
                     ))}
@@ -784,7 +791,7 @@ function PartnerAgencyFields({
               <FormItem>
                 <FormLabel className="text-xs">Name of Funding Agency</FormLabel>
                 <FormControl>
-                  <Input {...field} disabled={disabled} className="h-11 rounded-xl text-sm" />
+                  <Input {...field} disabled={disabled} className="h-9 rounded-xl text-xs" />
                 </FormControl>
                 <FormMessage className="text-xs" />
               </FormItem>
@@ -815,7 +822,7 @@ function PartnerAgencyFields({
                     <FormItem>
                       <FormLabel className="text-xs">Signatory Name</FormLabel>
                       <FormControl>
-                        <Input {...field} disabled={disabled} className="h-11 rounded-xl text-sm" />
+                        <Input {...field} disabled={disabled} className="h-9 rounded-xl text-xs" />
                       </FormControl>
                       <FormMessage className="text-xs" />
                     </FormItem>
@@ -823,7 +830,7 @@ function PartnerAgencyFields({
                 />
                 <div className="flex items-end">
                   {!disabled && fields.length > 1 && (
-                    <Button type="button" variant="outline" size="icon" className="h-11 w-11 rounded-xl text-destructive" onClick={() => remove(signatoryIndex)}>
+                    <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-xl text-destructive" onClick={() => remove(signatoryIndex)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   )}
@@ -1022,17 +1029,14 @@ export function ProjectLeaderRegistrationForm({
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit as never)} className="flex h-full flex-col bg-background">
         <div className="border-b border-border/40 bg-background px-4 py-4 sm:px-6 lg:px-8">
-          <div className="mx-auto w-full max-w-[1760px] space-y-5">
+          <div className="w-full space-y-5">
             <div className="flex items-start justify-between gap-4">
-              <div className="max-w-4xl space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#159E44]">Project Registration</p>
+              <div className="space-y-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Project Registration</p>
               <div>
-                <h2 className="max-w-4xl text-2xl font-semibold text-foreground sm:text-[2rem]">
+                <h2 className="text-xl font-semibold text-foreground">
                   {project?.id ? (isViewOnly ? "Project Registration Details" : "Update Project Registration") : "Register a New Project"}
                 </h2>
-                <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-                  A full-screen, step-by-step submission for Project Leaders with summary, partnership, staffing, and budget details.
-                </p>
               </div>
             </div>
               {onClose && (
@@ -1057,34 +1061,37 @@ export function ProjectLeaderRegistrationForm({
               </div>
             </div>
           </div>
-          <div className="mx-auto mt-5 w-full max-w-[1760px]">
+          <div className="mt-6 w-full">
             <StepIndicator currentStep={currentStep} totalSteps={4} labels={stepLabels} />
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto bg-background px-4 py-5 sm:px-6 lg:px-8">
-          <div className="mx-auto w-full max-w-[1760px]">
+          <div className="w-full">
           {currentStep === 1 && (
             <div className="space-y-6">
               <Card className="rounded-3xl border-border/50 shadow-none">
                 <CardHeader>
-                  <CardTitle className="text-lg">Project Overview</CardTitle>
-                  <CardDescription className="text-sm">Capture the core project definition before moving into the partnership details.</CardDescription>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <FolderOpen className="h-5 w-5 text-primary" />
+                    Project Overview
+                  </CardTitle>
+                  <CardDescription className="text-xs">Capture the core project definition before moving into the partnership details.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="grid gap-5 lg:grid-cols-2">
                     <FormField control={form.control} name="project_title" render={({ field }) => (
-                      <FormItem className="min-w-0"><FormLabel className="text-xs">Project Title</FormLabel><FormControl><Input {...field} disabled={isViewOnly} className="h-11 rounded-xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                      <FormItem className="min-w-0"><FormLabel className="text-xs">Project Title</FormLabel><FormControl><Input {...field} disabled={isViewOnly} className="h-9 rounded-xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
                     )} />
                     <FormField control={form.control} name="budget" render={({ field }) => (
-                      <FormItem className="min-w-0"><FormLabel className="text-xs">Budget</FormLabel><FormControl><Input {...field} type="number" min="0" disabled={isViewOnly} className="h-11 rounded-xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                      <FormItem className="min-w-0"><FormLabel className="text-xs">Budget</FormLabel><FormControl><Input {...field} type="number" min="0" disabled={isViewOnly} className="h-9 rounded-xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
                     )} />
                   </div>
                   <div className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_220px]">
                     <FormField control={form.control} name="inclusive_dates" render={({ field }) => (
                       <FormItem className="min-w-0"><FormLabel className="text-xs">Inclusive Date</FormLabel><FormControl><MultiDatePicker value={field.value} onChange={field.onChange} disabled={isViewOnly} placeholder="Select inclusive dates" /></FormControl><FormMessage className="text-xs" /></FormItem>
                     )} />
-                    <FormItem><FormLabel className="text-xs">Duration</FormLabel><Input value={getDurationLabel(inclusiveDates)} readOnly className="h-11 rounded-xl bg-muted/20 text-sm" /></FormItem>
+                    <FormItem><FormLabel className="text-xs">Duration</FormLabel><Input value={getDurationLabel(inclusiveDates)} readOnly className="h-9 rounded-xl bg-muted/20 text-xs" /></FormItem>
                   </div>
                   <div className="space-y-3">
                     <div><Label className="text-xs">University Extension Agenda</Label><p className="text-xs text-muted-foreground">Select one or more agenda areas for this registration.</p></div>
@@ -1099,10 +1106,10 @@ export function ProjectLeaderRegistrationForm({
                   </div>
                   <div className="grid gap-5 lg:grid-cols-2">
                     <FormField control={form.control} name="target_beneficiaries" render={({ field }) => (
-                      <FormItem className="min-w-0"><FormLabel className="text-xs">Target Beneficiaries</FormLabel><FormControl><Input {...field} disabled={isViewOnly} placeholder="Example: 50 female" className="h-11 rounded-xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                      <FormItem className="min-w-0"><FormLabel className="text-xs">Target Beneficiaries</FormLabel><FormControl><Input {...field} disabled={isViewOnly} placeholder="Example: 50 female" className="h-9 rounded-xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
                     )} />
                     <FormField control={form.control} name="department_unit" render={({ field }) => (
-                      <FormItem className="min-w-0"><FormLabel className="text-xs">Department / Unit</FormLabel><FormControl><Input {...field} readOnly className="h-11 rounded-xl bg-muted/20 text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                      <FormItem className="min-w-0"><FormLabel className="text-xs">Department / Unit</FormLabel><FormControl><Input {...field} readOnly className="h-9 rounded-xl bg-muted/20 text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
                     )} />
                   </div>
                 </CardContent>
@@ -1152,22 +1159,25 @@ export function ProjectLeaderRegistrationForm({
             <div className="space-y-6">
               <Card className="rounded-3xl border-border/40 shadow-none">
                 <CardHeader>
-                  <CardTitle className="text-xl">Project Design</CardTitle>
-                  <CardDescription className="text-sm">Define the rationale, objectives, strategies, and expected outcomes.</CardDescription>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Target className="h-5 w-5 text-primary" />
+                    Project Design
+                  </CardTitle>
+                  <CardDescription className="text-xs">Define the rationale, objectives, strategies, and expected outcomes.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <FormField control={form.control} name="rationale" render={({ field }) => (
-                    <FormItem><FormLabel className="text-xs">Rationale</FormLabel><FormControl><Textarea {...field} disabled={isViewOnly} className="min-h-32 rounded-2xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                    <FormItem><FormLabel className="text-xs">Rationale</FormLabel><FormControl><Textarea {...field} disabled={isViewOnly} className="min-h-24 rounded-2xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
                   )} />
                   <FormField control={form.control} name="objectives" render={({ field }) => (
-                    <FormItem><FormLabel className="text-xs">Objectives</FormLabel><FormControl><Textarea {...field} disabled={isViewOnly} className="min-h-32 rounded-2xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                    <FormItem><FormLabel className="text-xs">Objectives</FormLabel><FormControl><Textarea {...field} disabled={isViewOnly} className="min-h-24 rounded-2xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
                   )} />
 
                   <div className="space-y-4">
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        <h4 className="text-base font-semibold">Strategies Section</h4>
-                        <p className="text-sm text-muted-foreground">Add one or more strategy blocks for capacity building and technical assistance.</p>
+                        <h4 className="text-sm font-semibold">Strategies Section</h4>
+                        <p className="text-xs text-muted-foreground">Add one or more strategy blocks for capacity building and technical assistance.</p>
                       </div>
                       {!isViewOnly && (
                         <Button type="button" variant="outline" className="rounded-xl" onClick={() => strategiesArray.append({ capacity_building: "", technical_assistance: "" })}>
@@ -1180,9 +1190,9 @@ export function ProjectLeaderRegistrationForm({
                       {strategiesArray.fields.map((field, index) => (
                         <div key={field.id} className="rounded-2xl border border-border/40 bg-background p-4">
                           <div className="mb-4 flex items-center justify-between">
-                            <p className="text-sm font-semibold">Strategy {index + 1}</p>
+                            <p className="text-xs font-semibold">Strategy {index + 1}</p>
                             {!isViewOnly && strategiesArray.fields.length > 1 && (
-                              <Button type="button" variant="outline" className="rounded-xl text-destructive" onClick={() => strategiesArray.remove(index)}>
+                              <Button type="button" variant="outline" className="h-9 rounded-xl text-destructive" onClick={() => strategiesArray.remove(index)}>
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 Remove
                               </Button>
@@ -1190,10 +1200,10 @@ export function ProjectLeaderRegistrationForm({
                           </div>
                           <div className="grid gap-4 2xl:grid-cols-2">
                             <FormField control={form.control} name={`strategies.${index}.capacity_building`} render={({ field }) => (
-                              <FormItem><FormLabel className="text-xs">Capacity Building</FormLabel><FormControl><Textarea {...field} disabled={isViewOnly} className="min-h-28 rounded-2xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                              <FormItem><FormLabel className="text-xs">Capacity Building</FormLabel><FormControl><Textarea {...field} disabled={isViewOnly} className="min-h-20 rounded-2xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
                             )} />
                             <FormField control={form.control} name={`strategies.${index}.technical_assistance`} render={({ field }) => (
-                              <FormItem><FormLabel className="text-xs">Technical Assistance</FormLabel><FormControl><Textarea {...field} disabled={isViewOnly} className="min-h-28 rounded-2xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                              <FormItem><FormLabel className="text-xs">Technical Assistance</FormLabel><FormControl><Textarea {...field} disabled={isViewOnly} className="min-h-20 rounded-2xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
                             )} />
                           </div>
                         </div>
@@ -1204,7 +1214,7 @@ export function ProjectLeaderRegistrationForm({
                   <Separator />
 
                   <div className="space-y-4">
-                    <div><h4 className="text-base font-semibold">Expected Outputs (6Ps / 3Is)</h4><p className="text-sm text-muted-foreground">Capture narrative details and counts for each expected output.</p></div>
+                    <div><h4 className="text-sm font-semibold">Expected Outputs (6Ps / 3Is)</h4><p className="text-xs text-muted-foreground">Capture narrative details and counts for each expected output.</p></div>
                     <div className="grid gap-4 2xl:grid-cols-2">
                       {[
                         ["publication_text", "publication_count", "Publication"],
@@ -1219,10 +1229,10 @@ export function ProjectLeaderRegistrationForm({
                         <div key={label} className="rounded-2xl border border-border/40 bg-background p-4">
                           <div className="space-y-4">
                             <FormField control={form.control} name={textName as never} render={({ field }) => (
-                              <FormItem><FormLabel className="text-xs">{label}</FormLabel><FormControl><Textarea value={String(field.value ?? "")} onChange={field.onChange} onBlur={field.onBlur} name={field.name} ref={field.ref} disabled={isViewOnly} className="min-h-24 rounded-2xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                              <FormItem><FormLabel className="text-xs">{label}</FormLabel><FormControl><Textarea value={String(field.value ?? "")} onChange={field.onChange} onBlur={field.onBlur} name={field.name} ref={field.ref} disabled={isViewOnly} className="min-h-20 rounded-2xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
                             )} />
                             <FormField control={form.control} name={countName as never} render={({ field }) => (
-                              <FormItem><FormLabel className="text-xs">{label} Count</FormLabel><FormControl><Input value={Number(field.value ?? 0)} onChange={field.onChange} onBlur={field.onBlur} name={field.name} ref={field.ref} type="number" min="0" disabled={isViewOnly} className="h-11 rounded-xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                              <FormItem><FormLabel className="text-xs">{label} Count</FormLabel><FormControl><Input value={Number(field.value ?? 0)} onChange={field.onChange} onBlur={field.onBlur} name={field.name} ref={field.ref} type="number" min="0" disabled={isViewOnly} className="h-9 rounded-xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
                             )} />
                           </div>
                         </div>
@@ -1238,15 +1248,18 @@ export function ProjectLeaderRegistrationForm({
             <div className="space-y-6">
               <Card className="rounded-3xl border-border/40 shadow-none">
                 <CardHeader>
-                  <CardTitle className="text-xl">Organization and Staffing</CardTitle>
-                  <CardDescription className="text-sm">Complete the team structure, budget summary, needs assessment, and optional document uploads.</CardDescription>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Briefcase className="h-5 w-5 text-primary" />
+                    Organization and Staffing
+                  </CardTitle>
+                  <CardDescription className="text-xs">Complete the team structure, budget summary, needs assessment, and optional document uploads.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="rounded-2xl border border-border/40 bg-muted/10 p-4">
-                    <div className="mb-4"><h4 className="text-base font-semibold">Project Leader</h4><p className="text-sm text-muted-foreground">This is the primary owner of the registration.</p></div>
+                    <div className="mb-4"><h4 className="text-sm font-semibold">Project Leader</h4><p className="text-xs text-muted-foreground">This is the primary owner of the registration.</p></div>
                     <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_260px]">
                       <FormField control={form.control} name="project_leader_name" render={({ field }) => (
-                        <FormItem><FormLabel className="text-xs">Project Leader</FormLabel><FormControl><Input {...field} disabled={isViewOnly} className="h-11 rounded-xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                        <FormItem><FormLabel className="text-xs">Project Leader</FormLabel><FormControl><Input {...field} disabled={isViewOnly} className="h-9 rounded-xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
                       )} />
                       <FormField control={form.control} name="project_leader_employment" render={({ field }) => (
                         <FormItem>
@@ -1254,7 +1267,7 @@ export function ProjectLeaderRegistrationForm({
                           <FormControl>
                             <RadioGroup value={field.value} onValueChange={field.onChange} disabled={isViewOnly} className="grid grid-cols-2 gap-2 pt-2">
                               {employmentOptions.map((option) => (
-                                <label key={option} className={cn("flex items-center justify-center rounded-xl border border-border/40 px-3 py-3 text-sm", field.value === option && "border-[#159E44]/50 bg-muted/20")}>
+                                <label key={option} className={cn("flex items-center justify-center rounded-xl border border-border/40 px-3 py-2 text-xs", field.value === option && "border-primary/50 bg-primary/5 text-primary")}>
                                   <RadioGroupItem value={option} className="sr-only" />
                                   {option}
                                 </label>
@@ -1272,13 +1285,13 @@ export function ProjectLeaderRegistrationForm({
                   <StaffListFields control={typedControl} name="project_assistants" label="Project Assistants" disabled={isViewOnly} />
 
                   <Card className="rounded-3xl border-border/40 shadow-none">
-                    <CardHeader><CardTitle className="text-base">Budget Summary</CardTitle><CardDescription className="text-sm">Budget rows are automatically generated from the inclusive dates and grouped by year.</CardDescription></CardHeader>
+                    <CardHeader><CardTitle className="text-sm">Budget Summary</CardTitle><CardDescription className="text-xs">Budget rows are automatically generated from the inclusive dates and grouped by year.</CardDescription></CardHeader>
                     <CardContent className="space-y-4">
                       {budgetYearsArray.fields.map((field, index) => (
                         <div key={field.id} className="rounded-2xl border border-border/40 bg-background p-4">
                           <div className="mb-4 flex items-center justify-between">
-                            <p className="text-base font-semibold">Year {form.getValues(`budget_summary.${index}.year`)}</p>
-                            <p className="text-sm font-medium text-[#159E44]">Total: PHP {getBudgetRowTotal(budgetSummary[index]).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                            <p className="text-sm font-semibold">Year {form.getValues(`budget_summary.${index}.year`)}</p>
+                            <p className="text-xs font-medium text-primary">Total: PHP {getBudgetRowTotal(budgetSummary[index]).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                           </div>
                           <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-5">
                             {[
@@ -1289,38 +1302,38 @@ export function ProjectLeaderRegistrationForm({
                               ["other_mooe", "Other MOOE"],
                             ].map(([name, label]) => (
                               <FormField key={name} control={form.control} name={`budget_summary.${index}.${name}` as never} render={({ field }) => (
-                                <FormItem><FormLabel className="text-xs">{label}</FormLabel><FormControl><Input value={Number(field.value ?? 0)} onChange={field.onChange} onBlur={field.onBlur} name={field.name} ref={field.ref} type="number" min="0" disabled={isViewOnly} className="h-11 rounded-xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                                <FormItem><FormLabel className="text-xs">{label}</FormLabel><FormControl><Input value={Number(field.value ?? 0)} onChange={field.onChange} onBlur={field.onBlur} name={field.name} ref={field.ref} type="number" min="0" disabled={isViewOnly} className="h-9 rounded-xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
                               )} />
                             ))}
                           </div>
                         </div>
                       ))}
-                      <div className="rounded-2xl border border-border/40 bg-muted/10 px-4 py-3 text-sm"><span className="font-semibold text-foreground">Grand Total:</span> PHP {budgetGrandTotal.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                      <div className="rounded-2xl border border-border/40 bg-muted/10 px-4 py-3 text-xs"><span className="font-semibold text-foreground">Grand Total:</span> PHP {budgetGrandTotal.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                     </CardContent>
                   </Card>
 
                   <Card className="rounded-3xl border-border/40 shadow-none">
-                    <CardHeader><CardTitle className="text-base">Needs Assessment Section</CardTitle><CardDescription className="text-sm">This can be completed now or updated later with supporting files.</CardDescription></CardHeader>
+                    <CardHeader><CardTitle className="text-sm">Needs Assessment Section</CardTitle><CardDescription className="text-xs">This can be completed now or updated later with supporting files.</CardDescription></CardHeader>
                     <CardContent className="space-y-5">
                       <div className="grid gap-4 lg:grid-cols-2">
                         <FormField control={form.control} name="needs_assessment_title" render={({ field }) => (
-                          <FormItem><FormLabel className="text-xs">Title of Needs Assessment</FormLabel><FormControl><Input {...field} disabled={isViewOnly} className="h-11 rounded-xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                          <FormItem><FormLabel className="text-xs">Title of Needs Assessment</FormLabel><FormControl><Input {...field} disabled={isViewOnly} className="h-9 rounded-xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
                         )} />
                         <FormField control={form.control} name="needs_assessment_place" render={({ field }) => (
-                          <FormItem><FormLabel className="text-xs">Place Conducted</FormLabel><FormControl><Input {...field} disabled={isViewOnly} className="h-11 rounded-xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                          <FormItem><FormLabel className="text-xs">Place Conducted</FormLabel><FormControl><Input {...field} disabled={isViewOnly} className="h-9 rounded-xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
                         )} />
                       </div>
                       <FormField control={form.control} name="needs_assessment_dates" render={({ field }) => (
                         <FormItem><FormLabel className="text-xs">Dates Conducted</FormLabel><FormControl><MultiDatePicker value={field.value} onChange={field.onChange} disabled={isViewOnly} placeholder="Select assessment dates" /></FormControl><FormMessage className="text-xs" /></FormItem>
                       )} />
                       <FormField control={form.control} name="needs_assessment_results_used" render={({ field }) => (
-                        <FormItem><FormLabel className="text-xs">How results were used</FormLabel><FormControl><Textarea {...field} disabled={isViewOnly} className="min-h-28 rounded-2xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                        <FormItem><FormLabel className="text-xs">How results were used</FormLabel><FormControl><Textarea {...field} disabled={isViewOnly} className="min-h-20 rounded-2xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
                       )} />
                     </CardContent>
                   </Card>
 
                   <Card className="rounded-3xl border-border/40 shadow-none">
-                    <CardHeader><CardTitle className="text-base">Upload Documents</CardTitle><CardDescription className="text-sm">Optional PDF uploads. The code uses the `cqer-projects_pdfs` Supabase bucket.</CardDescription></CardHeader>
+                    <CardHeader><CardTitle className="text-sm">Upload Documents</CardTitle><CardDescription className="text-xs">Optional PDF uploads. The code uses the `cqer-projects_pdfs` Supabase bucket.</CardDescription></CardHeader>
                     <CardContent>
                       <FormField control={form.control} name="documents" render={({ field }) => (
                         <FormItem><FormControl><FileUpload value={field.value} onChange={field.onChange} disabled={isViewOnly} bucket="cqer-projects_pdfs" accept=".pdf" /></FormControl><FormMessage className="text-xs" /></FormItem>
@@ -1335,8 +1348,8 @@ export function ProjectLeaderRegistrationForm({
         </div>
 
         <div className="border-t border-border/50 bg-background px-5 py-4 sm:px-7 lg:px-10">
-          <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="text-sm text-muted-foreground">Step {currentStep} of 4</div>
+          <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-xs text-muted-foreground">Step {currentStep} of 4</div>
             <div className="flex flex-wrap justify-end gap-3">
               {currentStep > 1 && (
                 <Button type="button" variant="outline" className="rounded-xl" onClick={() => setCurrentStep((prev) => Math.max(1, prev - 1))}>
@@ -1345,12 +1358,12 @@ export function ProjectLeaderRegistrationForm({
                 </Button>
               )}
               {currentStep < 4 ? (
-                <Button type="button" className="rounded-xl bg-[#159E44] text-white hover:bg-[#128A3B]" onClick={goNext}>
+                <Button type="button" className="rounded-xl" onClick={goNext}>
                   Next
                   <ChevronRight className="ml-2 h-4 w-4" />
                 </Button>
               ) : !isViewOnly ? (
-                <Button type="submit" className="rounded-xl bg-[#159E44] text-white hover:bg-[#128A3B]" disabled={isSubmitting}>
+                <Button type="submit" className="rounded-xl" disabled={isSubmitting}>
                   <Save className="mr-2 h-4 w-4" />
                   {isSubmitting ? "Saving..." : "Save Project Registration"}
                 </Button>
