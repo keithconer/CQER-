@@ -970,7 +970,10 @@ export function ProjectLeaderRegistrationForm({
       5: [],
     };
     const valid = await form.trigger(fieldsByStep[currentStep]);
-    if (valid) setCurrentStep((prev) => Math.min(5, prev + 1));
+    if (valid) {
+      setCurrentStep((prev) => Math.min(5, prev + 1));
+      document.getElementById("registration-scroll-area")?.scrollTo(0, 0);
+    }
   };
 
   async function onSubmit(values: FormValues) {
@@ -1050,55 +1053,36 @@ export function ProjectLeaderRegistrationForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit as never)} onKeyDown={(e) => { if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA") e.preventDefault(); }} className="flex h-full flex-col bg-background">
-        <div className="border-b border-border/40 bg-background px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex w-full items-center justify-between">
+        <div className="border-b border-border/40 bg-background px-4 py-3 sm:px-6 lg:px-8">
+          <div className="flex w-full items-start justify-between gap-4">
             <h1 className="text-xl font-bold text-foreground">
               {project?.id ? (isViewOnly ? "Project Registration Details" : "Update Project Registration") : "Register a New Project"}
             </h1>
             {onClose && (
-              <Button type="button" variant="ghost" size="icon" className="h-10 w-10 shrink-0 rounded-full" onClick={onClose}>
-                <X className="h-5 w-5" />
+              <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0 rounded-full" onClick={onClose}>
+                <X className="h-4 w-4" />
               </Button>
             )}
           </div>
-          <div className="w-full space-y-5">
-            <div className="flex items-start justify-between gap-4">
-              <div className="space-y-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Project Registration</p>
-              <div>
-                <h2 className="text-xl font-semibold text-foreground">
-                  {project?.id ? (isViewOnly ? "Project Registration Details" : "Update Project Registration") : "Register a New Project"}
-                </h2>
-              </div>
-            </div>
-              {onClose && (
-                <Button type="button" variant="ghost" size="icon" className="h-10 w-10 shrink-0 rounded-full" onClick={onClose}>
-                  <X className="h-5 w-5" />
-                </Button>
-              )}
-            </div>
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px_260px]">
-              <div className="rounded-2xl border border-border/40 bg-muted/10 px-5 py-4 text-sm text-muted-foreground">
-                <p className="text-sm font-semibold leading-6 text-foreground">{form.getValues("department_unit")}</p>
-              </div>
-              <div className="rounded-2xl border border-border/40 bg-muted/10 px-5 py-4 text-sm text-muted-foreground">
-                <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/80">Duration</p>
-                <p className="mt-2 text-sm font-medium text-foreground">{getDurationLabel(inclusiveDates)}</p>
-              </div>
-              <div className="rounded-2xl border border-border/40 bg-muted/10 px-5 py-4 text-sm text-muted-foreground">
-                <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/80">Budget Summary Total</p>
-                <p className="mt-2 text-sm font-medium text-foreground">
-                  PHP {budgetGrandTotal.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </p>
-              </div>
-            </div>
+          <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_200px_200px]">
+             <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-2.5">
+               <p className="truncate text-xs font-semibold text-foreground">{form.getValues("department_unit")}</p>
+             </div>
+             <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-2.5">
+               <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80">Duration</p>
+               <p className="truncate text-xs font-medium text-foreground">{getDurationLabel(inclusiveDates)}</p>
+             </div>
+             <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-2.5">
+               <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80">Total Budget</p>
+               <p className="truncate text-xs font-medium text-foreground">PHP {budgetGrandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+             </div>
           </div>
-          <div className="mt-6 w-full">
+          <div className="mt-4 w-full">
             <StepIndicator currentStep={currentStep} totalSteps={5} labels={stepLabels} />
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto bg-background px-4 py-5 sm:px-6 lg:px-8">
+        <div id="registration-scroll-area" className="flex-1 overflow-y-auto bg-background px-4 py-5 sm:px-6 lg:px-8">
           <div className="w-full">
           {currentStep === 1 && (
             <div className="space-y-6">
@@ -1408,7 +1392,7 @@ export function ProjectLeaderRegistrationForm({
             <div className="text-xs text-muted-foreground">Step {currentStep} of {stepLabels.length}</div>
             <div className="flex flex-wrap justify-end gap-3">
               {currentStep > 1 && (
-                <Button type="button" variant="outline" className="rounded-xl" onClick={() => setCurrentStep((prev) => Math.max(1, prev - 1))}>
+                <Button type="button" variant="outline" className="rounded-xl" onClick={() => { setCurrentStep((prev) => Math.max(1, prev - 1)); document.getElementById("registration-scroll-area")?.scrollTo(0, 0); }}>
                   <ChevronLeft className="mr-2 h-4 w-4" />
                   Previous
                 </Button>
