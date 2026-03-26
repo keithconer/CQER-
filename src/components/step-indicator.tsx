@@ -15,7 +15,8 @@ export function StepIndicator({
   labels,
 }: StepIndicatorProps) {
   return (
-    <div className="flex items-center justify-center gap-0 w-full mb-6">
+    <div className="mb-2 w-full overflow-x-auto pb-2">
+      <div className="mx-auto flex min-w-max items-start justify-center gap-1 px-2 sm:gap-2">
       {Array.from({ length: totalSteps }, (_, i) => {
         const step = i + 1;
         const isCompleted = step < currentStep;
@@ -23,10 +24,10 @@ export function StepIndicator({
 
         return (
           <div key={step} className="flex items-center">
-            <div className="flex flex-col items-center">
+            <div className="flex min-w-[88px] flex-col items-center sm:min-w-[112px]">
               <div
                 className={cn(
-                  "w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium transition-all duration-200",
+                  "flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium transition-all duration-200 sm:h-10 sm:w-10 sm:text-sm",
                   isCompleted &&
                     "bg-[#159E44] text-white",
                   isActive &&
@@ -45,7 +46,7 @@ export function StepIndicator({
               {labels && labels[i] && (
                 <span
                   className={cn(
-                    "text-[10px] mt-1 text-center whitespace-nowrap",
+                    "mt-2 text-center text-[11px] leading-4 whitespace-normal sm:text-xs",
                     isActive
                       ? "text-foreground font-medium"
                       : "text-muted-foreground"
@@ -58,7 +59,7 @@ export function StepIndicator({
             {step < totalSteps && (
               <div
                 className={cn(
-                  "w-8 h-[2px] mx-1",
+                  "mx-1 mt-4 h-[2px] w-8 sm:mx-2 sm:w-12",
                   isCompleted ? "bg-[#159E44]" : "bg-muted"
                 )}
               />
@@ -66,6 +67,7 @@ export function StepIndicator({
           </div>
         );
       })}
+      </div>
     </div>
   );
 }

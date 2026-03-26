@@ -9,6 +9,7 @@ import {
   CalendarIcon,
   ChevronLeft,
   ChevronRight,
+  X,
   Plus,
   Save,
   Trash2,
@@ -187,6 +188,7 @@ interface ProjectLeaderRegistrationFormProps {
   currentDepartment?: string | null;
   currentUnit?: string | null;
   onSuccess?: () => void;
+  onClose?: () => void;
   isViewOnly?: boolean;
 }
 
@@ -842,6 +844,7 @@ export function ProjectLeaderRegistrationForm({
   currentDepartment,
   currentUnit,
   onSuccess,
+  onClose,
   isViewOnly = false,
 }: ProjectLeaderRegistrationFormProps) {
   const [currentStep, setCurrentStep] = React.useState(1);
@@ -1017,35 +1020,43 @@ export function ProjectLeaderRegistrationForm({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit as never)} className="flex h-full flex-col">
-        <div className="border-b border-border/50 bg-background px-6 py-5">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-            <div className="space-y-2">
+      <form onSubmit={form.handleSubmit(onSubmit as never)} className="flex h-full flex-col bg-background">
+        <div className="border-b border-border/50 bg-background px-5 py-5 sm:px-7 lg:px-10">
+          <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-5 2xl:flex-row 2xl:items-start 2xl:justify-between">
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#159E44]">Project Registration</p>
               <div>
-                <h2 className="text-2xl font-semibold text-foreground">
+                <h2 className="max-w-3xl text-2xl font-semibold text-foreground sm:text-3xl">
                   {project?.id ? (isViewOnly ? "Project Registration Details" : "Update Project Registration") : "Register a New Project"}
                 </h2>
-                <p className="text-sm text-muted-foreground">
+                <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
                   A full-screen, step-by-step submission for Project Leaders with summary, partnership, staffing, and budget details.
                 </p>
               </div>
             </div>
-            <div className="rounded-2xl border border-border/50 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
-              <p className="font-medium text-foreground">{form.getValues("department_unit")}</p>
-              <p>Duration: {getDurationLabel(inclusiveDates)}</p>
-              <p>
+              {onClose && (
+                <Button type="button" variant="ghost" size="icon" className="h-10 w-10 shrink-0 rounded-full" onClick={onClose}>
+                  <X className="h-5 w-5" />
+                </Button>
+              )}
+            </div>
+            <div className="w-full rounded-3xl border border-border/50 bg-muted/20 px-5 py-4 text-sm text-muted-foreground 2xl:max-w-[360px]">
+              <p className="text-base font-semibold leading-7 text-foreground">{form.getValues("department_unit")}</p>
+              <p className="mt-2">Duration: {getDurationLabel(inclusiveDates)}</p>
+              <p className="mt-1">
                 Budget Summary Total: PHP{" "}
                 {budgetGrandTotal.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
           </div>
-          <div className="mt-6">
+          <div className="mx-auto mt-6 w-full max-w-[1500px]">
             <StepIndicator currentStep={currentStep} totalSteps={4} labels={stepLabels} />
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto bg-[#f8faf8] px-6 py-6">
+        <div className="flex-1 overflow-y-auto bg-muted/20 px-4 py-5 sm:px-6 lg:px-10">
+          <div className="mx-auto w-full max-w-[1500px]">
           {currentStep === 1 && (
             <div className="space-y-6">
               <Card className="rounded-3xl border-border/60 shadow-none">
@@ -1054,7 +1065,7 @@ export function ProjectLeaderRegistrationForm({
                   <CardDescription className="text-sm">Capture the core project definition before moving into the partnership details.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="grid gap-5 xl:grid-cols-2">
+                  <div className="grid gap-5 lg:grid-cols-2">
                     <FormField control={form.control} name="project_title" render={({ field }) => (
                       <FormItem><FormLabel className="text-xs">Project Title</FormLabel><FormControl><Input {...field} disabled={isViewOnly} className="h-12 rounded-xl text-base" /></FormControl><FormMessage className="text-xs" /></FormItem>
                     )} />
@@ -1062,7 +1073,7 @@ export function ProjectLeaderRegistrationForm({
                       <FormItem><FormLabel className="text-xs">Budget</FormLabel><FormControl><Input {...field} type="number" min="0" disabled={isViewOnly} className="h-12 rounded-xl text-base" /></FormControl><FormMessage className="text-xs" /></FormItem>
                     )} />
                   </div>
-                  <div className="grid gap-5 xl:grid-cols-[minmax(0,1.3fr)_280px]">
+                  <div className="grid gap-5 2xl:grid-cols-[minmax(0,1.4fr)_320px]">
                     <FormField control={form.control} name="inclusive_dates" render={({ field }) => (
                       <FormItem><FormLabel className="text-xs">Inclusive Date</FormLabel><FormControl><MultiDatePicker value={field.value} onChange={field.onChange} disabled={isViewOnly} placeholder="Select inclusive dates" /></FormControl><FormMessage className="text-xs" /></FormItem>
                     )} />
@@ -1075,11 +1086,11 @@ export function ProjectLeaderRegistrationForm({
                       <p className="text-xs font-medium text-destructive">{form.formState.errors.extension_agenda.message}</p>
                     )}
                   </div>
-                  <div className="grid gap-6 xl:grid-cols-2">
+                  <div className="grid gap-6 2xl:grid-cols-2">
                     <div className="space-y-3"><div><Label className="text-xs">SDG Main</Label><p className="text-xs text-muted-foreground">Choose the primary SDGs linked to this project.</p></div><SdgGrid values={form.getValues("sdg_main")} onToggle={(value) => handleToggleValue("sdg_main", value)} disabled={isViewOnly} />{form.formState.errors.sdg_main?.message && <p className="text-xs font-medium text-destructive">{form.formState.errors.sdg_main.message}</p>}</div>
                     <div className="space-y-3"><div><Label className="text-xs">SDG Sub</Label><p className="text-xs text-muted-foreground">Choose the supporting SDGs linked to this project.</p></div><SdgGrid values={form.getValues("sdg_sub")} onToggle={(value) => handleToggleValue("sdg_sub", value)} disabled={isViewOnly} />{form.formState.errors.sdg_sub?.message && <p className="text-xs font-medium text-destructive">{form.formState.errors.sdg_sub.message}</p>}</div>
                   </div>
-                  <div className="grid gap-5 xl:grid-cols-2">
+                  <div className="grid gap-5 lg:grid-cols-2">
                     <FormField control={form.control} name="target_beneficiaries" render={({ field }) => (
                       <FormItem><FormLabel className="text-xs">Target Beneficiaries</FormLabel><FormControl><Input {...field} disabled={isViewOnly} placeholder="Example: 50 female" className="h-12 rounded-xl text-base" /></FormControl><FormMessage className="text-xs" /></FormItem>
                     )} />
@@ -1170,7 +1181,7 @@ export function ProjectLeaderRegistrationForm({
                               </Button>
                             )}
                           </div>
-                          <div className="grid gap-4 xl:grid-cols-2">
+                          <div className="grid gap-4 2xl:grid-cols-2">
                             <FormField control={form.control} name={`strategies.${index}.capacity_building`} render={({ field }) => (
                               <FormItem><FormLabel className="text-xs">Capacity Building</FormLabel><FormControl><Textarea {...field} disabled={isViewOnly} className="min-h-28 rounded-2xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
                             )} />
@@ -1187,7 +1198,7 @@ export function ProjectLeaderRegistrationForm({
 
                   <div className="space-y-4">
                     <div><h4 className="text-base font-semibold">Expected Outputs (6Ps / 3Is)</h4><p className="text-sm text-muted-foreground">Capture narrative details and counts for each expected output.</p></div>
-                    <div className="grid gap-4 xl:grid-cols-2">
+                    <div className="grid gap-4 2xl:grid-cols-2">
                       {[
                         ["publication_text", "publication_count", "Publication"],
                         ["patents_text", "patents_count", "Patents / IP"],
@@ -1226,7 +1237,7 @@ export function ProjectLeaderRegistrationForm({
                 <CardContent className="space-y-6">
                   <div className="rounded-2xl border border-border/50 bg-muted/10 p-4">
                     <div className="mb-4"><h4 className="text-base font-semibold">Project Leader</h4><p className="text-sm text-muted-foreground">This is the primary owner of the registration.</p></div>
-                    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
+                    <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_260px]">
                       <FormField control={form.control} name="project_leader_name" render={({ field }) => (
                         <FormItem><FormLabel className="text-xs">Project Leader</FormLabel><FormControl><Input {...field} disabled={isViewOnly} className="h-11 rounded-xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
                       )} />
@@ -1262,7 +1273,7 @@ export function ProjectLeaderRegistrationForm({
                             <p className="text-base font-semibold">Year {form.getValues(`budget_summary.${index}.year`)}</p>
                             <p className="text-sm font-medium text-[#159E44]">Total: PHP {getBudgetRowTotal(budgetSummary[index]).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                           </div>
-                          <div className="grid gap-4 xl:grid-cols-5">
+                          <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-5">
                             {[
                               ["food_and_beverage", "Food and Beverage"],
                               ["travel", "Travel"],
@@ -1284,7 +1295,7 @@ export function ProjectLeaderRegistrationForm({
                   <Card className="rounded-3xl border-border/60 shadow-none">
                     <CardHeader><CardTitle className="text-base">Needs Assessment Section</CardTitle><CardDescription className="text-sm">This can be completed now or updated later with supporting files.</CardDescription></CardHeader>
                     <CardContent className="space-y-5">
-                      <div className="grid gap-4 xl:grid-cols-2">
+                      <div className="grid gap-4 lg:grid-cols-2">
                         <FormField control={form.control} name="needs_assessment_title" render={({ field }) => (
                           <FormItem><FormLabel className="text-xs">Title of Needs Assessment</FormLabel><FormControl><Input {...field} disabled={isViewOnly} className="h-11 rounded-xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
                         )} />
@@ -1313,10 +1324,11 @@ export function ProjectLeaderRegistrationForm({
               </Card>
             </div>
           )}
+          </div>
         </div>
 
-        <div className="border-t border-border/50 bg-background px-6 py-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="border-t border-border/50 bg-background px-5 py-4 sm:px-7 lg:px-10">
+          <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-sm text-muted-foreground">Step {currentStep} of 4</div>
             <div className="flex flex-wrap justify-end gap-3">
               {currentStep > 1 && (

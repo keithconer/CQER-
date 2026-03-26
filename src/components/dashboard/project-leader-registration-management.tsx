@@ -348,19 +348,20 @@ export function ProjectLeaderRegistrationManagement({
       </Card>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="h-[96vh] w-[96vw] max-w-[96vw] overflow-hidden rounded-3xl p-0">
+        <DialogContent showCloseButton={false} className="fixed inset-0 left-0 top-0 h-screen w-screen max-w-none translate-x-0 translate-y-0 rounded-none border-0 p-0 shadow-none">
           <ProjectLeaderRegistrationForm
             currentUserId={currentUserId}
             currentUserName={currentUserName}
             currentDepartment={department}
             currentUnit={unit}
             onSuccess={handleSaved}
+            onClose={() => setCreateOpen(false)}
           />
         </DialogContent>
       </Dialog>
 
       <Dialog open={!!selectedProject} onOpenChange={(open) => !open && setSelectedProject(null)}>
-        <DialogContent className="h-[96vh] w-[96vw] max-w-[96vw] overflow-hidden rounded-3xl p-0">
+        <DialogContent showCloseButton={false} className="fixed inset-0 left-0 top-0 h-screen w-screen max-w-none translate-x-0 translate-y-0 rounded-none border-0 p-0 shadow-none">
           {selectedProject && (
             <ProjectLeaderRegistrationForm
               project={selectedProject}
@@ -369,6 +370,7 @@ export function ProjectLeaderRegistrationManagement({
               currentDepartment={department}
               currentUnit={unit}
               onSuccess={() => setSelectedProject(null)}
+              onClose={() => setSelectedProject(null)}
               isViewOnly
             />
           )}
@@ -376,7 +378,7 @@ export function ProjectLeaderRegistrationManagement({
       </Dialog>
 
       <Dialog open={!!editingProject} onOpenChange={(open) => !open && setEditingProject(null)}>
-        <DialogContent className="h-[96vh] w-[96vw] max-w-[96vw] overflow-hidden rounded-3xl p-0">
+        <DialogContent showCloseButton={false} className="fixed inset-0 left-0 top-0 h-screen w-screen max-w-none translate-x-0 translate-y-0 rounded-none border-0 p-0 shadow-none">
           {editingProject && (
             <ProjectLeaderRegistrationForm
               project={editingProject}
@@ -385,6 +387,7 @@ export function ProjectLeaderRegistrationManagement({
               currentDepartment={department}
               currentUnit={unit}
               onSuccess={handleSaved}
+              onClose={() => setEditingProject(null)}
             />
           )}
         </DialogContent>
