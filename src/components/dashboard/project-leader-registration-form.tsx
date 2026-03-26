@@ -66,7 +66,25 @@ const agendaOptions = [
   "M - Biodiversity and Environmental Conservation, Climate Action, and Inclusive Disaster Resilience, and Preparedness",
 ] as const;
 
-const sdgOptions = Array.from({ length: 17 }, (_, index) => String(index + 1));
+const sdgOptions = [
+  "1 - No Poverty",
+  "2 - Zero Hunger",
+  "3 - Good Health and Well-being",
+  "4 - Quality Education",
+  "5 - Gender Equality",
+  "6 - Clean Water and Sanitation",
+  "7 - Affordable and Clean Energy",
+  "8 - Decent Work and Economic Growth",
+  "9 - Industry, Innovation and Infrastructure",
+  "10 - Reduced Inequalities",
+  "11 - Sustainable Cities and Communities",
+  "12 - Responsible Consumption and Production",
+  "13 - Climate Action",
+  "14 - Life Below Water",
+  "15 - Life on Land",
+  "16 - Peace, Justice and Strong Institutions",
+  "17 - Partnerships for the Goals"
+] as const;
 const agencyCategoryOptions = ["government", "ngo", "private", "msme"] as const;
 const natureOptions = ["Internal", "External"] as const;
 const partnershipTypeOptions = ["MOA", "MOU", "LOA"] as const;
@@ -856,7 +874,7 @@ export function ProjectLeaderRegistrationForm({
 }: ProjectLeaderRegistrationFormProps) {
   const [currentStep, setCurrentStep] = React.useState(1);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const stepLabels = ["Overview", "Partner Agency", "Program Design", "Staffing & Budget"];
+  const stepLabels = ["Overview", "Partner Agency", "Program Design", "Staffing & Budget", "Review & Submit"];
   const defaultValues = React.useMemo(
     () => buildDefaultValues(project, currentUserName, currentDepartment, currentUnit),
     [project, currentUserName, currentDepartment, currentUnit]
@@ -873,6 +891,9 @@ export function ProjectLeaderRegistrationForm({
   const partnerAgenciesArray = useFieldArray({ control: typedControl, name: "partner_agencies" });
   const strategiesArray = useFieldArray({ control: typedControl, name: "strategies" });
   const budgetYearsArray = useFieldArray({ control: typedControl, name: "budget_summary" });
+  const extensionAgenda = useWatch({ control: typedControl, name: "extension_agenda" }) || [];
+  const sdgMain = useWatch({ control: typedControl, name: "sdg_main" }) || [];
+  const sdgSub = useWatch({ control: typedControl, name: "sdg_sub" }) || [];
 
   React.useEffect(() => {
     form.reset(defaultValues);
@@ -946,9 +967,10 @@ export function ProjectLeaderRegistrationForm({
         "environmental_impact_count",
       ],
       4: ["project_leader_name", "project_leader_employment", "budget_summary"],
+      5: [],
     };
     const valid = await form.trigger(fieldsByStep[currentStep]);
-    if (valid) setCurrentStep((prev) => Math.min(4, prev + 1));
+    if (valid) setCurrentStep((prev) => Math.min(5, prev + 1));
   };
 
   async function onSubmit(values: FormValues) {
@@ -1027,8 +1049,18 @@ export function ProjectLeaderRegistrationForm({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit as never)} className="flex h-full flex-col bg-background">
+      <form onSubmit={form.handleSubmit(onSubmit as never)} onKeyDown={(e) => { if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA") e.preventDefault(); }} className="flex h-full flex-col bg-background">
         <div className="border-b border-border/40 bg-background px-4 py-4 sm:px-6 lg:px-8">
+          <div className="flex w-full items-center justify-between">
+            <h1 className="text-xl font-bold text-foreground">
+              {project?.id ? (isViewOnly ? "Project Registration Details" : "Update Project Registration") : "Register a New Project"}
+            </h1>
+            {onClose && (
+              <Button type="button" variant="ghost" size="icon" className="h-10 w-10 shrink-0 rounded-full" onClick={onClose}>
+                <X className="h-5 w-5" />
+              </Button>
+            )}
+          </div>
           <div className="w-full space-y-5">
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-4">
@@ -1062,7 +1094,7 @@ export function ProjectLeaderRegistrationForm({
             </div>
           </div>
           <div className="mt-6 w-full">
-            <StepIndicator currentStep={currentStep} totalSteps={4} labels={stepLabels} />
+            <StepIndicator currentStep={currentStep} totalSteps={5} labels={stepLabels} />
           </div>
         </div>
 
@@ -1084,7 +1116,7 @@ export function ProjectLeaderRegistrationForm({
                       <FormItem className="min-w-0"><FormLabel className="text-xs">Project Title</FormLabel><FormControl><Input {...field} disabled={isViewOnly} className="h-9 rounded-xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
                     )} />
                     <FormField control={form.control} name="budget" render={({ field }) => (
-                      <FormItem className="min-w-0"><FormLabel className="text-xs">Budget</FormLabel><FormControl><Input {...field} type="number" min="0" disabled={isViewOnly} className="h-9 rounded-xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                      <FormItem className="min-w-0"><FormLabel className="text-xs">Budget</FormLabel><FormControl><Input value={field.value === 0 ? "" : (field.value ?? "")} onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))} onBlur={field.onBlur} name={field.name} ref={field.ref} type="number" min="0" disabled={isViewOnly} className="h-9 rounded-xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
                     )} />
                   </div>
                   <div className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_220px]">
@@ -1095,14 +1127,14 @@ export function ProjectLeaderRegistrationForm({
                   </div>
                   <div className="space-y-3">
                     <div><Label className="text-xs">University Extension Agenda</Label><p className="text-xs text-muted-foreground">Select one or more agenda areas for this registration.</p></div>
-                    <CheckboxGrid options={agendaOptions} values={form.getValues("extension_agenda")} onToggle={(value) => handleToggleValue("extension_agenda", value)} disabled={isViewOnly} />
+                    <CheckboxGrid options={agendaOptions} values={extensionAgenda} onToggle={(value) => handleToggleValue("extension_agenda", value)} disabled={isViewOnly} />
                     {form.formState.errors.extension_agenda?.message && (
                       <p className="text-xs font-medium text-destructive">{form.formState.errors.extension_agenda.message}</p>
                     )}
                   </div>
                   <div className="grid gap-6 2xl:grid-cols-2">
-                    <div className="min-w-0 space-y-3"><div><Label className="text-xs">SDG Main</Label><p className="text-xs text-muted-foreground">Choose the primary SDGs linked to this project.</p></div><SdgGrid values={form.getValues("sdg_main")} onToggle={(value) => handleToggleValue("sdg_main", value)} disabled={isViewOnly} />{form.formState.errors.sdg_main?.message && <p className="text-xs font-medium text-destructive">{form.formState.errors.sdg_main.message}</p>}</div>
-                    <div className="min-w-0 space-y-3"><div><Label className="text-xs">SDG Sub</Label><p className="text-xs text-muted-foreground">Choose the supporting SDGs linked to this project.</p></div><SdgGrid values={form.getValues("sdg_sub")} onToggle={(value) => handleToggleValue("sdg_sub", value)} disabled={isViewOnly} />{form.formState.errors.sdg_sub?.message && <p className="text-xs font-medium text-destructive">{form.formState.errors.sdg_sub.message}</p>}</div>
+                    <div className="min-w-0 space-y-3"><div><Label className="text-xs">SDG Main</Label><p className="text-xs text-muted-foreground">Choose the primary SDGs linked to this project.</p></div><SdgGrid values={sdgMain} onToggle={(value) => handleToggleValue("sdg_main", value)} disabled={isViewOnly} />{form.formState.errors.sdg_main?.message && <p className="text-xs font-medium text-destructive">{form.formState.errors.sdg_main.message}</p>}</div>
+                    <div className="min-w-0 space-y-3"><div><Label className="text-xs">SDG Sub</Label><p className="text-xs text-muted-foreground">Choose the supporting SDGs linked to this project.</p></div><SdgGrid values={sdgSub} onToggle={(value) => handleToggleValue("sdg_sub", value)} disabled={isViewOnly} />{form.formState.errors.sdg_sub?.message && <p className="text-xs font-medium text-destructive">{form.formState.errors.sdg_sub.message}</p>}</div>
                   </div>
                   <div className="grid gap-5 lg:grid-cols-2">
                     <FormField control={form.control} name="target_beneficiaries" render={({ field }) => (
@@ -1232,7 +1264,7 @@ export function ProjectLeaderRegistrationForm({
                               <FormItem><FormLabel className="text-xs">{label}</FormLabel><FormControl><Textarea value={String(field.value ?? "")} onChange={field.onChange} onBlur={field.onBlur} name={field.name} ref={field.ref} disabled={isViewOnly} className="min-h-20 rounded-2xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
                             )} />
                             <FormField control={form.control} name={countName as never} render={({ field }) => (
-                              <FormItem><FormLabel className="text-xs">{label} Count</FormLabel><FormControl><Input value={Number(field.value ?? 0)} onChange={field.onChange} onBlur={field.onBlur} name={field.name} ref={field.ref} type="number" min="0" disabled={isViewOnly} className="h-9 rounded-xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                              <FormItem><FormLabel className="text-xs">{label} Count</FormLabel><FormControl><Input value={field.value === 0 ? "" : (field.value ?? "")} onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))} onBlur={field.onBlur} name={field.name} ref={field.ref} type="number" min="0" disabled={isViewOnly} className="h-9 rounded-xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
                             )} />
                           </div>
                         </div>
@@ -1302,7 +1334,7 @@ export function ProjectLeaderRegistrationForm({
                               ["other_mooe", "Other MOOE"],
                             ].map(([name, label]) => (
                               <FormField key={name} control={form.control} name={`budget_summary.${index}.${name}` as never} render={({ field }) => (
-                                <FormItem><FormLabel className="text-xs">{label}</FormLabel><FormControl><Input value={Number(field.value ?? 0)} onChange={field.onChange} onBlur={field.onBlur} name={field.name} ref={field.ref} type="number" min="0" disabled={isViewOnly} className="h-9 rounded-xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                                <FormItem><FormLabel className="text-xs">{label}</FormLabel><FormControl><Input value={field.value === 0 ? "" : (field.value ?? "")} onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))} onBlur={field.onBlur} name={field.name} ref={field.ref} type="number" min="0" disabled={isViewOnly} className="h-9 rounded-xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
                               )} />
                             ))}
                           </div>
@@ -1344,12 +1376,36 @@ export function ProjectLeaderRegistrationForm({
               </Card>
             </div>
           )}
-          </div>
-        </div>
 
+          {currentStep === 5 && (
+            <div className="space-y-6">
+              <Card className="rounded-3xl border-border/40 shadow-none">
+                <CardHeader>
+                  <CardTitle className="text-center text-lg">Review & Submit</CardTitle>
+                  <CardDescription className="text-center text-xs">You have completed all sections. Please review your entries and click Save when you are ready.</CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col items-center py-10">
+                   <div className="rounded-full bg-primary/10 p-6 mb-4">
+                     <Save className="h-10 w-10 text-primary" />
+                   </div>
+                   <p className="max-w-md text-center text-sm text-muted-foreground mb-6">
+                     Clicking 'Save Project Registration' will formally record all details into the system. You can always update documents or budget specifics later depending on the approval stage.
+                   </p>
+                   {!isViewOnly && (
+                     <Button type="submit" size="lg" className="rounded-xl px-8" disabled={isSubmitting}>
+                       <Save className="mr-2 h-4 w-4" />
+                       {isSubmitting ? "Saving..." : "Save Project Registration"}
+                     </Button>
+                   )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </div>
+      </div>
         <div className="border-t border-border/50 bg-background px-5 py-4 sm:px-7 lg:px-10">
           <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="text-xs text-muted-foreground">Step {currentStep} of 4</div>
+            <div className="text-xs text-muted-foreground">Step {currentStep} of {stepLabels.length}</div>
             <div className="flex flex-wrap justify-end gap-3">
               {currentStep > 1 && (
                 <Button type="button" variant="outline" className="rounded-xl" onClick={() => setCurrentStep((prev) => Math.max(1, prev - 1))}>
@@ -1357,7 +1413,7 @@ export function ProjectLeaderRegistrationForm({
                   Previous
                 </Button>
               )}
-              {currentStep < 4 ? (
+              {currentStep < 5 ? (
                 <Button type="button" className="rounded-xl" onClick={goNext}>
                   Next
                   <ChevronRight className="ml-2 h-4 w-4" />
