@@ -58,6 +58,7 @@ import {
 } from "@/lib/actions/technical-advisory-services";
 import { getBackupSummary, type BackupDatasetSummary } from "@/lib/actions/backup";
 import { BackupManagement } from "@/components/dashboard/backup-management";
+import { ProjectLeaderRegistrationManagement } from "@/components/dashboard/project-leader-registration-management";
 
 
 function extractPartnerAgencyNames(projects: Project[]) {
@@ -223,45 +224,23 @@ export default async function DashboardPage({
   const panelParam = resolvedSearchParams.panel;
   const accountViewParam = resolvedSearchParams.account;
   const viewParam = resolvedSearchParams.view;
-  const activeProjectView =
-    viewParam === "project-proposal"
-      ? "project-proposal"
-      : viewParam === "needs-assessment"
-      ? "needs-assessment"
-      : viewParam === "consultancy-extension"
-      ? "consultancy-extension"
-      : "project-registration";
+  const activeProjectView: string =
+    "project-registration";
   const accountView = accountViewParam === "transfer" ? "transfer" : "register";
   const accountPanelSelected = panelParam === "account-management" || panelParam === "accounts";
-  const activePanel =
+  let activePanel =
     panelParam === "overview" ||
-    panelParam === "records" ||
-    panelParam === "unit-coordinators" ||
     panelParam === "account-management" ||
     panelParam === "accounts" ||
-    panelParam === "funding" ||
-    panelParam === "technical-advisory-services" ||
-    panelParam === "awards" ||
-    panelParam === "student-involvement" ||
-    panelParam === "faculty-involvement" ||
     panelParam === "community" ||
     panelParam === "backup" ||
-    panelParam === "technologies-innovation" ||
-    panelParam === "ordinance-resolutions" ||
-    panelParam === "trainings" ||
     panelParam === "projects"
       ? panelParam
       : "overview";
-  const hasEntitySelection =
-    activePanel === "records" &&
-    (activeProjectView === "project-registration" || activeProjectView === "project-proposal" || activeProjectView === "needs-assessment" || activeProjectView === "consultancy-extension");
-  const hasSuperAdminSelection =
-    panelParam === "projects" || panelParam === "records";
-  const superAdminPanel: "projects" | "trainings" =
-    panelParam === "projects" || panelParam === "trainings"
-      ? panelParam
-      : "projects";
-  const showOverview = activePanel === "overview";
+  let hasEntitySelection = activePanel === "projects";
+  let hasSuperAdminSelection = panelParam === "projects";
+  const superAdminPanel: string = "projects";
+  let showOverview = activePanel === "overview";
 
   const supabase = await createClient();
   const {
@@ -281,6 +260,21 @@ export default async function DashboardPage({
   if (!profile || !profile.first_name) {
     redirect("/register?step=2");
   }
+
+  const allowedPanelsByRole: Record<string, string[]> = {
+    super_admin: ["overview", "community", "backup", "account-management", "accounts"],
+    college_coordinator: ["overview", "community", "backup", "account-management", "accounts"],
+    unit_coordinator: ["overview", "community", "backup"],
+    project_leader: ["overview", "community", "backup", "projects"],
+    extension_office: ["overview", "community"],
+  };
+  const allowedPanels = allowedPanelsByRole[profile.user_type] || ["overview"];
+  if (!allowedPanels.includes(activePanel)) {
+    activePanel = "overview";
+  }
+  hasEntitySelection = activePanel === "projects";
+  hasSuperAdminSelection = activePanel === "projects" && profile.user_type === "super_admin";
+  showOverview = activePanel === "overview";
 
   let projects: Project[] = [];
   let unitProjects: Project[] = [];
@@ -804,19 +798,9 @@ export default async function DashboardPage({
   const firstName = profile.first_name || "User";
   const panelTitleMap: Record<string, string> = {
     overview: "Dashboard",
-    records: "Projects",
-    projects: "Projects",
+    projects: "Project Registration",
     community: "CQER Community",
     backup: "Create Backup",
-    funding: "Funding",
-    "technical-advisory-services": "Technical Advisory Services",
-    awards: "Awards",
-    "student-involvement": "Student Involvement",
-    "faculty-involvement": "Faculty Involvement",
-    "technologies-innovation": "Technologies",
-    "ordinance-resolutions": "Ordinance Resolutions",
-    trainings: "Trainings",
-    "unit-coordinators": "Unit Coordinators",
     "account-management": "Account Management",
     accounts: "Account Management",
   };
@@ -1332,38 +1316,13 @@ export default async function DashboardPage({
         activePanel === "backup" ? (
           <BackupManagement datasets={backupDatasets} />
         ) : hasEntitySelection ? (
-          activeProjectView === "needs-assessment" ? (
-            <NeedsAssessmentManagement
-              initialAssessments={needsAssessmentsList}
-              assignedProjects={projects}
-              readOnly={false}
-            />
-          ) : activeProjectView === "consultancy-extension" ? (
-            <ConsultancyExtensionManagement
-              initialExtensions={consultancyExtensionsList}
-              assignedProjects={projects}
-            />
-          ) : activeProjectView === "project-proposal" ? (
-            <ProjectProposalManagement
-              initialProjects={projects as ProjectProposal[]}
-              userType={userType}
-              department={profile.department}
-              unit={profile.unit}
-              unitOptions={[]}
-              currentUserId={user.id}
-              readOnly
-            />
-          ) : (
-            <ProjectManagement
-              initialProjects={projects}
-              userType={userType}
-              department={profile.department}
-              unit={profile.unit}
-              unitOptions={[]}
-              currentUserId={user.id}
-              readOnly
-            />
-          )
+          <ProjectLeaderRegistrationManagement
+            projects={projects}
+            currentUserId={user.id}
+            currentUserName={`${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "Project Leader"}
+            department={profile.department}
+            unit={profile.unit}
+          />
         ) : null
       )}
     </div>

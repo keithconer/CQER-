@@ -82,7 +82,7 @@ export async function createProject(formData: object) {
         .select("user_type, unit, department")
         .eq("id", user.id)
         .single();
-    if (!profile || !["unit_coordinator", "college_coordinator", "super_admin"].includes(profile.user_type)) {
+    if (!profile || !["unit_coordinator", "college_coordinator", "super_admin", "project_leader"].includes(profile.user_type)) {
         return { error: "Insufficient permissions to create projects." };
     }
 
@@ -141,6 +141,13 @@ export async function createProject(formData: object) {
             payload.related_curricular_offerings,
             allowedUnits
         );
+    } else if (profile?.user_type === "project_leader") {
+        payload.visibility_scope = "specific_units";
+        payload.visible_units = profile.unit ? [profile.unit] : [];
+        payload.visible_departments = profile.department ? [profile.department] : [];
+        payload.lead_units = profile.department ? [profile.department] : [];
+        payload.related_curricular_offerings = profile.unit ? [profile.unit] : [];
+        payload.project_leader_id = user.id;
     } else {
         payload.visibility_scope = "all_departments";
         payload.visible_units = [];
@@ -415,7 +422,7 @@ export async function getProjectLeaderProjects() {
     const { data, error } = await adminClient
         .from("projects")
         .select("*")
-        .eq("project_leader_id", user.id)
+        .or(`project_leader_id.eq.${user.id},created_by.eq.${user.id}`)
         .order("created_at", { ascending: false });
 
     if (error) {
@@ -470,7 +477,7 @@ export async function updateProject(id: string, formData: object) {
     if (!profile) {
         return { error: "Profile not found" };
     }
-    if (!["unit_coordinator", "college_coordinator", "super_admin"].includes(profile.user_type)) {
+    if (!["unit_coordinator", "college_coordinator", "super_admin", "project_leader"].includes(profile.user_type)) {
         return { error: "Insufficient permissions to update this record" };
     }
 
@@ -495,6 +502,10 @@ export async function updateProject(id: string, formData: object) {
         canManage = !!creatorProfile?.department && creatorProfile.department === profile.department;
     }
 
+    if (!canManage && profile.user_type === "project_leader") {
+        canManage = existingProject.created_by === user.id;
+    }
+
     if (!canManage) {
         return { error: "Insufficient permissions to update this record" };
     }
@@ -503,6 +514,13 @@ export async function updateProject(id: string, formData: object) {
     normalizePartnerAgencyCount(payload);
     if (!payload.entry_type) {
         payload.entry_type = "project";
+    } else if (profile?.user_type === "project_leader") {
+        payload.visibility_scope = "specific_units";
+        payload.visible_units = profile.unit ? [profile.unit] : [];
+        payload.visible_departments = profile.department ? [profile.department] : [];
+        payload.lead_units = profile.department ? [profile.department] : [];
+        payload.related_curricular_offerings = profile.unit ? [profile.unit] : [];
+        payload.project_leader_id = user.id;
     }
     if (!payload.title && typeof payload.project_title === "string" && payload.project_title.trim()) {
         payload.title = payload.project_title.trim();
@@ -615,7 +633,7 @@ export async function deleteProject(id: string) {
     if (!profile) {
         return { error: "Profile not found" };
     }
-    if (!["unit_coordinator", "college_coordinator", "super_admin"].includes(profile.user_type)) {
+    if (!["unit_coordinator", "college_coordinator", "super_admin", "project_leader"].includes(profile.user_type)) {
         return { error: "Insufficient permissions to delete this record" };
     }
 
@@ -638,6 +656,10 @@ export async function deleteProject(id: string) {
             .eq("id", existingProject.created_by)
             .single();
         canManage = !!creatorProfile?.department && creatorProfile.department === profile.department;
+    }
+
+    if (!canManage && profile.user_type === "project_leader") {
+        canManage = existingProject.created_by === user.id;
     }
 
     if (!canManage) {

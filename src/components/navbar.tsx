@@ -111,30 +111,16 @@ export function Navbar({ user }: NavbarProps) {
   const isDashboard = pathname?.startsWith("/dashboard");
   const viewParam = searchParams.get("view");
   const accountParam = searchParams.get("account");
-  const activeView =
-    viewParam === "project-registration" || viewParam === "project-proposal" || viewParam === "needs-assessment" || viewParam === "consultancy-extension"
-      ? viewParam
-      : "project-registration";
+  const activeView: string = viewParam === "project-registration" ? viewParam : "project-registration";
   const activeAccountView = accountParam === "transfer" ? "transfer" : "register";
   const panelParam = searchParams.get("panel");
-  const activePanel =
+  const activePanel: string =
     panelParam === "overview" ||
-    panelParam === "records" ||
-    panelParam === "unit-coordinators" ||
     panelParam === "account-management" ||
     panelParam === "accounts" ||
-    panelParam === "funding" ||
-    panelParam === "technical-advisory-services" ||
-    panelParam === "awards" ||
-    panelParam === "student-involvement" ||
-    panelParam === "faculty-involvement" ||
     panelParam === "community" ||
     panelParam === "backup" ||
-    panelParam === "technologies-innovation" ||
-    panelParam === "ordinance-resolutions" ||
-    panelParam === "trainings" ||
     panelParam === "projects"
-    || panelParam === "trainings"
       ? panelParam
       : "overview";
 
@@ -143,24 +129,10 @@ export function Navbar({ user }: NavbarProps) {
     router.prefetch("/dashboard?panel=overview");
     router.prefetch("/dashboard?panel=community");
     router.prefetch("/dashboard?panel=backup");
-    router.prefetch("/dashboard?panel=records&view=project-registration");
-    router.prefetch("/dashboard?panel=records&view=project-proposal");
-    router.prefetch("/dashboard?panel=records&view=needs-assessment");
-    router.prefetch("/dashboard?panel=records&view=consultancy-extension");
-    router.prefetch("/dashboard?panel=unit-coordinators");
     router.prefetch("/dashboard?panel=funding");
-    router.prefetch("/dashboard?panel=technical-advisory-services");
-    router.prefetch("/dashboard?panel=awards");
-    router.prefetch("/dashboard?panel=student-involvement");
-    router.prefetch("/dashboard?panel=faculty-involvement");
-    router.prefetch("/dashboard?panel=technologies-innovation");
-    router.prefetch("/dashboard?panel=ordinance-resolutions");
-    router.prefetch("/dashboard?panel=trainings");
     router.prefetch("/dashboard?panel=accounts");
     router.prefetch("/dashboard?panel=account-management&account=register");
-    router.prefetch("/dashboard?panel=account-management&account=transfer");
     router.prefetch("/dashboard?panel=projects&view=project-registration");
-    router.prefetch("/dashboard?panel=projects&view=project-proposal");
     router.prefetch("/settings");
   }, [router]);
 
@@ -225,11 +197,7 @@ export function Navbar({ user }: NavbarProps) {
   const navItemClass = (active: boolean) =>
     `dashboard-nav-item h-6 w-full justify-start text-[9px] border ${active ? "border-border/40 bg-muted/30" : "border-transparent"}`;
   const isAccountPanel = activePanel === "account-management" || activePanel === "accounts";
-  const canAccessBackup =
-    user.userType === "super_admin" ||
-    user.userType === "college_coordinator" ||
-    user.userType === "unit_coordinator" ||
-    user.userType === "project_leader";
+  const canAccessBackup = ["super_admin", "college_coordinator", "unit_coordinator", "project_leader"].includes(user.userType);
   const collapsedButtonClass = "h-9 w-9 p-0 rounded-xl";
   const collapsedIconClass = "h-4 w-4";
   const commonPanelItems: {
@@ -288,134 +256,13 @@ export function Navbar({ user }: NavbarProps) {
         roles: ["super_admin", "college_coordinator"],
       },
       {
-        id: "account-transfer",
-        label: user.userType === "super_admin" ? "Transfer College Coordinator Role" : "Transfer Unit Coordinator Role",
-        href: "/dashboard?panel=account-management&account=transfer",
-        keywords: ["transfer", "account handover", "role transfer"],
-        description: "Transfer coordinator responsibilities to another account.",
-        icon: ArrowRightLeft,
-        roles: ["super_admin", "college_coordinator"],
-      },
-      {
-        id: "records",
-        label: "Records",
-        href: "/dashboard?panel=records&view=project-registration",
-        keywords: ["records", "project registration", "proposal records"],
-        description: "Open the records section.",
-        icon: FolderPlus,
-        roles: ["college_coordinator", "unit_coordinator", "extension_office", "project_leader"],
-      },
-      {
-        id: "projects",
-        label: "Projects",
-        href: user.userType === "super_admin"
-          ? "/dashboard?panel=projects&view=project-registration"
-          : "/dashboard?panel=records&view=project-registration",
-        keywords: ["project registration", "projects folder", "project page"],
-        description: "Open the projects page.",
-        icon: FolderKanban,
-        roles: ["super_admin", "college_coordinator", "unit_coordinator", "extension_office", "project_leader"],
-      },
-      {
-        id: "project-proposals",
-        label: "Project Proposals",
-        href: user.userType === "super_admin"
-          ? "/dashboard?panel=projects&view=project-proposal"
-          : "/dashboard?panel=records&view=project-proposal",
-        keywords: ["proposal", "project proposal", "proposals"],
-        description: "Open the project proposal page.",
-        icon: FolderKanban,
-        roles: ["super_admin", "college_coordinator", "unit_coordinator", "extension_office", "project_leader"],
-      },
-      {
-        id: "consultancy-extension",
-        label: "Consultancy Extension",
-        href: "/dashboard?panel=records&view=consultancy-extension",
-        keywords: ["consultancy", "extension", "consultation"],
-        description: "Open the consultancy extension page.",
+        id: "project-registration",
+        label: "Project Registration",
+        href: "/dashboard?panel=projects&view=project-registration",
+        keywords: ["project registration", "project leader", "projects folder", "project page"],
+        description: "Open the project registration page.",
         icon: FolderKanban,
         roles: ["project_leader"],
-      },
-      {
-        id: "trainings",
-        label: "Trainings",
-        href: "/dashboard?panel=trainings",
-        keywords: ["training", "seminar", "workshop"],
-        description: "Open trainings management.",
-        icon: BookOpenCheck,
-        roles: ["super_admin", "college_coordinator", "unit_coordinator", "extension_office"],
-      },
-      {
-        id: "funding",
-        label: "Funding",
-        href: "/dashboard?panel=funding",
-        keywords: ["budget", "finance", "funding"],
-        description: "Open funding records and analysis.",
-        icon: Database,
-        roles: ["super_admin", "college_coordinator", "unit_coordinator", "extension_office"],
-      },
-      {
-        id: "technical-advisory-services",
-        label: "Technical Advisory Services",
-        href: "/dashboard?panel=technical-advisory-services",
-        keywords: ["technical advisory", "advisory services", "technical services"],
-        description: "Open technical advisory services management.",
-        icon: Briefcase,
-        roles: ["super_admin", "college_coordinator", "unit_coordinator"],
-      },
-      {
-        id: "awards",
-        label: "Awards",
-        href: "/dashboard?panel=awards",
-        keywords: ["recognition", "awards"],
-        description: "Open awards management.",
-        icon: Award,
-        roles: ["super_admin", "college_coordinator", "unit_coordinator", "extension_office"],
-      },
-      {
-        id: "student-involvement",
-        label: "Student Involvement",
-        href: "/dashboard?panel=student-involvement",
-        keywords: ["students", "student activities"],
-        description: "Open student involvement records.",
-        icon: UserRoundCheck,
-        roles: ["super_admin", "college_coordinator", "unit_coordinator", "extension_office"],
-      },
-      {
-        id: "faculty-involvement",
-        label: "Faculty Involvement",
-        href: "/dashboard?panel=faculty-involvement",
-        keywords: ["faculty", "pool of experts", "faculty records"],
-        description: "Open faculty involvement records.",
-        icon: GraduationCap,
-        roles: ["super_admin", "college_coordinator", "unit_coordinator", "extension_office"],
-      },
-      {
-        id: "technologies",
-        label: "Technologies",
-        href: "/dashboard?panel=technologies-innovation",
-        keywords: ["technology", "innovation", "technologies"],
-        description: "Open technologies and innovations.",
-        icon: Cpu,
-        roles: ["super_admin", "college_coordinator", "unit_coordinator", "extension_office"],
-      },
-      {
-        id: "ordinance",
-        label: "Ordinance",
-        href: "/dashboard?panel=ordinance-resolutions",
-        keywords: ["ordinance", "resolution", "ordinances"],
-        description: "Open ordinance and resolution records.",
-        icon: ScrollText,
-        roles: ["super_admin", "college_coordinator", "unit_coordinator", "extension_office"],
-      },
-      {
-        id: "settings",
-        label: "Settings",
-        href: "/settings",
-        keywords: ["password", "preferences", "change password"],
-        description: "Open account settings.",
-        icon: Settings,
-        roles: ["super_admin", "college_coordinator", "unit_coordinator", "extension_office", "project_leader"],
       },
       {
         id: "backup",
@@ -628,6 +475,68 @@ export function Navbar({ user }: NavbarProps) {
 
           <TooltipProvider delayDuration={150}>
             <ScrollArea className="h-[calc(100vh-48px)]">
+              <div className={cn("space-y-1 py-3", sidebarOpen ? "px-2" : "px-0")}>
+                {[
+                  {
+                    label: "Dashboard",
+                    panel: "overview",
+                    href: "/dashboard?panel=overview",
+                    icon: LayoutDashboard,
+                    roles: ["super_admin", "college_coordinator", "unit_coordinator", "project_leader"],
+                  },
+                  {
+                    label: "CQER Community",
+                    panel: "community",
+                    href: "/dashboard?panel=community",
+                    icon: Users2,
+                    roles: ["super_admin", "college_coordinator", "unit_coordinator", "project_leader"],
+                  },
+                  {
+                    label: "Project Registration",
+                    panel: "projects",
+                    href: "/dashboard?panel=projects&view=project-registration",
+                    icon: FolderKanban,
+                    roles: ["project_leader"],
+                  },
+                  {
+                    label: "Create Backup",
+                    panel: "backup",
+                    href: "/dashboard?panel=backup",
+                    icon: Download,
+                    roles: ["super_admin", "college_coordinator", "unit_coordinator", "project_leader"],
+                  },
+                  {
+                    label: "Account Management",
+                    panel: "account-management",
+                    href: "/dashboard?panel=account-management&account=register",
+                    icon: UserCog,
+                    roles: ["super_admin", "college_coordinator"],
+                  },
+                ]
+                  .filter((item) => item.roles.includes(user.userType))
+                  .map((item) => (
+                    <div key={item.label} className="flex justify-center w-full">
+                      {withTooltip(
+                        item.label,
+                        <Button
+                          variant="ghost"
+                          className={cn(
+                            "transition-all duration-200",
+                            sidebarOpen ? "h-8 w-full justify-start px-3" : collapsedButtonClass,
+                            activePanel === item.panel
+                              ? "border border-border/40 bg-muted/30 text-foreground"
+                              : "border border-transparent text-foreground"
+                          )}
+                          onClick={() => goTo(item.href)}
+                        >
+                          <item.icon className={cn("shrink-0", sidebarOpen ? "mr-2 h-3.5 w-3.5" : collapsedIconClass)} />
+                          {sidebarOpen && <span className="text-[9px] font-medium">{item.label}</span>}
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+              </div>
+              {false && (
               <div className={cn("space-y-1 py-3", sidebarOpen ? "px-2" : "px-0")}>
               <div className="flex justify-center w-full">
                 {withTooltip(
@@ -1120,6 +1029,7 @@ export function Navbar({ user }: NavbarProps) {
                 </>
               )}
               </div>
+              )}
             </ScrollArea>
           </TooltipProvider>
         </aside>

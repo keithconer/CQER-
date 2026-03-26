@@ -1,0 +1,1345 @@
+"use client";
+
+import * as React from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useFieldArray, useForm, useWatch, type Control } from "react-hook-form";
+import * as z from "zod";
+import { differenceInCalendarDays, format } from "date-fns";
+import {
+  CalendarIcon,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Save,
+  Trash2,
+} from "lucide-react";
+
+import { StepIndicator } from "@/components/step-indicator";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { FileUpload } from "@/components/dashboard/file-upload";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { createProject, updateProject } from "@/lib/actions/projects";
+import { type Project } from "@/components/dashboard/projects-table";
+
+const agendaOptions = [
+  "A - Agri-Fisheries and Food Security",
+  "B - Biodiversity and Environmental Conservation",
+  "C - Smart Engineering, ICT and Industrial Competitiveness",
+  "D - Public Health and Welfare",
+  "E - Societal Development and Equality",
+  "F - Sustainable Agri-Fisheries and Nutritional Security",
+  "G - Digital Multimedia and Cultural and Artistic Innovations",
+  "H - Societal Advancement and Economic Mobility",
+  "I - One Health and One Welfare",
+  "J - E-commerce, Industrial and Market Competitiveness",
+  "K - Effective Governance, Gender Equity, and Justice",
+  "L - Next-Generation Engineering, ICT Solutions, and Artificial Intelligence",
+  "M - Biodiversity and Environmental Conservation, Climate Action, and Inclusive Disaster Resilience, and Preparedness",
+] as const;
+
+const sdgOptions = Array.from({ length: 17 }, (_, index) => String(index + 1));
+const agencyCategoryOptions = ["government", "ngo", "private", "msme"] as const;
+const natureOptions = ["Internal", "External"] as const;
+const partnershipTypeOptions = ["MOA", "MOU", "LOA"] as const;
+const employmentOptions = ["Permanent", "COS"] as const;
+
+const textValue = z.string().trim().min(1, "This field is required.");
+const optionalTextValue = z.string().trim().optional().or(z.literal(""));
+const nonNegativeNumber = z.coerce.number().min(0, "Value must be 0 or greater.");
+
+const signatorySchema = z.object({
+  name: textValue,
+});
+
+const staffMemberSchema = z.object({
+  name: textValue,
+  employment: z.enum(employmentOptions),
+});
+
+const strategySchema = z
+  .object({
+    capacity_building: optionalTextValue,
+    technical_assistance: optionalTextValue,
+  })
+  .refine(
+    (value) =>
+      (value.capacity_building || "").trim().length > 0 ||
+      (value.technical_assistance || "").trim().length > 0,
+    { message: "Provide at least one strategy detail.", path: ["capacity_building"] }
+  );
+
+const budgetYearSchema = z.object({
+  year: z.number(),
+  food_and_beverage: nonNegativeNumber,
+  travel: nonNegativeNumber,
+  suppliers_and_materials: nonNegativeNumber,
+  communication: nonNegativeNumber,
+  other_mooe: nonNegativeNumber,
+});
+
+const partnerAgencySchema = z
+  .object({
+    name: textValue,
+    location: textValue,
+    category: z.enum(agencyCategoryOptions),
+    head_designation: textValue,
+    contact_details: textValue,
+    nature_of_partnership: z.enum(natureOptions),
+    funding_agency_name: optionalTextValue,
+    level_of_partnership: textValue,
+    type_of_partnership: z.enum(partnershipTypeOptions),
+    bor_approval_date: z.date().nullable(),
+    date_notarized: z.date().nullable(),
+    signatories: z.array(signatorySchema).min(1, "Add at least one signatory."),
+  })
+  .superRefine((value, ctx) => {
+    if (value.nature_of_partnership === "External" && !(value.funding_agency_name || "").trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["funding_agency_name"],
+        message: "Funding agency name is required for external partnerships.",
+      });
+    }
+  });
+
+const formSchema = z.object({
+  project_title: textValue,
+  budget: nonNegativeNumber,
+  inclusive_dates: z.array(z.date()).min(1, "Select at least one date."),
+  extension_agenda: z.array(z.string()).min(1, "Select at least one agenda."),
+  sdg_main: z.array(z.string()).min(1, "Select at least one SDG."),
+  sdg_sub: z.array(z.string()).min(1, "Select at least one SDG."),
+  target_beneficiaries: textValue,
+  department_unit: textValue,
+  partner_agencies: z.array(partnerAgencySchema).min(1, "Add at least one partner agency."),
+  rationale: textValue,
+  objectives: textValue,
+  strategies: z.array(strategySchema).min(1, "Add at least one strategy."),
+  publication_text: optionalTextValue,
+  publication_count: nonNegativeNumber,
+  patents_text: optionalTextValue,
+  patents_count: nonNegativeNumber,
+  people_services_text: optionalTextValue,
+  people_services_count: nonNegativeNumber,
+  places_partnerships_text: optionalTextValue,
+  places_partnerships_count: nonNegativeNumber,
+  policy_text: optionalTextValue,
+  policy_count: nonNegativeNumber,
+  social_impact_text: optionalTextValue,
+  social_impact_count: nonNegativeNumber,
+  economic_impact_text: optionalTextValue,
+  economic_impact_count: nonNegativeNumber,
+  environmental_impact_text: optionalTextValue,
+  environmental_impact_count: nonNegativeNumber,
+  project_leader_name: textValue,
+  project_leader_employment: z.enum(employmentOptions),
+  co_project_leaders: z.array(staffMemberSchema),
+  project_coordinators: z.array(staffMemberSchema),
+  project_facilitators: z.array(staffMemberSchema),
+  project_assistants: z.array(staffMemberSchema),
+  budget_summary: z
+    .array(budgetYearSchema)
+    .min(1, "Budget years will be generated from the inclusive dates."),
+  needs_assessment_title: optionalTextValue,
+  needs_assessment_dates: z.array(z.date()),
+  needs_assessment_place: optionalTextValue,
+  needs_assessment_results_used: optionalTextValue,
+  documents: z
+    .array(
+      z.object({
+        url: z.string(),
+        name: z.string(),
+      })
+    )
+    .default([]),
+});
+
+type FormValues = z.infer<typeof formSchema>;
+
+interface ProjectLeaderRegistrationFormProps {
+  project?: Project | null;
+  currentUserId: string;
+  currentUserName: string;
+  currentDepartment?: string | null;
+  currentUnit?: string | null;
+  onSuccess?: () => void;
+  isViewOnly?: boolean;
+}
+
+function sortDates(values: Date[]) {
+  return [...values].sort((left, right) => left.getTime() - right.getTime());
+}
+
+function formatDateRange(values: Date[]) {
+  const sorted = sortDates(values);
+  if (sorted.length === 0) return "No dates selected";
+  const start = sorted[0];
+  const end = sorted[sorted.length - 1];
+  return start.getTime() === end.getTime()
+    ? format(start, "MMM d, yyyy")
+    : `${format(start, "MMM d, yyyy")} to ${format(end, "MMM d, yyyy")}`;
+}
+
+function getDurationLabel(values: Date[]) {
+  const sorted = sortDates(values);
+  if (sorted.length === 0) return "0 days";
+  const start = sorted[0];
+  const end = sorted[sorted.length - 1];
+  const days = differenceInCalendarDays(end, start) + 1;
+  return `${days} day${days === 1 ? "" : "s"}`;
+}
+
+function getBudgetRowTotal(row?: FormValues["budget_summary"][number]) {
+  if (!row) return 0;
+  return (
+    Number(row.food_and_beverage || 0) +
+    Number(row.travel || 0) +
+    Number(row.suppliers_and_materials || 0) +
+    Number(row.communication || 0) +
+    Number(row.other_mooe || 0)
+  );
+}
+
+function getUniqueYears(values: Date[]) {
+  return Array.from(new Set(sortDates(values).map((item) => item.getFullYear()))).sort(
+    (a, b) => a - b
+  );
+}
+
+function toDateArray(value: unknown): Date[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => {
+      if (item instanceof Date) return item;
+      if (typeof item === "string") return new Date(item);
+      return null;
+    })
+    .filter((item): item is Date => item instanceof Date && !Number.isNaN(item.getTime()));
+}
+
+function getRegistrationData(project?: Project | null) {
+  if (!project?.funding_data || typeof project.funding_data !== "object") return null;
+  const maybeRegistration = (project.funding_data as Record<string, unknown>).registration_data;
+  return maybeRegistration && typeof maybeRegistration === "object"
+    ? (maybeRegistration as Record<string, unknown>)
+    : null;
+}
+
+function getDepartmentUnitLabel(department?: string | null, unit?: string | null) {
+  if (department && unit) return `${department} / ${unit}`;
+  return department || unit || "Unassigned";
+}
+
+function buildDefaultValues(
+  project: Project | null | undefined,
+  currentUserName: string,
+  department?: string | null,
+  unit?: string | null
+): FormValues {
+  const registration = getRegistrationData(project);
+  const budgetSummaryRaw = Array.isArray(registration?.budget_summary) ? registration?.budget_summary : [];
+  const partnerAgenciesRaw = Array.isArray(registration?.partner_agencies) ? registration?.partner_agencies : [];
+  const strategiesRaw = Array.isArray(registration?.strategies) ? registration?.strategies : [];
+  const coLeadersRaw = Array.isArray(registration?.co_project_leaders) ? registration?.co_project_leaders : [];
+  const coordinatorsRaw = Array.isArray(registration?.project_coordinators) ? registration?.project_coordinators : [];
+  const facilitatorsRaw = Array.isArray(registration?.project_facilitators) ? registration?.project_facilitators : [];
+  const assistantsRaw = Array.isArray(registration?.project_assistants) ? registration?.project_assistants : [];
+  const inclusiveDates = toDateArray(registration?.inclusive_dates)
+    .concat(project?.start_date ? [new Date(project.start_date)] : [])
+    .concat(project?.end_date ? [new Date(project.end_date)] : []);
+  const uniqueInclusiveDates = Array.from(
+    new Map(sortDates(inclusiveDates).map((item) => [item.toISOString(), item])).values()
+  );
+  const uniqueYears = getUniqueYears(uniqueInclusiveDates.length > 0 ? uniqueInclusiveDates : [new Date()]);
+
+  return {
+    project_title: String(registration?.project_title || project?.title || ""),
+    budget: Number(registration?.budget || project?.budget_total || 0),
+    inclusive_dates: uniqueInclusiveDates,
+    extension_agenda: Array.isArray(registration?.extension_agenda)
+      ? registration.extension_agenda.map((item) => String(item))
+      : Array.isArray(project?.classification)
+        ? project.classification
+        : [],
+    sdg_main: Array.isArray(registration?.sdg_main) ? registration.sdg_main.map((item) => String(item)) : [],
+    sdg_sub: Array.isArray(registration?.sdg_sub) ? registration.sdg_sub.map((item) => String(item)) : [],
+    target_beneficiaries: String(
+      registration?.target_beneficiaries ||
+        (Array.isArray(project?.target_beneficiaries) ? project.target_beneficiaries.join(", ") : "")
+    ),
+    department_unit: String(registration?.department_unit || getDepartmentUnitLabel(department, unit)),
+    partner_agencies:
+      partnerAgenciesRaw.length > 0
+        ? partnerAgenciesRaw.map((item) => {
+            const record = item as Record<string, unknown>;
+            return {
+              name: String(record.name || ""),
+              location: String(record.location || ""),
+              category: String(record.category || "government") as (typeof agencyCategoryOptions)[number],
+              head_designation: String(record.head_designation || ""),
+              contact_details: String(record.contact_details || ""),
+              nature_of_partnership: String(record.nature_of_partnership || "Internal") as (typeof natureOptions)[number],
+              funding_agency_name: String(record.funding_agency_name || ""),
+              level_of_partnership: String(record.level_of_partnership || ""),
+              type_of_partnership: String(record.type_of_partnership || "MOA") as (typeof partnershipTypeOptions)[number],
+              bor_approval_date: typeof record.bor_approval_date === "string" ? new Date(record.bor_approval_date) : null,
+              date_notarized: typeof record.date_notarized === "string" ? new Date(record.date_notarized) : null,
+              signatories:
+                Array.isArray(record.signatories) && record.signatories.length > 0
+                  ? record.signatories.map((entry) => ({ name: String((entry as Record<string, unknown>).name || "") }))
+                  : [{ name: "" }],
+            };
+          })
+        : [
+            {
+              name: "",
+              location: "",
+              category: "government",
+              head_designation: "",
+              contact_details: "",
+              nature_of_partnership: "Internal",
+              funding_agency_name: "",
+              level_of_partnership: "",
+              type_of_partnership: "MOA",
+              bor_approval_date: null,
+              date_notarized: null,
+              signatories: [{ name: "" }],
+            },
+          ],
+    rationale: String(registration?.rationale || ""),
+    objectives: String(registration?.objectives || ""),
+    strategies:
+      strategiesRaw.length > 0
+        ? strategiesRaw.map((item) => {
+            const record = item as Record<string, unknown>;
+            return {
+              capacity_building: String(record.capacity_building || ""),
+              technical_assistance: String(record.technical_assistance || ""),
+            };
+          })
+        : [{ capacity_building: "", technical_assistance: "" }],
+    publication_text: String(registration?.publication_text || ""),
+    publication_count: Number(registration?.publication_count || 0),
+    patents_text: String(registration?.patents_text || ""),
+    patents_count: Number(registration?.patents_count || 0),
+    people_services_text: String(registration?.people_services_text || ""),
+    people_services_count: Number(registration?.people_services_count || 0),
+    places_partnerships_text: String(registration?.places_partnerships_text || ""),
+    places_partnerships_count: Number(registration?.places_partnerships_count || 0),
+    policy_text: String(registration?.policy_text || ""),
+    policy_count: Number(registration?.policy_count || 0),
+    social_impact_text: String(registration?.social_impact_text || ""),
+    social_impact_count: Number(registration?.social_impact_count || 0),
+    economic_impact_text: String(registration?.economic_impact_text || ""),
+    economic_impact_count: Number(registration?.economic_impact_count || 0),
+    environmental_impact_text: String(registration?.environmental_impact_text || ""),
+    environmental_impact_count: Number(registration?.environmental_impact_count || 0),
+    project_leader_name: String(
+      registration?.project_leader_name || project?.proponents?.[0]?.name || currentUserName
+    ),
+    project_leader_employment: String(registration?.project_leader_employment || "Permanent") as (typeof employmentOptions)[number],
+    co_project_leaders: coLeadersRaw.map((item) => {
+      const record = item as Record<string, unknown>;
+      return {
+        name: String(record.name || ""),
+        employment: String(record.employment || "Permanent") as (typeof employmentOptions)[number],
+      };
+    }),
+    project_coordinators: coordinatorsRaw.map((item) => {
+      const record = item as Record<string, unknown>;
+      return {
+        name: String(record.name || ""),
+        employment: String(record.employment || "Permanent") as (typeof employmentOptions)[number],
+      };
+    }),
+    project_facilitators: facilitatorsRaw.map((item) => {
+      const record = item as Record<string, unknown>;
+      return {
+        name: String(record.name || ""),
+        employment: String(record.employment || "Permanent") as (typeof employmentOptions)[number],
+      };
+    }),
+    project_assistants:
+      assistantsRaw.length > 0
+        ? assistantsRaw.map((item) => {
+            const record = item as Record<string, unknown>;
+            return {
+              name: String(record.name || ""),
+              employment: String(record.employment || "Permanent") as (typeof employmentOptions)[number],
+            };
+          })
+        : (((project as Project & { project_assistants?: { name: string }[] })?.project_assistants) || []).map((item) => ({
+            name: String(item.name || ""),
+            employment: "Permanent" as const,
+          })),
+    budget_summary:
+      budgetSummaryRaw.length > 0
+        ? budgetSummaryRaw.map((item) => {
+            const record = item as Record<string, unknown>;
+            return {
+              year: Number(record.year || new Date().getFullYear()),
+              food_and_beverage: Number(record.food_and_beverage || 0),
+              travel: Number(record.travel || 0),
+              suppliers_and_materials: Number(record.suppliers_and_materials || 0),
+              communication: Number(record.communication || 0),
+              other_mooe: Number(record.other_mooe || 0),
+            };
+          })
+        : uniqueYears.map((year) => ({
+            year,
+            food_and_beverage: 0,
+            travel: 0,
+            suppliers_and_materials: 0,
+            communication: 0,
+            other_mooe: 0,
+          })),
+    needs_assessment_title: String(registration?.needs_assessment_title || ""),
+    needs_assessment_dates: toDateArray(registration?.needs_assessment_dates),
+    needs_assessment_place: String(registration?.needs_assessment_place || ""),
+    needs_assessment_results_used: String(registration?.needs_assessment_results_used || ""),
+    documents: Array.isArray(project?.documents) ? project.documents : [],
+  };
+}
+
+function MultiDatePicker({
+  value,
+  onChange,
+  disabled,
+  placeholder,
+}: {
+  value: Date[];
+  onChange: (value: Date[]) => void;
+  disabled?: boolean;
+  placeholder?: string;
+}) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          className={cn(
+            "h-11 w-full justify-start rounded-xl border-border/60 bg-background px-3 text-left text-sm font-normal",
+            value.length === 0 && "text-muted-foreground"
+          )}
+          disabled={disabled}
+        >
+          <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+          <span className="truncate">{value.length > 0 ? formatDateRange(value) : placeholder || "Select dates"}</span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar
+          mode="multiple"
+          selected={value}
+          onSelect={(dates) => onChange(sortDates(dates || []))}
+          className="rounded-md border-0"
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function CheckboxGrid({
+  options,
+  values,
+  onToggle,
+  disabled,
+}: {
+  options: readonly string[];
+  values: string[];
+  onToggle: (value: string) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      {options.map((option) => {
+        const checked = values.includes(option);
+        return (
+          <label
+            key={option}
+            className={cn(
+              "flex min-h-14 items-start gap-3 rounded-2xl border border-border/50 bg-background px-4 py-3 text-sm",
+              checked && "border-[#159E44]/60 bg-[#159E44]/5"
+            )}
+          >
+            <Checkbox checked={checked} onCheckedChange={() => onToggle(option)} disabled={disabled} className="mt-0.5" />
+            <span className="leading-5">{option}</span>
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+
+function SdgGrid({
+  values,
+  onToggle,
+  disabled,
+}: {
+  values: string[];
+  onToggle: (value: string) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="grid grid-cols-4 gap-3 sm:grid-cols-6 lg:grid-cols-9">
+      {sdgOptions.map((option) => {
+        const checked = values.includes(option);
+        return (
+          <label
+            key={option}
+            className={cn(
+              "flex items-center justify-center gap-2 rounded-xl border border-border/50 px-3 py-3 text-sm font-medium",
+              checked && "border-[#159E44]/60 bg-[#159E44]/5 text-[#0f6a2d]"
+            )}
+          >
+            <Checkbox checked={checked} onCheckedChange={() => onToggle(option)} disabled={disabled} />
+            <span>{option}</span>
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+
+function StaffListFields({
+  control,
+  name,
+  label,
+  disabled,
+}: {
+  control: Control<FormValues>;
+  name: "co_project_leaders" | "project_coordinators" | "project_facilitators" | "project_assistants";
+  label: string;
+  disabled?: boolean;
+}) {
+  const { fields, append, remove } = useFieldArray({ control, name });
+
+  return (
+    <div className="space-y-3 rounded-2xl border border-border/50 bg-muted/10 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <Label className="text-sm font-semibold">{label}</Label>
+          <p className="text-xs text-muted-foreground">Add one or more team members for this role.</p>
+        </div>
+        {!disabled && (
+          <Button type="button" variant="outline" className="rounded-xl" onClick={() => append({ name: "", employment: "Permanent" })}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add
+          </Button>
+        )}
+      </div>
+
+      {fields.length === 0 ? (
+        <p className="rounded-xl border border-dashed border-border/60 px-4 py-5 text-sm text-muted-foreground">
+          No entries added yet.
+        </p>
+      ) : (
+        <div className="space-y-3">
+          {fields.map((field, index) => (
+            <div key={field.id} className="grid gap-3 rounded-xl border border-border/50 bg-background p-4 lg:grid-cols-[minmax(0,1fr)_220px_44px]">
+              <FormField
+                control={control}
+                name={`${name}.${index}.name`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs">Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} disabled={disabled} className="h-11 rounded-xl text-sm" />
+                    </FormControl>
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={control}
+                name={`${name}.${index}.employment`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs">Appointment</FormLabel>
+                    <FormControl>
+                      <RadioGroup value={field.value} onValueChange={field.onChange} disabled={disabled} className="grid grid-cols-2 gap-2 pt-2">
+                        {employmentOptions.map((option) => (
+                          <label
+                            key={option}
+                            className={cn(
+                              "flex items-center justify-center rounded-xl border border-border/50 px-3 py-3 text-sm",
+                              field.value === option && "border-[#159E44]/60 bg-[#159E44]/5"
+                            )}
+                          >
+                            <RadioGroupItem value={option} className="sr-only" />
+                            {option}
+                          </label>
+                        ))}
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
+              <div className="flex items-end">
+                {!disabled && (
+                  <Button type="button" variant="outline" size="icon" className="h-11 w-11 rounded-xl text-destructive" onClick={() => remove(index)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PartnerAgencyFields({
+  control,
+  index,
+  disabled,
+  onRemove,
+}: {
+  control: Control<FormValues>;
+  index: number;
+  disabled?: boolean;
+  onRemove: () => void;
+}) {
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: `partner_agencies.${index}.signatories` as never,
+  });
+  const nature = useWatch({
+    control,
+    name: `partner_agencies.${index}.nature_of_partnership` as never,
+  }) as unknown as (typeof natureOptions)[number];
+
+  return (
+    <Card className="rounded-3xl border-border/60 shadow-none">
+      <CardHeader className="pb-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <CardTitle className="text-base">Partner Agency {index + 1}</CardTitle>
+            <CardDescription className="text-sm">Capture the agency, partnership, and signatory details.</CardDescription>
+          </div>
+          {!disabled && (
+            <Button type="button" variant="outline" className="rounded-xl text-destructive" onClick={onRemove}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              Remove
+            </Button>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <div className="grid gap-4 lg:grid-cols-2">
+          <FormField control={control} name={`partner_agencies.${index}.name`} render={({ field }) => (
+            <FormItem><FormLabel className="text-xs">Name of Partner Agency</FormLabel><FormControl><Input {...field} disabled={disabled} className="h-11 rounded-xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
+          )} />
+          <FormField control={control} name={`partner_agencies.${index}.location`} render={({ field }) => (
+            <FormItem><FormLabel className="text-xs">Location</FormLabel><FormControl><Input {...field} disabled={disabled} className="h-11 rounded-xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
+          )} />
+          <FormField control={control} name={`partner_agencies.${index}.head_designation`} render={({ field }) => (
+            <FormItem><FormLabel className="text-xs">Designation of the Head of Agency</FormLabel><FormControl><Input {...field} disabled={disabled} className="h-11 rounded-xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
+          )} />
+          <FormField control={control} name={`partner_agencies.${index}.contact_details`} render={({ field }) => (
+            <FormItem><FormLabel className="text-xs">Contact Details</FormLabel><FormControl><Input {...field} disabled={disabled} className="h-11 rounded-xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
+          )} />
+          <FormField control={control} name={`partner_agencies.${index}.level_of_partnership`} render={({ field }) => (
+            <FormItem><FormLabel className="text-xs">Level of Partnership</FormLabel><FormControl><Input {...field} disabled={disabled} className="h-11 rounded-xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
+          )} />
+
+          <FormField
+            control={control}
+            name={`partner_agencies.${index}.category`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs">Category of Agency</FormLabel>
+                <Select value={field.value} onValueChange={field.onChange} disabled={disabled}>
+                  <FormControl>
+                    <SelectTrigger className="h-11 rounded-xl text-sm">
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {agencyCategoryOptions.map((option) => (
+                      <SelectItem key={option} value={option} className="text-sm capitalize">
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage className="text-xs" />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={control}
+            name={`partner_agencies.${index}.nature_of_partnership`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs">Nature of Partnership</FormLabel>
+                <Select value={field.value} onValueChange={field.onChange} disabled={disabled}>
+                  <FormControl>
+                    <SelectTrigger className="h-11 rounded-xl text-sm">
+                      <SelectValue placeholder="Select partnership nature" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {natureOptions.map((option) => (
+                      <SelectItem key={option} value={option} className="text-sm">
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage className="text-xs" />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={control}
+            name={`partner_agencies.${index}.type_of_partnership`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs">Type of Partnership</FormLabel>
+                <Select value={field.value} onValueChange={field.onChange} disabled={disabled}>
+                  <FormControl>
+                    <SelectTrigger className="h-11 rounded-xl text-sm">
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {partnershipTypeOptions.map((option) => (
+                      <SelectItem key={option} value={option} className="text-sm">
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage className="text-xs" />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={control}
+            name={`partner_agencies.${index}.bor_approval_date`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs">Date of BOR&apos;S Approval</FormLabel>
+                <FormControl>
+                  <MultiDatePicker value={field.value ? [field.value] : []} onChange={(value) => field.onChange(value[0] || null)} disabled={disabled} placeholder="Pick approval date" />
+                </FormControl>
+                <FormMessage className="text-xs" />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={control}
+            name={`partner_agencies.${index}.date_notarized`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs">Date Notarized</FormLabel>
+                <FormControl>
+                  <MultiDatePicker value={field.value ? [field.value] : []} onChange={(value) => field.onChange(value[0] || null)} disabled={disabled} placeholder="Pick notarized date" />
+                </FormControl>
+                <FormMessage className="text-xs" />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        {nature === "External" && (
+          <FormField
+            control={control}
+            name={`partner_agencies.${index}.funding_agency_name`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs">Name of Funding Agency</FormLabel>
+                <FormControl>
+                  <Input {...field} disabled={disabled} className="h-11 rounded-xl text-sm" />
+                </FormControl>
+                <FormMessage className="text-xs" />
+              </FormItem>
+            )}
+          />
+        )}
+
+        <div className="space-y-3 rounded-2xl border border-border/50 bg-muted/10 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <Label className="text-sm font-semibold">Signatories of Agencies</Label>
+              <p className="text-xs text-muted-foreground">Add one or more agency signatories.</p>
+            </div>
+            {!disabled && (
+              <Button type="button" variant="outline" className="rounded-xl" onClick={() => append({ name: "" })}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Signatory
+              </Button>
+            )}
+          </div>
+          <div className="space-y-3">
+            {fields.map((field, signatoryIndex) => (
+              <div key={field.id} className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_44px]">
+                <FormField
+                  control={control}
+                  name={`partner_agencies.${index}.signatories.${signatoryIndex}.name`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs">Signatory Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} disabled={disabled} className="h-11 rounded-xl text-sm" />
+                      </FormControl>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+                <div className="flex items-end">
+                  {!disabled && fields.length > 1 && (
+                    <Button type="button" variant="outline" size="icon" className="h-11 w-11 rounded-xl text-destructive" onClick={() => remove(signatoryIndex)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+export function ProjectLeaderRegistrationForm({
+  project,
+  currentUserId,
+  currentUserName,
+  currentDepartment,
+  currentUnit,
+  onSuccess,
+  isViewOnly = false,
+}: ProjectLeaderRegistrationFormProps) {
+  const [currentStep, setCurrentStep] = React.useState(1);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const stepLabels = ["Overview", "Partner Agency", "Program Design", "Staffing & Budget"];
+  const defaultValues = React.useMemo(
+    () => buildDefaultValues(project, currentUserName, currentDepartment, currentUnit),
+    [project, currentUserName, currentDepartment, currentUnit]
+  );
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema) as never,
+    defaultValues,
+  });
+  const typedControl = form.control as Control<FormValues>;
+
+  const inclusiveDates = useWatch({ control: typedControl, name: "inclusive_dates" }) || [];
+  const budgetSummary = useWatch({ control: typedControl, name: "budget_summary" }) || [];
+  const partnerAgenciesArray = useFieldArray({ control: typedControl, name: "partner_agencies" });
+  const strategiesArray = useFieldArray({ control: typedControl, name: "strategies" });
+  const budgetYearsArray = useFieldArray({ control: typedControl, name: "budget_summary" });
+
+  React.useEffect(() => {
+    form.reset(defaultValues);
+  }, [defaultValues, form]);
+
+  React.useEffect(() => {
+    form.setValue("department_unit", getDepartmentUnitLabel(currentDepartment, currentUnit), {
+      shouldDirty: false,
+    });
+    if (!project) {
+      form.setValue("project_leader_name", currentUserName, { shouldDirty: false });
+    }
+  }, [form, currentDepartment, currentUnit, currentUserName, project]);
+
+  React.useEffect(() => {
+    const years = getUniqueYears(inclusiveDates);
+    if (years.length === 0) return;
+    const currentRows = form.getValues("budget_summary") || [];
+    const byYear = new Map(currentRows.map((item) => [item.year, item]));
+    const nextRows = years.map((year) => {
+      const existing = byYear.get(year);
+      return (
+        existing || {
+          year,
+          food_and_beverage: 0,
+          travel: 0,
+          suppliers_and_materials: 0,
+          communication: 0,
+          other_mooe: 0,
+        }
+      );
+    });
+    if (JSON.stringify(currentRows) !== JSON.stringify(nextRows)) {
+      budgetYearsArray.replace(nextRows);
+    }
+  }, [inclusiveDates, form, budgetYearsArray]);
+
+  const budgetGrandTotal = budgetSummary.reduce((sum, item) => sum + getBudgetRowTotal(item), 0);
+
+  const handleToggleValue = (fieldName: "extension_agenda" | "sdg_main" | "sdg_sub", value: string) => {
+    const current = form.getValues(fieldName);
+    const next = current.includes(value)
+      ? current.filter((item) => item !== value)
+      : [...current, value];
+    form.setValue(fieldName, next, { shouldDirty: true, shouldValidate: true });
+  };
+
+  const goNext = async () => {
+    const fieldsByStep: Record<number, (keyof FormValues)[]> = {
+      1: ["project_title", "budget", "inclusive_dates", "extension_agenda", "sdg_main", "sdg_sub", "target_beneficiaries", "department_unit"],
+      2: ["partner_agencies"],
+      3: [
+        "rationale",
+        "objectives",
+        "strategies",
+        "publication_text",
+        "publication_count",
+        "patents_text",
+        "patents_count",
+        "people_services_text",
+        "people_services_count",
+        "places_partnerships_text",
+        "places_partnerships_count",
+        "policy_text",
+        "policy_count",
+        "social_impact_text",
+        "social_impact_count",
+        "economic_impact_text",
+        "economic_impact_count",
+        "environmental_impact_text",
+        "environmental_impact_count",
+      ],
+      4: ["project_leader_name", "project_leader_employment", "budget_summary"],
+    };
+    const valid = await form.trigger(fieldsByStep[currentStep]);
+    if (valid) setCurrentStep((prev) => Math.min(4, prev + 1));
+  };
+
+  async function onSubmit(values: FormValues) {
+    if (isViewOnly) return;
+    setIsSubmitting(true);
+
+    const sortedDates = sortDates(values.inclusive_dates);
+    const startDate = sortedDates[0];
+    const endDate = sortedDates[sortedDates.length - 1];
+    const registrationData = {
+      ...values,
+      inclusive_dates: values.inclusive_dates.map((item) => item.toISOString()),
+      partner_agencies: values.partner_agencies.map((agency) => ({
+        ...agency,
+        bor_approval_date: agency.bor_approval_date ? agency.bor_approval_date.toISOString() : null,
+        date_notarized: agency.date_notarized ? agency.date_notarized.toISOString() : null,
+      })),
+      needs_assessment_dates: values.needs_assessment_dates.map((item) => item.toISOString()),
+      duration: getDurationLabel(values.inclusive_dates),
+      budget_summary_total: budgetGrandTotal,
+    };
+    const budgetRequirements = values.budget_summary.map((yearRow) => ({
+      name: `Year ${yearRow.year}`,
+      amount: getBudgetRowTotal(yearRow),
+    }));
+    const fundingType = values.partner_agencies.some((agency) => agency.nature_of_partnership === "External")
+      ? "externally funded"
+      : "internally funded";
+
+    const payload = {
+      entry_type: "project" as const,
+      title: values.project_title,
+      project_title: values.project_title,
+      project_leader_id: currentUserId,
+      classification: values.extension_agenda,
+      sdg_goals: Array.from(new Set([...values.sdg_main, ...values.sdg_sub])),
+      academic_program: values.department_unit,
+      major: "",
+      proponents: [{ name: values.project_leader_name }],
+      co_project_leaders: values.co_project_leaders.map((item) => ({ name: item.name })),
+      project_assistants: values.project_assistants.map((item) => ({ name: item.name })),
+      college: currentDepartment || "CEIT",
+      collaborating_agencies: values.partner_agencies.map((agency) => agency.name).join(", "),
+      target_beneficiaries: [values.target_beneficiaries],
+      community_location: values.partner_agencies[0]?.location || "",
+      category: "new",
+      funding_source: fundingType,
+      start_date: startDate ? startDate.toISOString() : null,
+      end_date: endDate ? endDate.toISOString() : null,
+      budget_requirements: budgetRequirements,
+      budget_total: budgetGrandTotal > 0 ? budgetGrandTotal : values.budget,
+      gad_score: 0,
+      contact_person: values.project_leader_name,
+      contact_details: values.partner_agencies[0]?.contact_details || "",
+      lead_units: currentDepartment ? [currentDepartment] : [],
+      related_curricular_offerings: currentUnit ? [currentUnit] : [],
+      visibility_scope: "specific_units" as const,
+      visible_units: currentUnit ? [currentUnit] : [],
+      visible_departments: currentDepartment ? [currentDepartment] : [],
+      documents: values.documents,
+      partner_agencies: values.partner_agencies,
+      funding_data: {
+        registration_data: registrationData,
+      },
+    };
+
+    const result = project?.id ? await updateProject(project.id, payload) : await createProject(payload);
+
+    setIsSubmitting(false);
+    if (result?.error) {
+      alert(result.error);
+      return;
+    }
+    onSuccess?.();
+  }
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit as never)} className="flex h-full flex-col">
+        <div className="border-b border-border/50 bg-background px-6 py-5">
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#159E44]">Project Registration</p>
+              <div>
+                <h2 className="text-2xl font-semibold text-foreground">
+                  {project?.id ? (isViewOnly ? "Project Registration Details" : "Update Project Registration") : "Register a New Project"}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  A full-screen, step-by-step submission for Project Leaders with summary, partnership, staffing, and budget details.
+                </p>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-border/50 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground">{form.getValues("department_unit")}</p>
+              <p>Duration: {getDurationLabel(inclusiveDates)}</p>
+              <p>
+                Budget Summary Total: PHP{" "}
+                {budgetGrandTotal.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+            </div>
+          </div>
+          <div className="mt-6">
+            <StepIndicator currentStep={currentStep} totalSteps={4} labels={stepLabels} />
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto bg-[#f8faf8] px-6 py-6">
+          {currentStep === 1 && (
+            <div className="space-y-6">
+              <Card className="rounded-3xl border-border/60 shadow-none">
+                <CardHeader>
+                  <CardTitle className="text-xl">Project Overview</CardTitle>
+                  <CardDescription className="text-sm">Capture the core project definition before moving into the partnership details.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid gap-5 xl:grid-cols-2">
+                    <FormField control={form.control} name="project_title" render={({ field }) => (
+                      <FormItem><FormLabel className="text-xs">Project Title</FormLabel><FormControl><Input {...field} disabled={isViewOnly} className="h-12 rounded-xl text-base" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="budget" render={({ field }) => (
+                      <FormItem><FormLabel className="text-xs">Budget</FormLabel><FormControl><Input {...field} type="number" min="0" disabled={isViewOnly} className="h-12 rounded-xl text-base" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                    )} />
+                  </div>
+                  <div className="grid gap-5 xl:grid-cols-[minmax(0,1.3fr)_280px]">
+                    <FormField control={form.control} name="inclusive_dates" render={({ field }) => (
+                      <FormItem><FormLabel className="text-xs">Inclusive Date</FormLabel><FormControl><MultiDatePicker value={field.value} onChange={field.onChange} disabled={isViewOnly} placeholder="Select inclusive dates" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                    )} />
+                    <FormItem><FormLabel className="text-xs">Duration</FormLabel><Input value={getDurationLabel(inclusiveDates)} readOnly className="h-12 rounded-xl bg-muted/30 text-base" /></FormItem>
+                  </div>
+                  <div className="space-y-3">
+                    <div><Label className="text-xs">University Extension Agenda</Label><p className="text-xs text-muted-foreground">Select one or more agenda areas for this registration.</p></div>
+                    <CheckboxGrid options={agendaOptions} values={form.getValues("extension_agenda")} onToggle={(value) => handleToggleValue("extension_agenda", value)} disabled={isViewOnly} />
+                    {form.formState.errors.extension_agenda?.message && (
+                      <p className="text-xs font-medium text-destructive">{form.formState.errors.extension_agenda.message}</p>
+                    )}
+                  </div>
+                  <div className="grid gap-6 xl:grid-cols-2">
+                    <div className="space-y-3"><div><Label className="text-xs">SDG Main</Label><p className="text-xs text-muted-foreground">Choose the primary SDGs linked to this project.</p></div><SdgGrid values={form.getValues("sdg_main")} onToggle={(value) => handleToggleValue("sdg_main", value)} disabled={isViewOnly} />{form.formState.errors.sdg_main?.message && <p className="text-xs font-medium text-destructive">{form.formState.errors.sdg_main.message}</p>}</div>
+                    <div className="space-y-3"><div><Label className="text-xs">SDG Sub</Label><p className="text-xs text-muted-foreground">Choose the supporting SDGs linked to this project.</p></div><SdgGrid values={form.getValues("sdg_sub")} onToggle={(value) => handleToggleValue("sdg_sub", value)} disabled={isViewOnly} />{form.formState.errors.sdg_sub?.message && <p className="text-xs font-medium text-destructive">{form.formState.errors.sdg_sub.message}</p>}</div>
+                  </div>
+                  <div className="grid gap-5 xl:grid-cols-2">
+                    <FormField control={form.control} name="target_beneficiaries" render={({ field }) => (
+                      <FormItem><FormLabel className="text-xs">Target Beneficiaries</FormLabel><FormControl><Input {...field} disabled={isViewOnly} placeholder="Example: 50 female" className="h-12 rounded-xl text-base" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="department_unit" render={({ field }) => (
+                      <FormItem><FormLabel className="text-xs">Department / Unit</FormLabel><FormControl><Input {...field} readOnly className="h-12 rounded-xl bg-muted/30 text-base" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                    )} />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+          {currentStep === 2 && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-xl font-semibold">Partner Agency Section</h3>
+                  <p className="text-sm text-muted-foreground">Track every internal or external partner and its formal agreement details.</p>
+                </div>
+                {!isViewOnly && (
+                  <Button
+                    type="button"
+                    className="rounded-xl bg-[#159E44] text-white hover:bg-[#128A3B]"
+                    onClick={() => partnerAgenciesArray.append({
+                      name: "",
+                      location: "",
+                      category: "government",
+                      head_designation: "",
+                      contact_details: "",
+                      nature_of_partnership: "Internal",
+                      funding_agency_name: "",
+                      level_of_partnership: "",
+                      type_of_partnership: "MOA",
+                      bor_approval_date: null,
+                      date_notarized: null,
+                      signatories: [{ name: "" }],
+                    })}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Partner Agency
+                  </Button>
+                )}
+              </div>
+              <div className="space-y-5">
+                {partnerAgenciesArray.fields.map((field, index) => (
+                  <PartnerAgencyFields key={field.id} control={typedControl} index={index} disabled={isViewOnly} onRemove={() => partnerAgenciesArray.remove(index)} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {currentStep === 3 && (
+            <div className="space-y-6">
+              <Card className="rounded-3xl border-border/60 shadow-none">
+                <CardHeader>
+                  <CardTitle className="text-xl">Project Design</CardTitle>
+                  <CardDescription className="text-sm">Define the rationale, objectives, strategies, and expected outcomes.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <FormField control={form.control} name="rationale" render={({ field }) => (
+                    <FormItem><FormLabel className="text-xs">Rationale</FormLabel><FormControl><Textarea {...field} disabled={isViewOnly} className="min-h-32 rounded-2xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="objectives" render={({ field }) => (
+                    <FormItem><FormLabel className="text-xs">Objectives</FormLabel><FormControl><Textarea {...field} disabled={isViewOnly} className="min-h-32 rounded-2xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                  )} />
+
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h4 className="text-base font-semibold">Strategies Section</h4>
+                        <p className="text-sm text-muted-foreground">Add one or more strategy blocks for capacity building and technical assistance.</p>
+                      </div>
+                      {!isViewOnly && (
+                        <Button type="button" variant="outline" className="rounded-xl" onClick={() => strategiesArray.append({ capacity_building: "", technical_assistance: "" })}>
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add Strategy
+                        </Button>
+                      )}
+                    </div>
+                    <div className="space-y-4">
+                      {strategiesArray.fields.map((field, index) => (
+                        <div key={field.id} className="rounded-2xl border border-border/50 bg-background p-4">
+                          <div className="mb-4 flex items-center justify-between">
+                            <p className="text-sm font-semibold">Strategy {index + 1}</p>
+                            {!isViewOnly && strategiesArray.fields.length > 1 && (
+                              <Button type="button" variant="outline" className="rounded-xl text-destructive" onClick={() => strategiesArray.remove(index)}>
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Remove
+                              </Button>
+                            )}
+                          </div>
+                          <div className="grid gap-4 xl:grid-cols-2">
+                            <FormField control={form.control} name={`strategies.${index}.capacity_building`} render={({ field }) => (
+                              <FormItem><FormLabel className="text-xs">Capacity Building</FormLabel><FormControl><Textarea {...field} disabled={isViewOnly} className="min-h-28 rounded-2xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                            )} />
+                            <FormField control={form.control} name={`strategies.${index}.technical_assistance`} render={({ field }) => (
+                              <FormItem><FormLabel className="text-xs">Technical Assistance</FormLabel><FormControl><Textarea {...field} disabled={isViewOnly} className="min-h-28 rounded-2xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                            )} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-4">
+                    <div><h4 className="text-base font-semibold">Expected Outputs (6Ps / 3Is)</h4><p className="text-sm text-muted-foreground">Capture narrative details and counts for each expected output.</p></div>
+                    <div className="grid gap-4 xl:grid-cols-2">
+                      {[
+                        ["publication_text", "publication_count", "Publication"],
+                        ["patents_text", "patents_count", "Patents / IP"],
+                        ["people_services_text", "people_services_count", "People Services"],
+                        ["places_partnerships_text", "places_partnerships_count", "Places and Partnerships"],
+                        ["policy_text", "policy_count", "Policy"],
+                        ["social_impact_text", "social_impact_count", "Social Impact"],
+                        ["economic_impact_text", "economic_impact_count", "Economic Impact"],
+                        ["environmental_impact_text", "environmental_impact_count", "Environmental Impact"],
+                      ].map(([textName, countName, label]) => (
+                        <div key={label} className="rounded-2xl border border-border/50 bg-background p-4">
+                          <div className="space-y-4">
+                            <FormField control={form.control} name={textName as never} render={({ field }) => (
+                              <FormItem><FormLabel className="text-xs">{label}</FormLabel><FormControl><Textarea value={String(field.value ?? "")} onChange={field.onChange} onBlur={field.onBlur} name={field.name} ref={field.ref} disabled={isViewOnly} className="min-h-24 rounded-2xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                            )} />
+                            <FormField control={form.control} name={countName as never} render={({ field }) => (
+                              <FormItem><FormLabel className="text-xs">{label} Count</FormLabel><FormControl><Input value={Number(field.value ?? 0)} onChange={field.onChange} onBlur={field.onBlur} name={field.name} ref={field.ref} type="number" min="0" disabled={isViewOnly} className="h-11 rounded-xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                            )} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {currentStep === 4 && (
+            <div className="space-y-6">
+              <Card className="rounded-3xl border-border/60 shadow-none">
+                <CardHeader>
+                  <CardTitle className="text-xl">Organization and Staffing</CardTitle>
+                  <CardDescription className="text-sm">Complete the team structure, budget summary, needs assessment, and optional document uploads.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="rounded-2xl border border-border/50 bg-muted/10 p-4">
+                    <div className="mb-4"><h4 className="text-base font-semibold">Project Leader</h4><p className="text-sm text-muted-foreground">This is the primary owner of the registration.</p></div>
+                    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
+                      <FormField control={form.control} name="project_leader_name" render={({ field }) => (
+                        <FormItem><FormLabel className="text-xs">Project Leader</FormLabel><FormControl><Input {...field} disabled={isViewOnly} className="h-11 rounded-xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                      )} />
+                      <FormField control={form.control} name="project_leader_employment" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Appointment</FormLabel>
+                          <FormControl>
+                            <RadioGroup value={field.value} onValueChange={field.onChange} disabled={isViewOnly} className="grid grid-cols-2 gap-2 pt-2">
+                              {employmentOptions.map((option) => (
+                                <label key={option} className={cn("flex items-center justify-center rounded-xl border border-border/50 px-3 py-3 text-sm", field.value === option && "border-[#159E44]/60 bg-[#159E44]/5")}>
+                                  <RadioGroupItem value={option} className="sr-only" />
+                                  {option}
+                                </label>
+                              ))}
+                            </RadioGroup>
+                          </FormControl>
+                          <FormMessage className="text-xs" />
+                        </FormItem>
+                      )} />
+                    </div>
+                  </div>
+                  <StaffListFields control={typedControl} name="co_project_leaders" label="Co-Project Leaders" disabled={isViewOnly} />
+                  <StaffListFields control={typedControl} name="project_coordinators" label="Project Coordinators" disabled={isViewOnly} />
+                  <StaffListFields control={typedControl} name="project_facilitators" label="Project Facilitators" disabled={isViewOnly} />
+                  <StaffListFields control={typedControl} name="project_assistants" label="Project Assistants" disabled={isViewOnly} />
+
+                  <Card className="rounded-3xl border-border/60 shadow-none">
+                    <CardHeader><CardTitle className="text-base">Budget Summary</CardTitle><CardDescription className="text-sm">Budget rows are automatically generated from the inclusive dates and grouped by year.</CardDescription></CardHeader>
+                    <CardContent className="space-y-4">
+                      {budgetYearsArray.fields.map((field, index) => (
+                        <div key={field.id} className="rounded-2xl border border-border/50 bg-background p-4">
+                          <div className="mb-4 flex items-center justify-between">
+                            <p className="text-base font-semibold">Year {form.getValues(`budget_summary.${index}.year`)}</p>
+                            <p className="text-sm font-medium text-[#159E44]">Total: PHP {getBudgetRowTotal(budgetSummary[index]).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                          </div>
+                          <div className="grid gap-4 xl:grid-cols-5">
+                            {[
+                              ["food_and_beverage", "Food and Beverage"],
+                              ["travel", "Travel"],
+                              ["suppliers_and_materials", "Suppliers and Materials"],
+                              ["communication", "Communication"],
+                              ["other_mooe", "Other MOOE"],
+                            ].map(([name, label]) => (
+                              <FormField key={name} control={form.control} name={`budget_summary.${index}.${name}` as never} render={({ field }) => (
+                                <FormItem><FormLabel className="text-xs">{label}</FormLabel><FormControl><Input value={Number(field.value ?? 0)} onChange={field.onChange} onBlur={field.onBlur} name={field.name} ref={field.ref} type="number" min="0" disabled={isViewOnly} className="h-11 rounded-xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                              )} />
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                      <div className="rounded-2xl border border-[#159E44]/20 bg-[#159E44]/5 px-4 py-3 text-sm"><span className="font-semibold text-[#0f6a2d]">Grand Total:</span> PHP {budgetGrandTotal.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="rounded-3xl border-border/60 shadow-none">
+                    <CardHeader><CardTitle className="text-base">Needs Assessment Section</CardTitle><CardDescription className="text-sm">This can be completed now or updated later with supporting files.</CardDescription></CardHeader>
+                    <CardContent className="space-y-5">
+                      <div className="grid gap-4 xl:grid-cols-2">
+                        <FormField control={form.control} name="needs_assessment_title" render={({ field }) => (
+                          <FormItem><FormLabel className="text-xs">Title of Needs Assessment</FormLabel><FormControl><Input {...field} disabled={isViewOnly} className="h-11 rounded-xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                        )} />
+                        <FormField control={form.control} name="needs_assessment_place" render={({ field }) => (
+                          <FormItem><FormLabel className="text-xs">Place Conducted</FormLabel><FormControl><Input {...field} disabled={isViewOnly} className="h-11 rounded-xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                        )} />
+                      </div>
+                      <FormField control={form.control} name="needs_assessment_dates" render={({ field }) => (
+                        <FormItem><FormLabel className="text-xs">Dates Conducted</FormLabel><FormControl><MultiDatePicker value={field.value} onChange={field.onChange} disabled={isViewOnly} placeholder="Select assessment dates" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                      )} />
+                      <FormField control={form.control} name="needs_assessment_results_used" render={({ field }) => (
+                        <FormItem><FormLabel className="text-xs">How results were used</FormLabel><FormControl><Textarea {...field} disabled={isViewOnly} className="min-h-28 rounded-2xl text-sm" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                      )} />
+                    </CardContent>
+                  </Card>
+
+                  <Card className="rounded-3xl border-border/60 shadow-none">
+                    <CardHeader><CardTitle className="text-base">Upload Documents</CardTitle><CardDescription className="text-sm">Optional PDF uploads. The code uses the `cqer-projects_pdfs` Supabase bucket.</CardDescription></CardHeader>
+                    <CardContent>
+                      <FormField control={form.control} name="documents" render={({ field }) => (
+                        <FormItem><FormControl><FileUpload value={field.value} onChange={field.onChange} disabled={isViewOnly} bucket="cqer-projects_pdfs" accept=".pdf" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                      )} />
+                    </CardContent>
+                  </Card>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </div>
+
+        <div className="border-t border-border/50 bg-background px-6 py-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-sm text-muted-foreground">Step {currentStep} of 4</div>
+            <div className="flex flex-wrap justify-end gap-3">
+              {currentStep > 1 && (
+                <Button type="button" variant="outline" className="rounded-xl" onClick={() => setCurrentStep((prev) => Math.max(1, prev - 1))}>
+                  <ChevronLeft className="mr-2 h-4 w-4" />
+                  Previous
+                </Button>
+              )}
+              {currentStep < 4 ? (
+                <Button type="button" className="rounded-xl bg-[#159E44] text-white hover:bg-[#128A3B]" onClick={goNext}>
+                  Next
+                  <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
+              ) : !isViewOnly ? (
+                <Button type="submit" className="rounded-xl bg-[#159E44] text-white hover:bg-[#128A3B]" disabled={isSubmitting}>
+                  <Save className="mr-2 h-4 w-4" />
+                  {isSubmitting ? "Saving..." : "Save Project Registration"}
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      </form>
+    </Form>
+  );
+}
