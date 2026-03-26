@@ -231,7 +231,12 @@ export function ProjectLeaderRegistrationManagement({
       <Card className="border-border/60 shadow-sm">
         <CardHeader className="space-y-4 pb-4">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-            <div />
+            <div>
+              <CardTitle className="text-xl font-semibold">Project Registration</CardTitle>
+              <CardDescription className="text-sm">
+                Register, review, export, and manage your project registrations in one place.
+              </CardDescription>
+            </div>
             <div className="flex flex-wrap gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

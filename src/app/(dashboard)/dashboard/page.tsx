@@ -827,7 +827,7 @@ export default async function DashboardPage({
 
   return (
     <div className="space-y-4">
-      {activePanel !== "community" && (
+      {activePanel !== "community" && !(userType === "project_leader" && activePanel === "projects") && (
         <div>
           <h1 className="text-sm font-semibold text-foreground/90">{pageTitle}</h1>
           {showOverview && (
