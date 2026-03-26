@@ -971,6 +971,10 @@ export function ProjectLeaderRegistrationForm({
     };
     const valid = await form.trigger(fieldsByStep[currentStep]);
     if (valid) {
+      if (currentStep === 4) {
+        // Automatically save when navigating to step 5
+        form.handleSubmit(onSubmit as never)();
+      }
       setCurrentStep((prev) => Math.min(5, prev + 1));
       document.getElementById("registration-scroll-area")?.scrollTo(0, 0);
     }
@@ -1365,22 +1369,15 @@ export function ProjectLeaderRegistrationForm({
             <div className="space-y-6">
               <Card className="rounded-3xl border-border/40 shadow-none">
                 <CardHeader>
-                  <CardTitle className="text-center text-lg">Review & Submit</CardTitle>
-                  <CardDescription className="text-center text-xs">You have completed all sections. Please review your entries and click Save when you are ready.</CardDescription>
+                  <CardTitle className="text-center text-lg">{isSubmitting ? "Saving..." : "Project Registration Complete"}</CardTitle>
                 </CardHeader>
                 <CardContent className="flex flex-col items-center py-10">
                    <div className="rounded-full bg-primary/10 p-6 mb-4">
-                     <Save className="h-10 w-10 text-primary" />
+                     <Save className={cn("h-10 w-10 text-primary", isSubmitting && "animate-pulse")} />
                    </div>
                    <p className="max-w-md text-center text-sm text-muted-foreground mb-6">
-                     Clicking 'Save Project Registration' will formally record all details into the system. You can always update documents or budget specifics later depending on the approval stage.
+                     It automatically saves changes now, just wait a moment. Your registration is being processed into the system.
                    </p>
-                   {!isViewOnly && (
-                     <Button type="submit" size="lg" className="rounded-xl px-8" disabled={isSubmitting}>
-                       <Save className="mr-2 h-4 w-4" />
-                       {isSubmitting ? "Saving..." : "Save Project Registration"}
-                     </Button>
-                   )}
                 </CardContent>
               </Card>
             </div>
@@ -1397,17 +1394,12 @@ export function ProjectLeaderRegistrationForm({
                   Previous
                 </Button>
               )}
-              {currentStep < 5 ? (
+              {currentStep < 5 && (
                 <Button type="button" className="rounded-xl" onClick={goNext}>
                   Next
                   <ChevronRight className="ml-2 h-4 w-4" />
                 </Button>
-              ) : !isViewOnly ? (
-                <Button type="submit" className="rounded-xl" disabled={isSubmitting}>
-                  <Save className="mr-2 h-4 w-4" />
-                  {isSubmitting ? "Saving..." : "Save Project Registration"}
-                </Button>
-              ) : null}
+              )}
             </div>
           </div>
         </div>
