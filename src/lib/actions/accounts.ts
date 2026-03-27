@@ -5,12 +5,6 @@ import { createClient } from "@/lib/supabase/server";
 
 const TRANSFER_TABLES = [
   "projects",
-  "awards",
-  "student_involvement",
-  "faculty_involvement",
-  "pool_of_experts",
-  "technologies_innovations",
-  "ordinance_resolutions",
   "trainings",
 ];
 

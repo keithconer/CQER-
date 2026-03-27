@@ -37,22 +37,12 @@ import {
   LogOut,
   Moon,
   Type,
-  FolderPlus,
   FolderKanban,
-  Briefcase,
-  ChevronRight,
-  Database,
-  Award,
-  UserRoundCheck,
-  GraduationCap,
-  Cpu,
-  ScrollText,
   BookOpenCheck,
   Loader2,
   Sun,
   UserCog,
   UserPlus,
-  ArrowRightLeft,
   LayoutDashboard,
   Users2,
   Download,
@@ -92,9 +82,6 @@ export function Navbar({ user }: NavbarProps) {
 
   const [rolePopoverOpen, setRolePopoverOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [createExpanded, setCreateExpanded] = useState(true);
-  const [recordsExpanded, setRecordsExpanded] = useState(true);
-  const [superProjectsExpanded, setSuperProjectsExpanded] = useState(true);
   const [accountExpanded, setAccountExpanded] = useState(true);
   const [fontScale, setFontScale] = useState<"small" | "medium" | "large">(() => {
     if (typeof window === "undefined") return "small";
@@ -109,10 +96,6 @@ export function Navbar({ user }: NavbarProps) {
   });
 
   const isDashboard = pathname?.startsWith("/dashboard");
-  const viewParam = searchParams.get("view");
-  const accountParam = searchParams.get("account");
-  const activeView: string = viewParam === "project-registration" ? viewParam : "project-registration";
-  const activeAccountView = accountParam === "transfer" ? "transfer" : "register";
   const panelParam = searchParams.get("panel");
   const activePanel: string =
     panelParam === "overview" ||
@@ -131,7 +114,6 @@ export function Navbar({ user }: NavbarProps) {
     router.prefetch("/dashboard?panel=community");
     router.prefetch("/dashboard?panel=backup");
     router.prefetch("/dashboard?panel=trainings");
-    router.prefetch("/dashboard?panel=funding");
     router.prefetch("/dashboard?panel=accounts");
     router.prefetch("/dashboard?panel=account-management&account=register");
     router.prefetch("/dashboard?panel=projects&view=project-registration");
@@ -199,35 +181,8 @@ export function Navbar({ user }: NavbarProps) {
   const navItemClass = (active: boolean) =>
     `dashboard-nav-item h-6 w-full justify-start text-[9px] border ${active ? "border-border/40 bg-muted/30" : "border-transparent"}`;
   const isAccountPanel = activePanel === "account-management" || activePanel === "accounts";
-  const canAccessBackup = ["super_admin", "college_coordinator", "unit_coordinator", "project_leader"].includes(user.userType);
   const collapsedButtonClass = "h-9 w-9 p-0 rounded-xl";
   const collapsedIconClass = "h-4 w-4";
-  const commonPanelItems: {
-    panel: string;
-    icon: LucideIcon;
-    label: string;
-    roles: string[];
-  }[] = [
-    { panel: "trainings", icon: BookOpenCheck, label: "Trainings", roles: ["college_coordinator", "unit_coordinator", "extension_office", "project_leader"] },
-    { panel: "funding", icon: Database, label: "Funding", roles: ["college_coordinator", "unit_coordinator", "extension_office"] },
-    { panel: "technical-advisory-services", icon: Briefcase, label: "Technical Advisory Services", roles: ["college_coordinator", "unit_coordinator"] },
-    { panel: "awards", icon: Award, label: "Awards", roles: ["college_coordinator", "unit_coordinator", "extension_office"] },
-    { panel: "student-involvement", icon: UserRoundCheck, label: "Student Involvement", roles: ["college_coordinator", "unit_coordinator", "extension_office"] },
-    { panel: "faculty-involvement", icon: GraduationCap, label: "Faculty Involvement", roles: ["college_coordinator", "unit_coordinator", "extension_office"] },
-    { panel: "technologies-innovation", icon: Cpu, label: "Technologies", roles: ["college_coordinator", "unit_coordinator", "extension_office"] },
-    { panel: "ordinance-resolutions", icon: ScrollText, label: "Ordinance", roles: ["college_coordinator", "unit_coordinator", "extension_office"] },
-  ];
-  const superAdminRecordItems = [
-    { panel: "projects", icon: FolderKanban, label: "Projects" },
-    { panel: "trainings", icon: BookOpenCheck, label: "Trainings" },
-    { panel: "funding", icon: Database, label: "Funding" },
-    { panel: "technical-advisory-services", icon: Briefcase, label: "Technical Advisory Services" },
-    { panel: "awards", icon: Award, label: "Awards" },
-    { panel: "student-involvement", icon: UserRoundCheck, label: "Student Involvement" },
-    { panel: "faculty-involvement", icon: GraduationCap, label: "Faculty Involvement" },
-    { panel: "technologies-innovation", icon: Cpu, label: "Technologies" },
-    { panel: "ordinance-resolutions", icon: ScrollText, label: "Ordinance" },
-  ] as const;
   const searchItems = useMemo<NavbarSearchItem[]>(() => {
     const items: NavSearchConfig[] = [
       {
@@ -246,7 +201,7 @@ export function Navbar({ user }: NavbarProps) {
         keywords: ["community", "announcements", "social", "feed", "ceit"],
         description: "Open the CQER Community announcement feed.",
         icon: Users2,
-        roles: ["super_admin", "college_coordinator", "unit_coordinator", "extension_office", "project_leader"],
+        roles: ["super_admin", "college_coordinator", "unit_coordinator"],
       },
       {
         id: "account-management",
@@ -274,6 +229,15 @@ export function Navbar({ user }: NavbarProps) {
         description: "Export your created records and import them later.",
         icon: Download,
         roles: ["super_admin", "college_coordinator", "unit_coordinator", "project_leader"],
+      },
+      {
+        id: "trainings",
+        label: "Trainings",
+        href: "/dashboard?panel=trainings",
+        keywords: ["training", "trainings"],
+        description: "Open the trainings page.",
+        icon: BookOpenCheck,
+        roles: ["project_leader"],
       },
     ];
 
@@ -429,8 +393,8 @@ export function Navbar({ user }: NavbarProps) {
         <button
           type="button"
           className="fixed inset-0 z-40 bg-black/20 md:hidden"
-          onClick={() => setSidebarOpen(false)}
-          aria-label="Close sidebar"
+                    onClick={() => setSidebarOpen(false)}
+                  aria-label="Close sidebar"
         />
       )}
 
@@ -491,13 +455,20 @@ export function Navbar({ user }: NavbarProps) {
                     panel: "community",
                     href: "/dashboard?panel=community",
                     icon: Users2,
-                    roles: ["super_admin", "college_coordinator", "unit_coordinator", "project_leader"],
+                    roles: ["super_admin", "college_coordinator", "unit_coordinator"],
                   },
                   {
                     label: "Project Registration",
                     panel: "projects",
                     href: "/dashboard?panel=projects&view=project-registration",
                     icon: FolderKanban,
+                    roles: ["project_leader"],
+                  },
+                  {
+                    label: "Trainings",
+                    panel: "trainings",
+                    href: "/dashboard?panel=trainings",
+                    icon: BookOpenCheck,
                     roles: ["project_leader"],
                   },
                   {
@@ -538,301 +509,6 @@ export function Navbar({ user }: NavbarProps) {
                     </div>
                   ))}
               </div>
-              {false && (
-              <div className={cn("space-y-1 py-3", sidebarOpen ? "px-2" : "px-0")}>
-              <div className="flex justify-center w-full">
-                {withTooltip(
-                  "Dashboard",
-                  <Button
-                    variant="ghost"
-                    className={cn(
-                      "transition-all duration-200",
-                      sidebarOpen ? "h-7 w-full justify-start px-3" : collapsedButtonClass,
-                      activePanel === "overview"
-                        ? "border border-border/40 bg-muted/30 text-foreground"
-                        : "border border-transparent text-foreground"
-                    )}
-                    onClick={() => goTo("/dashboard?panel=overview")}
-                  >
-                    <LayoutDashboard className={cn("shrink-0", sidebarOpen ? "mr-2 h-3 w-3" : collapsedIconClass)} />
-                    {sidebarOpen && <span className="text-[9px] font-medium">Dashboard</span>}
-                  </Button>
-                )}
-              </div>
-              {["super_admin", "college_coordinator", "unit_coordinator", "extension_office", "project_leader"].includes(user.userType) && (
-                <div className="flex justify-center w-full">
-                  {withTooltip(
-                    "CQER Community",
-                    <Button
-                      variant="ghost"
-                      className={cn(
-                        "transition-all duration-200",
-                        sidebarOpen ? "h-7 w-full justify-start px-3" : collapsedButtonClass,
-                        activePanel === "community"
-                          ? "border border-border/40 bg-muted/30 text-foreground"
-                          : "border border-transparent text-foreground"
-                      )}
-                      onClick={() => goTo("/dashboard?panel=community")}
-                    >
-                      <Users2 className={cn("shrink-0", sidebarOpen ? "mr-2 h-3 w-3" : collapsedIconClass)} />
-                      {sidebarOpen && <span className="text-[9px] font-medium">CQER Community</span>}
-                    </Button>
-                  )}
-                </div>
-              )}
-              {user.userType === "college_coordinator" && (
-                <>
-                  {!sidebarOpen ? (
-                    <Popover>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="flex justify-center w-full">
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                className={cn(
-                                  `transition-all duration-200 ${collapsedButtonClass}`,
-                                  isAccountPanel
-                                    ? "border border-border/40 bg-muted/30 text-foreground"
-                                    : "border border-transparent text-foreground"
-                                )}
-                              >
-                                <UserCog className={`${collapsedIconClass} shrink-0`} />
-                              </Button>
-                            </PopoverTrigger>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent side="right">Account Management</TooltipContent>
-                      </Tooltip>
-                      <PopoverContent
-                        side="right"
-                        align="start"
-                        className="w-56 p-2 ml-2 bg-background border border-border shadow-md rounded-lg"
-                      >
-                        <div className="space-y-1">
-                          <Button
-                            variant="ghost"
-                            className={navItemClass(isAccountPanel && activeAccountView === "register")}
-                            onClick={() => goTo("/dashboard?panel=account-management&account=register")}
-                          >
-                            <UserPlus className="mr-2 h-3 w-3" />
-                            Register Unit Coordinators
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            className={navItemClass(isAccountPanel && activeAccountView === "transfer")}
-                            onClick={() => goTo("/dashboard?panel=account-management&account=transfer")}
-                          >
-                            <ArrowRightLeft className="mr-2 h-3 w-3" />
-                            Transfer Unit Coordinator Role
-                          </Button>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  ) : (
-                    <Button
-                      variant="ghost"
-                      className={cn(
-                        "h-8 transition-all duration-200 w-full justify-start px-3",
-                        isAccountPanel ? "border border-border/40 bg-muted/30" : "border border-transparent"
-                      )}
-                      onClick={() => setAccountExpanded((prev) => !prev)}
-                    >
-                      <UserCog className="mr-2 h-3.5 w-3.5 shrink-0" />
-                      <span className="text-[9px] font-medium">Account Management</span>
-                    </Button>
-                  )}
-                  {accountExpanded && sidebarOpen && (
-                    <div className="space-y-1 pl-2">
-                      <Button
-                        variant="ghost"
-                        className={navItemClass(isAccountPanel && activeAccountView === "register")}
-                        onClick={() => goTo("/dashboard?panel=account-management&account=register")}
-                      >
-                        <UserPlus className="mr-2 h-3 w-3" />
-                        Register Unit Coordinators
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className={navItemClass(isAccountPanel && activeAccountView === "transfer")}
-                        onClick={() => goTo("/dashboard?panel=account-management&account=transfer")}
-                      >
-                        <ArrowRightLeft className="mr-2 h-3 w-3" />
-                        Transfer Unit Coordinator Role
-                      </Button>
-                    </div>
-                  )}
-                </>
-              )}
-
-              {(["college_coordinator", "unit_coordinator", "extension_office", "project_leader"].includes(user.userType)) && (
-                <>
-                  {!sidebarOpen ? (
-                    <Popover>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="flex justify-center w-full">
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                className={cn(
-                                  `${collapsedButtonClass} mx-auto flex transition-all duration-200`,
-                                  (activePanel === "records" || createExpanded)
-                                    ? "border border-border/40 bg-muted/30 text-foreground"
-                                    : "border border-transparent text-foreground"
-                                )}
-                              >
-                                <FolderPlus className={`${collapsedIconClass} shrink-0`} />
-                              </Button>
-                            </PopoverTrigger>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent side="right">Records</TooltipContent>
-                      </Tooltip>
-                      <PopoverContent side="right" align="start" className="w-48 p-2 ml-2 bg-background border border-border shadow-md rounded-lg">
-                        <div className="space-y-1">
-                          {user.userType === "project_leader" && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                className={navItemClass(activePanel === "records" && activeView === "project-registration")}
-                                onClick={() => goTo("/dashboard?panel=records&view=project-registration")}
-                              >
-                                <FolderKanban className="mr-2 h-3 w-3" />
-                                Project Registration
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                className={navItemClass(activePanel === "records" && activeView === "project-proposal")}
-                                onClick={() => goTo("/dashboard?panel=records&view=project-proposal")}
-                              >
-                                <FolderKanban className="mr-2 h-3 w-3" />
-                                Project Proposal
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                className={navItemClass(activePanel === "records" && activeView === "needs-assessment")}
-                                onClick={() => goTo("/dashboard?panel=records&view=needs-assessment")}
-                              >
-                                <FolderKanban className="mr-2 h-3 w-3" />
-                                Needs Assessment
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                className={navItemClass(activePanel === "records" && activeView === "consultancy-extension")}
-                                onClick={() => goTo("/dashboard?panel=records&view=consultancy-extension")}
-                              >
-                                <FolderKanban className="mr-2 h-3 w-3" />
-                                Consultancy Extension
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  ) : (
-                    <Button
-                      variant="ghost"
-                      className={cn(
-                        "h-8 transition-all duration-200 w-full justify-start px-3",
-                        (activePanel === "records" || createExpanded) ? "border border-border/40 bg-muted/30" : "border border-transparent"
-                      )}
-                      onClick={() => setCreateExpanded((prev) => !prev)}
-                    >
-                      <FolderPlus className="mr-2 h-3.5 w-3.5 shrink-0" />
-                      <span className="text-[9px] font-medium">Records</span>
-                      <ChevronRight className={cn("ml-auto h-3 w-3 transition-transform duration-200", createExpanded && "rotate-90")} />
-                    </Button>
-                  )}
-                  {createExpanded && sidebarOpen && (
-                    <div className="space-y-1 pl-2">
-                      <Button
-                        variant="ghost"
-                        className={navItemClass(activePanel === "records" && activeView === "project-registration")}
-                        onClick={() => goTo("/dashboard?panel=records&view=project-registration")}
-                      >
-                        <FolderKanban className="mr-2 h-3 w-3" />
-                        Project Registration
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className={navItemClass(activePanel === "records" && activeView === "project-proposal")}
-                        onClick={() => goTo("/dashboard?panel=records&view=project-proposal")}
-                      >
-                        <FolderKanban className="mr-2 h-3 w-3" />
-                        Project Proposal
-                      </Button>
-                      {user.userType === "project_leader" && (
-                        <Button
-                          variant="ghost"
-                          className={navItemClass(activePanel === "records" && activeView === "needs-assessment")}
-                          onClick={() => goTo("/dashboard?panel=records&view=needs-assessment")}
-                        >
-                          <FolderKanban className="mr-2 h-3 w-3" />
-                          Needs Assessment
-                        </Button>
-                      )}
-                      {user.userType === "project_leader" && (
-                        <Button
-                          variant="ghost"
-                          className={navItemClass(activePanel === "records" && activeView === "consultancy-extension")}
-                          onClick={() => goTo("/dashboard?panel=records&view=consultancy-extension")}
-                        >
-                          <FolderKanban className="mr-2 h-3 w-3" />
-                          Consultancy Extension
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                </>
-              )}
-
-              {/* Simplified loop for common items */}
-              {commonPanelItems.map((item) => (
-                item.roles.includes(user.userType) && (
-                  <div key={item.panel} className="flex justify-center w-full">
-                    {withTooltip(
-                      item.label,
-                      <Button
-                        variant="ghost"
-                        className={cn(
-                          "transition-all duration-200",
-                          sidebarOpen ? "h-7 w-full justify-start px-3" : collapsedButtonClass,
-                          activePanel === item.panel
-                            ? "border border-border/40 bg-muted/30 text-foreground"
-                            : "border border-transparent text-foreground"
-                        )}
-                        onClick={() => goTo(`/dashboard?panel=${item.panel}`)}
-                      >
-                        <item.icon className={cn("shrink-0", sidebarOpen ? "mr-2 h-3 w-3" : collapsedIconClass)} />
-                        {sidebarOpen && <span className="text-[9px]">{item.label}</span>}
-                      </Button>
-                    )}
-                  </div>
-                )
-              ))}
-
-              {canAccessBackup && (
-                <div className="flex justify-center w-full">
-                  {withTooltip(
-                    "Create Backup",
-                    <Button
-                      variant="ghost"
-                      className={cn(
-                        "transition-all duration-200",
-                        sidebarOpen ? "h-7 w-full justify-start px-3" : collapsedButtonClass,
-                        activePanel === "backup"
-                          ? "border border-border/40 bg-muted/30 text-foreground"
-                          : "border border-transparent text-foreground"
-                      )}
-                      onClick={() => goTo("/dashboard?panel=backup")}
-                    >
-                      <Download className={cn("shrink-0", sidebarOpen ? "mr-2 h-3 w-3" : collapsedIconClass)} />
-                      {sidebarOpen && <span className="text-[9px]">Create Backup</span>}
-                    </Button>
-                  )}
-                </div>
-              )}
 
               {user.userType === "super_admin" && (
                 <>
@@ -866,19 +542,11 @@ export function Navbar({ user }: NavbarProps) {
                         <div className="space-y-1">
                           <Button
                             variant="ghost"
-                            className={navItemClass(isAccountPanel && activeAccountView === "register")}
+                            className={navItemClass(isAccountPanel)}
                             onClick={() => goTo("/dashboard?panel=account-management&account=register")}
                           >
                             <UserPlus className="mr-2 h-3 w-3" />
                             Register College Coordinators
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            className={navItemClass(isAccountPanel && activeAccountView === "transfer")}
-                            onClick={() => goTo("/dashboard?panel=account-management&account=transfer")}
-                          >
-                            <ArrowRightLeft className="mr-2 h-3 w-3" />
-                            Transfer College Coordinator Role
                           </Button>
                         </div>
                       </PopoverContent>
@@ -901,136 +569,15 @@ export function Navbar({ user }: NavbarProps) {
                     <div className="space-y-1 pl-2">
                       <Button
                         variant="ghost"
-                        className={navItemClass(isAccountPanel && activeAccountView === "register")}
+                        className={navItemClass(isAccountPanel)}
                         onClick={() => goTo("/dashboard?panel=account-management&account=register")}
                       >
                         <UserPlus className="mr-2 h-3 w-3" />
                         Register College Coordinators
                       </Button>
-                      <Button
-                        variant="ghost"
-                        className={navItemClass(isAccountPanel && activeAccountView === "transfer")}
-                        onClick={() => goTo("/dashboard?panel=account-management&account=transfer")}
-                      >
-                        <ArrowRightLeft className="mr-2 h-3 w-3" />
-                        Transfer College Coordinator Role
-                      </Button>
-                    </div>
-                  )}
-                  {withTooltip(
-                    "Records",
-                    <Button
-                      variant="ghost"
-                      className={cn(
-                        "h-8 transition-all duration-200",
-                        sidebarOpen ? "w-full justify-start px-3" : `${collapsedButtonClass} mx-auto flex`,
-                        recordsExpanded && !sidebarOpen ? "border border-border/40 bg-muted/30" : "border border-transparent"
-                      )}
-                      onClick={() => setRecordsExpanded((prev) => !prev)}
-                    >
-                      <Database className={cn("shrink-0", sidebarOpen ? "mr-2 h-3.5 w-3.5" : collapsedIconClass)} />
-                      {sidebarOpen && <span className="text-[9px] font-medium">Records</span>}
-                    </Button>
-                  )}
-                  
-                  {/* Super admin flattened items when collapsed, nested when expanded */}
-                  {(recordsExpanded || !sidebarOpen) && (
-                    <div className={cn(sidebarOpen ? "space-y-1 pl-2" : "space-y-1")}>
-                      {superAdminRecordItems.map((item) => (
-                        <div key={item.panel} className="w-full">
-                          <div className="flex justify-center w-full">
-                            {item.panel === "projects" && !sidebarOpen ? (
-                            <Popover>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="flex justify-center w-full">
-                                    <PopoverTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        className={cn(
-                                          `transition-all duration-200 ${collapsedButtonClass}`,
-                                          (activePanel === "projects" && (activeView === "project-registration" || activeView === "project-proposal"))
-                                            ? "border border-border/40 bg-muted/30 text-foreground"
-                                            : "border border-transparent text-foreground"
-                                        )}
-                                      >
-                                        <item.icon className={`shrink-0 ${collapsedIconClass}`} />
-                                      </Button>
-                                    </PopoverTrigger>
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent side="right">{item.label}</TooltipContent>
-                              </Tooltip>
-                              <PopoverContent side="right" align="start" className="w-48 p-2 ml-2 bg-background border border-border shadow-md rounded-lg">
-                                <div className="space-y-1">
-                                  <Button
-                                    variant="ghost"
-                                    className={navItemClass(activePanel === "projects" && activeView === "project-registration")}
-                                    onClick={() => goTo("/dashboard?panel=projects&view=project-registration")}
-                                  >
-                                    <FolderKanban className="mr-2 h-3 w-3" />
-                                    Project Registration
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    className={navItemClass(activePanel === "projects" && activeView === "project-proposal")}
-                                    onClick={() => goTo("/dashboard?panel=projects&view=project-proposal")}
-                                  >
-                                    <FolderKanban className="mr-2 h-3 w-3" />
-                                    Project Proposal
-                                  </Button>
-                                </div>
-                              </PopoverContent>
-                            </Popover>
-                          ) : (
-                            withTooltip(
-                              item.label,
-                              <Button
-                                variant="ghost"
-                                className={cn(
-                                  "transition-all duration-200",
-                                  sidebarOpen ? "h-6 w-full justify-start px-2" : collapsedButtonClass,
-                                  activePanel === item.panel 
-                                    ? "border border-border/40 bg-muted/30 text-foreground"
-                                    : "border border-transparent text-foreground"
-                                )}
-                                onClick={() => (item.panel === "projects" && sidebarOpen) 
-                                  ? setSuperProjectsExpanded(!superProjectsExpanded) 
-                                  : goTo(`/dashboard?panel=${item.panel}`)}
-                              >
-                                <item.icon className={cn("shrink-0", sidebarOpen ? "mr-2 h-3 w-3" : collapsedIconClass)} />
-                                {sidebarOpen && <span className="text-[9px]">{item.label}</span>}
-                              </Button>
-                            )
-                          )}
-                          </div>
-                          {item.panel === "projects" && sidebarOpen && superProjectsExpanded && (
-                            <div className="space-y-1 pl-2">
-                              <Button
-                                variant="ghost"
-                                className={navItemClass(activePanel === "projects" && activeView === "project-registration")}
-                                onClick={() => goTo("/dashboard?panel=projects&view=project-registration")}
-                              >
-                                <FolderKanban className="mr-2 h-3 w-3" />
-                                Project Registration
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                className={navItemClass(activePanel === "projects" && activeView === "project-proposal")}
-                                onClick={() => goTo("/dashboard?panel=projects&view=project-proposal")}
-                              >
-                                <FolderKanban className="mr-2 h-3 w-3" />
-                                Project Proposal
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      ))}
                     </div>
                   )}
                 </>
-              )}
-              </div>
               )}
             </ScrollArea>
           </TooltipProvider>

@@ -294,10 +294,9 @@ export function CoordinatorRegistration({ userType, title, description, departme
                       >
                         <option value="">Unit Coordinator</option>
                         <option value="project_leader">Project Leader</option>
-                        <option value="extension_office">Extension Office</option>
                       </select>
                       <p className="text-[9px] text-muted-foreground">
-                        Leave as Unit Coordinator unless assigning a Project Leader or Extension Office role.
+                        Leave as Unit Coordinator unless assigning a Project Leader role.
                       </p>
                     </div>
                   )}

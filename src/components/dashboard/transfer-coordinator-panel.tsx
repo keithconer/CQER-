@@ -188,12 +188,6 @@ export function TransferCoordinatorPanel({
   const usageEntries = [
     { key: "projects", label: "Projects" },
     { key: "trainings", label: "Trainings" },
-    { key: "awards", label: "Awards" },
-    { key: "student_involvement", label: "Student" },
-    { key: "faculty_involvement", label: "Faculty" },
-    { key: "pool_of_experts", label: "Experts" },
-    { key: "technologies_innovations", label: "Technologies" },
-    { key: "ordinance_resolutions", label: "Ordinance" },
   ];
 
   return (

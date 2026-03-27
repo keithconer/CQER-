@@ -1,61 +1,20 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { UnitProjectsManagement } from "@/components/dashboard/unit-projects-management";
 import { CoordinatorRegistration } from "@/components/dashboard/coordinator-registration";
-import { getCollegeProjects, getProjects, getProjectLeaderProjects, getProjectLeaderProposals, getUnitProjects } from "@/lib/actions/projects";
-import { getAwards } from "@/lib/actions/awards";
-import { getStudentInvolvement } from "@/lib/actions/student-involvement";
-import { getFacultyModuleData } from "@/lib/actions/faculty-involvement";
-import { getOrdinances, getTechnologies } from "@/lib/actions/technology-ordinance";
+import { getCollegeProjects, getProjectLeaderProjects, getUnitProjects } from "@/lib/actions/projects";
 import { getTrainings } from "@/lib/actions/trainings";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getAllUnits, getUnitsByDepartment } from "@/lib/departments";
-import { CollegeProjectsManagement } from "@/components/dashboard/college-projects-management";
-import { CollegeProjectProposalsManagement } from "@/components/dashboard/college-project-proposals-management";
-import { UnitProjectProposalsManagement } from "@/components/dashboard/unit-project-proposals-management";
-import { ProjectProposalManagement } from "@/components/dashboard/project-proposal-management";
-import { ProjectManagement } from "@/components/dashboard/project-management";
-import { type ProjectProposal } from "@/components/dashboard/project-proposals-table";
-import { FundingManagement } from "@/components/dashboard/funding-management";
-import { TechnicalAdvisoryServicesManagement } from "@/components/dashboard/technical-advisory-services-management";
 import { UnitCoordinatorsPanel } from "@/components/dashboard/unit-coordinators-panel";
-import { NeedsAssessmentManagement } from "@/components/dashboard/needs-assessment-management";
-import { getNeedsAssessments, type NeedsAssessment } from "@/lib/actions/needs-assessment";
-import { ConsultancyExtensionManagement } from "@/components/dashboard/consultancy-extension-management";
-import { getConsultancyExtensions, type ConsultancyExtension } from "@/lib/actions/consultancy-extension";
-import { AwardsManagement, type AwardRecord } from "@/components/dashboard/awards-management";
 import { type Project } from "@/components/dashboard/projects-table";
-import {
-  StudentInvolvementManagement,
-  type StudentInvolvementRecord,
-} from "@/components/dashboard/student-involvement-management";
-import {
-  FacultyInvolvementManagement,
-  type FacultyInvolvementRecord,
-  type PoolExpertRecord,
-} from "@/components/dashboard/faculty-involvement-management";
-import {
-  OrdinanceResolutionsManagement,
-  type OrdinanceRecord,
-} from "@/components/dashboard/ordinance-resolutions-management";
-import {
-  TechnologiesManagement,
-  type TechnologyRecord,
-} from "@/components/dashboard/technologies-management";
 import { TrainingsManagement } from "@/components/dashboard/trainings-management";
 import { type TrainingRecord } from "@/components/dashboard/trainings-form";
 import { AccountsTable } from "@/components/dashboard/accounts-table";
-import { TransferCoordinatorPanel } from "@/components/dashboard/transfer-coordinator-panel";
 import { DashboardAnalytics } from "@/components/dashboard/dashboard-analytics";
 import { format, startOfMonth, subMonths } from "date-fns";
 import { DEPARTMENTS } from "@/lib/departments";
 import { ActiveCoordinators, type CoordinatorActivity } from "@/components/dashboard/active-coordinators";
 import { CommunityPanel } from "@/components/dashboard/community-panel";
 import { getCommunityBootstrap, type CommunityPost } from "@/lib/actions/community";
-import {
-  getTechnicalAdvisoryServices,
-  type TechnicalAdvisoryServiceRecord,
-} from "@/lib/actions/technical-advisory-services";
 import { getBackupSummary, type BackupDatasetSummary } from "@/lib/actions/backup";
 import { BackupManagement } from "@/components/dashboard/backup-management";
 import { ProjectLeaderRegistrationManagement } from "@/components/dashboard/project-leader-registration-management";
@@ -231,11 +190,6 @@ export default async function DashboardPage({
 }) {
   const resolvedSearchParams = (await searchParams) || {};
   const panelParam = resolvedSearchParams.panel;
-  const accountViewParam = resolvedSearchParams.account;
-  const viewParam = resolvedSearchParams.view;
-  const activeProjectView: string =
-    "project-registration";
-  const accountView = accountViewParam === "transfer" ? "transfer" : "register";
   const accountPanelSelected = panelParam === "account-management" || panelParam === "accounts";
   let activePanel =
     panelParam === "overview" ||
@@ -248,8 +202,6 @@ export default async function DashboardPage({
       ? panelParam
       : "overview";
   let hasEntitySelection = activePanel === "projects";
-  let hasSuperAdminSelection = panelParam === "projects";
-  const superAdminPanel: string = "projects";
   let showOverview = activePanel === "overview";
 
   const supabase = await createClient();
@@ -275,28 +227,18 @@ export default async function DashboardPage({
     super_admin: ["overview", "community", "backup", "account-management", "accounts"],
     college_coordinator: ["overview", "community", "backup", "account-management", "accounts"],
     unit_coordinator: ["overview", "community", "backup"],
-    project_leader: ["overview", "community", "backup", "projects", "trainings"],
-    extension_office: ["overview", "community"],
+    project_leader: ["overview", "backup", "projects", "trainings"],
+    extension_office: ["overview"],
   };
   const allowedPanels = allowedPanelsByRole[profile.user_type] || ["overview"];
   if (!allowedPanels.includes(activePanel)) {
     activePanel = "overview";
   }
   hasEntitySelection = activePanel === "projects";
-  hasSuperAdminSelection = activePanel === "projects" && profile.user_type === "super_admin";
   showOverview = activePanel === "overview";
 
   let projects: Project[] = [];
-  let unitProjects: Project[] = [];
-  let awards: AwardRecord[] = [];
-  let studentInvolvementRecords: StudentInvolvementRecord[] = [];
-  let needsAssessmentsList: NeedsAssessment[] = [];
-  let consultancyExtensionsList: ConsultancyExtension[] = [];
-  let technicalAdvisoryServicesList: TechnicalAdvisoryServiceRecord[] = [];
-  let facultyInvolvementRecords: FacultyInvolvementRecord[] = [];
-  let poolExpertRecords: PoolExpertRecord[] = [];
-  let technologyRecords: TechnologyRecord[] = [];
-  let ordinanceRecords: OrdinanceRecord[] = [];
+  const unitProjects: Project[] = [];
   let trainingRecords: TrainingRecord[] = [];
   let trainingPartnerAgencyOptions: string[] = [];
   let trainingProjectOptions: { id: string; title: string }[] = [];
@@ -318,52 +260,11 @@ export default async function DashboardPage({
   if (profile.user_type === "unit_coordinator" || profile.user_type === "extension_office") {
     if (activePanel === "backup" && profile.user_type === "unit_coordinator") {
       backupDatasets = (await getBackupSummary()).datasets;
-    } else if (activePanel === "community") {
+    } else if (activePanel === "community" && profile.user_type === "unit_coordinator") {
       const communityData = await getCommunityBootstrap(profile.department);
       publicCommunityPosts = communityData.publicPosts;
       departmentCommunityPosts = communityData.departmentPosts;
       communityUsers = communityData.mentionableUsers;
-    } else if (activePanel === "awards") {
-      awards = (await getAwards()).data || [];
-    } else if (activePanel === "student-involvement") {
-      studentInvolvementRecords = (await getStudentInvolvement()).data || [];
-    } else if (activePanel === "faculty-involvement") {
-      const moduleData = await getFacultyModuleData();
-      facultyInvolvementRecords = moduleData.data?.faculty || [];
-      poolExpertRecords = moduleData.data?.pool || [];
-    } else if (activePanel === "technologies-innovation") {
-      technologyRecords = (await getTechnologies()).data || [];
-    } else if (activePanel === "ordinance-resolutions") {
-      ordinanceRecords = (await getOrdinances()).data || [];
-    } else if (activePanel === "trainings") {
-      trainingRecords = (await getTrainings()).data || [];
-      const visibleProjects = (await getUnitProjects()).data || [];
-      trainingPartnerAgencyOptions = extractPartnerAgencyNames(visibleProjects);
-      trainingProjectOptions = extractProjectOptions(visibleProjects);
-    } else if (activePanel === "technical-advisory-services") {
-      technicalAdvisoryServicesList = await getTechnicalAdvisoryServices();
-      if (profile.user_type === "unit_coordinator") {
-        const [myProjectsResult, unitProjectsResult] = await Promise.all([
-          getProjects(),
-          getUnitProjects(),
-        ]);
-        projects = myProjectsResult.data || [];
-        unitProjects = unitProjectsResult.data || [];
-      } else {
-        unitProjects = (await getUnitProjects()).data || [];
-      }
-    } else if (activePanel === "funding" || hasEntitySelection) {
-      if (profile.user_type === "unit_coordinator") {
-        const [myProjectsResult, unitProjectsResult] = await Promise.all([
-          getProjects(),
-          getUnitProjects(),
-        ]);
-        projects = myProjectsResult.data || [];
-        unitProjects = unitProjectsResult.data || [];
-      } else {
-        unitProjects = (await getUnitProjects()).data || [];
-        projects = [];
-      }
     }
   } else if (
     profile.user_type === "college_coordinator" &&
@@ -376,37 +277,10 @@ export default async function DashboardPage({
       publicCommunityPosts = communityData.publicPosts;
       departmentCommunityPosts = communityData.departmentPosts;
       communityUsers = communityData.mentionableUsers;
-    } else if (activePanel === "awards") {
-      awards = (await getAwards()).data || [];
-    } else if (activePanel === "student-involvement") {
-      studentInvolvementRecords = (await getStudentInvolvement()).data || [];
-    } else if (activePanel === "faculty-involvement") {
-      const moduleData = await getFacultyModuleData();
-      facultyInvolvementRecords = moduleData.data?.faculty || [];
-      poolExpertRecords = moduleData.data?.pool || [];
-    } else if (activePanel === "technologies-innovation") {
-      technologyRecords = (await getTechnologies()).data || [];
-    } else if (activePanel === "ordinance-resolutions") {
-      ordinanceRecords = (await getOrdinances()).data || [];
-    } else if (activePanel === "trainings") {
-      trainingRecords = (await getTrainings()).data || [];
-      const visibleProjects = (await getCollegeProjects()).data || [];
-      trainingPartnerAgencyOptions = extractPartnerAgencyNames(visibleProjects);
-      trainingProjectOptions = extractProjectOptions(visibleProjects);
-    } else if (activePanel === "technical-advisory-services") {
-      technicalAdvisoryServicesList = await getTechnicalAdvisoryServices();
-      projects = (await getCollegeProjects()).data || [];
-    } else if (activePanel === "funding" || hasEntitySelection) {
-      projects = (await getCollegeProjects()).data || [];
     }
   } else if (profile.user_type === "project_leader") {
     if (activePanel === "backup") {
       backupDatasets = (await getBackupSummary()).datasets;
-    } else if (activePanel === "community") {
-      const communityData = await getCommunityBootstrap(profile.department);
-      publicCommunityPosts = communityData.publicPosts;
-      departmentCommunityPosts = communityData.departmentPosts;
-      communityUsers = communityData.mentionableUsers;
     } else if (activePanel === "trainings") {
       trainingRecords = (await getTrainings()).data || [];
       const leaderProjectsResult = await getProjectLeaderProjects();
@@ -414,21 +288,8 @@ export default async function DashboardPage({
       trainingPartnerAgencyOptions = extractPartnerAgencyNames(leaderProjects);
       trainingProjectOptions = extractProjectOptions(leaderProjects);
     } else if (hasEntitySelection) {
-      if (activeProjectView === "project-proposal") {
-        const leaderProposalsResult = await getProjectLeaderProposals();
-        projects = (leaderProposalsResult.data || []) as unknown as Project[];
-      } else {
-        const leaderProjectsResult = await getProjectLeaderProjects();
-        projects = (leaderProjectsResult.data || []) as Project[];
-      }
-      
-      if (activeProjectView === "needs-assessment") {
-        needsAssessmentsList = await getNeedsAssessments();
-      }
-
-      if (activeProjectView === "consultancy-extension") {
-        consultancyExtensionsList = await getConsultancyExtensions();
-      }
+      const leaderProjectsResult = await getProjectLeaderProjects();
+      projects = (leaderProjectsResult.data || []) as Project[];
     }
   }
 
@@ -441,9 +302,6 @@ export default async function DashboardPage({
     department: string | null;
     unit: string | null;
   }[] = [];
-  let availableUnitsForCollege: string[] = [];
-  let availableUnitsForSuperAdmin: string[] = [];
-
   let allProjects: Project[] = [];
   let analyticsProjects: AnalyticsProject[] = [];
   let analyticsUsers = 0;
@@ -474,9 +332,6 @@ export default async function DashboardPage({
           account.user_type === "project_leader" ||
           account.user_type === "extension_office"
       ) || [];
-
-    availableUnitsForSuperAdmin = getAllUnits();
-
     if (activePanel === "backup") {
       backupDatasets = (await getBackupSummary()).datasets;
     } else if (activePanel === "community") {
@@ -484,30 +339,7 @@ export default async function DashboardPage({
       publicCommunityPosts = communityData.publicPosts;
       departmentCommunityPosts = communityData.departmentPosts;
       communityUsers = communityData.mentionableUsers;
-    } else if (activePanel === "awards") {
-      awards = (await getAwards()).data || [];
-    } else if (activePanel === "student-involvement") {
-      studentInvolvementRecords = (await getStudentInvolvement()).data || [];
-    } else if (activePanel === "faculty-involvement") {
-      const moduleData = await getFacultyModuleData();
-      facultyInvolvementRecords = moduleData.data?.faculty || [];
-      poolExpertRecords = moduleData.data?.pool || [];
-    } else if (activePanel === "technologies-innovation") {
-      technologyRecords = (await getTechnologies()).data || [];
-    } else if (activePanel === "ordinance-resolutions") {
-      ordinanceRecords = (await getOrdinances()).data || [];
-    } else if (activePanel === "trainings" || superAdminPanel === "trainings") {
-      trainingRecords = (await getTrainings()).data || [];
-      const { data: projectsData } = await adminClient.from("projects").select("*");
-      trainingPartnerAgencyOptions = extractPartnerAgencyNames((projectsData as Project[] | null) || []);
-    } else if (activePanel === "technical-advisory-services") {
-      technicalAdvisoryServicesList = await getTechnicalAdvisoryServices();
-      const { data: projectsData } = await adminClient
-        .from("projects")
-        .select("*")
-        .order("created_at", { ascending: false });
-      projects = (projectsData as Project[] | null) || [];
-    } else if (activePanel === "funding" || hasEntitySelection || superAdminPanel === "projects") {
+    } else if (hasEntitySelection) {
       const { data: projectsData } = await adminClient
         .from("projects")
         .select("*")
@@ -625,9 +457,6 @@ export default async function DashboardPage({
   }
 
   if (profile.user_type === "college_coordinator" && profile.department) {
-    // Always expose all units in the department for visibility selection.
-    availableUnitsForCollege = getUnitsByDepartment(profile.department);
-
     if (activePanel === "unit-coordinators" || accountPanelSelected) {
       const adminClient = createAdminClient();
       const { data: unitAccounts } = await adminClient
@@ -917,129 +746,20 @@ export default async function DashboardPage({
       {userType === "super_admin" && activePanel !== "community" && (
         <div className="space-y-4">
           {accountPanelSelected ? (
-            accountView === "transfer" ? (
-              <TransferCoordinatorPanel
-                mode="college"
-                accounts={allAccounts}
+            <>
+              <CoordinatorRegistration
+                userType="college_coordinator"
+                title="College Coordinators"
+                description="Register emails of College coordinators for their specific departments."
               />
-            ) : (
-              <>
-                <CoordinatorRegistration
-                  userType="college_coordinator"
-                  title="College Coordinators"
-                  description="Register emails of College coordinators for their specific departments."
-                />
-                <AccountsTable
-                  accounts={allAccounts}
-                  title="Registered Coordinators"
-                  description="All coordinator accounts across departments."
-                />
-              </>
-            )
-          ) : activePanel === "awards" ? (
-            <AwardsManagement
-              initialAwards={awards}
-              department={null}
-              userType={userType}
-              currentUserId={user.id}
-            />
+              <AccountsTable
+                accounts={allAccounts}
+                title="Registered Coordinators"
+                description="All coordinator accounts across departments."
+              />
+            </>
           ) : activePanel === "backup" ? (
             <BackupManagement datasets={backupDatasets} />
-          ) : activePanel === "funding" ? (
-            <FundingManagement
-              projects={projects}
-              title="Funding"
-              description="Filter funding rows by Internal or External."
-            />
-          ) : activePanel === "technical-advisory-services" ? (
-            <TechnicalAdvisoryServicesManagement
-              initialRecords={technicalAdvisoryServicesList}
-              assignedProjects={projects}
-              currentUserId={user.id}
-              userType={userType}
-              department={profile.department}
-            />
-          ) : activePanel === "student-involvement" ? (
-            <StudentInvolvementManagement
-              initialRecords={studentInvolvementRecords}
-              department={null}
-              userType={userType}
-              unit={null}
-              unitOptions={availableUnitsForSuperAdmin}
-              currentUserId={user.id}
-            />
-          ) : activePanel === "faculty-involvement" ? (
-            <FacultyInvolvementManagement
-              department={null}
-              userType={userType}
-              facultyRecords={facultyInvolvementRecords}
-              poolRecords={poolExpertRecords}
-              currentUserId={user.id}
-            />
-          ) : activePanel === "technologies-innovation" ? (
-            <TechnologiesManagement
-              initialRecords={technologyRecords}
-              department={null}
-              userType={userType}
-              unit={null}
-              unitOptions={availableUnitsForSuperAdmin}
-              currentUserId={user.id}
-            />
-          ) : activePanel === "ordinance-resolutions" ? (
-            <OrdinanceResolutionsManagement
-              initialRecords={ordinanceRecords}
-              department={null}
-              userType={userType}
-              unit={null}
-              unitOptions={availableUnitsForSuperAdmin}
-              currentUserId={user.id}
-            />
-          ) : (hasSuperAdminSelection || superAdminPanel === "trainings") ? (
-            <>
-              {activeProjectView === "project-proposal" ? (
-                <ProjectProposalManagement
-                  initialProjects={allProjects as ProjectProposal[]}
-                  userType={userType}
-                  department={profile.department}
-                  unit={profile.unit}
-                  unitOptions={availableUnitsForSuperAdmin}
-                  currentUserId={user.id}
-                />
-              ) : superAdminPanel === "trainings" ? (
-                <TrainingsManagement
-                  initialRecords={trainingRecords}
-                  department={profile.department}
-                  userType={userType}
-                  unit={profile.unit}
-                  unitOptions={availableUnitsForSuperAdmin}
-                  partnerAgencyOptions={trainingPartnerAgencyOptions}
-                  projectOptions={trainingProjectOptions}
-                  currentUserName={`${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "User"}
-                  currentUserId={user.id}
-                />
-              ) : (
-                <ProjectManagement
-                  initialProjects={allProjects}
-                  userType={userType}
-                  department={profile.department}
-                  unit={profile.unit}
-                  unitOptions={availableUnitsForSuperAdmin}
-                  currentUserId={user.id}
-                />
-              )}
-            </>
-          ) : activePanel === "trainings" ? (
-            <TrainingsManagement
-              initialRecords={trainingRecords}
-              department={profile.department}
-              userType={userType}
-              unit={profile.unit}
-              unitOptions={availableUnitsForSuperAdmin}
-              partnerAgencyOptions={trainingPartnerAgencyOptions}
-              projectOptions={trainingProjectOptions}
-              currentUserName={`${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "User"}
-              currentUserId={user.id}
-            />
           ) : null}
         </div>
       )}
@@ -1047,297 +767,19 @@ export default async function DashboardPage({
       {userType === "college_coordinator" && activePanel !== "community" && (
         <div className="space-y-4">
           {activePanel === "unit-coordinators" || accountPanelSelected ? (
-            accountView === "transfer" ? (
-              <TransferCoordinatorPanel
-                mode="unit"
-                accounts={collegeUnitCoordinatorAccounts}
-                department={profile.department}
-              />
-            ) : (
-              <UnitCoordinatorsPanel
-                accounts={collegeUnitCoordinatorAccounts}
-                department={profile.department}
-              />
-            )
-          ) : activePanel === "awards" ? (
-            <AwardsManagement
-              initialAwards={awards}
+            <UnitCoordinatorsPanel
+              accounts={collegeUnitCoordinatorAccounts}
               department={profile.department}
-              userType={userType}
-              currentUserId={user.id}
             />
           ) : activePanel === "backup" ? (
             <BackupManagement datasets={backupDatasets} />
-          ) : activePanel === "funding" ? (
-            <FundingManagement
-              projects={projects}
-              title="Funding"
-              description="Filter funding rows by Internal or External."
-            />
-          ) : activePanel === "technical-advisory-services" ? (
-            <TechnicalAdvisoryServicesManagement
-              initialRecords={technicalAdvisoryServicesList}
-              assignedProjects={projects}
-              currentUserId={user.id}
-              userType={userType}
-              department={profile.department}
-            />
-          ) : activePanel === "student-involvement" ? (
-            <StudentInvolvementManagement
-              initialRecords={studentInvolvementRecords}
-              department={profile.department}
-              userType={userType}
-              unit={profile.unit}
-              unitOptions={availableUnitsForCollege}
-              currentUserId={user.id}
-            />
-          ) : activePanel === "faculty-involvement" ? (
-            <FacultyInvolvementManagement
-              department={profile.department}
-              userType={userType}
-              facultyRecords={facultyInvolvementRecords}
-              poolRecords={poolExpertRecords}
-              currentUserId={user.id}
-            />
-          ) : activePanel === "technologies-innovation" ? (
-            <TechnologiesManagement
-              initialRecords={technologyRecords}
-              department={profile.department}
-              userType={userType}
-              unit={profile.unit}
-              unitOptions={availableUnitsForCollege}
-              currentUserId={user.id}
-            />
-          ) : activePanel === "ordinance-resolutions" ? (
-            <OrdinanceResolutionsManagement
-              initialRecords={ordinanceRecords}
-              department={profile.department}
-              userType={userType}
-              unit={profile.unit}
-              unitOptions={availableUnitsForCollege}
-              currentUserId={user.id}
-            />
-          ) : activePanel === "trainings" ? (
-            <TrainingsManagement
-              initialRecords={trainingRecords}
-              department={profile.department}
-              userType={userType}
-              unit={profile.unit}
-              unitOptions={availableUnitsForCollege}
-              partnerAgencyOptions={trainingPartnerAgencyOptions}
-              projectOptions={trainingProjectOptions}
-              currentUserName={`${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "User"}
-              currentUserId={user.id}
-            />
-          ) : hasEntitySelection ? (
-            activeProjectView === "project-proposal" ? (
-              <CollegeProjectProposalsManagement
-                initialProjects={projects}
-                userType={userType}
-                department={profile.department}
-                unit={profile.unit}
-                unitOptions={availableUnitsForCollege}
-                currentUserId={user.id}
-              />
-            ) : (
-              <CollegeProjectsManagement
-                initialProjects={projects}
-                userType={userType}
-                department={profile.department}
-                unit={profile.unit}
-                unitOptions={availableUnitsForCollege}
-                currentUserId={user.id}
-              />
-            )
           ) : null}
         </div>
       )}
 
       {userType === "unit_coordinator" && activePanel !== "community" && (
-        activePanel === "awards" ? (
-          <AwardsManagement
-            initialAwards={awards}
-            department={profile.department}
-            userType={userType}
-            currentUserId={user.id}
-          />
-        ) : activePanel === "backup" ? (
+        activePanel === "backup" ? (
           <BackupManagement datasets={backupDatasets} />
-        ) : activePanel === "funding" ? (
-          <FundingManagement
-            projects={unitProjects}
-            title="Funding"
-            description="Filter funding rows by Internal or External."
-          />
-        ) : activePanel === "technical-advisory-services" ? (
-          <TechnicalAdvisoryServicesManagement
-            initialRecords={technicalAdvisoryServicesList}
-            assignedProjects={unitProjects}
-            currentUserId={user.id}
-            userType={userType}
-            department={profile.department}
-          />
-        ) : activePanel === "student-involvement" ? (
-          <StudentInvolvementManagement
-            initialRecords={studentInvolvementRecords}
-            department={profile.department}
-            userType={userType}
-            unit={profile.unit}
-            unitOptions={[]}
-            currentUserId={user.id}
-          />
-        ) : activePanel === "faculty-involvement" ? (
-          <FacultyInvolvementManagement
-            department={profile.department}
-            userType={userType}
-            facultyRecords={facultyInvolvementRecords}
-            poolRecords={poolExpertRecords}
-            currentUserId={user.id}
-          />
-        ) : activePanel === "technologies-innovation" ? (
-          <TechnologiesManagement
-            initialRecords={technologyRecords}
-            department={profile.department}
-            userType={userType}
-            unit={profile.unit}
-            unitOptions={[]}
-            currentUserId={user.id}
-          />
-        ) : activePanel === "ordinance-resolutions" ? (
-          <OrdinanceResolutionsManagement
-            initialRecords={ordinanceRecords}
-            department={profile.department}
-            userType={userType}
-            unit={profile.unit}
-            unitOptions={[]}
-            currentUserId={user.id}
-          />
-        ) : activePanel === "trainings" ? (
-          <TrainingsManagement
-            initialRecords={trainingRecords}
-            department={profile.department}
-            userType={userType}
-            unit={profile.unit}
-            unitOptions={[]}
-            partnerAgencyOptions={trainingPartnerAgencyOptions}
-            projectOptions={trainingProjectOptions}
-            currentUserName={`${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "User"}
-            currentUserId={user.id}
-          />
-        ) : hasEntitySelection ? (
-          activeProjectView === "project-proposal" ? (
-            <UnitProjectProposalsManagement
-              myProjects={projects}
-              unitProjects={unitProjects}
-              userType={userType}
-              department={profile.department}
-              unit={profile.unit}
-              currentUserId={user.id}
-            />
-          ) : (
-            <UnitProjectsManagement
-              myProjects={projects}
-              unitProjects={unitProjects}
-              userType={userType}
-              department={profile.department}
-              unit={profile.unit}
-              unitOptions={[]}
-              currentUserId={user.id}
-            />
-          )
-        ) : null
-      )}
-
-      {userType === "extension_office" && activePanel !== "community" && (
-        activePanel === "awards" ? (
-          <AwardsManagement
-            initialAwards={awards}
-            department={profile.department}
-            userType={userType}
-            currentUserId={user.id}
-            isViewOnly
-          />
-        ) : activePanel === "funding" ? (
-          <FundingManagement
-            projects={unitProjects}
-            title="Funding"
-            description="Filter funding rows by Internal or External."
-          />
-        ) : activePanel === "student-involvement" ? (
-          <StudentInvolvementManagement
-            initialRecords={studentInvolvementRecords}
-            department={profile.department}
-            userType={userType}
-            unit={profile.unit}
-            unitOptions={[]}
-            currentUserId={user.id}
-            isViewOnly
-          />
-        ) : activePanel === "faculty-involvement" ? (
-          <FacultyInvolvementManagement
-            department={profile.department}
-            userType={userType}
-            facultyRecords={facultyInvolvementRecords}
-            poolRecords={poolExpertRecords}
-            currentUserId={user.id}
-            isViewOnly
-          />
-        ) : activePanel === "technologies-innovation" ? (
-          <TechnologiesManagement
-            initialRecords={technologyRecords}
-            department={profile.department}
-            userType={userType}
-            unit={profile.unit}
-            unitOptions={[]}
-            currentUserId={user.id}
-            isViewOnly
-          />
-        ) : activePanel === "ordinance-resolutions" ? (
-          <OrdinanceResolutionsManagement
-            initialRecords={ordinanceRecords}
-            department={profile.department}
-            userType={userType}
-            unit={profile.unit}
-            unitOptions={[]}
-            currentUserId={user.id}
-            isViewOnly
-          />
-        ) : activePanel === "trainings" ? (
-          <TrainingsManagement
-            initialRecords={trainingRecords}
-            department={profile.department}
-            userType={userType}
-            unit={profile.unit}
-            unitOptions={[]}
-            partnerAgencyOptions={trainingPartnerAgencyOptions}
-            projectOptions={trainingProjectOptions}
-            currentUserName={`${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "User"}
-            currentUserId={user.id}
-            isViewOnly
-          />
-        ) : hasEntitySelection ? (
-          activeProjectView === "project-proposal" ? (
-            <UnitProjectProposalsManagement
-              myProjects={projects}
-              unitProjects={unitProjects}
-              userType={userType}
-              department={profile.department}
-              unit={profile.unit}
-              currentUserId={user.id}
-              readOnly
-            />
-          ) : (
-            <UnitProjectsManagement
-              myProjects={projects}
-              unitProjects={unitProjects}
-              userType={userType}
-              department={profile.department}
-              unit={profile.unit}
-              unitOptions={[]}
-              currentUserId={user.id}
-              readOnly
-            />
-          )
         ) : null
       )}
 

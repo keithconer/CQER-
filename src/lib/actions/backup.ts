@@ -12,17 +12,7 @@ type SupportedRole =
 
 type DatasetKey =
   | "project_registration"
-  | "project_proposal"
-  | "trainings"
-  | "technical_advisory_services"
-  | "awards"
-  | "student_involvement"
-  | "faculty_involvement"
-  | "pool_of_experts"
-  | "technologies_innovations"
-  | "ordinance_resolutions"
-  | "needs_assessments"
-  | "consultancy_extensions";
+  | "trainings";
 
 export type BackupSelection = DatasetKey | "all";
 
@@ -61,73 +51,13 @@ const DATASETS: DatasetConfig[] = [
     key: "project_registration",
     label: "Project Registration",
     table: "projects",
-    roles: ["super_admin", "college_coordinator", "unit_coordinator"],
-  },
-  {
-    key: "project_proposal",
-    label: "Project Proposal",
-    table: "projects",
-    roles: ["super_admin", "college_coordinator", "unit_coordinator"],
+    roles: ["super_admin", "college_coordinator", "unit_coordinator", "project_leader"],
   },
   {
     key: "trainings",
     label: "Trainings",
     table: "trainings",
-    roles: ["super_admin", "college_coordinator", "unit_coordinator"],
-  },
-  {
-    key: "technical_advisory_services",
-    label: "Technical Advisory Services",
-    table: "technical_advisory_services",
-    roles: ["super_admin", "college_coordinator", "unit_coordinator"],
-  },
-  {
-    key: "awards",
-    label: "Awards",
-    table: "awards",
-    roles: ["super_admin", "college_coordinator", "unit_coordinator"],
-  },
-  {
-    key: "student_involvement",
-    label: "Student Involvement",
-    table: "student_involvement",
-    roles: ["super_admin", "college_coordinator", "unit_coordinator"],
-  },
-  {
-    key: "faculty_involvement",
-    label: "Faculty Involvement",
-    table: "faculty_involvement",
-    roles: ["super_admin", "college_coordinator", "unit_coordinator"],
-  },
-  {
-    key: "pool_of_experts",
-    label: "Pool of Experts",
-    table: "pool_of_experts",
-    roles: ["super_admin", "college_coordinator", "unit_coordinator"],
-  },
-  {
-    key: "technologies_innovations",
-    label: "Technologies",
-    table: "technologies_innovations",
-    roles: ["super_admin", "college_coordinator", "unit_coordinator"],
-  },
-  {
-    key: "ordinance_resolutions",
-    label: "Ordinance and Resolutions",
-    table: "ordinance_resolutions",
-    roles: ["super_admin", "college_coordinator", "unit_coordinator"],
-  },
-  {
-    key: "needs_assessments",
-    label: "Needs Assessments",
-    table: "needs_assessments",
-    roles: ["project_leader"],
-  },
-  {
-    key: "consultancy_extensions",
-    label: "Consultancy Extensions",
-    table: "consultancy_extensions",
-    roles: ["project_leader"],
+    roles: ["super_admin", "college_coordinator", "unit_coordinator", "project_leader"],
   },
 ];
 
@@ -224,13 +154,9 @@ async function getDatasetRecords(
       cachedProjects ||
       (await fetchOwnTableRecords(adminClient, "projects", userId)).records;
     const split = splitProjectRecords(projectRecords);
-    const projectKey =
-      config.key === "project_proposal"
-        ? "project_proposal"
-        : "project_registration";
     return {
       available: projectsAvailable,
-      records: split[projectKey],
+      records: split.project_registration,
     };
   }
 

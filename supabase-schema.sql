@@ -3040,3 +3040,22 @@ using (
 -- ============================================================
 -- END: Technical Advisory Services Module
 -- ============================================================
+
+-- ============================================================
+-- START: Cleanup Removed Modules
+-- Retain only dashboard/backups/notifications/community plus
+-- project registrations and trainings-related data tables.
+-- ============================================================
+drop table if exists public.awards cascade;
+drop table if exists public.student_involvement cascade;
+drop table if exists public.faculty_involvement cascade;
+drop table if exists public.pool_of_experts cascade;
+drop table if exists public.technologies_innovations cascade;
+drop table if exists public.ordinance_resolutions cascade;
+drop table if exists public.needs_assessments cascade;
+drop table if exists public.technical_advisory_services cascade;
+
+notify pgrst, 'reload schema';
+-- ============================================================
+-- END: Cleanup Removed Modules
+-- ============================================================
