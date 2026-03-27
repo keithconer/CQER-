@@ -437,7 +437,7 @@ function MultiDatePicker({
           type="button"
           variant="outline"
           className={cn(
-            "h-11 w-full justify-start rounded-xl border-border/60 bg-background px-3 text-left text-sm font-normal",
+            "h-9 w-full justify-start rounded-xl border-border/60 bg-background px-3 text-left text-xs font-normal",
             value.length === 0 && "text-muted-foreground"
           )}
           disabled={disabled}
@@ -481,7 +481,7 @@ function NumberField({
               onChange={(event) => field.onChange(event.target.value === "" ? 0 : Number(event.target.value))}
               readOnly={readOnly}
               disabled={disabled}
-              className={cn("h-10 rounded-xl text-sm", readOnly && "bg-muted/20")}
+              className={cn("h-9 rounded-xl text-xs", readOnly && "bg-muted/20")}
             />
           </FormControl>
           <FormMessage className="text-xs" />
@@ -967,7 +967,7 @@ export function TrainingsForm({
                         <FormItem>
                           <FormLabel className="text-xs">Title of Training</FormLabel>
                           <FormControl>
-                            <Input {...field} disabled={isViewOnly} className="h-10 rounded-xl text-sm" />
+                            <Input {...field} disabled={isViewOnly} className="h-9 rounded-xl text-xs" />
                           </FormControl>
                           <FormMessage className="text-xs" />
                         </FormItem>
@@ -982,7 +982,7 @@ export function TrainingsForm({
                           <FormControl>
                             <div className="relative">
                               <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                              <Input {...field} disabled={isViewOnly} className="h-10 rounded-xl pl-10 text-sm" />
+                              <Input {...field} disabled={isViewOnly} className="h-9 rounded-xl pl-10 text-xs" />
                             </div>
                           </FormControl>
                           <FormMessage className="text-xs" />
@@ -992,7 +992,7 @@ export function TrainingsForm({
                   </div>
 
                   <div className="rounded-2xl border border-border/40 bg-muted/10 p-4">
-                    <div className="grid gap-4 xl:grid-cols-[220px_minmax(0,1fr)_200px_200px]">
+                    <div className="grid gap-5 xl:grid-cols-[220px_minmax(0,1fr)_200px_200px]">
                       <FormField
                         control={form.control}
                         name="date_mode"
@@ -1001,7 +1001,7 @@ export function TrainingsForm({
                             <FormLabel className="text-xs">Dates Conducted</FormLabel>
                             <Select value={field.value} onValueChange={field.onChange} disabled={isViewOnly}>
                               <FormControl>
-                                <SelectTrigger className="h-10 rounded-xl text-sm">
+                                <SelectTrigger className="h-9 rounded-xl text-xs">
                                   <SelectValue placeholder="Select mode" />
                                 </SelectTrigger>
                               </FormControl>
@@ -1050,7 +1050,7 @@ export function TrainingsForm({
                                     value={typeof field.value === "number" ? field.value : ""}
                                     onChange={(event) => field.onChange(event.target.value === "" ? null : Number(event.target.value))}
                                     disabled={isViewOnly}
-                                    className="h-10 rounded-xl pl-10 text-sm"
+                                    className="h-9 rounded-xl pl-10 text-xs"
                                     placeholder="e.g. 6"
                                   />
                                 </div>
@@ -1062,11 +1062,11 @@ export function TrainingsForm({
                       )}
                       <FormItem>
                         <FormLabel className="text-xs">Number of Days</FormLabel>
-                        <Input value={String(conductedDays)} readOnly className="h-10 rounded-xl bg-muted/20 text-sm" />
+                        <Input value={String(conductedDays)} readOnly className="h-9 rounded-xl bg-muted/20 text-xs" />
                       </FormItem>
                       <FormItem>
                         <FormLabel className="text-xs">Number of Hours</FormLabel>
-                        <Input value={dateMode === "hours" ? String(manualHours) : "-"} readOnly className="h-10 rounded-xl bg-muted/20 text-sm" />
+                        <Input value={dateMode === "hours" ? String(manualHours) : "-"} readOnly className="h-9 rounded-xl bg-muted/20 text-xs" />
                       </FormItem>
                     </div>
                   </div>
@@ -1077,7 +1077,7 @@ export function TrainingsForm({
                       name="sdg_main"
                       render={({ field }) => (
                         <FormItem className="rounded-2xl border border-border/40 bg-background p-4">
-                          <FormLabel className="text-sm font-semibold">SDG Main</FormLabel>
+                          <FormLabel className="text-xs font-semibold">SDG Main</FormLabel>
                           <div className="mt-4 grid gap-2 sm:grid-cols-2">
                             {sdgOptions.map((option) => (
                               <label key={option} className="flex items-start gap-3 rounded-xl border border-border/40 px-3 py-2">
@@ -1105,7 +1105,7 @@ export function TrainingsForm({
                       name="sdg_sub"
                       render={({ field }) => (
                         <FormItem className="rounded-2xl border border-border/40 bg-background p-4">
-                          <FormLabel className="text-sm font-semibold">SDG Sub</FormLabel>
+                          <FormLabel className="text-xs font-semibold">SDG Sub</FormLabel>
                           <div className="mt-4 grid gap-2 sm:grid-cols-2">
                             {sdgOptions.map((option) => (
                               <label key={option} className="flex items-start gap-3 rounded-xl border border-border/40 px-3 py-2">
@@ -1135,7 +1135,7 @@ export function TrainingsForm({
                     name="thematic_area"
                     render={({ field }) => (
                       <FormItem className="rounded-2xl border border-border/40 bg-background p-4">
-                        <FormLabel className="text-sm font-semibold">Thematic Area</FormLabel>
+                        <FormLabel className="text-xs font-semibold">Thematic Area</FormLabel>
                         <div className="mt-4 grid gap-2 lg:grid-cols-2">
                           {THEMATIC_AREA_OPTIONS.map((option) => (
                             <label key={option.value} className="flex items-start gap-3 rounded-xl border border-border/40 px-3 py-2">
@@ -1150,7 +1150,7 @@ export function TrainingsForm({
                                   )
                                 }
                               />
-                              <span className="text-xs leading-5">{option.label}</span>
+                              <span className="text-xs leading-5">{option.value}</span>
                             </label>
                           ))}
                         </div>
@@ -1168,7 +1168,7 @@ export function TrainingsForm({
                           <FormLabel className="text-xs">Category of Training</FormLabel>
                           <Select value={field.value} onValueChange={field.onChange} disabled={isViewOnly}>
                             <FormControl>
-                              <SelectTrigger className="h-10 rounded-xl text-sm">
+                              <SelectTrigger className="h-9 rounded-xl text-xs">
                                 <SelectValue placeholder="Select category" />
                               </SelectTrigger>
                             </FormControl>
@@ -1192,7 +1192,7 @@ export function TrainingsForm({
                           <FormLabel className="text-xs">Mode / Method of Training</FormLabel>
                           <Select value={field.value} onValueChange={field.onChange} disabled={isViewOnly}>
                             <FormControl>
-                              <SelectTrigger className="h-10 rounded-xl text-sm">
+                              <SelectTrigger className="h-9 rounded-xl text-xs">
                                 <SelectValue placeholder="Select mode" />
                               </SelectTrigger>
                             </FormControl>
@@ -1218,7 +1218,7 @@ export function TrainingsForm({
                         <FormItem>
                           <FormLabel className="text-xs">Please Specify</FormLabel>
                           <FormControl>
-                            <Input {...field} disabled={isViewOnly} className="h-10 rounded-xl text-sm" />
+                            <Input {...field} disabled={isViewOnly} className="h-9 rounded-xl text-xs" />
                           </FormControl>
                           <FormMessage className="text-xs" />
                         </FormItem>
