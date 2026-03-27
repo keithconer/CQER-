@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useFieldArray, useForm, useWatch, type Control } from "react-hook-form";
+import { useFieldArray, useForm, useWatch, type Control, type FieldPath } from "react-hook-form";
 import * as z from "zod";
 import { format } from "date-fns";
 import {
@@ -218,7 +218,7 @@ const formSchema = z
       });
     }
 
-    if (values.training_category === "OTHERS" && !values.training_category_other.trim()) {
+    if (values.training_category === "OTHERS" && !(values.training_category_other ?? "").trim()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["training_category_other"],
@@ -237,6 +237,9 @@ const formSchema = z
 
 type FormValues = z.infer<typeof formSchema>;
 type RatingBreakdown = FormValues["rating_relevance_breakdown"];
+type InputValues = z.input<typeof formSchema>;
+type OutputValues = z.output<typeof formSchema>;
+type TrainingsControl = Control<InputValues, unknown, OutputValues>;
 
 export interface TrainingRecord {
   id: string;
@@ -457,8 +460,8 @@ function NumberField({
   disabled,
   readOnly = false,
 }: {
-  control: Control<FormValues>;
-  name: keyof FormValues;
+  control: TrainingsControl;
+  name: FieldPath<FormValues>;
   label: string;
   disabled?: boolean;
   readOnly?: boolean;
@@ -474,7 +477,7 @@ function NumberField({
             <Input
               type="number"
               min="0"
-              value={field.value ?? 0}
+              value={Number(field.value ?? 0)}
               onChange={(event) => field.onChange(event.target.value === "" ? 0 : Number(event.target.value))}
               readOnly={readOnly}
               disabled={disabled}
@@ -494,7 +497,7 @@ function RatingBreakdownFields({
   title,
   disabled,
 }: {
-  control: Control<FormValues>;
+  control: TrainingsControl;
   name: "rating_relevance_breakdown" | "rating_quality_breakdown" | "rating_timeliness_breakdown";
   title: string;
   disabled?: boolean;
@@ -517,7 +520,7 @@ function RatingBreakdownFields({
                   <Input
                     type="number"
                     min="0"
-                    value={field.value ?? 0}
+                    value={Number(field.value ?? 0)}
                     onChange={(event) => field.onChange(event.target.value === "" ? 0 : Number(event.target.value))}
                     disabled={disabled}
                     className="h-10 rounded-xl text-sm"
@@ -539,7 +542,7 @@ function StudentFields({
   disabled,
   onRemove,
 }: {
-  control: Control<FormValues>;
+  control: TrainingsControl;
   index: number;
   disabled?: boolean;
   onRemove: () => void;
@@ -686,7 +689,7 @@ export function TrainingsForm({
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const autoSubmitStartedRef = React.useRef(false);
 
-  const form = useForm<FormValues>({
+  const form = useForm<InputValues, unknown, OutputValues>({
     resolver: zodResolver(formSchema),
     defaultValues: buildDefaultValues(record, department, currentUserName, unit),
   });
@@ -701,7 +704,7 @@ export function TrainingsForm({
     name: "tvl_disability_breakdown",
   });
 
-  const dateMode = useWatch({ control: form.control, name: "date_mode" });
+  const dateMode = useWatch({ control: form.control, name: "date_mode" }) ?? "days";
   const selectedDates = useWatch({ control: form.control, name: "inclusive_dates" }) || [];
   const manualHours = Number(useWatch({ control: form.control, name: "manual_hours" }) || 0);
   const trainingCategory = useWatch({ control: form.control, name: "training_category" });
@@ -754,7 +757,7 @@ export function TrainingsForm({
     }
   }, [currentStep]);
 
-  const stepOneFields: (keyof FormValues)[] = [
+  const stepOneFields: FieldPath<FormValues>[] = [
     "training_title",
     "venue_platform",
     "sdg_main",
@@ -763,7 +766,7 @@ export function TrainingsForm({
     "training_category",
     "training_mode",
   ];
-  const stepTwoFields: (keyof FormValues)[] = [
+  const stepTwoFields: FieldPath<FormValues>[] = [
     "faculty_male",
     "faculty_female",
     "faculty_permanent",
@@ -775,7 +778,7 @@ export function TrainingsForm({
     "partner_agencies_male",
     "partner_agencies_female",
   ];
-  const stepThreeFields: (keyof FormValues)[] = [
+  const stepThreeFields: FieldPath<FormValues>[] = [
     "total_trainees_surveyed",
     "amount_charged_to_cvsu",
     "amount_charged_to_partner_agency",
@@ -784,7 +787,7 @@ export function TrainingsForm({
 
   async function validateStep(step: number) {
     if (step === 1) {
-      const targetFields = [...stepOneFields, dateMode === "days" ? "inclusive_dates" : "manual_hours"];
+      const targetFields: FieldPath<FormValues>[] = [...stepOneFields, dateMode === "days" ? "inclusive_dates" : "manual_hours"];
       return form.trigger(targetFields, { shouldFocus: true });
     }
     if (step === 2) {
@@ -831,7 +834,7 @@ export function TrainingsForm({
       sdg_main: values.sdg_main,
       sdg_sub: values.sdg_sub,
       training_category: values.training_category,
-      training_category_other: values.training_category_other,
+      training_category_other: values.training_category_other || "",
       training_mode: values.training_mode,
       faculty_male: values.faculty_male,
       faculty_female: values.faculty_female,
@@ -879,7 +882,7 @@ export function TrainingsForm({
       amount_charged_to_cvsu: values.amount_charged_to_cvsu,
       amount_charged_to_partner_agency: values.amount_charged_to_partner_agency,
       partner_agency_amount_type: values.partner_agency_amount_type,
-      expense_partner_agency_name: values.expense_partner_agency_name,
+      expense_partner_agency_name: values.expense_partner_agency_name || "",
       partner_agencies: values.expense_partner_agency_name ? [values.expense_partner_agency_name] : [],
       thematic_area: values.thematic_area,
       remarks: values.remarks || "",
@@ -1018,7 +1021,7 @@ export function TrainingsForm({
                               <FormLabel className="text-xs">Inclusive Dates</FormLabel>
                               <FormControl>
                                 <MultiDatePicker
-                                  value={field.value}
+                                  value={field.value ?? []}
                                   onChange={field.onChange}
                                   disabled={isViewOnly}
                                   placeholder="Select one or more dates"
@@ -1042,7 +1045,7 @@ export function TrainingsForm({
                                     type="number"
                                     min="1"
                                     max="8"
-                                    value={field.value ?? ""}
+                                    value={typeof field.value === "number" ? field.value : ""}
                                     onChange={(event) => field.onChange(event.target.value === "" ? null : Number(event.target.value))}
                                     disabled={isViewOnly}
                                     className="h-10 rounded-xl pl-10 text-sm"
@@ -1533,7 +1536,7 @@ export function TrainingsForm({
                           <FormItem>
                             <FormControl>
                               <FileUpload
-                                value={field.value}
+                                value={field.value ?? []}
                                 onChange={field.onChange}
                                 disabled={isViewOnly}
                                 bucket="cqer-trainings_pdf"
