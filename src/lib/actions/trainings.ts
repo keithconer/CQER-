@@ -15,18 +15,25 @@ export interface TrainingPayload {
   contact_details: string;
   related_curricular_offerings: string[];
   training_title: string;
+  related_project_id?: string | null;
+  related_project_title?: string;
   date_mode: "days" | "hours";
   inclusive_dates: string[];
   manual_hours: number | null;
   venue_platform: string;
   sdg_goals: string[];
+  sdg_main?: string[];
+  sdg_sub?: string[];
   training_category: "TVL" | "CE" | "GAD" | "AE" | "BE" | "OTHERS";
   training_category_other: string;
   training_mode: "FTF" | "O" | "H";
   faculty_male: number;
   faculty_female: number;
+  faculty_permanent?: number;
+  faculty_cos?: number;
   non_academic_male: number;
   non_academic_female: number;
+  cvsu_students?: { name: string; program: string }[];
   cvsu_students_male: number;
   cvsu_students_female: number;
   partner_agencies_male: number;
@@ -57,10 +64,15 @@ export interface TrainingPayload {
   rating_relevance: number;
   rating_equality: number;
   rating_timeliness: number;
+  rating_relevance_breakdown?: Record<string, number>;
+  rating_quality_breakdown?: Record<string, number>;
+  rating_timeliness_breakdown?: Record<string, number>;
   total_clients_requesting_trainings: number;
   total_requests_responded_next_3_days: number;
   amount_charged_to_cvsu: number;
   amount_charged_to_partner_agency: number;
+  partner_agency_amount_type?: "estimated" | "exact";
+  expense_partner_agency_name?: string;
   partner_agencies: string[];
   thematic_area: string[];
   remarks: string;
@@ -114,12 +126,27 @@ function trainingVisibleToDepartment(
 }
 
 export async function getTrainings() {
-  const { department, userType } = await getCurrentContext();
+  const { user, department, userType } = await getCurrentContext();
   const adminClient = createAdminClient();
   if (userType === "super_admin") {
     const { data, error } = await adminClient
       .from("trainings")
       .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching trainings:", error);
+      return { error: error.message };
+    }
+
+    return { data };
+  }
+
+  if (userType === "project_leader") {
+    const { data, error } = await adminClient
+      .from("trainings")
+      .select("*")
+      .eq("created_by", user.id)
       .order("created_at", { ascending: false });
 
     if (error) {

@@ -250,7 +250,7 @@ export function ProjectLeaderRegistrationManagement({
                   <DropdownMenuItem onClick={() => void exportPdf(filteredProjects)}>Export PDF</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button className="rounded-xl" onClick={() => setCreateOpen(true)}>
+              <Button className="rounded-xl bg-[#159E44] text-white hover:bg-[#128A3B]" onClick={() => setCreateOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Register Project
               </Button>

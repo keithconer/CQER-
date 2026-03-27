@@ -1311,18 +1311,25 @@ create table if not exists public.trainings (
   contact_details text not null,
   related_curricular_offerings jsonb not null default '[]'::jsonb,
   training_title text not null,
+  related_project_id uuid,
+  related_project_title text,
   date_mode text not null default 'days',
   inclusive_dates jsonb not null default '[]'::jsonb,
   manual_hours numeric(6,2),
   venue_platform text not null,
   sdg_goals jsonb not null default '[]'::jsonb,
+  sdg_main jsonb not null default '[]'::jsonb,
+  sdg_sub jsonb not null default '[]'::jsonb,
   training_category text not null,
   training_category_other text,
   training_mode text not null,
   faculty_male integer not null default 0,
   faculty_female integer not null default 0,
+  faculty_permanent integer not null default 0,
+  faculty_cos integer not null default 0,
   non_academic_male integer not null default 0,
   non_academic_female integer not null default 0,
+  cvsu_students jsonb not null default '[]'::jsonb,
   cvsu_students_male integer not null default 0,
   cvsu_students_female integer not null default 0,
   partner_agencies_male integer not null default 0,
@@ -1345,6 +1352,7 @@ create table if not exists public.trainings (
   tvl_disabilities_count integer not null default 0,
   tvl_disability_breakdown jsonb not null default '[]'::jsonb,
   tvl_total_persons_trained integer not null default 0,
+  total_persons_trained integer not null default 0,
   conducted_days_count integer not null default 0,
   days_multiplier numeric(6,2) not null default 0,
   weighted_days_trained numeric(10,2) not null default 0,
@@ -1353,10 +1361,15 @@ create table if not exists public.trainings (
   rating_relevance integer not null default 3,
   rating_equality integer not null default 3,
   rating_timeliness integer not null default 3,
+  rating_relevance_breakdown jsonb not null default '{"5":0,"4":0,"3":0,"2":0,"1":0}'::jsonb,
+  rating_quality_breakdown jsonb not null default '{"5":0,"4":0,"3":0,"2":0,"1":0}'::jsonb,
+  rating_timeliness_breakdown jsonb not null default '{"5":0,"4":0,"3":0,"2":0,"1":0}'::jsonb,
   total_clients_requesting_trainings integer not null default 0,
   total_requests_responded_next_3_days integer not null default 0,
   amount_charged_to_cvsu numeric(14,2) not null default 0,
   amount_charged_to_partner_agency numeric(14,2) not null default 0,
+  partner_agency_amount_type text not null default 'estimated',
+  expense_partner_agency_name text,
   partner_agencies jsonb not null default '[]'::jsonb,
   thematic_area jsonb not null default '[]'::jsonb,
   remarks text,
@@ -1410,9 +1423,9 @@ begin
     alter table public.trainings
       add constraint trainings_ratings_check
       check (
-        rating_relevance between 1 and 5 and
-        rating_equality between 1 and 5 and
-        rating_timeliness between 1 and 5
+        rating_relevance between 0 and 5 and
+        rating_equality between 0 and 5 and
+        rating_timeliness between 0 and 5
       );
   end if;
 end
@@ -2629,7 +2642,31 @@ $$;
 -- Add missing columns to trainings
 alter table public.trainings
 add column if not exists visibility_scope text default 'department',
-add column if not exists visible_departments jsonb default '[]'::jsonb;
+add column if not exists visible_departments jsonb default '[]'::jsonb,
+add column if not exists related_project_id uuid,
+add column if not exists related_project_title text,
+add column if not exists sdg_main jsonb default '[]'::jsonb,
+add column if not exists sdg_sub jsonb default '[]'::jsonb,
+add column if not exists faculty_permanent integer not null default 0,
+add column if not exists faculty_cos integer not null default 0,
+add column if not exists cvsu_students jsonb default '[]'::jsonb,
+add column if not exists total_persons_trained integer not null default 0,
+add column if not exists rating_relevance_breakdown jsonb default '{"5":0,"4":0,"3":0,"2":0,"1":0}'::jsonb,
+add column if not exists rating_quality_breakdown jsonb default '{"5":0,"4":0,"3":0,"2":0,"1":0}'::jsonb,
+add column if not exists rating_timeliness_breakdown jsonb default '{"5":0,"4":0,"3":0,"2":0,"1":0}'::jsonb,
+add column if not exists partner_agency_amount_type text default 'estimated',
+add column if not exists expense_partner_agency_name text;
+
+alter table public.trainings
+drop constraint if exists trainings_ratings_check;
+
+alter table public.trainings
+add constraint trainings_ratings_check
+check (
+  rating_relevance between 0 and 5 and
+  rating_equality between 0 and 5 and
+  rating_timeliness between 0 and 5
+);
 
 -- Add missing columns to projects
 alter table public.projects

@@ -84,6 +84,15 @@ function extractPartnerAgencyNames(projects: Project[]) {
   return Array.from(values).sort((a, b) => a.localeCompare(b));
 }
 
+function extractProjectOptions(projects: Project[]) {
+  return projects
+    .filter((project) => Boolean(project.id && project.title))
+    .map((project) => ({
+      id: project.id,
+      title: project.title,
+    }));
+}
+
 export type LeaderboardData = CoordinatorActivity & {
   projects: number;
   trainings: number;
@@ -234,6 +243,7 @@ export default async function DashboardPage({
     panelParam === "accounts" ||
     panelParam === "community" ||
     panelParam === "backup" ||
+    panelParam === "trainings" ||
     panelParam === "projects"
       ? panelParam
       : "overview";
@@ -265,7 +275,7 @@ export default async function DashboardPage({
     super_admin: ["overview", "community", "backup", "account-management", "accounts"],
     college_coordinator: ["overview", "community", "backup", "account-management", "accounts"],
     unit_coordinator: ["overview", "community", "backup"],
-    project_leader: ["overview", "community", "backup", "projects"],
+    project_leader: ["overview", "community", "backup", "projects", "trainings"],
     extension_office: ["overview", "community"],
   };
   const allowedPanels = allowedPanelsByRole[profile.user_type] || ["overview"];
@@ -289,6 +299,7 @@ export default async function DashboardPage({
   let ordinanceRecords: OrdinanceRecord[] = [];
   let trainingRecords: TrainingRecord[] = [];
   let trainingPartnerAgencyOptions: string[] = [];
+  let trainingProjectOptions: { id: string; title: string }[] = [];
   let publicCommunityPosts: CommunityPost[] = [];
   let departmentCommunityPosts: CommunityPost[] = [];
   let communityUsers = [] as Awaited<ReturnType<typeof getCommunityBootstrap>>["mentionableUsers"];
@@ -328,6 +339,7 @@ export default async function DashboardPage({
       trainingRecords = (await getTrainings()).data || [];
       const visibleProjects = (await getUnitProjects()).data || [];
       trainingPartnerAgencyOptions = extractPartnerAgencyNames(visibleProjects);
+      trainingProjectOptions = extractProjectOptions(visibleProjects);
     } else if (activePanel === "technical-advisory-services") {
       technicalAdvisoryServicesList = await getTechnicalAdvisoryServices();
       if (profile.user_type === "unit_coordinator") {
@@ -380,6 +392,7 @@ export default async function DashboardPage({
       trainingRecords = (await getTrainings()).data || [];
       const visibleProjects = (await getCollegeProjects()).data || [];
       trainingPartnerAgencyOptions = extractPartnerAgencyNames(visibleProjects);
+      trainingProjectOptions = extractProjectOptions(visibleProjects);
     } else if (activePanel === "technical-advisory-services") {
       technicalAdvisoryServicesList = await getTechnicalAdvisoryServices();
       projects = (await getCollegeProjects()).data || [];
@@ -394,6 +407,12 @@ export default async function DashboardPage({
       publicCommunityPosts = communityData.publicPosts;
       departmentCommunityPosts = communityData.departmentPosts;
       communityUsers = communityData.mentionableUsers;
+    } else if (activePanel === "trainings") {
+      trainingRecords = (await getTrainings()).data || [];
+      const leaderProjectsResult = await getProjectLeaderProjects();
+      const leaderProjects = (leaderProjectsResult.data || []) as Project[];
+      trainingPartnerAgencyOptions = extractPartnerAgencyNames(leaderProjects);
+      trainingProjectOptions = extractProjectOptions(leaderProjects);
     } else if (hasEntitySelection) {
       if (activeProjectView === "project-proposal") {
         const leaderProposalsResult = await getProjectLeaderProposals();
@@ -994,6 +1013,8 @@ export default async function DashboardPage({
                   unit={profile.unit}
                   unitOptions={availableUnitsForSuperAdmin}
                   partnerAgencyOptions={trainingPartnerAgencyOptions}
+                  projectOptions={trainingProjectOptions}
+                  currentUserName={`${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "User"}
                   currentUserId={user.id}
                 />
               ) : (
@@ -1015,6 +1036,8 @@ export default async function DashboardPage({
               unit={profile.unit}
               unitOptions={availableUnitsForSuperAdmin}
               partnerAgencyOptions={trainingPartnerAgencyOptions}
+              projectOptions={trainingProjectOptions}
+              currentUserName={`${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "User"}
               currentUserId={user.id}
             />
           ) : null}
@@ -1102,6 +1125,8 @@ export default async function DashboardPage({
               unit={profile.unit}
               unitOptions={availableUnitsForCollege}
               partnerAgencyOptions={trainingPartnerAgencyOptions}
+              projectOptions={trainingProjectOptions}
+              currentUserName={`${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "User"}
               currentUserId={user.id}
             />
           ) : hasEntitySelection ? (
@@ -1195,6 +1220,8 @@ export default async function DashboardPage({
             unit={profile.unit}
             unitOptions={[]}
             partnerAgencyOptions={trainingPartnerAgencyOptions}
+            projectOptions={trainingProjectOptions}
+            currentUserName={`${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "User"}
             currentUserId={user.id}
           />
         ) : hasEntitySelection ? (
@@ -1283,6 +1310,8 @@ export default async function DashboardPage({
             unit={profile.unit}
             unitOptions={[]}
             partnerAgencyOptions={trainingPartnerAgencyOptions}
+            projectOptions={trainingProjectOptions}
+            currentUserName={`${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "User"}
             currentUserId={user.id}
             isViewOnly
           />
@@ -1315,6 +1344,18 @@ export default async function DashboardPage({
       {userType === "project_leader" && activePanel !== "community" && (
         activePanel === "backup" ? (
           <BackupManagement datasets={backupDatasets} />
+        ) : activePanel === "trainings" ? (
+          <TrainingsManagement
+            initialRecords={trainingRecords}
+            department={profile.department}
+            userType={userType}
+            unit={profile.unit}
+            unitOptions={[]}
+            partnerAgencyOptions={trainingPartnerAgencyOptions}
+            projectOptions={trainingProjectOptions}
+            currentUserName={`${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "Project Leader"}
+            currentUserId={user.id}
+          />
         ) : hasEntitySelection ? (
           <ProjectLeaderRegistrationManagement
             projects={projects}

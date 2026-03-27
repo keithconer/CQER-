@@ -120,6 +120,7 @@ export function Navbar({ user }: NavbarProps) {
     panelParam === "accounts" ||
     panelParam === "community" ||
     panelParam === "backup" ||
+    panelParam === "trainings" ||
     panelParam === "projects"
       ? panelParam
       : "overview";
@@ -129,6 +130,7 @@ export function Navbar({ user }: NavbarProps) {
     router.prefetch("/dashboard?panel=overview");
     router.prefetch("/dashboard?panel=community");
     router.prefetch("/dashboard?panel=backup");
+    router.prefetch("/dashboard?panel=trainings");
     router.prefetch("/dashboard?panel=funding");
     router.prefetch("/dashboard?panel=accounts");
     router.prefetch("/dashboard?panel=account-management&account=register");
@@ -206,7 +208,7 @@ export function Navbar({ user }: NavbarProps) {
     label: string;
     roles: string[];
   }[] = [
-    { panel: "trainings", icon: BookOpenCheck, label: "Trainings", roles: ["college_coordinator", "unit_coordinator", "extension_office"] },
+    { panel: "trainings", icon: BookOpenCheck, label: "Trainings", roles: ["college_coordinator", "unit_coordinator", "extension_office", "project_leader"] },
     { panel: "funding", icon: Database, label: "Funding", roles: ["college_coordinator", "unit_coordinator", "extension_office"] },
     { panel: "technical-advisory-services", icon: Briefcase, label: "Technical Advisory Services", roles: ["college_coordinator", "unit_coordinator"] },
     { panel: "awards", icon: Award, label: "Awards", roles: ["college_coordinator", "unit_coordinator", "extension_office"] },

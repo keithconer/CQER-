@@ -15,9 +15,18 @@ interface FileUploadProps {
   maxFiles?: number;
   bucket?: string;
   accept?: string;
+  maxSizeInMB?: number;
 }
 
-export function FileUpload({ value = [], onChange, disabled, maxFiles = 5, bucket = "cqer-projects_pdfs", accept }: FileUploadProps) {
+export function FileUpload({
+  value = [],
+  onChange,
+  disabled,
+  maxFiles = 5,
+  bucket = "cqer-projects_pdfs",
+  accept,
+  maxSizeInMB = 5,
+}: FileUploadProps) {
   const [uploading, setUploading] = React.useState(false);
   const [progress, setProgress] = React.useState(0);
   const [openingIndex, setOpeningIndex] = React.useState<number | null>(null);
@@ -33,8 +42,8 @@ export function FileUpload({ value = [], onChange, disabled, maxFiles = 5, bucke
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert("File size must be less than 5MB.");
+    if (file.size > maxSizeInMB * 1024 * 1024) {
+      alert(`File size must be less than ${maxSizeInMB}MB.`);
       return;
     }
 
@@ -195,7 +204,7 @@ export function FileUpload({ value = [], onChange, disabled, maxFiles = 5, bucke
                 <p className="text-xs font-medium">
                   {value.length > 0 ? "Add another copy" : "Click to upload copies"}
                 </p>
-                <p className="text-[9px] text-muted-foreground">PDF (Max 5MB each)</p>
+                <p className="text-[9px] text-muted-foreground">PDF (Max {maxSizeInMB}MB each)</p>
               </div>
             </>
           )}
