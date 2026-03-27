@@ -419,6 +419,16 @@ function getAverageRating(breakdown: RatingBreakdown) {
   return Number((weightedTotal / totalResponses).toFixed(2));
 }
 
+function getStoredRating(breakdown: RatingBreakdown) {
+  return Math.round(getAverageRating(breakdown));
+}
+
+function getEditableNumberValue(value: unknown, readOnly = false) {
+  if (readOnly) return Number(value ?? 0);
+  if (value === "" || value == null) return "";
+  return Number(value);
+}
+
 function MultiDatePicker({
   value,
   onChange,
@@ -477,8 +487,9 @@ function NumberField({
             <Input
               type="number"
               min="0"
-              value={Number(field.value ?? 0)}
-              onChange={(event) => field.onChange(event.target.value === "" ? 0 : Number(event.target.value))}
+              inputMode="decimal"
+              value={getEditableNumberValue(field.value, readOnly)}
+              onChange={(event) => field.onChange(event.target.value === "" ? "" : Number(event.target.value))}
               readOnly={readOnly}
               disabled={disabled}
               className={cn("h-9 rounded-xl text-xs", readOnly && "bg-muted/20")}
@@ -520,8 +531,9 @@ function RatingBreakdownFields({
                   <Input
                     type="number"
                     min="0"
-                    value={Number(field.value ?? 0)}
-                    onChange={(event) => field.onChange(event.target.value === "" ? 0 : Number(event.target.value))}
+                    inputMode="numeric"
+                    value={getEditableNumberValue(field.value)}
+                    onChange={(event) => field.onChange(event.target.value === "" ? "" : Number(event.target.value))}
                     disabled={disabled}
                     className="h-10 rounded-xl text-sm"
                   />
@@ -606,7 +618,19 @@ function buildDefaultValues(
   department: string,
   currentUserName: string,
   unit?: string | null
-): FormValues {
+): InputValues {
+  const editableNumber = (value: unknown) => (record ? Number(value || 0) : "");
+  const editableRatingBreakdown = (value: unknown) =>
+    record
+      ? normalizeRatingBreakdown(value)
+      : {
+          "5": "",
+          "4": "",
+          "3": "",
+          "2": "",
+          "1": "",
+        };
+
   return {
     college: record?.college || "CEIT",
     department: record?.department || department || "",
@@ -634,37 +658,37 @@ function buildDefaultValues(
     training_category: record?.training_category || "TVL",
     training_category_other: record?.training_category_other || "",
     training_mode: record?.training_mode || "FTF",
-    faculty_male: Number(record?.faculty_male || 0),
-    faculty_female: Number(record?.faculty_female || 0),
-    faculty_permanent: Number(record?.faculty_permanent || 0),
-    faculty_cos: Number(record?.faculty_cos || 0),
-    non_academic_male: Number(record?.non_academic_male || 0),
-    non_academic_female: Number(record?.non_academic_female || 0),
+    faculty_male: editableNumber(record?.faculty_male),
+    faculty_female: editableNumber(record?.faculty_female),
+    faculty_permanent: editableNumber(record?.faculty_permanent),
+    faculty_cos: editableNumber(record?.faculty_cos),
+    non_academic_male: editableNumber(record?.non_academic_male),
+    non_academic_female: editableNumber(record?.non_academic_female),
     cvsu_students: normalizeStudentArray(record?.cvsu_students),
-    cvsu_students_male: Number(record?.cvsu_students_male || 0),
-    cvsu_students_female: Number(record?.cvsu_students_female || 0),
-    partner_agencies_male: Number(record?.partner_agencies_male || 0),
-    partner_agencies_female: Number(record?.partner_agencies_female || 0),
+    cvsu_students_male: editableNumber(record?.cvsu_students_male),
+    cvsu_students_female: editableNumber(record?.cvsu_students_female),
+    partner_agencies_male: editableNumber(record?.partner_agencies_male),
+    partner_agencies_female: editableNumber(record?.partner_agencies_female),
     participants_male_total: Number(record?.participants_male_total || 0),
     participants_female_total: Number(record?.participants_female_total || 0),
     participants_overall_total: Number(record?.participants_overall_total || 0),
-    tvl_solo_parent: Number(record?.tvl_solo_parent || 0),
-    tvl_4ps_members: Number(record?.tvl_4ps_members || 0),
-    tvl_disabilities_count: Number(record?.tvl_disabilities_count || 0),
+    tvl_solo_parent: editableNumber(record?.tvl_solo_parent),
+    tvl_4ps_members: editableNumber(record?.tvl_4ps_members),
+    tvl_disabilities_count: editableNumber(record?.tvl_disabilities_count),
     tvl_disability_breakdown: normalizeDisabilityArray(record?.tvl_disability_breakdown),
     total_persons_trained: Number(record?.total_persons_trained || record?.tvl_total_persons_trained || record?.participants_overall_total || 0),
     conducted_days_count: Number(record?.conducted_days_count || 0),
     days_multiplier: Number(record?.days_multiplier || 0),
     weighted_days_trained: Number(record?.weighted_days_trained || 0),
     days_trained_per_weight: Number(record?.days_trained_per_weight || 0),
-    total_trainees_surveyed: Number(record?.total_trainees_surveyed || 0),
-    rating_relevance_breakdown: normalizeRatingBreakdown(record?.rating_relevance_breakdown),
-    rating_quality_breakdown: normalizeRatingBreakdown(record?.rating_quality_breakdown),
-    rating_timeliness_breakdown: normalizeRatingBreakdown(record?.rating_timeliness_breakdown),
-    total_clients_requesting_trainings: Number(record?.total_clients_requesting_trainings || 0),
-    total_requests_responded_next_3_days: Number(record?.total_requests_responded_next_3_days || 0),
-    amount_charged_to_cvsu: Number(record?.amount_charged_to_cvsu || 0),
-    amount_charged_to_partner_agency: Number(record?.amount_charged_to_partner_agency || 0),
+    total_trainees_surveyed: editableNumber(record?.total_trainees_surveyed),
+    rating_relevance_breakdown: editableRatingBreakdown(record?.rating_relevance_breakdown),
+    rating_quality_breakdown: editableRatingBreakdown(record?.rating_quality_breakdown),
+    rating_timeliness_breakdown: editableRatingBreakdown(record?.rating_timeliness_breakdown),
+    total_clients_requesting_trainings: editableNumber(record?.total_clients_requesting_trainings),
+    total_requests_responded_next_3_days: editableNumber(record?.total_requests_responded_next_3_days),
+    amount_charged_to_cvsu: editableNumber(record?.amount_charged_to_cvsu),
+    amount_charged_to_partner_agency: editableNumber(record?.amount_charged_to_partner_agency),
     partner_agency_amount_type: record?.partner_agency_amount_type || "estimated",
     expense_partner_agency_name:
       record?.expense_partner_agency_name || normalizeStringArray(record?.partner_agencies)[0] || "",
@@ -871,9 +895,9 @@ export function TrainingsForm({
       weighted_days_trained: values.weighted_days_trained,
       days_trained_per_weight: values.days_trained_per_weight,
       total_trainees_surveyed: values.total_trainees_surveyed,
-      rating_relevance: getAverageRating(values.rating_relevance_breakdown),
-      rating_equality: getAverageRating(values.rating_quality_breakdown),
-      rating_timeliness: getAverageRating(values.rating_timeliness_breakdown),
+      rating_relevance: getStoredRating(values.rating_relevance_breakdown),
+      rating_equality: getStoredRating(values.rating_quality_breakdown),
+      rating_timeliness: getStoredRating(values.rating_timeliness_breakdown),
       rating_relevance_breakdown: values.rating_relevance_breakdown,
       rating_quality_breakdown: values.rating_quality_breakdown,
       rating_timeliness_breakdown: values.rating_timeliness_breakdown,
