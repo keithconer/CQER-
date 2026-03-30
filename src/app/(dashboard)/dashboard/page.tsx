@@ -6,6 +6,7 @@ import { getTrainings } from "@/lib/actions/trainings";
 import { getConsultancyExtensions } from "@/lib/actions/consultancy-extension";
 import { getTechnicalAdvisoryServices } from "@/lib/actions/technical-advisory-services";
 import { getAdoptersWithEnterprise } from "@/lib/actions/adopters-with-enterprise";
+import { getTechnologiesInnovationsCommercialized } from "@/lib/actions/technologies-innovations-commercialized";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { UnitCoordinatorsPanel } from "@/components/dashboard/unit-coordinators-panel";
 import { type Project } from "@/components/dashboard/projects-table";
@@ -27,6 +28,8 @@ import { TechnicalAdvisoryServicesManagement } from "@/components/dashboard/tech
 import { type TechnicalAdvisoryServiceRecord } from "@/lib/actions/technical-advisory-services";
 import { AdoptersWithEnterpriseManagement } from "@/components/dashboard/adopters-with-enterprise-management";
 import { type AdoptersWithEnterpriseRecord } from "@/lib/actions/adopters-with-enterprise";
+import { TechnologiesInnovationsCommercializedManagement } from "@/components/dashboard/technologies-innovations-commercialized-management";
+import { type TechnologyCommercializationRecord } from "@/lib/actions/technologies-innovations-commercialized";
 
 
 function extractPartnerAgencyNames(projects: Project[]) {
@@ -210,6 +213,7 @@ export default async function DashboardPage({
     panelParam === "consultancy" ||
     panelParam === "technical-advisory" ||
     panelParam === "adopters-with-enterprise" ||
+    panelParam === "technologies-innovations-commercialized" ||
     panelParam === "projects"
       ? panelParam
       : "overview";
@@ -239,7 +243,7 @@ export default async function DashboardPage({
     super_admin: ["overview", "community", "backup", "account-management", "accounts"],
     college_coordinator: ["overview", "community", "backup", "account-management", "accounts"],
     unit_coordinator: ["overview", "community", "backup"],
-    project_leader: ["overview", "backup", "projects", "trainings", "consultancy", "technical-advisory", "adopters-with-enterprise"],
+    project_leader: ["overview", "backup", "projects", "trainings", "consultancy", "technical-advisory", "adopters-with-enterprise", "technologies-innovations-commercialized"],
     extension_office: ["overview"],
   };
   const allowedPanels = allowedPanelsByRole[profile.user_type] || ["overview"];
@@ -255,6 +259,7 @@ export default async function DashboardPage({
   let consultancyRecords: ConsultancyExtension[] = [];
   let technicalAdvisoryRecords: TechnicalAdvisoryServiceRecord[] = [];
   let adoptersWithEnterpriseRecords: AdoptersWithEnterpriseRecord[] = [];
+  let technologyCommercializationRecords: TechnologyCommercializationRecord[] = [];
   let trainingPartnerAgencyOptions: string[] = [];
   let trainingProjectOptions: { id: string; title: string }[] = [];
   let publicCommunityPosts: CommunityPost[] = [];
@@ -310,6 +315,11 @@ export default async function DashboardPage({
       technicalAdvisoryRecords = (await getTechnicalAdvisoryServices()).data || [];
     } else if (activePanel === "adopters-with-enterprise") {
       adoptersWithEnterpriseRecords = (await getAdoptersWithEnterprise()).data || [];
+      const leaderProjectsResult = await getProjectLeaderProjects();
+      projects = (leaderProjectsResult.data || []) as Project[];
+    } else if (activePanel === "technologies-innovations-commercialized") {
+      technologyCommercializationRecords =
+        (await getTechnologiesInnovationsCommercialized()).data || [];
       const leaderProjectsResult = await getProjectLeaderProjects();
       projects = (leaderProjectsResult.data || []) as Project[];
     } else if (hasEntitySelection) {
@@ -675,6 +685,7 @@ export default async function DashboardPage({
     consultancy: "Consultancy",
     "technical-advisory": "Technical Advisory",
     "adopters-with-enterprise": "Adopters with Enterprise",
+    "technologies-innovations-commercialized": "Technologies / Innovations Commercialized",
     community: "CQER Community",
     backup: "Create Backup",
     "account-management": "Account Management",
@@ -835,6 +846,11 @@ export default async function DashboardPage({
           <TechnicalAdvisoryServicesManagement initialRecords={technicalAdvisoryRecords} />
         ) : activePanel === "adopters-with-enterprise" ? (
           <AdoptersWithEnterpriseManagement initialRecords={adoptersWithEnterpriseRecords} projects={projects} />
+        ) : activePanel === "technologies-innovations-commercialized" ? (
+          <TechnologiesInnovationsCommercializedManagement
+            initialRecords={technologyCommercializationRecords}
+            projects={projects}
+          />
         ) : hasEntitySelection ? (
           <ProjectLeaderRegistrationManagement
             projects={projects}

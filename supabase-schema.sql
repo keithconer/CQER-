@@ -3270,6 +3270,136 @@ using (
 );
 -- END COPY: Adopters With Enterprise Management
 
+-- START COPY: Technologies / Innovations Commercialized Management
+create table if not exists public.technologies_innovations_commercialized (
+  id uuid primary key default gen_random_uuid(),
+  technology_name text not null,
+  year_developed timestamptz not null,
+  technology_generator text not null,
+  related_project_id uuid references public.projects(id) on delete set null,
+  related_project_title text,
+  status text not null check (
+    status in (
+      'deployed through various modalities',
+      'commercialized',
+      'with pre-commercialization activities'
+    )
+  ),
+  documents jsonb not null default '[]'::jsonb,
+  department text,
+  unit text,
+  created_by uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+create index if not exists idx_tech_innovations_commercialized_created_by
+  on public.technologies_innovations_commercialized (created_by);
+
+create index if not exists idx_tech_innovations_commercialized_related_project_id
+  on public.technologies_innovations_commercialized (related_project_id);
+
+alter table public.technologies_innovations_commercialized enable row level security;
+
+drop policy if exists "Users can view own technologies innovations commercialized" on public.technologies_innovations_commercialized;
+create policy "Users can view own technologies innovations commercialized"
+on public.technologies_innovations_commercialized
+for select
+using (auth.uid() = created_by);
+
+drop policy if exists "Users can create own technologies innovations commercialized" on public.technologies_innovations_commercialized;
+create policy "Users can create own technologies innovations commercialized"
+on public.technologies_innovations_commercialized
+for insert
+with check (auth.uid() = created_by);
+
+drop policy if exists "Users can update own technologies innovations commercialized" on public.technologies_innovations_commercialized;
+create policy "Users can update own technologies innovations commercialized"
+on public.technologies_innovations_commercialized
+for update
+using (auth.uid() = created_by)
+with check (auth.uid() = created_by);
+
+drop policy if exists "Users can delete own technologies innovations commercialized" on public.technologies_innovations_commercialized;
+create policy "Users can delete own technologies innovations commercialized"
+on public.technologies_innovations_commercialized
+for delete
+using (auth.uid() = created_by);
+
+drop policy if exists "Super admins can manage all technologies innovations commercialized" on public.technologies_innovations_commercialized;
+create policy "Super admins can manage all technologies innovations commercialized"
+on public.technologies_innovations_commercialized
+for all
+using (
+  exists (
+    select 1
+    from public.profiles
+    where id = auth.uid()
+      and user_type = 'super_admin'
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.profiles
+    where id = auth.uid()
+      and user_type = 'super_admin'
+  )
+);
+
+do $$
+begin
+  if exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'technologies_innovations_commercialized'
+  ) then
+    null;
+  else
+    alter publication supabase_realtime add table public.technologies_innovations_commercialized;
+  end if;
+exception
+  when undefined_object then
+    null;
+end $$;
+
+insert into storage.buckets (id, name, public)
+values (
+  'cqer-technologies_pdf',
+  'cqer-technologies_pdf',
+  false
+)
+on conflict (id) do nothing;
+
+drop policy if exists "Technologies PDFs allow authenticated reads" on storage.objects;
+create policy "Technologies PDFs allow authenticated reads"
+on storage.objects for select
+to authenticated
+using (
+  bucket_id = 'cqer-technologies_pdf'
+);
+
+drop policy if exists "Technologies PDFs allow authenticated uploads" on storage.objects;
+create policy "Technologies PDFs allow authenticated uploads"
+on storage.objects for insert
+to authenticated
+with check (
+  bucket_id = 'cqer-technologies_pdf' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+
+drop policy if exists "Technologies PDFs owner delete" on storage.objects;
+create policy "Technologies PDFs owner delete"
+on storage.objects for delete
+to authenticated
+using (
+  bucket_id = 'cqer-technologies_pdf' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+-- END COPY: Technologies / Innovations Commercialized Management
+
 drop table if exists public.awards cascade;
 drop table if exists public.student_involvement cascade;
 drop table if exists public.faculty_involvement cascade;

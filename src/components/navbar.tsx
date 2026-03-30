@@ -49,6 +49,7 @@ import {
   BriefcaseBusiness,
   Wrench,
   Factory,
+  Cpu,
   type LucideIcon,
 } from "lucide-react";
 import Image from "next/image";
@@ -110,6 +111,7 @@ export function Navbar({ user }: NavbarProps) {
     panelParam === "consultancy" ||
     panelParam === "technical-advisory" ||
     panelParam === "adopters-with-enterprise" ||
+    panelParam === "technologies-innovations-commercialized" ||
     panelParam === "projects"
       ? panelParam
       : "overview";
@@ -123,6 +125,7 @@ export function Navbar({ user }: NavbarProps) {
     router.prefetch("/dashboard?panel=consultancy");
     router.prefetch("/dashboard?panel=technical-advisory");
     router.prefetch("/dashboard?panel=adopters-with-enterprise");
+    router.prefetch("/dashboard?panel=technologies-innovations-commercialized");
     router.prefetch("/dashboard?panel=accounts");
     router.prefetch("/dashboard?panel=account-management&account=register");
     router.prefetch("/dashboard?panel=projects&view=project-registration");
@@ -273,6 +276,15 @@ export function Navbar({ user }: NavbarProps) {
         keywords: ["adopters", "enterprise", "adopters with enterprise"],
         description: "Open the adopters with enterprise page.",
         icon: Factory,
+        roles: ["project_leader"],
+      },
+      {
+        id: "technologies-innovations-commercialized",
+        label: "Technologies / Innovations Commercialized",
+        href: "/dashboard?panel=technologies-innovations-commercialized",
+        keywords: ["technologies", "innovations", "commercialized", "technology commercialization"],
+        description: "Open the technologies / innovations commercialized page.",
+        icon: Cpu,
         roles: ["project_leader"],
       },
     ];
@@ -526,6 +538,13 @@ export function Navbar({ user }: NavbarProps) {
                     panel: "adopters-with-enterprise",
                     href: "/dashboard?panel=adopters-with-enterprise",
                     icon: Factory,
+                    roles: ["project_leader"],
+                  },
+                  {
+                    label: "Technologies / Innovations Commercialized",
+                    panel: "technologies-innovations-commercialized",
+                    href: "/dashboard?panel=technologies-innovations-commercialized",
+                    icon: Cpu,
                     roles: ["project_leader"],
                   },
                   {
