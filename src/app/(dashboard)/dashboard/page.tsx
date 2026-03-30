@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { CoordinatorRegistration } from "@/components/dashboard/coordinator-registration";
 import { getCollegeProjects, getProjectLeaderProjects, getUnitProjects } from "@/lib/actions/projects";
 import { getTrainings } from "@/lib/actions/trainings";
+import { getConsultancyExtensions } from "@/lib/actions/consultancy-extension";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { UnitCoordinatorsPanel } from "@/components/dashboard/unit-coordinators-panel";
 import { type Project } from "@/components/dashboard/projects-table";
@@ -18,6 +19,8 @@ import { getCommunityBootstrap, type CommunityPost } from "@/lib/actions/communi
 import { getBackupSummary, type BackupDatasetSummary } from "@/lib/actions/backup";
 import { BackupManagement } from "@/components/dashboard/backup-management";
 import { ProjectLeaderRegistrationManagement } from "@/components/dashboard/project-leader-registration-management";
+import { ConsultancyExtensionManagement } from "@/components/dashboard/consultancy-extension-management";
+import { type ConsultancyExtension } from "@/lib/actions/consultancy-extension";
 
 
 function extractPartnerAgencyNames(projects: Project[]) {
@@ -198,6 +201,7 @@ export default async function DashboardPage({
     panelParam === "community" ||
     panelParam === "backup" ||
     panelParam === "trainings" ||
+    panelParam === "consultancy" ||
     panelParam === "projects"
       ? panelParam
       : "overview";
@@ -227,7 +231,7 @@ export default async function DashboardPage({
     super_admin: ["overview", "community", "backup", "account-management", "accounts"],
     college_coordinator: ["overview", "community", "backup", "account-management", "accounts"],
     unit_coordinator: ["overview", "community", "backup"],
-    project_leader: ["overview", "backup", "projects", "trainings"],
+    project_leader: ["overview", "backup", "projects", "trainings", "consultancy"],
     extension_office: ["overview"],
   };
   const allowedPanels = allowedPanelsByRole[profile.user_type] || ["overview"];
@@ -240,6 +244,7 @@ export default async function DashboardPage({
   let projects: Project[] = [];
   const unitProjects: Project[] = [];
   let trainingRecords: TrainingRecord[] = [];
+  let consultancyRecords: ConsultancyExtension[] = [];
   let trainingPartnerAgencyOptions: string[] = [];
   let trainingProjectOptions: { id: string; title: string }[] = [];
   let publicCommunityPosts: CommunityPost[] = [];
@@ -287,6 +292,10 @@ export default async function DashboardPage({
       const leaderProjects = (leaderProjectsResult.data || []) as Project[];
       trainingPartnerAgencyOptions = extractPartnerAgencyNames(leaderProjects);
       trainingProjectOptions = extractProjectOptions(leaderProjects);
+    } else if (activePanel === "consultancy") {
+      consultancyRecords = (await getConsultancyExtensions()).data || [];
+      const leaderProjectsResult = await getProjectLeaderProjects();
+      projects = (leaderProjectsResult.data || []) as Project[];
     } else if (hasEntitySelection) {
       const leaderProjectsResult = await getProjectLeaderProjects();
       projects = (leaderProjectsResult.data || []) as Project[];
@@ -647,6 +656,7 @@ export default async function DashboardPage({
   const panelTitleMap: Record<string, string> = {
     overview: "Dashboard",
     projects: "Project Registration",
+    consultancy: "Consultancy",
     community: "CQER Community",
     backup: "Create Backup",
     "account-management": "Account Management",
@@ -797,6 +807,11 @@ export default async function DashboardPage({
             projectOptions={trainingProjectOptions}
             currentUserName={`${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "Project Leader"}
             currentUserId={user.id}
+          />
+        ) : activePanel === "consultancy" ? (
+          <ConsultancyExtensionManagement
+            initialExtensions={consultancyRecords}
+            assignedProjects={projects}
           />
         ) : hasEntitySelection ? (
           <ProjectLeaderRegistrationManagement

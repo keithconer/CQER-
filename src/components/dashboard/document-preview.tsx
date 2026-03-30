@@ -7,11 +7,12 @@ import { cn } from "@/lib/utils";
 
 interface DocumentPreviewProps {
   documents: { url: string; name: string }[] | null | undefined;
+  bucket?: string;
 }
 
-const BUCKET = "cqer-projects_pdfs";
+const DEFAULT_BUCKET = "cqer-projects_pdfs";
 
-export function DocumentPreview({ documents }: DocumentPreviewProps) {
+export function DocumentPreview({ documents, bucket = DEFAULT_BUCKET }: DocumentPreviewProps) {
   const [loadingUrl, setLoadingUrl] = React.useState<string | null>(null);
 
   const handleOpen = async (url: string) => {
@@ -20,7 +21,7 @@ export function DocumentPreview({ documents }: DocumentPreviewProps) {
     try {
       const supabase = createClient();
       const { data, error } = await supabase.storage
-        .from(BUCKET)
+        .from(bucket)
         .createSignedUrl(url, 3600);
 
       if (error) {

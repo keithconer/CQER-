@@ -3045,6 +3045,120 @@ using (
 -- START: Cleanup Removed Modules
 -- Retain only dashboard/backups/notifications/community plus
 -- project registrations and trainings-related data tables.
+
+-- START COPY: Consultancy Management
+create table if not exists public.consultancy_extensions (
+  id uuid primary key default gen_random_uuid(),
+  title_of_consultancy text not null,
+  base_agency_institute text not null,
+  nature_of_consultancy text not null,
+  created_by uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+alter table public.consultancy_extensions
+  add column if not exists related_project_id uuid references public.projects(id) on delete set null,
+  add column if not exists related_project_title text,
+  add column if not exists category text,
+  add column if not exists status text,
+  add column if not exists documents jsonb not null default '[]'::jsonb;
+
+update public.consultancy_extensions
+set documents = '[]'::jsonb
+where documents is null;
+
+alter table public.consultancy_extensions
+  alter column category set not null,
+  alter column status set not null,
+  alter column documents set not null;
+
+alter table public.consultancy_extensions
+  drop constraint if exists consultancy_extensions_category_check;
+
+alter table public.consultancy_extensions
+  add constraint consultancy_extensions_category_check
+  check (category in ('Internally', 'Externally'));
+
+alter table public.consultancy_extensions
+  drop constraint if exists consultancy_extensions_status_check;
+
+alter table public.consultancy_extensions
+  add constraint consultancy_extensions_status_check
+  check (status in ('On-going', 'Completed'));
+
+create index if not exists idx_consultancy_extensions_created_by
+  on public.consultancy_extensions (created_by);
+
+create index if not exists idx_consultancy_extensions_related_project_id
+  on public.consultancy_extensions (related_project_id);
+
+alter table public.consultancy_extensions enable row level security;
+
+drop policy if exists "Users can view own consultancy extensions" on public.consultancy_extensions;
+create policy "Users can view own consultancy extensions"
+on public.consultancy_extensions
+for select
+using (auth.uid() = created_by);
+
+drop policy if exists "Users can create own consultancy extensions" on public.consultancy_extensions;
+create policy "Users can create own consultancy extensions"
+on public.consultancy_extensions
+for insert
+with check (auth.uid() = created_by);
+
+drop policy if exists "Users can update own consultancy extensions" on public.consultancy_extensions;
+create policy "Users can update own consultancy extensions"
+on public.consultancy_extensions
+for update
+using (auth.uid() = created_by)
+with check (auth.uid() = created_by);
+
+drop policy if exists "Users can delete own consultancy extensions" on public.consultancy_extensions;
+create policy "Users can delete own consultancy extensions"
+on public.consultancy_extensions
+for delete
+using (auth.uid() = created_by);
+
+drop policy if exists "Super admins can manage all consultancy extensions" on public.consultancy_extensions;
+create policy "Super admins can manage all consultancy extensions"
+on public.consultancy_extensions
+for all
+using (
+  exists (
+    select 1
+    from public.profiles
+    where id = auth.uid()
+      and user_type = 'super_admin'
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.profiles
+    where id = auth.uid()
+      and user_type = 'super_admin'
+  )
+);
+
+do $$
+begin
+  if exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'consultancy_extensions'
+  ) then
+    null;
+  else
+    alter publication supabase_realtime add table public.consultancy_extensions;
+  end if;
+exception
+  when undefined_object then
+    null;
+end $$;
+-- END COPY: Consultancy Management
 -- ============================================================
 drop table if exists public.awards cascade;
 drop table if exists public.student_involvement cascade;

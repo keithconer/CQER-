@@ -46,6 +46,7 @@ import {
   LayoutDashboard,
   Users2,
   Download,
+  BriefcaseBusiness,
   type LucideIcon,
 } from "lucide-react";
 import Image from "next/image";
@@ -104,6 +105,7 @@ export function Navbar({ user }: NavbarProps) {
     panelParam === "community" ||
     panelParam === "backup" ||
     panelParam === "trainings" ||
+    panelParam === "consultancy" ||
     panelParam === "projects"
       ? panelParam
       : "overview";
@@ -114,6 +116,7 @@ export function Navbar({ user }: NavbarProps) {
     router.prefetch("/dashboard?panel=community");
     router.prefetch("/dashboard?panel=backup");
     router.prefetch("/dashboard?panel=trainings");
+    router.prefetch("/dashboard?panel=consultancy");
     router.prefetch("/dashboard?panel=accounts");
     router.prefetch("/dashboard?panel=account-management&account=register");
     router.prefetch("/dashboard?panel=projects&view=project-registration");
@@ -237,6 +240,15 @@ export function Navbar({ user }: NavbarProps) {
         keywords: ["training", "trainings"],
         description: "Open the trainings page.",
         icon: BookOpenCheck,
+        roles: ["project_leader"],
+      },
+      {
+        id: "consultancy",
+        label: "Consultancy",
+        href: "/dashboard?panel=consultancy",
+        keywords: ["consultancy", "consulting", "consultancy records"],
+        description: "Open the consultancy page.",
+        icon: BriefcaseBusiness,
         roles: ["project_leader"],
       },
     ];
@@ -469,6 +481,13 @@ export function Navbar({ user }: NavbarProps) {
                     panel: "trainings",
                     href: "/dashboard?panel=trainings",
                     icon: BookOpenCheck,
+                    roles: ["project_leader"],
+                  },
+                  {
+                    label: "Consultancy",
+                    panel: "consultancy",
+                    href: "/dashboard?panel=consultancy",
+                    icon: BriefcaseBusiness,
                     roles: ["project_leader"],
                   },
                   {
