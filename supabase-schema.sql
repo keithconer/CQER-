@@ -3400,6 +3400,140 @@ using (
 );
 -- END COPY: Technologies / Innovations Commercialized Management
 
+-- START COPY: IEC Materials Management
+create table if not exists public.iec_materials (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  format text not null check (format in ('video', 'brochure', 'pamphlet', 'e-formats')),
+  related_project_id uuid references public.projects(id) on delete set null,
+  related_project_title text,
+  sdg_goals jsonb not null default '[]'::jsonb,
+  thematic_area jsonb not null default '[]'::jsonb,
+  male_count integer not null default 0,
+  female_count integer not null default 0,
+  student_count integer not null default 0,
+  farmer_count integer not null default 0,
+  fisherfolk_count integer not null default 0,
+  ag_technician_count integer not null default 0,
+  government_employee_count integer not null default 0,
+  private_employee_count integer not null default 0,
+  others_label text,
+  others_count integer not null default 0,
+  documents jsonb not null default '[]'::jsonb,
+  department text,
+  unit text,
+  created_by uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+create index if not exists idx_iec_materials_created_by
+  on public.iec_materials (created_by);
+
+create index if not exists idx_iec_materials_related_project_id
+  on public.iec_materials (related_project_id);
+
+alter table public.iec_materials enable row level security;
+
+drop policy if exists "Users can view own iec materials" on public.iec_materials;
+create policy "Users can view own iec materials"
+on public.iec_materials
+for select
+using (auth.uid() = created_by);
+
+drop policy if exists "Users can create own iec materials" on public.iec_materials;
+create policy "Users can create own iec materials"
+on public.iec_materials
+for insert
+with check (auth.uid() = created_by);
+
+drop policy if exists "Users can update own iec materials" on public.iec_materials;
+create policy "Users can update own iec materials"
+on public.iec_materials
+for update
+using (auth.uid() = created_by)
+with check (auth.uid() = created_by);
+
+drop policy if exists "Users can delete own iec materials" on public.iec_materials;
+create policy "Users can delete own iec materials"
+on public.iec_materials
+for delete
+using (auth.uid() = created_by);
+
+drop policy if exists "Super admins can manage all iec materials" on public.iec_materials;
+create policy "Super admins can manage all iec materials"
+on public.iec_materials
+for all
+using (
+  exists (
+    select 1
+    from public.profiles
+    where id = auth.uid()
+      and user_type = 'super_admin'
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.profiles
+    where id = auth.uid()
+      and user_type = 'super_admin'
+  )
+);
+
+do $$
+begin
+  if exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'iec_materials'
+  ) then
+    null;
+  else
+    alter publication supabase_realtime add table public.iec_materials;
+  end if;
+exception
+  when undefined_object then
+    null;
+end $$;
+
+insert into storage.buckets (id, name, public)
+values (
+  'cqer-iecmat_pdf',
+  'cqer-iecmat_pdf',
+  false
+)
+on conflict (id) do nothing;
+
+drop policy if exists "IEC Materials PDFs allow authenticated reads" on storage.objects;
+create policy "IEC Materials PDFs allow authenticated reads"
+on storage.objects for select
+to authenticated
+using (
+  bucket_id = 'cqer-iecmat_pdf'
+);
+
+drop policy if exists "IEC Materials PDFs allow authenticated uploads" on storage.objects;
+create policy "IEC Materials PDFs allow authenticated uploads"
+on storage.objects for insert
+to authenticated
+with check (
+  bucket_id = 'cqer-iecmat_pdf' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+
+drop policy if exists "IEC Materials PDFs owner delete" on storage.objects;
+create policy "IEC Materials PDFs owner delete"
+on storage.objects for delete
+to authenticated
+using (
+  bucket_id = 'cqer-iecmat_pdf' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+-- END COPY: IEC Materials Management
+
 drop table if exists public.awards cascade;
 drop table if exists public.student_involvement cascade;
 drop table if exists public.faculty_involvement cascade;

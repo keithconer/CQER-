@@ -50,6 +50,7 @@ import {
   Wrench,
   Factory,
   Cpu,
+  Megaphone,
   type LucideIcon,
 } from "lucide-react";
 import Image from "next/image";
@@ -112,6 +113,7 @@ export function Navbar({ user }: NavbarProps) {
     panelParam === "technical-advisory" ||
     panelParam === "adopters-with-enterprise" ||
     panelParam === "technologies-innovations-commercialized" ||
+    panelParam === "iec-materials" ||
     panelParam === "projects"
       ? panelParam
       : "overview";
@@ -126,6 +128,7 @@ export function Navbar({ user }: NavbarProps) {
     router.prefetch("/dashboard?panel=technical-advisory");
     router.prefetch("/dashboard?panel=adopters-with-enterprise");
     router.prefetch("/dashboard?panel=technologies-innovations-commercialized");
+    router.prefetch("/dashboard?panel=iec-materials");
     router.prefetch("/dashboard?panel=accounts");
     router.prefetch("/dashboard?panel=account-management&account=register");
     router.prefetch("/dashboard?panel=projects&view=project-registration");
@@ -285,6 +288,15 @@ export function Navbar({ user }: NavbarProps) {
         keywords: ["technologies", "innovations", "commercialized", "technology commercialization"],
         description: "Open the technologies / innovations commercialized page.",
         icon: Cpu,
+        roles: ["project_leader"],
+      },
+      {
+        id: "iec-materials",
+        label: "IEC Materials",
+        href: "/dashboard?panel=iec-materials",
+        keywords: ["iec", "iec materials", "information education communication"],
+        description: "Open the IEC materials page.",
+        icon: Megaphone,
         roles: ["project_leader"],
       },
     ];
@@ -545,6 +557,13 @@ export function Navbar({ user }: NavbarProps) {
                     panel: "technologies-innovations-commercialized",
                     href: "/dashboard?panel=technologies-innovations-commercialized",
                     icon: Cpu,
+                    roles: ["project_leader"],
+                  },
+                  {
+                    label: "IEC Materials",
+                    panel: "iec-materials",
+                    href: "/dashboard?panel=iec-materials",
+                    icon: Megaphone,
                     roles: ["project_leader"],
                   },
                   {
