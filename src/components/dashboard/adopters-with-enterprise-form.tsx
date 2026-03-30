@@ -157,7 +157,8 @@ export function AdoptersWithEnterpriseForm({
   React.useEffect(() => {
     if (!selectedProject || isViewOnly) return;
     const nextCategory = getProjectCategory(selectedProject);
-    adopters.forEach((_, index) => {
+    adopters.forEach((adopter, index) => {
+      if (adopter?.category === nextCategory) return;
       form.setValue(`adopters.${index}.category`, nextCategory, { shouldDirty: true });
     });
   }, [adopters, form, isViewOnly, selectedProject]);

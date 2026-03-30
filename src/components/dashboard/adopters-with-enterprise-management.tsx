@@ -269,12 +269,20 @@ export function AdoptersWithEnterpriseManagement({
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent showCloseButton={false} className="flex flex-col overflow-hidden fixed inset-0 left-0 top-0 h-[100dvh] w-screen max-w-none sm:max-w-none translate-x-0 translate-y-0 rounded-none border-0 p-0 shadow-none">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Create Adopters with Enterprise</DialogTitle>
+            <DialogDescription>Create a new adopters with enterprise record.</DialogDescription>
+          </DialogHeader>
           <AdoptersWithEnterpriseForm projects={projects} onSuccess={handleSaved} onClose={() => setCreateOpen(false)} />
         </DialogContent>
       </Dialog>
 
       <Dialog open={!!selectedRecord} onOpenChange={(open) => !open && setSelectedRecord(null)}>
         <DialogContent showCloseButton={false} className="flex flex-col overflow-hidden fixed inset-0 left-0 top-0 h-[100dvh] w-screen max-w-none sm:max-w-none translate-x-0 translate-y-0 rounded-none border-0 p-0 shadow-none">
+          <DialogHeader className="sr-only">
+            <DialogTitle>View Adopters with Enterprise</DialogTitle>
+            <DialogDescription>View the selected adopters with enterprise record.</DialogDescription>
+          </DialogHeader>
           {selectedRecord && (
             <AdoptersWithEnterpriseForm projects={projects} initialData={selectedRecord} isViewOnly onSuccess={() => setSelectedRecord(null)} onClose={() => setSelectedRecord(null)} />
           )}
@@ -283,6 +291,10 @@ export function AdoptersWithEnterpriseManagement({
 
       <Dialog open={!!editingRecord} onOpenChange={(open) => !open && setEditingRecord(null)}>
         <DialogContent showCloseButton={false} className="flex flex-col overflow-hidden fixed inset-0 left-0 top-0 h-[100dvh] w-screen max-w-none sm:max-w-none translate-x-0 translate-y-0 rounded-none border-0 p-0 shadow-none">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Update Adopters with Enterprise</DialogTitle>
+            <DialogDescription>Update the selected adopters with enterprise record.</DialogDescription>
+          </DialogHeader>
           {editingRecord && (
             <AdoptersWithEnterpriseForm projects={projects} initialData={editingRecord} onSuccess={handleSaved} onClose={() => setEditingRecord(null)} />
           )}
