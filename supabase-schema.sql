@@ -2922,35 +2922,21 @@ using (
 -- ============================================================
 create table if not exists public.technical_advisory_services (
   id uuid default gen_random_uuid() primary key,
-  project_no text not null,
-  project_title text not null,
-  lead_unit text not null,
-  college text not null default 'CEIT',
-  contact_person text not null,
-  related_curricular_offerings jsonb not null default '[]'::jsonb,
+  agency_name text not null,
+  agency_address text not null,
+  clients jsonb not null default '[]'::jsonb,
+  category text not null check (category in ('internal', 'external')),
   department text,
   unit text,
-  advisory_date date not null,
+  advisory_date timestamptz not null,
   venue text not null,
-  service_persons jsonb not null default '[]'::jsonb,
-  service_provided text not null check (
-    service_provided in (
-      'Technical assistance',
-      'Consultation',
-      'Resource person',
-      'Technology promotion',
-      'Value adding',
-      'Others'
-    )
-  ),
-  service_provided_other text,
-  clients jsonb not null default '[]'::jsonb,
-  quality_score integer check (quality_score between 1 and 5),
-  relevance_score integer check (relevance_score between 1 and 5),
-  timeliness_score integer check (timeliness_score between 1 and 5),
-  overall_satisfaction_score integer check (overall_satisfaction_score between 1 and 5),
-  comments_suggestions text,
-  document_url text,
+  faculty_members jsonb not null default '[]'::jsonb,
+  number_of_hours numeric not null default 0,
+  rating_relevance_breakdown jsonb not null default '{"5":0,"4":0,"3":0,"2":0,"1":0}'::jsonb,
+  rating_quality_breakdown jsonb not null default '{"5":0,"4":0,"3":0,"2":0,"1":0}'::jsonb,
+  rating_timeliness_breakdown jsonb not null default '{"5":0,"4":0,"3":0,"2":0,"1":0}'::jsonb,
+  rating_overall_breakdown jsonb not null default '{"5":0,"4":0,"3":0,"2":0,"1":0}'::jsonb,
+  documents jsonb not null default '[]'::jsonb,
   created_by uuid references public.profiles(id) on delete cascade not null,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
@@ -3006,35 +2992,35 @@ $$;
 
 insert into storage.buckets (id, name, public)
 values (
-  'cqer-technical-advisory-services-pdfs',
-  'cqer-technical-advisory-services-pdfs',
-  true
+  'cqer-technicaladv_pdf',
+  'cqer-technicaladv_pdf',
+  false
 )
 on conflict (id) do nothing;
 
-drop policy if exists "Technical Advisory Services PDFs allow public reads" on storage.objects;
-create policy "Technical Advisory Services PDFs allow public reads"
+drop policy if exists "Technical Advisory PDFs allow authenticated reads" on storage.objects;
+create policy "Technical Advisory PDFs allow authenticated reads"
 on storage.objects for select
-to public
+to authenticated
 using (
-  bucket_id = 'cqer-technical-advisory-services-pdfs'
+  bucket_id = 'cqer-technicaladv_pdf'
 );
 
-drop policy if exists "Technical Advisory Services PDFs allow authenticated uploads" on storage.objects;
-create policy "Technical Advisory Services PDFs allow authenticated uploads"
+drop policy if exists "Technical Advisory PDFs allow authenticated uploads" on storage.objects;
+create policy "Technical Advisory PDFs allow authenticated uploads"
 on storage.objects for insert
 to authenticated
 with check (
-  bucket_id = 'cqer-technical-advisory-services-pdfs' AND
+  bucket_id = 'cqer-technicaladv_pdf' AND
   (storage.foldername(name))[1] = auth.uid()::text
 );
 
-drop policy if exists "Technical Advisory Services PDFs owner delete" on storage.objects;
-create policy "Technical Advisory Services PDFs owner delete"
+drop policy if exists "Technical Advisory PDFs owner delete" on storage.objects;
+create policy "Technical Advisory PDFs owner delete"
 on storage.objects for delete
 to authenticated
 using (
-  bucket_id = 'cqer-technical-advisory-services-pdfs' AND
+  bucket_id = 'cqer-technicaladv_pdf' AND
   (storage.foldername(name))[1] = auth.uid()::text
 );
 -- ============================================================
@@ -3167,7 +3153,6 @@ drop table if exists public.pool_of_experts cascade;
 drop table if exists public.technologies_innovations cascade;
 drop table if exists public.ordinance_resolutions cascade;
 drop table if exists public.needs_assessments cascade;
-drop table if exists public.technical_advisory_services cascade;
 
 notify pgrst, 'reload schema';
 -- ============================================================

@@ -4,6 +4,7 @@ import * as React from "react";
 import {
   BriefcaseBusiness,
   Eye,
+  FileDown,
   Pencil,
   Plus,
   Search,
@@ -31,6 +32,7 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -46,6 +48,80 @@ interface ConsultancyExtensionManagementProps {
 }
 
 type FilterMode = "all" | "on-going" | "completed" | "with_project" | "without_project";
+
+async function exportExcel(records: ConsultancyExtension[]) {
+  const ExcelJSImport = await import("exceljs/dist/exceljs.min.js");
+  const ExcelJS = ExcelJSImport?.default ?? ExcelJSImport;
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet("Consultancy");
+  const columns = [
+    { header: "Title of Consultancy", key: "title", width: 36 },
+    { header: "Base Agency / Institute", key: "agency", width: 30 },
+    { header: "Nature of Consultancy", key: "nature", width: 30 },
+    { header: "Project", key: "project", width: 30 },
+    { header: "Category", key: "category", width: 16 },
+    { header: "Status", key: "status", width: 16 },
+  ];
+  sheet.columns = columns.map((column) => ({ key: column.key, width: column.width }));
+  sheet.mergeCells("A1:F1");
+  sheet.getCell("A1").value = "Consultancy";
+  sheet.getCell("A1").font = { bold: true, size: 14 };
+  sheet.getCell("A1").alignment = { horizontal: "center" };
+  sheet.getRow(2).values = columns.map((column) => column.header);
+  sheet.getRow(2).eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF159E44" } };
+  });
+  records.forEach((record) => {
+    sheet.addRow({
+      title: record.title_of_consultancy,
+      agency: record.base_agency_institute,
+      nature: record.nature_of_consultancy,
+      project: record.related_project_title || "-",
+      category: record.category,
+      status: record.status,
+    });
+  });
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `consultancy-${new Date().toISOString().slice(0, 10)}.xlsx`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+async function exportPdf(records: ConsultancyExtension[]) {
+  const { jsPDF } = await import("jspdf");
+  const { default: autoTable } = await import("jspdf-autotable");
+  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+  doc.setFontSize(12);
+  doc.text("Consultancy", doc.internal.pageSize.getWidth() / 2, 12, { align: "center" });
+  autoTable(doc, {
+    startY: 18,
+    head: [[
+      "Title of Consultancy",
+      "Base Agency / Institute",
+      "Nature of Consultancy",
+      "Project",
+      "Category",
+      "Status",
+    ]],
+    body: records.map((record) => ([
+      record.title_of_consultancy,
+      record.base_agency_institute,
+      record.nature_of_consultancy,
+      record.related_project_title || "-",
+      record.category,
+      record.status,
+    ])),
+    theme: "grid",
+    headStyles: { fillColor: [21, 158, 68], textColor: [255, 255, 255], fontSize: 8 },
+    styles: { fontSize: 7, cellPadding: 2, overflow: "linebreak" },
+  });
+  doc.save(`consultancy-${new Date().toISOString().slice(0, 10)}.pdf`);
+}
 
 export function ConsultancyExtensionManagement({
   initialExtensions,
@@ -113,12 +189,26 @@ export function ConsultancyExtensionManagement({
                 Search, filter, review, and manage consultancy records in one place.
               </CardDescription>
             </div>
-            {!isViewOnly && (
-              <Button className="rounded-xl" onClick={() => setCreateOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Create Consultancy
-              </Button>
-            )}
+            <div className="flex flex-wrap gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="rounded-xl">
+                    <FileDown className="mr-2 h-4 w-4" />
+                    Export
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => void exportExcel(filteredRecords)}>Export Excel</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => void exportPdf(filteredRecords)}>Export PDF</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              {!isViewOnly && (
+                <Button className="rounded-xl bg-[#159E44] text-white hover:bg-[#128A3B]" onClick={() => setCreateOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Consultancy
+                </Button>
+              )}
+            </div>
           </div>
 
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">

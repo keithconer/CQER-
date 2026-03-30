@@ -47,6 +47,7 @@ import {
   Users2,
   Download,
   BriefcaseBusiness,
+  Wrench,
   type LucideIcon,
 } from "lucide-react";
 import Image from "next/image";
@@ -106,6 +107,7 @@ export function Navbar({ user }: NavbarProps) {
     panelParam === "backup" ||
     panelParam === "trainings" ||
     panelParam === "consultancy" ||
+    panelParam === "technical-advisory" ||
     panelParam === "projects"
       ? panelParam
       : "overview";
@@ -117,6 +119,7 @@ export function Navbar({ user }: NavbarProps) {
     router.prefetch("/dashboard?panel=backup");
     router.prefetch("/dashboard?panel=trainings");
     router.prefetch("/dashboard?panel=consultancy");
+    router.prefetch("/dashboard?panel=technical-advisory");
     router.prefetch("/dashboard?panel=accounts");
     router.prefetch("/dashboard?panel=account-management&account=register");
     router.prefetch("/dashboard?panel=projects&view=project-registration");
@@ -249,6 +252,15 @@ export function Navbar({ user }: NavbarProps) {
         keywords: ["consultancy", "consulting", "consultancy records"],
         description: "Open the consultancy page.",
         icon: BriefcaseBusiness,
+        roles: ["project_leader"],
+      },
+      {
+        id: "technical-advisory",
+        label: "Technical Advisory",
+        href: "/dashboard?panel=technical-advisory",
+        keywords: ["technical advisory", "advisory", "technical advisory services"],
+        description: "Open the technical advisory page.",
+        icon: Wrench,
         roles: ["project_leader"],
       },
     ];
@@ -488,6 +500,13 @@ export function Navbar({ user }: NavbarProps) {
                     panel: "consultancy",
                     href: "/dashboard?panel=consultancy",
                     icon: BriefcaseBusiness,
+                    roles: ["project_leader"],
+                  },
+                  {
+                    label: "Technical Advisory",
+                    panel: "technical-advisory",
+                    href: "/dashboard?panel=technical-advisory",
+                    icon: Wrench,
                     roles: ["project_leader"],
                   },
                   {

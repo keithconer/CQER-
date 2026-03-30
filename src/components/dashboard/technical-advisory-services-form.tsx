@@ -5,11 +5,28 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import * as z from "zod";
 import { format } from "date-fns";
-import { CalendarIcon, Plus, Save, Trash2, UsersRound, Wrench } from "lucide-react";
+import {
+  Building2,
+  CalendarIcon,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardCheck,
+  Clock3,
+  Mail,
+  MapPin,
+  Phone,
+  Plus,
+  Save,
+  UserRound,
+  UsersRound,
+  X,
+} from "lucide-react";
 
-import { cn } from "@/lib/utils";
+import { StepIndicator } from "@/components/step-indicator";
+import { FileUpload } from "@/components/dashboard/file-upload";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Form,
@@ -28,591 +45,710 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import {
   createTechnicalAdvisoryService,
-  deleteTechnicalAdvisoryService,
   updateTechnicalAdvisoryService,
+  type CreateTechnicalAdvisoryServicePayload,
+  type RatingBreakdown,
   type TechnicalAdvisoryServiceRecord,
 } from "@/lib/actions/technical-advisory-services";
-import { FileUpload } from "./file-upload";
-import { type Project } from "./projects-table";
 
-const clientSchema = z.object({
-  name: z.string().min(1, "Client name is required"),
-  sex: z.enum(["male", "female"]),
-  address: z.string().min(1, "Address is required"),
-  agency_office_unit: z.string().min(1, "Agency/office/unit is required"),
-  position: z.string().min(1, "Position is required"),
-  contact_no: z.string().optional(),
-  email: z.string().email("Valid email is required"),
-  category: z.enum([
-    "student",
-    "farmer",
-    "fisherfolk",
-    "government",
-    "employee",
-    "private_employee",
-    "organization",
-    "others",
-  ]),
-  category_other: z.string().optional(),
+const stepLabels = ["Agency Information", "Advisory Services Details", "Assessment", "Saving"];
+const nonNegativeNumber = z.coerce.number().min(0, "Value must be 0 or greater.");
+const ratingBreakdownSchema = z.object({
+  "5": nonNegativeNumber.default(0),
+  "4": nonNegativeNumber.default(0),
+  "3": nonNegativeNumber.default(0),
+  "2": nonNegativeNumber.default(0),
+  "1": nonNegativeNumber.default(0),
 });
 
-const servicePersonSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-});
-
-const formSchema = z
+const clientSchema = z
   .object({
-    project_no: z.string().min(1, "Project number is required"),
-    project_title: z.string().min(1, "Project title is required"),
-    lead_unit: z.string().min(1, "Lead unit is required"),
-    college: z.string().min(1, "College is required"),
-    contact_person: z.string().min(1, "Contact person is required"),
-    related_curricular_offerings: z.string().min(1, "Related curricular offering is required"),
-    clients: z.array(clientSchema).min(1, "Add at least one client"),
-    advisory_date: z.date(),
-    venue: z.string().min(1, "Venue is required"),
-    service_persons: z.array(servicePersonSchema).min(1, "Add at least one person"),
-    service_provided: z.enum([
-      "Technical assistance",
-      "Consultation",
-      "Resource person",
-      "Technology promotion",
-      "Value adding",
-      "Others",
-    ]),
-    service_provided_other: z.string().optional(),
-    quality_score: z.number().int().min(1).max(5),
-    relevance_score: z.number().int().min(1).max(5),
-    timeliness_score: z.number().int().min(1).max(5),
-    overall_satisfaction_score: z.number().int().min(1).max(5),
-    comments_suggestions: z.string().optional(),
-    document_url: z.string().nullable().optional(),
+    name: z.string().trim().min(1, "Client name is required."),
+    sex: z.enum(["male", "female"]),
+    position: z.string().trim().min(1, "Position is required."),
+    contact_through: z.enum(["email", "phone", "both"]),
+    email: z.string().trim().optional().or(z.literal("")),
+    phone_number: z.string().trim().optional().or(z.literal("")),
   })
   .superRefine((value, ctx) => {
-    value.clients.forEach((client, index) => {
-      if (client.category === "others" && !client.category_other?.trim()) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["clients", index, "category_other"],
-          message: "Please specify the client category",
-        });
-      }
-    });
-
-    if (value.service_provided === "Others" && !value.service_provided_other?.trim()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["service_provided_other"],
-        message: "Please specify the service provided",
-      });
+    if ((value.contact_through === "email" || value.contact_through === "both") && !value.email) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["email"], message: "Email is required." });
+    }
+    if ((value.contact_through === "phone" || value.contact_through === "both") && !value.phone_number) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["phone_number"], message: "Phone number is required." });
     }
   });
+
+const facultySchema = z.object({
+  name: z.string().trim().min(1, "Faculty member name is required."),
+});
+
+const formSchema = z.object({
+  agency_name: z.string().trim().min(1, "Name of agency is required."),
+  agency_address: z.string().trim().min(1, "Address is required."),
+  clients: z.array(clientSchema).min(1, "Add at least one client."),
+  category: z.enum(["internal", "external"]),
+  advisory_date: z.date(),
+  venue: z.string().trim().min(1, "Venue is required."),
+  faculty_members: z.array(facultySchema).min(1, "Add at least one faculty member."),
+  number_of_hours: nonNegativeNumber,
+  rating_relevance_breakdown: ratingBreakdownSchema,
+  rating_quality_breakdown: ratingBreakdownSchema,
+  rating_timeliness_breakdown: ratingBreakdownSchema,
+  rating_overall_breakdown: ratingBreakdownSchema,
+  documents: z.array(z.object({ url: z.string(), name: z.string() })).default([]),
+});
 
 type FormValues = z.infer<typeof formSchema>;
 
 interface TechnicalAdvisoryServicesFormProps {
-  assignedProjects: Project[];
   initialData?: TechnicalAdvisoryServiceRecord;
-  onSuccess?: () => void;
+  onSuccess: (action: "created" | "updated") => void;
+  onClose?: () => void;
   isViewOnly?: boolean;
 }
 
-function getProjectLeadUnit(project: Project) {
-  if (Array.isArray(project.lead_units) && project.lead_units.length > 0) {
-    return project.lead_units.join(", ");
-  }
-  return project.created_by_unit || "";
+function buildDefaultValues(record?: TechnicalAdvisoryServiceRecord): FormValues {
+  return {
+    agency_name: record?.agency_name || "",
+    agency_address: record?.agency_address || "",
+    clients: record?.clients?.length
+      ? record.clients.map((client) => ({
+          name: client.name || "",
+          sex: client.sex || "male",
+          position: client.position || "",
+          contact_through: client.contact_through || "email",
+          email: client.email || "",
+          phone_number: client.phone_number || "",
+        }))
+      : [{ name: "", sex: "male", position: "", contact_through: "email", email: "", phone_number: "" }],
+    category: record?.category || "internal",
+    advisory_date: record?.advisory_date ? new Date(record.advisory_date) : new Date(),
+    venue: record?.venue || "",
+    faculty_members: record?.faculty_members?.length
+      ? record.faculty_members.map((member) => ({ name: member.name || "" }))
+      : [{ name: "" }],
+    number_of_hours: record?.number_of_hours ?? 0,
+    rating_relevance_breakdown: record?.rating_relevance_breakdown || { "5": 0, "4": 0, "3": 0, "2": 0, "1": 0 },
+    rating_quality_breakdown: record?.rating_quality_breakdown || { "5": 0, "4": 0, "3": 0, "2": 0, "1": 0 },
+    rating_timeliness_breakdown: record?.rating_timeliness_breakdown || { "5": 0, "4": 0, "3": 0, "2": 0, "1": 0 },
+    rating_overall_breakdown: record?.rating_overall_breakdown || { "5": 0, "4": 0, "3": 0, "2": 0, "1": 0 },
+    documents: record?.documents || [],
+  };
 }
 
-function getProjectCurricular(project: Project) {
-  if (Array.isArray(project.related_curricular_offerings) && project.related_curricular_offerings.length > 0) {
-    return project.related_curricular_offerings.join(", ");
-  }
-  return "";
+function getRatingsTotal(breakdown?: RatingBreakdown) {
+  if (!breakdown) return 0;
+  return Number(breakdown["5"] || 0) + Number(breakdown["4"] || 0) + Number(breakdown["3"] || 0) + Number(breakdown["2"] || 0) + Number(breakdown["1"] || 0);
 }
 
-function AssessmentPicker({
-  label,
+function RatingBreakdownFields({
+  title,
   value,
   onChange,
   disabled,
 }: {
-  label: string;
-  value?: number;
-  onChange: (value: number) => void;
+  title: string;
+  value: RatingBreakdown;
+  onChange: (next: RatingBreakdown) => void;
   disabled?: boolean;
 }) {
+  const total = getRatingsTotal(value);
+
   return (
-    <div className="space-y-2 rounded-lg border border-border/50 p-3">
-      <p className="text-[10px] font-semibold">{label}</p>
-      <div className="flex flex-wrap gap-2">
-        {[1, 2, 3, 4, 5].map((score) => (
-          <label
-            key={score}
-            className="flex items-center gap-1 rounded-md border border-border/50 px-2 py-1 text-[10px]"
-          >
-            <Checkbox
-              checked={value === score}
-              onCheckedChange={() => onChange(score)}
-              disabled={disabled}
-            />
-            <span>{score}</span>
-          </label>
-        ))}
-      </div>
-    </div>
+    <Card className="rounded-2xl border-border/40 shadow-none">
+      <CardHeader>
+        <CardTitle className="text-sm">{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-4 md:grid-cols-5">
+          {(["5", "4", "3", "2", "1"] as const).map((key) => (
+            <div key={key} className="space-y-2">
+              <FormLabel className="text-xs">{key} - how many rated {key}</FormLabel>
+              <Input
+                type="number"
+                min="0"
+                value={String(value[key] ?? 0)}
+                disabled={disabled}
+                onChange={(event) => onChange({ ...value, [key]: Math.max(0, Number(event.target.value || 0)) })}
+                className="h-10 rounded-xl text-sm"
+              />
+            </div>
+          ))}
+        </div>
+        <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-3 text-sm">
+          Total: <span className="font-semibold">{total}</span>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
 export function TechnicalAdvisoryServicesForm({
-  assignedProjects,
   initialData,
   onSuccess,
+  onClose,
   isViewOnly = false,
 }: TechnicalAdvisoryServicesFormProps) {
+  const [currentStep, setCurrentStep] = React.useState(1);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const autoSubmitStartedRef = React.useRef(false);
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: initialData
-      ? {
-          project_no: initialData.project_no,
-          project_title: initialData.project_title,
-          lead_unit: initialData.lead_unit,
-          college: initialData.college || "CEIT",
-          contact_person: initialData.contact_person,
-          related_curricular_offerings: (initialData.related_curricular_offerings || []).join(", "),
-          clients:
-            initialData.clients?.length > 0
-              ? initialData.clients.map((client) => ({
-                  name: client.name || "",
-                  sex: client.sex || "male",
-                  address: client.address || "",
-                  agency_office_unit: client.agency_office_unit || "",
-                  position: client.position || "",
-                  contact_no: client.contact_no || "",
-                  email: client.email || "",
-                  category: client.category || "student",
-                  category_other: client.category_other || "",
-                }))
-              : [],
-          advisory_date: initialData.advisory_date ? new Date(initialData.advisory_date) : undefined,
-          venue: initialData.venue,
-          service_persons:
-            initialData.service_persons?.length > 0 ? initialData.service_persons : [{ name: "" }],
-          service_provided: initialData.service_provided,
-          service_provided_other: initialData.service_provided_other || "",
-          quality_score: initialData.quality_score || 1,
-          relevance_score: initialData.relevance_score || 1,
-          timeliness_score: initialData.timeliness_score || 1,
-          overall_satisfaction_score: initialData.overall_satisfaction_score || 1,
-          comments_suggestions: initialData.comments_suggestions || "",
-          document_url: initialData.document_url || null,
-        }
-      : {
-          project_no: "",
-          project_title: "",
-          lead_unit: "",
-          college: "CEIT",
-          contact_person: "",
-          related_curricular_offerings: "",
-          clients: [
-            {
-              name: "",
-              sex: "male",
-              address: "",
-              agency_office_unit: "",
-              position: "",
-              contact_no: "",
-              email: "",
-              category: "student",
-              category_other: "",
-            },
-          ],
-          advisory_date: undefined,
-          venue: "",
-          service_persons: [{ name: "" }],
-          service_provided: "Technical assistance",
-          service_provided_other: "",
-          quality_score: 1,
-          relevance_score: 1,
-          timeliness_score: 1,
-          overall_satisfaction_score: 1,
-          comments_suggestions: "",
-          document_url: null,
-        },
+    resolver: zodResolver(formSchema) as any,
+    defaultValues: buildDefaultValues(initialData),
   });
 
-  const selectedProjectNo = useWatch({ control: form.control, name: "project_no" });
-  const selectedService = useWatch({ control: form.control, name: "service_provided" });
-  const clientsValue = useWatch({ control: form.control, name: "clients" });
   const clientsArray = useFieldArray({ control: form.control, name: "clients" });
-  const servicePersonsArray = useFieldArray({ control: form.control, name: "service_persons" });
+  const facultyArray = useFieldArray({ control: form.control, name: "faculty_members" });
+  const clients = useWatch({ control: form.control, name: "clients" });
+  const ratingRelevance = useWatch({ control: form.control, name: "rating_relevance_breakdown" });
+  const ratingQuality = useWatch({ control: form.control, name: "rating_quality_breakdown" });
+  const ratingTimeliness = useWatch({ control: form.control, name: "rating_timeliness_breakdown" });
+  const ratingOverall = useWatch({ control: form.control, name: "rating_overall_breakdown" });
+
+  const relevanceTotal = getRatingsTotal(ratingRelevance);
+  const qualityTotal = getRatingsTotal(ratingQuality);
+  const timelinessTotal = getRatingsTotal(ratingTimeliness);
+  const overallTotal = getRatingsTotal(ratingOverall);
+  const grandTotal = relevanceTotal + qualityTotal + timelinessTotal + overallTotal;
+
+  const validateStep = async () => {
+    if (currentStep === 1) return form.trigger(["agency_name", "agency_address", "clients", "category"]);
+    if (currentStep === 2) return form.trigger(["advisory_date", "venue", "faculty_members", "number_of_hours"]);
+    if (currentStep === 3) return form.trigger(["rating_relevance_breakdown", "rating_quality_breakdown", "rating_timeliness_breakdown", "rating_overall_breakdown", "documents"]);
+    return true;
+  };
+
+  const goNext = async () => {
+    if (isViewOnly) {
+      setCurrentStep((value) => Math.min(value + 1, stepLabels.length));
+      return;
+    }
+    const valid = await validateStep();
+    if (!valid) return;
+    setCurrentStep((value) => Math.min(value + 1, stepLabels.length));
+  };
+
+  const goPrevious = () => setCurrentStep((value) => Math.max(value - 1, 1));
+
+  const handleSubmit = React.useCallback(async (values: FormValues) => {
+    const payload: CreateTechnicalAdvisoryServicePayload = {
+      agency_name: values.agency_name,
+      agency_address: values.agency_address,
+      clients: values.clients.map((client) => ({
+        ...client,
+        email: client.contact_through === "phone" ? "" : client.email || "",
+        phone_number: client.contact_through === "email" ? "" : client.phone_number || "",
+      })),
+      category: values.category,
+      advisory_date: values.advisory_date.toISOString(),
+      venue: values.venue,
+      faculty_members: values.faculty_members,
+      number_of_hours: values.number_of_hours,
+      rating_relevance_breakdown: values.rating_relevance_breakdown,
+      rating_quality_breakdown: values.rating_quality_breakdown,
+      rating_timeliness_breakdown: values.rating_timeliness_breakdown,
+      rating_overall_breakdown: values.rating_overall_breakdown,
+      documents: values.documents,
+    };
+
+    setIsSubmitting(true);
+    const result = initialData?.id
+      ? await updateTechnicalAdvisoryService(initialData.id, payload)
+      : await createTechnicalAdvisoryService(payload);
+    setIsSubmitting(false);
+
+    if (result?.error) {
+      alert(result.error);
+      setCurrentStep(3);
+      autoSubmitStartedRef.current = false;
+      return;
+    }
+
+    onSuccess(initialData?.id ? "updated" : "created");
+  }, [initialData?.id, onSuccess]);
 
   React.useEffect(() => {
-    if (!selectedProjectNo || initialData) return;
-    const project = assignedProjects.find((item) => item.project_no === selectedProjectNo);
-    if (!project) return;
-    form.setValue("project_title", project.title || "");
-    form.setValue("lead_unit", getProjectLeadUnit(project));
-    form.setValue("college", "CEIT");
-    form.setValue("contact_person", project.contact_person || "");
-    form.setValue("related_curricular_offerings", getProjectCurricular(project));
-  }, [assignedProjects, form, initialData, selectedProjectNo]);
+    autoSubmitStartedRef.current = false;
+  }, [initialData?.id]);
 
-  async function onSubmit(values: FormValues) {
-    if (isViewOnly) return;
-    try {
-      setIsSubmitting(true);
-      const payload = {
-        project_no: values.project_no,
-        project_title: values.project_title,
-        lead_unit: values.lead_unit,
-        college: values.college,
-        contact_person: values.contact_person,
-        related_curricular_offerings: values.related_curricular_offerings
-          .split(",")
-          .map((item) => item.trim())
-          .filter(Boolean),
-        advisory_date: values.advisory_date.toISOString(),
-        venue: values.venue.trim(),
-        service_persons: values.service_persons.map((person) => ({ name: person.name.trim() })),
-        service_provided: values.service_provided,
-        service_provided_other:
-          values.service_provided === "Others" ? values.service_provided_other?.trim() || null : null,
-        clients: values.clients.map((client) => ({
-          ...client,
-          name: client.name.trim(),
-          address: client.address.trim(),
-          agency_office_unit: client.agency_office_unit.trim(),
-          position: client.position.trim(),
-          contact_no: client.contact_no?.trim() || "",
-          email: client.email.trim(),
-          category_other: client.category === "others" ? client.category_other?.trim() || "" : "",
-        })),
-        quality_score: values.quality_score,
-        relevance_score: values.relevance_score,
-        timeliness_score: values.timeliness_score,
-        overall_satisfaction_score: values.overall_satisfaction_score,
-        comments_suggestions: values.comments_suggestions?.trim() || null,
-        document_url: values.document_url || null,
-      };
-
-      if (initialData?.id) {
-        await updateTechnicalAdvisoryService(initialData.id, payload);
-      } else {
-        await createTechnicalAdvisoryService(payload);
-      }
-
-      onSuccess?.();
-    } catch (error) {
-      console.error(error);
-      alert("Failed to save technical advisory service.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  async function handleDelete() {
-    if (!initialData?.id || isViewOnly) return;
-    if (!confirm("Are you sure you want to delete this technical advisory service record?")) return;
-    try {
-      setIsSubmitting(true);
-      await deleteTechnicalAdvisoryService(initialData.id);
-      onSuccess?.();
-    } catch (error) {
-      console.error(error);
-      alert("Failed to delete technical advisory service record.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
+  React.useEffect(() => {
+    if (currentStep !== 4 || isViewOnly || autoSubmitStartedRef.current) return;
+    autoSubmitStartedRef.current = true;
+    const timeout = window.setTimeout(() => {
+      void form.handleSubmit(handleSubmit as any)();
+    }, 900);
+    return () => window.clearTimeout(timeout);
+  }, [currentStep, form, handleSubmit, isViewOnly]);
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <FormField control={form.control} name="project_no" render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-[10px]">Project No.</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isViewOnly || !!initialData}>
-                <FormControl>
-                  <SelectTrigger className="h-8 text-[10px]">
-                    <SelectValue placeholder="Select project no." />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {assignedProjects.map((project) => (
-                    <SelectItem key={project.project_no || project.id} value={project.project_no || project.id} className="text-[10px]">
-                      {(project.project_no || "N/A") + " - " + (project.title || "Untitled Project")}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage className="text-[10px]" />
-            </FormItem>
-          )} />
-
-          <FormField control={form.control} name="project_title" render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-[10px]">Project Title</FormLabel>
-              <FormControl><Input {...field} readOnly className="h-8 text-[10px] bg-muted/40" /></FormControl>
-              <FormMessage className="text-[10px]" />
-            </FormItem>
-          )} />
-
-          <FormField control={form.control} name="lead_unit" render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-[10px]">Lead Unit</FormLabel>
-              <FormControl><Input {...field} readOnly className="h-8 text-[10px] bg-muted/40" /></FormControl>
-              <FormMessage className="text-[10px]" />
-            </FormItem>
-          )} />
-
-          <FormField control={form.control} name="college" render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-[10px]">College</FormLabel>
-              <FormControl><Input {...field} readOnly className="h-8 text-[10px] bg-muted/40" /></FormControl>
-              <FormMessage className="text-[10px]" />
-            </FormItem>
-          )} />
-
-          <FormField control={form.control} name="contact_person" render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-[10px]">Contact Person</FormLabel>
-              <FormControl><Input {...field} readOnly className="h-8 text-[10px] bg-muted/40" /></FormControl>
-              <FormMessage className="text-[10px]" />
-            </FormItem>
-          )} />
-
-          <FormField control={form.control} name="related_curricular_offerings" render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-[10px]">Related Curricular Offering</FormLabel>
-              <FormControl><Input {...field} readOnly className="h-8 text-[10px] bg-muted/40" /></FormControl>
-              <FormMessage className="text-[10px]" />
-            </FormItem>
-          )} />
-        </div>
-
-        <div className="space-y-3 rounded-lg border border-border/50 p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="rounded-md bg-primary/10 p-1.5"><UsersRound className="h-3.5 w-3.5 text-primary" /></div>
-              <div>
-                <h3 className="text-[11px] font-semibold">Client&apos;s Information</h3>
-                <p className="text-[10px] text-muted-foreground">Add one or more clients for this service.</p>
-              </div>
-            </div>
-            {!isViewOnly && (
-              <Button type="button" variant="outline" className="h-7 text-[10px]" onClick={() => clientsArray.append({
-                name: "", sex: "male", address: "", agency_office_unit: "", position: "", contact_no: "", email: "", category: "student", category_other: "",
-              })}>
-                <Plus className="mr-1 h-3 w-3" />Add Client
+      <form onSubmit={(event) => event.preventDefault()} className="flex h-full min-h-0 flex-col bg-background">
+        <div className="border-b border-border/40 bg-background px-4 py-3 sm:px-6 lg:px-8">
+          <div className="flex w-full items-start justify-between gap-4">
+            <h1 className="text-xl font-bold text-foreground">
+              {initialData?.id ? (isViewOnly ? "Technical Advisory Details" : "Update Technical Advisory") : "Create Technical Advisory"}
+            </h1>
+            {onClose && (
+              <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0 rounded-full" onClick={onClose}>
+                <X className="h-4 w-4" />
               </Button>
             )}
           </div>
-
-          {clientsArray.fields.map((clientField, index) => {
-            const currentCategory = clientsValue?.[index]?.category;
-            return (
-              <div key={clientField.id} className="space-y-3 rounded-lg border border-border/50 p-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-[10px] font-semibold">Client {index + 1}</p>
-                  {!isViewOnly && clientsArray.fields.length > 1 && (
-                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => clientsArray.remove(index)}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                  <FormField control={form.control} name={`clients.${index}.name`} render={({ field }) => (
-                    <FormItem><FormLabel className="text-[10px]">Name</FormLabel><FormControl><Input {...field} className="h-8 text-[10px]" disabled={isViewOnly} /></FormControl><FormMessage className="text-[10px]" /></FormItem>
-                  )} />
-                  <FormField control={form.control} name={`clients.${index}.sex`} render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-[10px]">Sex</FormLabel>
-                      <div className="flex items-center gap-4 rounded-md border border-border/50 px-3 py-2">
-                        <label className="flex items-center gap-2 text-[10px]"><Checkbox checked={field.value === "male"} onCheckedChange={() => field.onChange("male")} disabled={isViewOnly} />Male</label>
-                        <label className="flex items-center gap-2 text-[10px]"><Checkbox checked={field.value === "female"} onCheckedChange={() => field.onChange("female")} disabled={isViewOnly} />Female</label>
-                      </div>
-                      <FormMessage className="text-[10px]" />
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name={`clients.${index}.address`} render={({ field }) => (
-                    <FormItem><FormLabel className="text-[10px]">Address</FormLabel><FormControl><Input {...field} className="h-8 text-[10px]" disabled={isViewOnly} /></FormControl><FormMessage className="text-[10px]" /></FormItem>
-                  )} />
-                  <FormField control={form.control} name={`clients.${index}.agency_office_unit`} render={({ field }) => (
-                    <FormItem><FormLabel className="text-[10px]">Agency/Office/Unit</FormLabel><FormControl><Input {...field} className="h-8 text-[10px]" disabled={isViewOnly} /></FormControl><FormMessage className="text-[10px]" /></FormItem>
-                  )} />
-                  <FormField control={form.control} name={`clients.${index}.position`} render={({ field }) => (
-                    <FormItem><FormLabel className="text-[10px]">Position</FormLabel><FormControl><Input {...field} className="h-8 text-[10px]" disabled={isViewOnly} /></FormControl><FormMessage className="text-[10px]" /></FormItem>
-                  )} />
-                  <FormField control={form.control} name={`clients.${index}.contact_no`} render={({ field }) => (
-                    <FormItem><FormLabel className="text-[10px]">Contact No. (Optional)</FormLabel><FormControl><Input {...field} className="h-8 text-[10px]" disabled={isViewOnly} /></FormControl><FormMessage className="text-[10px]" /></FormItem>
-                  )} />
-                  <FormField control={form.control} name={`clients.${index}.email`} render={({ field }) => (
-                    <FormItem><FormLabel className="text-[10px]">Email</FormLabel><FormControl><Input {...field} className="h-8 text-[10px]" disabled={isViewOnly} /></FormControl><FormMessage className="text-[10px]" /></FormItem>
-                  )} />
-                  <FormField control={form.control} name={`clients.${index}.category`} render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-[10px]">Category</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isViewOnly}>
-                        <FormControl><SelectTrigger className="h-8 text-[10px]"><SelectValue placeholder="Select category" /></SelectTrigger></FormControl>
-                        <SelectContent>
-                          <SelectItem value="student" className="text-[10px]">Student</SelectItem>
-                          <SelectItem value="farmer" className="text-[10px]">Farmer</SelectItem>
-                          <SelectItem value="fisherfolk" className="text-[10px]">Fisherfolk</SelectItem>
-                          <SelectItem value="government" className="text-[10px]">Government</SelectItem>
-                          <SelectItem value="employee" className="text-[10px]">Employee</SelectItem>
-                          <SelectItem value="private_employee" className="text-[10px]">Private Employee</SelectItem>
-                          <SelectItem value="organization" className="text-[10px]">Organization</SelectItem>
-                          <SelectItem value="others" className="text-[10px]">Others</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage className="text-[10px]" />
-                    </FormItem>
-                  )} />
-                </div>
-
-                {currentCategory === "others" && (
-                  <FormField control={form.control} name={`clients.${index}.category_other`} render={({ field }) => (
-                    <FormItem><FormLabel className="text-[10px]">Please Specify</FormLabel><FormControl><Input {...field} className="h-8 text-[10px]" disabled={isViewOnly} /></FormControl><FormMessage className="text-[10px]" /></FormItem>
-                  )} />
-                )}
-              </div>
-            );
-          })}
+          <div className="mt-3 grid gap-3 lg:grid-cols-3">
+            <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-2.5">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80">Agency</p>
+              <p className="truncate text-xs font-medium text-foreground">{form.watch("agency_name") || "Unassigned"}</p>
+            </div>
+            <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-2.5">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80">Category</p>
+              <p className="truncate text-xs font-medium text-foreground">{form.watch("category")}</p>
+            </div>
+            <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-2.5">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80">Grand Total Ratings</p>
+              <p className="truncate text-xs font-medium text-foreground">{grandTotal}</p>
+            </div>
+          </div>
+          <div className="mt-4 w-full">
+            <StepIndicator currentStep={currentStep} totalSteps={stepLabels.length} labels={stepLabels} />
+          </div>
         </div>
 
-        <div className="space-y-3 rounded-lg border border-border/50 p-4">
-          <div className="flex items-center gap-2">
-            <div className="rounded-md bg-primary/10 p-1.5"><Wrench className="h-3.5 w-3.5 text-primary" /></div>
-            <div>
-              <h3 className="text-[11px] font-semibold">Advisory Services Details</h3>
-              <p className="text-[10px] text-muted-foreground">Record the activity date, venue, people, and service provided.</p>
-            </div>
-          </div>
+        <div className="flex-1 overflow-y-auto bg-background px-4 py-5 sm:px-6 lg:px-8">
+          {currentStep === 1 && (
+            <div className="space-y-6">
+              <Card className="rounded-3xl border-border/40 shadow-none">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Building2 className="h-5 w-5 text-foreground" />
+                    Agency Information
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Capture the agency details, client list, contact channel, and category.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid gap-4 xl:grid-cols-2">
+                    <FormField
+                      control={form.control as any}
+                      name="agency_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Name of Agency</FormLabel>
+                          <FormControl>
+                            <Input {...field} disabled={isViewOnly} className="h-10 rounded-xl text-sm" />
+                          </FormControl>
+                          <FormMessage className="text-xs" />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control as any}
+                      name="agency_address"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Address</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                              <Input {...field} disabled={isViewOnly} className="h-10 rounded-xl pl-10 text-sm" />
+                            </div>
+                          </FormControl>
+                          <FormMessage className="text-xs" />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <FormField control={form.control} name="advisory_date" render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel className="text-[10px] pb-1">Date</FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button variant="outline" className={cn("h-8 justify-between text-[10px] font-normal", !field.value && "text-muted-foreground")} disabled={isViewOnly}>
-                        {field.value ? format(field.value, "PPP") : "Pick a date"}
-                        <CalendarIcon className="h-3 w-3 opacity-50" />
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                  </PopoverContent>
-                </Popover>
-                <FormMessage className="text-[10px]" />
-              </FormItem>
-            )} />
-            <FormField control={form.control} name="venue" render={({ field }) => (
-              <FormItem><FormLabel className="text-[10px]">Venue</FormLabel><FormControl><Input {...field} className="h-8 text-[10px]" disabled={isViewOnly} /></FormControl><FormMessage className="text-[10px]" /></FormItem>
-            )} />
-          </div>
+                  <FormField
+                    control={form.control as any}
+                    name="category"
+                    render={({ field }) => (
+                      <FormItem className="max-w-sm">
+                        <FormLabel className="text-xs">Category</FormLabel>
+                        <Select value={field.value} onValueChange={field.onChange} disabled={isViewOnly}>
+                          <FormControl>
+                            <SelectTrigger className="h-10 rounded-xl text-sm">
+                              <SelectValue placeholder="Select category" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="internal" className="text-sm">Internal</SelectItem>
+                            <SelectItem value="external" className="text-sm">External</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage className="text-xs" />
+                      </FormItem>
+                    )}
+                  />
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <FormLabel className="text-[10px]">Name of Person</FormLabel>
-              {!isViewOnly && (
-                <Button type="button" variant="outline" className="h-7 text-[10px]" onClick={() => servicePersonsArray.append({ name: "" })}>
-                  <Plus className="mr-1 h-3 w-3" />Add Person
-                </Button>
-              )}
+                  <Card className="rounded-2xl border-border/40 shadow-none">
+                    <CardHeader className="flex flex-row items-center justify-between">
+                      <div>
+                        <CardTitle className="text-sm">Clients</CardTitle>
+                        <CardDescription className="text-xs">Add one or more clients dynamically.</CardDescription>
+                      </div>
+                      {!isViewOnly && (
+                        <Button type="button" className="rounded-xl bg-[#159E44] text-white hover:bg-[#128A3B]" onClick={() => clientsArray.append({ name: "", sex: "male", position: "", contact_through: "email", email: "", phone_number: "" })}>
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add Client
+                        </Button>
+                      )}
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {clientsArray.fields.map((fieldItem, index) => {
+                        const currentContactMode = clients?.[index]?.contact_through;
+                        return (
+                          <div key={fieldItem.id} className="space-y-4 rounded-2xl border border-border/40 p-4">
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm font-semibold">Client {index + 1}</p>
+                              {!isViewOnly && clientsArray.fields.length > 1 && (
+                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 rounded-full text-destructive" onClick={() => clientsArray.remove(index)}>
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                            <div className="grid gap-4 xl:grid-cols-2">
+                              <FormField
+                                control={form.control as any}
+                                name={`clients.${index}.name`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel className="text-xs">Name of Client</FormLabel>
+                                    <FormControl>
+                                      <div className="relative">
+                                        <UserRound className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                        <Input {...field} disabled={isViewOnly} className="h-10 rounded-xl pl-10 text-sm" />
+                                      </div>
+                                    </FormControl>
+                                    <FormMessage className="text-xs" />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={form.control as any}
+                                name={`clients.${index}.position`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel className="text-xs">Position</FormLabel>
+                                    <FormControl>
+                                      <Input {...field} disabled={isViewOnly} className="h-10 rounded-xl text-sm" />
+                                    </FormControl>
+                                    <FormMessage className="text-xs" />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+                            <FormField
+                              control={form.control as any}
+                              name={`clients.${index}.sex`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-xs">Sex</FormLabel>
+                                  <div className="flex gap-4 rounded-xl border border-border/40 px-4 py-3">
+                                    <label className="flex items-center gap-2 text-sm">
+                                      <Checkbox checked={field.value === "male"} onCheckedChange={() => field.onChange("male")} disabled={isViewOnly} />
+                                      Male
+                                    </label>
+                                    <label className="flex items-center gap-2 text-sm">
+                                      <Checkbox checked={field.value === "female"} onCheckedChange={() => field.onChange("female")} disabled={isViewOnly} />
+                                      Female
+                                    </label>
+                                  </div>
+                                  <FormMessage className="text-xs" />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control as any}
+                              name={`clients.${index}.contact_through`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-xs">Contact Through</FormLabel>
+                                  <Select value={field.value} onValueChange={field.onChange} disabled={isViewOnly}>
+                                    <FormControl>
+                                      <SelectTrigger className="h-10 rounded-xl text-sm max-w-sm">
+                                        <SelectValue placeholder="Select contact method" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="email" className="text-sm">Email</SelectItem>
+                                      <SelectItem value="phone" className="text-sm">Phone Number</SelectItem>
+                                      <SelectItem value="both" className="text-sm">Both</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage className="text-xs" />
+                                </FormItem>
+                              )}
+                            />
+                            <div className="grid gap-4 xl:grid-cols-2">
+                              {(currentContactMode === "email" || currentContactMode === "both") && (
+                                <FormField
+                                  control={form.control as any}
+                                  name={`clients.${index}.email`}
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel className="text-xs">Email</FormLabel>
+                                      <FormControl>
+                                        <div className="relative">
+                                          <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                          <Input {...field} disabled={isViewOnly} className="h-10 rounded-xl pl-10 text-sm" />
+                                        </div>
+                                      </FormControl>
+                                      <FormMessage className="text-xs" />
+                                    </FormItem>
+                                  )}
+                                />
+                              )}
+                              {(currentContactMode === "phone" || currentContactMode === "both") && (
+                                <FormField
+                                  control={form.control as any}
+                                  name={`clients.${index}.phone_number`}
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel className="text-xs">Phone Number</FormLabel>
+                                      <FormControl>
+                                        <div className="relative">
+                                          <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                          <Input {...field} disabled={isViewOnly} className="h-10 rounded-xl pl-10 text-sm" />
+                                        </div>
+                                      </FormControl>
+                                      <FormMessage className="text-xs" />
+                                    </FormItem>
+                                  )}
+                                />
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </CardContent>
+                  </Card>
+                </CardContent>
+              </Card>
             </div>
-            <div className="space-y-2">
-              {servicePersonsArray.fields.map((fieldItem, index) => (
-                <div key={fieldItem.id} className="flex items-start gap-2">
-                  <FormField control={form.control} name={`service_persons.${index}.name`} render={({ field }) => (
-                    <FormItem className="flex-1"><FormControl><Input {...field} className="h-8 text-[10px]" disabled={isViewOnly} /></FormControl><FormMessage className="text-[10px]" /></FormItem>
+          )}
+
+          {currentStep === 2 && (
+            <div className="space-y-6">
+              <Card className="rounded-3xl border-border/40 shadow-none">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <UsersRound className="h-5 w-5 text-foreground" />
+                    Advisory Services Details
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Record the date, venue, faculty members, and number of hours rendered.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid gap-4 xl:grid-cols-2">
+                    <FormField
+                      control={form.control as any}
+                      name="advisory_date"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel className="text-xs">Date</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button variant="outline" className={cn("h-10 justify-between rounded-xl text-sm font-normal", !field.value && "text-muted-foreground")} disabled={isViewOnly}>
+                                  {field.value ? format(field.value, "PPP") : "Pick a date"}
+                                  <CalendarIcon className="h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage className="text-xs" />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control as any}
+                      name="venue"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Venue</FormLabel>
+                          <FormControl>
+                            <Input {...field} disabled={isViewOnly} className="h-10 rounded-xl text-sm" />
+                          </FormControl>
+                          <FormMessage className="text-xs" />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <Card className="rounded-2xl border-border/40 shadow-none">
+                    <CardHeader className="flex flex-row items-center justify-between">
+                      <div>
+                        <CardTitle className="text-sm">Faculty Members</CardTitle>
+                        <CardDescription className="text-xs">Add the faculty members who rendered the services.</CardDescription>
+                      </div>
+                      {!isViewOnly && (
+                        <Button type="button" className="rounded-xl bg-[#159E44] text-white hover:bg-[#128A3B]" onClick={() => facultyArray.append({ name: "" })}>
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add Faculty
+                        </Button>
+                      )}
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {facultyArray.fields.map((fieldItem, index) => (
+                        <div key={fieldItem.id} className="flex items-start gap-2">
+                          <FormField
+                            control={form.control as any}
+                            name={`faculty_members.${index}.name`}
+                            render={({ field }) => (
+                              <FormItem className="flex-1">
+                                <FormLabel className="text-xs">Name of the Faculty Member</FormLabel>
+                                <FormControl>
+                                  <Input {...field} disabled={isViewOnly} className="h-10 rounded-xl text-sm" />
+                                </FormControl>
+                                <FormMessage className="text-xs" />
+                              </FormItem>
+                            )}
+                          />
+                          {!isViewOnly && facultyArray.fields.length > 1 && (
+                            <Button type="button" variant="ghost" size="icon" className="mt-6 h-10 w-10 rounded-full text-destructive" onClick={() => facultyArray.remove(index)}>
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+
+                  <FormField
+                    control={form.control as any}
+                    name="number_of_hours"
+                    render={({ field }) => (
+                      <FormItem className="max-w-sm">
+                        <FormLabel className="text-xs">Number of Hours</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Clock3 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <Input type="number" min="0" {...field} disabled={isViewOnly} className="h-10 rounded-xl pl-10 text-sm" />
+                          </div>
+                        </FormControl>
+                        <FormMessage className="text-xs" />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {currentStep === 3 && (
+            <div className="space-y-6">
+              <Card className="rounded-3xl border-border/40 shadow-none">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <ClipboardCheck className="h-5 w-5 text-foreground" />
+                    Assessment
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Capture the rating breakdowns and upload the supporting PDF document.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <FormField control={form.control as any} name="rating_relevance_breakdown" render={({ field }) => (
+                    <RatingBreakdownFields title="Client Rating on the Relevance of the Services" value={field.value} onChange={field.onChange} disabled={isViewOnly} />
                   )} />
-                  {!isViewOnly && servicePersonsArray.fields.length > 1 && (
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => servicePersonsArray.remove(index)}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                </div>
-              ))}
+                  <FormField control={form.control as any} name="rating_quality_breakdown" render={({ field }) => (
+                    <RatingBreakdownFields title="Client Rating on the Quality of the Services" value={field.value} onChange={field.onChange} disabled={isViewOnly} />
+                  )} />
+                  <FormField control={form.control as any} name="rating_timeliness_breakdown" render={({ field }) => (
+                    <RatingBreakdownFields title="Client Rating on the Timeliness of the Services" value={field.value} onChange={field.onChange} disabled={isViewOnly} />
+                  )} />
+                  <FormField control={form.control as any} name="rating_overall_breakdown" render={({ field }) => (
+                    <RatingBreakdownFields title="Overall Satisfaction to Feedback to Experts" value={field.value} onChange={field.onChange} disabled={isViewOnly} />
+                  )} />
+
+                  <div className="rounded-2xl border border-border/40 bg-muted/10 px-4 py-4 text-sm">
+                    Grand Total of All Ratings: <span className="font-semibold">{grandTotal}</span>
+                  </div>
+
+                  <Card className="rounded-2xl border-border/40 shadow-none">
+                    <CardHeader>
+                      <CardTitle className="text-sm">Uploading of Documents</CardTitle>
+                      <CardDescription className="text-xs">
+                        Upload PDF files to the private `cqer-technicaladv_pdf` bucket. Maximum 5MB per file.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <FormField
+                        control={form.control as any}
+                        name="documents"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <FileUpload
+                                value={field.value ?? []}
+                                onChange={field.onChange}
+                                disabled={isViewOnly}
+                                bucket="cqer-technicaladv_pdf"
+                                accept=".pdf"
+                                maxSizeInMB={5}
+                              />
+                            </FormControl>
+                            <FormMessage className="text-xs" />
+                          </FormItem>
+                        )}
+                      />
+                    </CardContent>
+                  </Card>
+                </CardContent>
+              </Card>
             </div>
-          </div>
+          )}
 
-          <FormField control={form.control} name="service_provided" render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-[10px]">Services Provided</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isViewOnly}>
-                <FormControl><SelectTrigger className="h-8 text-[10px]"><SelectValue placeholder="Select service" /></SelectTrigger></FormControl>
-                <SelectContent>
-                  <SelectItem value="Technical assistance" className="text-[10px]">Technical assistance</SelectItem>
-                  <SelectItem value="Consultation" className="text-[10px]">Consultation</SelectItem>
-                  <SelectItem value="Resource person" className="text-[10px]">Resource person</SelectItem>
-                  <SelectItem value="Technology promotion" className="text-[10px]">Technology promotion</SelectItem>
-                  <SelectItem value="Value adding" className="text-[10px]">Value adding</SelectItem>
-                  <SelectItem value="Others" className="text-[10px]">Others</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage className="text-[10px]" />
-            </FormItem>
-          )} />
-
-          {selectedService === "Others" && (
-            <FormField control={form.control} name="service_provided_other" render={({ field }) => (
-              <FormItem><FormLabel className="text-[10px]">Please Specify</FormLabel><FormControl><Input {...field} className="h-8 text-[10px]" disabled={isViewOnly} /></FormControl><FormMessage className="text-[10px]" /></FormItem>
-            )} />
+          {currentStep === 4 && (
+            <div className="space-y-6">
+              <Card className="rounded-3xl border-border/40 shadow-none">
+                <CardHeader>
+                  <CardTitle className="text-center text-lg">{isViewOnly ? "Technical Advisory Summary" : isSubmitting ? "Saving..." : "Preparing Save"}</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col items-center py-10">
+                  <div className="mb-4 rounded-full bg-muted p-6">
+                    <Save className={cn("h-10 w-10 text-foreground", !isViewOnly && "animate-pulse")} />
+                  </div>
+                  <p className="max-w-md text-center text-sm text-muted-foreground">
+                    {isViewOnly
+                      ? "This technical advisory record is displayed in the same step-based layout used for create and update."
+                      : "Please wait while the technical advisory record is automatically saved."}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
           )}
         </div>
 
-        <div className="space-y-3 rounded-lg border border-border/50 p-4">
-          <div><h3 className="text-[11px] font-semibold">Assessment</h3><p className="text-[10px] text-muted-foreground">Choose one rating from 1 to 5 for each criterion.</p></div>
-          <FormField control={form.control} name="quality_score" render={({ field }) => <FormItem><AssessmentPicker label="A. Quality" value={field.value} onChange={field.onChange} disabled={isViewOnly} /><FormMessage className="text-[10px]" /></FormItem>} />
-          <FormField control={form.control} name="relevance_score" render={({ field }) => <FormItem><AssessmentPicker label="B. Relevance" value={field.value} onChange={field.onChange} disabled={isViewOnly} /><FormMessage className="text-[10px]" /></FormItem>} />
-          <FormField control={form.control} name="timeliness_score" render={({ field }) => <FormItem><AssessmentPicker label="C. Timeliness" value={field.value} onChange={field.onChange} disabled={isViewOnly} /><FormMessage className="text-[10px]" /></FormItem>} />
-          <FormField control={form.control} name="overall_satisfaction_score" render={({ field }) => <FormItem><AssessmentPicker label="D. Overall satisfaction feedback to experts" value={field.value} onChange={field.onChange} disabled={isViewOnly} /><FormMessage className="text-[10px]" /></FormItem>} />
-        </div>
-
-        <FormField control={form.control} name="comments_suggestions" render={({ field }) => (
-          <FormItem><FormLabel className="text-[10px]">Comments/Suggestions</FormLabel><FormControl><Textarea {...field} className="min-h-[90px] text-[10px]" disabled={isViewOnly} placeholder="Add remarks, comments, or suggestions." /></FormControl><FormMessage className="text-[10px]" /></FormItem>
-        )} />
-
-        <FormField control={form.control} name="document_url" render={({ field }) => (
-          <FormItem>
-            <FormLabel className="text-[10px]">Upload Document (PDF)</FormLabel>
-            <FormControl>
-              <FileUpload
-                value={field.value ? [{ url: field.value, name: "Technical Advisory Service Document" }] : []}
-                onChange={(files) => field.onChange(files[0]?.url || null)}
-                bucket="cqer-technical-advisory-services-pdfs"
-                accept=".pdf"
-                disabled={isViewOnly}
-              />
-            </FormControl>
-            <p className="text-[9px] text-muted-foreground">Suggested bucket name: <span className="font-medium">cqer-technical-advisory-services-pdfs</span></p>
-            <FormMessage className="text-[10px]" />
-          </FormItem>
-        )} />
-
-        {!isViewOnly && (
-          <div className="flex justify-end gap-2 pt-2">
-            {initialData && (
-              <Button type="button" variant="destructive" className="h-8 text-[10px]" onClick={handleDelete} disabled={isSubmitting}>
-                <Trash2 className="mr-1 h-3 w-3" />Delete
-              </Button>
-            )}
-            <Button type="submit" className="h-8 bg-[#159E44] text-[10px] text-white hover:bg-[#128A3B]" disabled={isSubmitting}>
-              <Save className="mr-1 h-3 w-3" />{isSubmitting ? "Saving..." : "Save"}
-            </Button>
+        <div className="border-t border-border/50 bg-background px-5 py-4 sm:px-7 lg:px-10">
+          <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-xs text-muted-foreground">Step {currentStep} of {stepLabels.length}</div>
+            <div className="flex flex-wrap justify-end gap-3">
+              {currentStep > 1 && (
+                <Button type="button" variant="outline" className="rounded-xl" onClick={goPrevious}>
+                  <ChevronLeft className="mr-2 h-4 w-4" />
+                  Previous
+                </Button>
+              )}
+              {currentStep < stepLabels.length && (
+                <Button type="button" className="rounded-xl" onClick={goNext} disabled={isSubmitting}>
+                  Next
+                  <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </div>
-        )}
+        </div>
       </form>
     </Form>
   );

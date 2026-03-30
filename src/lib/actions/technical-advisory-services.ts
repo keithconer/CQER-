@@ -11,58 +11,48 @@ type UserRole =
   | "extension_office"
   | "project_leader";
 
+export type TechnicalAdvisoryCategory = "internal" | "external";
+export type TechnicalAdvisorySex = "male" | "female";
+export type TechnicalAdvisoryContactThrough = "email" | "phone" | "both";
+
 export interface TechnicalAdvisoryClient {
   name: string;
-  sex: "male" | "female" | "";
-  address: string;
-  agency_office_unit: string;
+  sex: TechnicalAdvisorySex;
   position: string;
-  contact_no?: string;
-  email: string;
-  category:
-    | "student"
-    | "farmer"
-    | "fisherfolk"
-    | "government"
-    | "employee"
-    | "private_employee"
-    | "organization"
-    | "others";
-  category_other?: string;
+  contact_through: TechnicalAdvisoryContactThrough;
+  email?: string;
+  phone_number?: string;
 }
 
-export interface TechnicalAdvisoryServicePerson {
+export interface TechnicalAdvisoryFacultyMember {
   name: string;
+}
+
+export interface RatingBreakdown {
+  "5": number;
+  "4": number;
+  "3": number;
+  "2": number;
+  "1": number;
 }
 
 export interface TechnicalAdvisoryServiceRecord {
   id: string;
-  project_no: string;
-  project_title: string;
-  lead_unit: string;
-  college: string;
-  contact_person: string;
-  related_curricular_offerings: string[] | null;
-  department: string | null;
-  unit: string | null;
+  agency_name: string;
+  agency_address: string;
+  clients: TechnicalAdvisoryClient[];
+  category: TechnicalAdvisoryCategory;
   advisory_date: string;
   venue: string;
-  service_persons: TechnicalAdvisoryServicePerson[];
-  service_provided:
-    | "Technical assistance"
-    | "Consultation"
-    | "Resource person"
-    | "Technology promotion"
-    | "Value adding"
-    | "Others";
-  service_provided_other?: string | null;
-  clients: TechnicalAdvisoryClient[];
-  quality_score: number | null;
-  relevance_score: number | null;
-  timeliness_score: number | null;
-  overall_satisfaction_score: number | null;
-  comments_suggestions?: string | null;
-  document_url?: string | null;
+  faculty_members: TechnicalAdvisoryFacultyMember[];
+  number_of_hours: number;
+  rating_relevance_breakdown: RatingBreakdown;
+  rating_quality_breakdown: RatingBreakdown;
+  rating_timeliness_breakdown: RatingBreakdown;
+  rating_overall_breakdown: RatingBreakdown;
+  documents: { url: string; name: string }[];
+  department: string | null;
+  unit: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -83,45 +73,37 @@ type ProfileLite = {
   last_name: string | null;
 };
 
+const emptyRatings: RatingBreakdown = { "5": 0, "4": 0, "3": 0, "2": 0, "1": 0 };
+
+function normalizeRatings(raw: unknown): RatingBreakdown {
+  if (!raw || typeof raw !== "object") return emptyRatings;
+  const source = raw as Record<string, unknown>;
+  return {
+    "5": Number(source["5"] || 0),
+    "4": Number(source["4"] || 0),
+    "3": Number(source["3"] || 0),
+    "2": Number(source["2"] || 0),
+    "1": Number(source["1"] || 0),
+  };
+}
+
 function normalizeRecord(record: Record<string, unknown>, creator?: ProfileLite | null) {
   const fullName = [creator?.first_name, creator?.last_name].filter(Boolean).join(" ").trim();
   return {
     ...record,
-    related_curricular_offerings: Array.isArray(record.related_curricular_offerings)
-      ? (record.related_curricular_offerings as string[])
+    clients: Array.isArray(record.clients) ? (record.clients as TechnicalAdvisoryClient[]) : [],
+    faculty_members: Array.isArray(record.faculty_members)
+      ? (record.faculty_members as TechnicalAdvisoryFacultyMember[])
       : [],
-    service_persons: Array.isArray(record.service_persons)
-      ? (record.service_persons as TechnicalAdvisoryServicePerson[])
+    documents: Array.isArray(record.documents)
+      ? (record.documents as { url: string; name: string }[])
       : [],
-    clients: Array.isArray(record.clients)
-      ? (record.clients as TechnicalAdvisoryClient[])
-      : [],
+    rating_relevance_breakdown: normalizeRatings(record.rating_relevance_breakdown),
+    rating_quality_breakdown: normalizeRatings(record.rating_quality_breakdown),
+    rating_timeliness_breakdown: normalizeRatings(record.rating_timeliness_breakdown),
+    rating_overall_breakdown: normalizeRatings(record.rating_overall_breakdown),
     created_by_name: fullName || null,
   } as TechnicalAdvisoryServiceRecord;
-}
-
-function canViewRecordForProfile(record: Record<string, unknown>, profile: ProfileLite) {
-  if (profile.user_type === "super_admin") return true;
-  if (profile.user_type === "college_coordinator") {
-    return (record.department as string | null) === profile.department;
-  }
-  if (profile.user_type === "unit_coordinator") {
-    return (
-      (record.department as string | null) === profile.department &&
-      (record.unit as string | null) === profile.unit
-    );
-  }
-  return false;
-}
-
-function canManageRecordForProfile(
-  record: Pick<TechnicalAdvisoryServiceRecord, "created_by" | "department">,
-  profile: ProfileLite,
-  userId: string
-) {
-  if (profile.user_type === "super_admin") return true;
-  if (profile.user_type === "college_coordinator") return record.department === profile.department;
-  return record.created_by === userId;
 }
 
 async function getAuthorizedProfile() {
@@ -140,15 +122,39 @@ async function getAuthorizedProfile() {
 
   if (error || !profile) throw new Error("Profile not found");
 
-  if (!["super_admin", "college_coordinator", "unit_coordinator"].includes(profile.user_type || "")) {
+  if (!["super_admin", "college_coordinator", "unit_coordinator", "project_leader"].includes(profile.user_type || "")) {
     throw new Error("Insufficient permissions");
   }
 
   return { user, profile: profile as ProfileLite };
 }
 
+function canViewRecordForProfile(record: Record<string, unknown>, profile: ProfileLite, userId: string) {
+  if (profile.user_type === "super_admin") return true;
+  if (profile.user_type === "college_coordinator") {
+    return (record.department as string | null) === profile.department;
+  }
+  if (profile.user_type === "unit_coordinator") {
+    return (
+      (record.department as string | null) === profile.department &&
+      (record.unit as string | null) === profile.unit
+    );
+  }
+  return String(record.created_by || "") === userId;
+}
+
+function canManageRecordForProfile(
+  record: Pick<TechnicalAdvisoryServiceRecord, "created_by" | "department">,
+  profile: ProfileLite,
+  userId: string
+) {
+  if (profile.user_type === "super_admin") return true;
+  if (profile.user_type === "college_coordinator") return record.department === profile.department;
+  return record.created_by === userId;
+}
+
 export async function getTechnicalAdvisoryServices() {
-  const { profile } = await getAuthorizedProfile();
+  const { profile, user } = await getAuthorizedProfile();
   const adminClient = createAdminClient();
 
   const { data, error } = await adminClient
@@ -158,12 +164,12 @@ export async function getTechnicalAdvisoryServices() {
 
   if (error) {
     console.error("Error fetching technical advisory services:", error);
-    return [];
+    return { error: error.message };
   }
 
-  const records = (data || []).filter((record) => canViewRecordForProfile(record, profile));
+  const visibleRecords = (data || []).filter((record) => canViewRecordForProfile(record, profile, user.id));
   const creatorIds = Array.from(
-    new Set(records.map((record) => String(record.created_by || "")).filter(Boolean))
+    new Set(visibleRecords.map((record) => String(record.created_by || "")).filter(Boolean))
   );
 
   let creatorMap = new Map<string, ProfileLite>();
@@ -175,12 +181,12 @@ export async function getTechnicalAdvisoryServices() {
     creatorMap = new Map((creators || []).map((item) => [item.id, item as ProfileLite]));
   }
 
-  return records.map((record) => normalizeRecord(record, creatorMap.get(String(record.created_by))));
+  return {
+    data: visibleRecords.map((record) => normalizeRecord(record, creatorMap.get(String(record.created_by)))),
+  };
 }
 
-export async function createTechnicalAdvisoryService(
-  payload: CreateTechnicalAdvisoryServicePayload
-) {
+export async function createTechnicalAdvisoryService(payload: CreateTechnicalAdvisoryServicePayload) {
   const {
     user,
     profile: { department, unit },
@@ -202,11 +208,11 @@ export async function createTechnicalAdvisoryService(
 
   if (error) {
     console.error("Error creating technical advisory service:", error);
-    throw new Error(error.message);
+    return { error: error.message };
   }
 
   revalidatePath("/dashboard");
-  return data;
+  return { data: normalizeRecord(data as Record<string, unknown>) };
 }
 
 export async function updateTechnicalAdvisoryService(
@@ -222,10 +228,12 @@ export async function updateTechnicalAdvisoryService(
     .eq("id", id)
     .single();
 
-  if (existingError || !existing) throw new Error("Record not found");
+  if (existingError || !existing) {
+    return { error: "Record not found" };
+  }
 
   if (!canManageRecordForProfile(existing as TechnicalAdvisoryServiceRecord, profile, user.id)) {
-    throw new Error("Insufficient permissions to update this record");
+    return { error: "Insufficient permissions to update this record" };
   }
 
   const { data, error } = await adminClient
@@ -240,11 +248,11 @@ export async function updateTechnicalAdvisoryService(
 
   if (error) {
     console.error("Error updating technical advisory service:", error);
-    throw new Error(error.message);
+    return { error: error.message };
   }
 
   revalidatePath("/dashboard");
-  return data;
+  return { data: normalizeRecord(data as Record<string, unknown>) };
 }
 
 export async function deleteTechnicalAdvisoryService(id: string) {
@@ -257,10 +265,12 @@ export async function deleteTechnicalAdvisoryService(id: string) {
     .eq("id", id)
     .single();
 
-  if (existingError || !existing) throw new Error("Record not found");
+  if (existingError || !existing) {
+    return { error: "Record not found" };
+  }
 
   if (!canManageRecordForProfile(existing as TechnicalAdvisoryServiceRecord, profile, user.id)) {
-    throw new Error("Insufficient permissions to delete this record");
+    return { error: "Insufficient permissions to delete this record" };
   }
 
   const { error } = await adminClient
@@ -270,9 +280,9 @@ export async function deleteTechnicalAdvisoryService(id: string) {
 
   if (error) {
     console.error("Error deleting technical advisory service:", error);
-    throw new Error(error.message);
+    return { error: error.message };
   }
 
   revalidatePath("/dashboard");
-  return true;
+  return { success: true };
 }

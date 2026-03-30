@@ -3,7 +3,7 @@
 import * as React from "react";
 import { FileText, ExternalLink, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { cn } from "@/lib/utils";
+import { getSignedStorageUrl } from "@/lib/actions/storage";
 
 interface DocumentPreviewProps {
   documents: { url: string; name: string }[] | null | undefined;
@@ -19,20 +19,21 @@ export function DocumentPreview({ documents, bucket = DEFAULT_BUCKET }: Document
     if (!url) return;
     setLoadingUrl(url);
     try {
-      const supabase = createClient();
-      const { data, error } = await supabase.storage
-        .from(bucket)
-        .createSignedUrl(url, 3600);
+      if (url.startsWith("http")) {
+        window.open(url, "_blank", "noopener,noreferrer");
+        return;
+      }
 
-      if (error) {
-        console.error("Error creating signed URL:", error);
+      const directClient = createClient();
+      const { data } = await directClient.storage.from(bucket).createSignedUrl(url, 3600);
+      const signedUrl = data?.signedUrl || (await getSignedStorageUrl(bucket, url));
+
+      if (!signedUrl) {
         alert("Error opening document.");
         return;
       }
 
-      if (data?.signedUrl) {
-        window.open(data.signedUrl, "_blank");
-      }
+      window.open(signedUrl, "_blank", "noopener,noreferrer");
     } catch (err) {
       console.error("Unexpected error:", err);
     } finally {

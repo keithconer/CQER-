@@ -4,6 +4,7 @@ import { CoordinatorRegistration } from "@/components/dashboard/coordinator-regi
 import { getCollegeProjects, getProjectLeaderProjects, getUnitProjects } from "@/lib/actions/projects";
 import { getTrainings } from "@/lib/actions/trainings";
 import { getConsultancyExtensions } from "@/lib/actions/consultancy-extension";
+import { getTechnicalAdvisoryServices } from "@/lib/actions/technical-advisory-services";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { UnitCoordinatorsPanel } from "@/components/dashboard/unit-coordinators-panel";
 import { type Project } from "@/components/dashboard/projects-table";
@@ -21,6 +22,8 @@ import { BackupManagement } from "@/components/dashboard/backup-management";
 import { ProjectLeaderRegistrationManagement } from "@/components/dashboard/project-leader-registration-management";
 import { ConsultancyExtensionManagement } from "@/components/dashboard/consultancy-extension-management";
 import { type ConsultancyExtension } from "@/lib/actions/consultancy-extension";
+import { TechnicalAdvisoryServicesManagement } from "@/components/dashboard/technical-advisory-services-management";
+import { type TechnicalAdvisoryServiceRecord } from "@/lib/actions/technical-advisory-services";
 
 
 function extractPartnerAgencyNames(projects: Project[]) {
@@ -202,6 +205,7 @@ export default async function DashboardPage({
     panelParam === "backup" ||
     panelParam === "trainings" ||
     panelParam === "consultancy" ||
+    panelParam === "technical-advisory" ||
     panelParam === "projects"
       ? panelParam
       : "overview";
@@ -231,7 +235,7 @@ export default async function DashboardPage({
     super_admin: ["overview", "community", "backup", "account-management", "accounts"],
     college_coordinator: ["overview", "community", "backup", "account-management", "accounts"],
     unit_coordinator: ["overview", "community", "backup"],
-    project_leader: ["overview", "backup", "projects", "trainings", "consultancy"],
+    project_leader: ["overview", "backup", "projects", "trainings", "consultancy", "technical-advisory"],
     extension_office: ["overview"],
   };
   const allowedPanels = allowedPanelsByRole[profile.user_type] || ["overview"];
@@ -245,6 +249,7 @@ export default async function DashboardPage({
   const unitProjects: Project[] = [];
   let trainingRecords: TrainingRecord[] = [];
   let consultancyRecords: ConsultancyExtension[] = [];
+  let technicalAdvisoryRecords: TechnicalAdvisoryServiceRecord[] = [];
   let trainingPartnerAgencyOptions: string[] = [];
   let trainingProjectOptions: { id: string; title: string }[] = [];
   let publicCommunityPosts: CommunityPost[] = [];
@@ -296,6 +301,8 @@ export default async function DashboardPage({
       consultancyRecords = (await getConsultancyExtensions()).data || [];
       const leaderProjectsResult = await getProjectLeaderProjects();
       projects = (leaderProjectsResult.data || []) as Project[];
+    } else if (activePanel === "technical-advisory") {
+      technicalAdvisoryRecords = (await getTechnicalAdvisoryServices()).data || [];
     } else if (hasEntitySelection) {
       const leaderProjectsResult = await getProjectLeaderProjects();
       projects = (leaderProjectsResult.data || []) as Project[];
@@ -657,6 +664,7 @@ export default async function DashboardPage({
     overview: "Dashboard",
     projects: "Project Registration",
     consultancy: "Consultancy",
+    "technical-advisory": "Technical Advisory",
     community: "CQER Community",
     backup: "Create Backup",
     "account-management": "Account Management",
@@ -813,6 +821,8 @@ export default async function DashboardPage({
             initialExtensions={consultancyRecords}
             assignedProjects={projects}
           />
+        ) : activePanel === "technical-advisory" ? (
+          <TechnicalAdvisoryServicesManagement initialRecords={technicalAdvisoryRecords} />
         ) : hasEntitySelection ? (
           <ProjectLeaderRegistrationManagement
             projects={projects}
