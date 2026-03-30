@@ -48,6 +48,7 @@ import {
   Download,
   BriefcaseBusiness,
   Wrench,
+  Factory,
   type LucideIcon,
 } from "lucide-react";
 import Image from "next/image";
@@ -108,6 +109,7 @@ export function Navbar({ user }: NavbarProps) {
     panelParam === "trainings" ||
     panelParam === "consultancy" ||
     panelParam === "technical-advisory" ||
+    panelParam === "adopters-with-enterprise" ||
     panelParam === "projects"
       ? panelParam
       : "overview";
@@ -120,6 +122,7 @@ export function Navbar({ user }: NavbarProps) {
     router.prefetch("/dashboard?panel=trainings");
     router.prefetch("/dashboard?panel=consultancy");
     router.prefetch("/dashboard?panel=technical-advisory");
+    router.prefetch("/dashboard?panel=adopters-with-enterprise");
     router.prefetch("/dashboard?panel=accounts");
     router.prefetch("/dashboard?panel=account-management&account=register");
     router.prefetch("/dashboard?panel=projects&view=project-registration");
@@ -261,6 +264,15 @@ export function Navbar({ user }: NavbarProps) {
         keywords: ["technical advisory", "advisory", "technical advisory services"],
         description: "Open the technical advisory page.",
         icon: Wrench,
+        roles: ["project_leader"],
+      },
+      {
+        id: "adopters-with-enterprise",
+        label: "Adopters with Enterprise",
+        href: "/dashboard?panel=adopters-with-enterprise",
+        keywords: ["adopters", "enterprise", "adopters with enterprise"],
+        description: "Open the adopters with enterprise page.",
+        icon: Factory,
         roles: ["project_leader"],
       },
     ];
@@ -507,6 +519,13 @@ export function Navbar({ user }: NavbarProps) {
                     panel: "technical-advisory",
                     href: "/dashboard?panel=technical-advisory",
                     icon: Wrench,
+                    roles: ["project_leader"],
+                  },
+                  {
+                    label: "Adopters with Enterprise",
+                    panel: "adopters-with-enterprise",
+                    href: "/dashboard?panel=adopters-with-enterprise",
+                    icon: Factory,
                     roles: ["project_leader"],
                   },
                   {

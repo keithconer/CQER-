@@ -3146,6 +3146,130 @@ exception
 end $$;
 -- END COPY: Consultancy Management
 -- ============================================================
+
+-- START COPY: Adopters With Enterprise Management
+create table if not exists public.adopters_with_enterprise (
+  id uuid primary key default gen_random_uuid(),
+  technology_transferred text not null,
+  transfer_date timestamptz not null,
+  related_project_id uuid references public.projects(id) on delete set null,
+  related_project_title text,
+  adopters jsonb not null default '[]'::jsonb,
+  documents jsonb not null default '[]'::jsonb,
+  department text,
+  unit text,
+  created_by uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+create index if not exists idx_adopters_with_enterprise_created_by
+  on public.adopters_with_enterprise (created_by);
+
+create index if not exists idx_adopters_with_enterprise_related_project_id
+  on public.adopters_with_enterprise (related_project_id);
+
+alter table public.adopters_with_enterprise enable row level security;
+
+drop policy if exists "Users can view own adopters with enterprise" on public.adopters_with_enterprise;
+create policy "Users can view own adopters with enterprise"
+on public.adopters_with_enterprise
+for select
+using (auth.uid() = created_by);
+
+drop policy if exists "Users can create own adopters with enterprise" on public.adopters_with_enterprise;
+create policy "Users can create own adopters with enterprise"
+on public.adopters_with_enterprise
+for insert
+with check (auth.uid() = created_by);
+
+drop policy if exists "Users can update own adopters with enterprise" on public.adopters_with_enterprise;
+create policy "Users can update own adopters with enterprise"
+on public.adopters_with_enterprise
+for update
+using (auth.uid() = created_by)
+with check (auth.uid() = created_by);
+
+drop policy if exists "Users can delete own adopters with enterprise" on public.adopters_with_enterprise;
+create policy "Users can delete own adopters with enterprise"
+on public.adopters_with_enterprise
+for delete
+using (auth.uid() = created_by);
+
+drop policy if exists "Super admins can manage all adopters with enterprise" on public.adopters_with_enterprise;
+create policy "Super admins can manage all adopters with enterprise"
+on public.adopters_with_enterprise
+for all
+using (
+  exists (
+    select 1
+    from public.profiles
+    where id = auth.uid()
+      and user_type = 'super_admin'
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.profiles
+    where id = auth.uid()
+      and user_type = 'super_admin'
+  )
+);
+
+do $$
+begin
+  if exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'adopters_with_enterprise'
+  ) then
+    null;
+  else
+    alter publication supabase_realtime add table public.adopters_with_enterprise;
+  end if;
+exception
+  when undefined_object then
+    null;
+end $$;
+
+insert into storage.buckets (id, name, public)
+values (
+  'cqer-adopters_pdf',
+  'cqer-adopters_pdf',
+  false
+)
+on conflict (id) do nothing;
+
+drop policy if exists "Adopters PDFs allow authenticated reads" on storage.objects;
+create policy "Adopters PDFs allow authenticated reads"
+on storage.objects for select
+to authenticated
+using (
+  bucket_id = 'cqer-adopters_pdf'
+);
+
+drop policy if exists "Adopters PDFs allow authenticated uploads" on storage.objects;
+create policy "Adopters PDFs allow authenticated uploads"
+on storage.objects for insert
+to authenticated
+with check (
+  bucket_id = 'cqer-adopters_pdf' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+
+drop policy if exists "Adopters PDFs owner delete" on storage.objects;
+create policy "Adopters PDFs owner delete"
+on storage.objects for delete
+to authenticated
+using (
+  bucket_id = 'cqer-adopters_pdf' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+-- END COPY: Adopters With Enterprise Management
+
 drop table if exists public.awards cascade;
 drop table if exists public.student_involvement cascade;
 drop table if exists public.faculty_involvement cascade;
