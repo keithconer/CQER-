@@ -163,6 +163,22 @@ export function AdoptersWithEnterpriseForm({
     });
   }, [adopters, form, isViewOnly, selectedProject]);
 
+  React.useEffect(() => {
+    adopters.forEach((adopter, index) => {
+      const beforeValue = Number(adopter?.monthly_income_before_value || 0);
+      const afterValue = Number(adopter?.monthly_income_after_value || 0);
+      const differenceValue = Math.max(0, afterValue - beforeValue);
+
+      if (Number(adopter?.monthly_income_difference_value || 0) === differenceValue) return;
+
+      form.setValue(
+        `adopters.${index}.monthly_income_difference_value`,
+        differenceValue,
+        { shouldDirty: true }
+      );
+    });
+  }, [adopters, form]);
+
   const validateStep = async () => {
     if (currentStep === 1) return form.trigger(["technology_transferred", "transfer_date", "related_project_id"]);
     if (currentStep === 2) return form.trigger(["adopters", "documents"]);
