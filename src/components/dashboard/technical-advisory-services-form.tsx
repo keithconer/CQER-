@@ -111,6 +111,10 @@ interface TechnicalAdvisoryServicesFormProps {
   isViewOnly?: boolean;
 }
 
+function normalizeDateValue(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
 function buildDefaultValues(record?: TechnicalAdvisoryServiceRecord): FormValues {
   return {
     agency_name: record?.agency_name || "",
@@ -126,7 +130,7 @@ function buildDefaultValues(record?: TechnicalAdvisoryServiceRecord): FormValues
         }))
       : [{ name: "", sex: "male", position: "", contact_through: "email", email: "", phone_number: "" }],
     category: record?.category || "internal",
-    advisory_date: record?.advisory_date ? new Date(record.advisory_date) : new Date(),
+    advisory_date: record?.advisory_date ? normalizeDateValue(new Date(record.advisory_date)) : normalizeDateValue(new Date()),
     venue: record?.venue || "",
     faculty_members: record?.faculty_members?.length
       ? record.faculty_members.map((member) => ({ name: member.name || "" }))
@@ -174,6 +178,7 @@ function RatingBreakdownFields({
                 value={String(value[key] ?? 0)}
                 disabled={disabled}
                 onChange={(event) => onChange({ ...value, [key]: Math.max(0, Number(event.target.value || 0)) })}
+                onFocus={(event) => event.currentTarget.select()}
                 className="h-10 rounded-xl text-sm"
               />
             </div>
@@ -245,7 +250,7 @@ export function TechnicalAdvisoryServicesForm({
         phone_number: client.contact_through === "email" ? "" : client.phone_number || "",
       })),
       category: values.category,
-      advisory_date: values.advisory_date.toISOString(),
+      advisory_date: normalizeDateValue(values.advisory_date).toISOString(),
       venue: values.venue,
       faculty_members: values.faculty_members,
       number_of_hours: values.number_of_hours,
@@ -563,7 +568,15 @@ export function TechnicalAdvisoryServicesForm({
                               </FormControl>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                              <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={(date) => {
+                                  if (!date) return;
+                                  field.onChange(normalizeDateValue(date));
+                                }}
+                                initialFocus
+                              />
                             </PopoverContent>
                           </Popover>
                           <FormMessage className="text-xs" />
