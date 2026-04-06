@@ -52,6 +52,7 @@ import {
   Cpu,
   Megaphone,
   Wallet,
+  Landmark,
   type LucideIcon,
 } from "lucide-react";
 import Image from "next/image";
@@ -116,6 +117,7 @@ export function Navbar({ user }: NavbarProps) {
     panelParam === "technologies-innovations-commercialized" ||
     panelParam === "iec-materials" ||
     panelParam === "budget-utilization" ||
+    panelParam === "ordinance-resolution" ||
     panelParam === "projects"
       ? panelParam
       : "overview";
@@ -132,6 +134,7 @@ export function Navbar({ user }: NavbarProps) {
     router.prefetch("/dashboard?panel=technologies-innovations-commercialized");
     router.prefetch("/dashboard?panel=iec-materials");
     router.prefetch("/dashboard?panel=budget-utilization");
+    router.prefetch("/dashboard?panel=ordinance-resolution");
     router.prefetch("/dashboard?panel=accounts");
     router.prefetch("/dashboard?panel=account-management&account=register");
     router.prefetch("/dashboard?panel=projects&view=project-registration");
@@ -246,6 +249,15 @@ export function Navbar({ user }: NavbarProps) {
         keywords: ["budget", "utilization", "expenses", "spent", "spending"],
         description: "Open the budget utilization page.",
         icon: Wallet,
+        roles: ["project_leader"],
+      },
+      {
+        id: "ordinance-resolution",
+        label: "Ordinance / Resolution",
+        href: "/dashboard?panel=ordinance-resolution",
+        keywords: ["ordinance", "resolution", "approval", "endorsed", "policy"],
+        description: "Open the ordinance and resolution page.",
+        icon: Landmark,
         roles: ["project_leader"],
       },
       {
@@ -541,6 +553,13 @@ export function Navbar({ user }: NavbarProps) {
                     panel: "budget-utilization",
                     href: "/dashboard?panel=budget-utilization",
                     icon: Wallet,
+                    roles: ["project_leader"],
+                  },
+                  {
+                    label: "Ordinance / Resolution",
+                    panel: "ordinance-resolution",
+                    href: "/dashboard?panel=ordinance-resolution",
+                    icon: Landmark,
                     roles: ["project_leader"],
                   },
                   {

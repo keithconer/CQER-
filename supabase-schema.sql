@@ -3640,6 +3640,103 @@ using (
 -- END COPY: Budget Utilization Module
 -- ============================================================
 
+-- ============================================================
+-- START COPY: Ordinance Resolution Module
+-- ============================================================
+create table if not exists public.ordinance_resolutions (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default timezone('utc'::text, now()),
+  updated_at timestamptz not null default timezone('utc'::text, now()),
+  created_by uuid not null references auth.users(id) on delete cascade,
+  name text not null,
+  implementing_agency text not null,
+  status text not null check (status in ('submitted', 'endorsed', 'approved')),
+  date_of_approval timestamptz,
+  project_id uuid references public.projects(id) on delete set null,
+  project_title text,
+  documents jsonb not null default '[]'::jsonb
+);
+
+create index if not exists idx_ordinance_resolutions_created_by
+on public.ordinance_resolutions (created_by);
+
+create index if not exists idx_ordinance_resolutions_project_id
+on public.ordinance_resolutions (project_id);
+
+alter table public.ordinance_resolutions enable row level security;
+
+drop policy if exists "Users can view own ordinance resolutions" on public.ordinance_resolutions;
+create policy "Users can view own ordinance resolutions" on public.ordinance_resolutions
+for select using (auth.uid() = created_by);
+
+drop policy if exists "Users can create own ordinance resolutions" on public.ordinance_resolutions;
+create policy "Users can create own ordinance resolutions" on public.ordinance_resolutions
+for insert with check (auth.uid() = created_by);
+
+drop policy if exists "Users can update own ordinance resolutions" on public.ordinance_resolutions;
+create policy "Users can update own ordinance resolutions" on public.ordinance_resolutions
+for update using (auth.uid() = created_by) with check (auth.uid() = created_by);
+
+drop policy if exists "Users can delete own ordinance resolutions" on public.ordinance_resolutions;
+create policy "Users can delete own ordinance resolutions" on public.ordinance_resolutions
+for delete using (auth.uid() = created_by);
+
+drop policy if exists "Super admins can manage all ordinance resolutions" on public.ordinance_resolutions;
+create policy "Super admins can manage all ordinance resolutions" on public.ordinance_resolutions
+for all using (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.user_type = 'super_admin'
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.user_type = 'super_admin'
+  )
+);
+
+insert into storage.buckets (id, name, public)
+values (
+  'cqer-ordinance_pdf',
+  'cqer-ordinance_pdf',
+  false
+)
+on conflict (id) do nothing;
+
+drop policy if exists "Ordinance PDFs allow authenticated reads" on storage.objects;
+create policy "Ordinance PDFs allow authenticated reads"
+on storage.objects for select
+to authenticated
+using (
+  bucket_id = 'cqer-ordinance_pdf'
+);
+
+drop policy if exists "Ordinance PDFs allow authenticated uploads" on storage.objects;
+create policy "Ordinance PDFs allow authenticated uploads"
+on storage.objects for insert
+to authenticated
+with check (
+  bucket_id = 'cqer-ordinance_pdf' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+
+drop policy if exists "Ordinance PDFs owner delete" on storage.objects;
+create policy "Ordinance PDFs owner delete"
+on storage.objects for delete
+to authenticated
+using (
+  bucket_id = 'cqer-ordinance_pdf' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+-- ============================================================
+-- END COPY: Ordinance Resolution Module
+-- ============================================================
+
 notify pgrst, 'reload schema';
 -- ============================================================
 -- END: Cleanup Removed Modules
