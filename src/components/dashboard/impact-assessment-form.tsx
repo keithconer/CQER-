@@ -157,6 +157,7 @@ export function ImpactAssessmentForm({
     () => projects.find((project) => project.id === selectedProjectId) || null,
     [projects, selectedProjectId]
   );
+  const isManualActivityEntry = !selectedProjectId;
 
   React.useEffect(() => {
     if (!selectedProject) return;
@@ -303,19 +304,26 @@ export function ImpactAssessmentForm({
                     )}
                   />
 
-                  <FormField
-                    control={typedControl}
-                    name="activity_name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Project or Training Activity Name</FormLabel>
-                        <FormControl>
-                          <Input {...field} disabled={isViewOnly} className="h-11 rounded-xl" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  {isManualActivityEntry ? (
+                    <FormField
+                      control={typedControl}
+                      name="activity_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Project or Training Activity Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} disabled={isViewOnly} className="h-11 rounded-xl" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ) : (
+                    <div className="rounded-2xl border border-border/60 bg-muted/10 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Selected Project</p>
+                      <p className="mt-2 text-sm font-medium">{selectedProject?.title || "-"}</p>
+                    </div>
+                  )}
 
                   <FormField
                     control={typedControl}
