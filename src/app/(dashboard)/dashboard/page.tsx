@@ -33,6 +33,8 @@ import { TechnologiesInnovationsCommercializedManagement } from "@/components/da
 import { type TechnologyCommercializationRecord } from "@/lib/actions/technologies-innovations-commercialized";
 import { IecMaterialsManagement } from "@/components/dashboard/iec-materials-management";
 import { type IecMaterialRecord } from "@/lib/actions/iec-materials";
+import { getBudgetUtilizations, type BudgetUtilizationRecord } from "@/lib/actions/budget-utilization";
+import { BudgetUtilizationManagement } from "@/components/dashboard/budget-utilization-management";
 
 
 function extractPartnerAgencyNames(projects: Project[]) {
@@ -218,6 +220,7 @@ export default async function DashboardPage({
     panelParam === "adopters-with-enterprise" ||
     panelParam === "technologies-innovations-commercialized" ||
     panelParam === "iec-materials" ||
+    panelParam === "budget-utilization" ||
     panelParam === "projects"
       ? panelParam
       : "overview";
@@ -247,7 +250,7 @@ export default async function DashboardPage({
     super_admin: ["overview", "community", "backup", "account-management", "accounts"],
     college_coordinator: ["overview", "community", "backup", "account-management", "accounts"],
     unit_coordinator: ["overview", "community", "backup"],
-    project_leader: ["overview", "backup", "projects", "trainings", "consultancy", "technical-advisory", "adopters-with-enterprise", "technologies-innovations-commercialized", "iec-materials"],
+    project_leader: ["overview", "backup", "projects", "budget-utilization", "trainings", "consultancy", "technical-advisory", "adopters-with-enterprise", "technologies-innovations-commercialized", "iec-materials"],
     extension_office: ["overview"],
   };
   const allowedPanels = allowedPanelsByRole[profile.user_type] || ["overview"];
@@ -265,6 +268,7 @@ export default async function DashboardPage({
   let adoptersWithEnterpriseRecords: AdoptersWithEnterpriseRecord[] = [];
   let technologyCommercializationRecords: TechnologyCommercializationRecord[] = [];
   let iecMaterialRecords: IecMaterialRecord[] = [];
+  let budgetUtilizationRecords: BudgetUtilizationRecord[] = [];
   let trainingPartnerAgencyOptions: string[] = [];
   let trainingProjectOptions: { id: string; title: string }[] = [];
   let publicCommunityPosts: CommunityPost[] = [];
@@ -329,6 +333,10 @@ export default async function DashboardPage({
       projects = (leaderProjectsResult.data || []) as Project[];
     } else if (activePanel === "iec-materials") {
       iecMaterialRecords = (await getIecMaterials()).data || [];
+      const leaderProjectsResult = await getProjectLeaderProjects();
+      projects = (leaderProjectsResult.data || []) as Project[];
+    } else if (activePanel === "budget-utilization") {
+      budgetUtilizationRecords = (await getBudgetUtilizations()).data || [];
       const leaderProjectsResult = await getProjectLeaderProjects();
       projects = (leaderProjectsResult.data || []) as Project[];
     } else if (hasEntitySelection) {
@@ -696,6 +704,7 @@ export default async function DashboardPage({
     "adopters-with-enterprise": "Adopters with Enterprise",
     "technologies-innovations-commercialized": "Technologies / Innovations Commercialized",
     "iec-materials": "IEC Materials",
+    "budget-utilization": "Budget Utilization",
     community: "CQER Community",
     backup: "Create Backup",
     "account-management": "Account Management",
@@ -863,6 +872,8 @@ export default async function DashboardPage({
           />
         ) : activePanel === "iec-materials" ? (
           <IecMaterialsManagement initialRecords={iecMaterialRecords} projects={projects} />
+        ) : activePanel === "budget-utilization" ? (
+          <BudgetUtilizationManagement records={budgetUtilizationRecords} projects={projects} />
         ) : hasEntitySelection ? (
           <ProjectLeaderRegistrationManagement
             projects={projects}

@@ -51,6 +51,7 @@ import {
   Factory,
   Cpu,
   Megaphone,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import Image from "next/image";
@@ -114,6 +115,7 @@ export function Navbar({ user }: NavbarProps) {
     panelParam === "adopters-with-enterprise" ||
     panelParam === "technologies-innovations-commercialized" ||
     panelParam === "iec-materials" ||
+    panelParam === "budget-utilization" ||
     panelParam === "projects"
       ? panelParam
       : "overview";
@@ -129,6 +131,7 @@ export function Navbar({ user }: NavbarProps) {
     router.prefetch("/dashboard?panel=adopters-with-enterprise");
     router.prefetch("/dashboard?panel=technologies-innovations-commercialized");
     router.prefetch("/dashboard?panel=iec-materials");
+    router.prefetch("/dashboard?panel=budget-utilization");
     router.prefetch("/dashboard?panel=accounts");
     router.prefetch("/dashboard?panel=account-management&account=register");
     router.prefetch("/dashboard?panel=projects&view=project-registration");
@@ -234,6 +237,15 @@ export function Navbar({ user }: NavbarProps) {
         keywords: ["project registration", "project leader", "projects folder", "project page"],
         description: "Open the project registration page.",
         icon: FolderKanban,
+        roles: ["project_leader"],
+      },
+      {
+        id: "budget-utilization",
+        label: "Budget Utilization",
+        href: "/dashboard?panel=budget-utilization",
+        keywords: ["budget", "utilization", "expenses", "spent", "spending"],
+        description: "Open the budget utilization page.",
+        icon: Wallet,
         roles: ["project_leader"],
       },
       {
@@ -522,6 +534,13 @@ export function Navbar({ user }: NavbarProps) {
                     panel: "projects",
                     href: "/dashboard?panel=projects&view=project-registration",
                     icon: FolderKanban,
+                    roles: ["project_leader"],
+                  },
+                  {
+                    label: "Budget Utilization",
+                    panel: "budget-utilization",
+                    href: "/dashboard?panel=budget-utilization",
+                    icon: Wallet,
                     roles: ["project_leader"],
                   },
                   {

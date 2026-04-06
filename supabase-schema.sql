@@ -3542,6 +3542,104 @@ drop table if exists public.technologies_innovations cascade;
 drop table if exists public.ordinance_resolutions cascade;
 drop table if exists public.needs_assessments cascade;
 
+-- ============================================================
+-- START COPY: Budget Utilization Module
+-- ============================================================
+create table if not exists public.budget_utilizations (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default timezone('utc'::text, now()),
+  updated_at timestamptz not null default timezone('utc'::text, now()),
+  created_by uuid not null references auth.users(id) on delete cascade,
+  project_id uuid not null references public.projects(id) on delete cascade,
+  project_title text not null,
+  total_budget numeric(14,2) not null default 0,
+  utilized_total numeric(14,2) not null default 0,
+  coverage_start timestamptz not null,
+  coverage_end timestamptz not null,
+  monthly_breakdown jsonb not null default '[]'::jsonb,
+  documents jsonb not null default '[]'::jsonb
+);
+
+create index if not exists idx_budget_utilizations_created_by
+on public.budget_utilizations (created_by);
+
+create index if not exists idx_budget_utilizations_project_id
+on public.budget_utilizations (project_id);
+
+alter table public.budget_utilizations enable row level security;
+
+drop policy if exists "Users can view own budget utilizations" on public.budget_utilizations;
+create policy "Users can view own budget utilizations" on public.budget_utilizations
+for select using (auth.uid() = created_by);
+
+drop policy if exists "Users can create own budget utilizations" on public.budget_utilizations;
+create policy "Users can create own budget utilizations" on public.budget_utilizations
+for insert with check (auth.uid() = created_by);
+
+drop policy if exists "Users can update own budget utilizations" on public.budget_utilizations;
+create policy "Users can update own budget utilizations" on public.budget_utilizations
+for update using (auth.uid() = created_by) with check (auth.uid() = created_by);
+
+drop policy if exists "Users can delete own budget utilizations" on public.budget_utilizations;
+create policy "Users can delete own budget utilizations" on public.budget_utilizations
+for delete using (auth.uid() = created_by);
+
+drop policy if exists "Super admins can manage all budget utilizations" on public.budget_utilizations;
+create policy "Super admins can manage all budget utilizations" on public.budget_utilizations
+for all using (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.user_type = 'super_admin'
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.user_type = 'super_admin'
+  )
+);
+
+insert into storage.buckets (id, name, public)
+values (
+  'cqer-budgetutil_pdf',
+  'cqer-budgetutil_pdf',
+  false
+)
+on conflict (id) do nothing;
+
+drop policy if exists "Budget Utilization PDFs allow authenticated reads" on storage.objects;
+create policy "Budget Utilization PDFs allow authenticated reads"
+on storage.objects for select
+to authenticated
+using (
+  bucket_id = 'cqer-budgetutil_pdf'
+);
+
+drop policy if exists "Budget Utilization PDFs allow authenticated uploads" on storage.objects;
+create policy "Budget Utilization PDFs allow authenticated uploads"
+on storage.objects for insert
+to authenticated
+with check (
+  bucket_id = 'cqer-budgetutil_pdf' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+
+drop policy if exists "Budget Utilization PDFs owner delete" on storage.objects;
+create policy "Budget Utilization PDFs owner delete"
+on storage.objects for delete
+to authenticated
+using (
+  bucket_id = 'cqer-budgetutil_pdf' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+-- ============================================================
+-- END COPY: Budget Utilization Module
+-- ============================================================
+
 notify pgrst, 'reload schema';
 -- ============================================================
 -- END: Cleanup Removed Modules
