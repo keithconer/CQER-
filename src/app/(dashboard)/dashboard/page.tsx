@@ -43,6 +43,8 @@ import { getExtensionPrograms, type ExtensionProgramRecord } from "@/lib/actions
 import { ExtensionProgramManagement } from "@/components/dashboard/extension-program-management";
 import { getAwardsRecognitions, type AwardsRecognitionRecord } from "@/lib/actions/awards-recognition";
 import { AwardsRecognitionManagement } from "@/components/dashboard/awards-recognition-management";
+import { getOtherActivities, type OtherActivityRecord } from "@/lib/actions/other-activities";
+import { OtherActivitiesManagement } from "@/components/dashboard/other-activities-management";
 
 
 function extractPartnerAgencyNames(projects: Project[]) {
@@ -233,6 +235,7 @@ export default async function DashboardPage({
     panelParam === "impact-assessment" ||
     panelParam === "extension-program" ||
     panelParam === "awards-recognition" ||
+    panelParam === "other-activities" ||
     panelParam === "projects"
       ? panelParam
       : "overview";
@@ -262,7 +265,7 @@ export default async function DashboardPage({
     super_admin: ["overview", "community", "backup", "account-management", "accounts"],
     college_coordinator: ["overview", "community", "backup", "account-management", "accounts"],
     unit_coordinator: ["overview", "community", "backup"],
-    project_leader: ["overview", "backup", "projects", "budget-utilization", "ordinance-resolution", "impact-assessment", "extension-program", "awards-recognition", "trainings", "consultancy", "technical-advisory", "adopters-with-enterprise", "technologies-innovations-commercialized", "iec-materials"],
+    project_leader: ["overview", "backup", "projects", "budget-utilization", "ordinance-resolution", "impact-assessment", "extension-program", "awards-recognition", "other-activities", "trainings", "consultancy", "technical-advisory", "adopters-with-enterprise", "technologies-innovations-commercialized", "iec-materials"],
     extension_office: ["overview"],
   };
   const allowedPanels = allowedPanelsByRole[profile.user_type] || ["overview"];
@@ -285,6 +288,7 @@ export default async function DashboardPage({
   let impactAssessmentRecords: ImpactAssessmentRecord[] = [];
   let extensionProgramRecords: ExtensionProgramRecord[] = [];
   let awardsRecognitionRecords: AwardsRecognitionRecord[] = [];
+  let otherActivityRecords: OtherActivityRecord[] = [];
   let trainingPartnerAgencyOptions: string[] = [];
   let trainingProjectOptions: { id: string; title: string }[] = [];
   let publicCommunityPosts: CommunityPost[] = [];
@@ -371,6 +375,8 @@ export default async function DashboardPage({
       awardsRecognitionRecords = (await getAwardsRecognitions()).data || [];
       const leaderProjectsResult = await getProjectLeaderProjects();
       projects = (leaderProjectsResult.data || []) as Project[];
+    } else if (activePanel === "other-activities") {
+      otherActivityRecords = (await getOtherActivities()).data || [];
     } else if (hasEntitySelection) {
       const leaderProjectsResult = await getProjectLeaderProjects();
       projects = (leaderProjectsResult.data || []) as Project[];
@@ -741,6 +747,7 @@ export default async function DashboardPage({
     "impact-assessment": "Impact / Assessment",
     "extension-program": "Extension Program",
     "awards-recognition": "Awards and Recognition",
+    "other-activities": "Other Activities",
     community: "CQER Community",
     backup: "Create Backup",
     "account-management": "Account Management",
@@ -918,6 +925,8 @@ export default async function DashboardPage({
           <ExtensionProgramManagement records={extensionProgramRecords} projects={projects} />
         ) : activePanel === "awards-recognition" ? (
           <AwardsRecognitionManagement records={awardsRecognitionRecords} projects={projects} />
+        ) : activePanel === "other-activities" ? (
+          <OtherActivitiesManagement records={otherActivityRecords} />
         ) : hasEntitySelection ? (
           <ProjectLeaderRegistrationManagement
             projects={projects}

@@ -56,6 +56,7 @@ import {
   ClipboardCheck,
   Newspaper,
   Trophy,
+  NotepadText,
   type LucideIcon,
 } from "lucide-react";
 import Image from "next/image";
@@ -124,6 +125,7 @@ export function Navbar({ user }: NavbarProps) {
     panelParam === "impact-assessment" ||
     panelParam === "extension-program" ||
     panelParam === "awards-recognition" ||
+    panelParam === "other-activities" ||
     panelParam === "projects"
       ? panelParam
       : "overview";
@@ -144,6 +146,7 @@ export function Navbar({ user }: NavbarProps) {
     router.prefetch("/dashboard?panel=impact-assessment");
     router.prefetch("/dashboard?panel=extension-program");
     router.prefetch("/dashboard?panel=awards-recognition");
+    router.prefetch("/dashboard?panel=other-activities");
     router.prefetch("/dashboard?panel=accounts");
     router.prefetch("/dashboard?panel=account-management&account=register");
     router.prefetch("/dashboard?panel=projects&view=project-registration");
@@ -294,6 +297,15 @@ export function Navbar({ user }: NavbarProps) {
         keywords: ["awards", "recognition", "award", "conference", "donor"],
         description: "Open the awards and recognition page.",
         icon: Trophy,
+        roles: ["project_leader"],
+      },
+      {
+        id: "other-activities",
+        label: "Other Activities",
+        href: "/dashboard?panel=other-activities",
+        keywords: ["other activities", "meeting", "workshop", "planning", "outreach"],
+        description: "Open the other activities page.",
+        icon: NotepadText,
         roles: ["project_leader"],
       },
       {
@@ -617,6 +629,13 @@ export function Navbar({ user }: NavbarProps) {
                     panel: "awards-recognition",
                     href: "/dashboard?panel=awards-recognition",
                     icon: Trophy,
+                    roles: ["project_leader"],
+                  },
+                  {
+                    label: "Other Activities",
+                    panel: "other-activities",
+                    href: "/dashboard?panel=other-activities",
+                    icon: NotepadText,
                     roles: ["project_leader"],
                   },
                   {

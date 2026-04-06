@@ -4028,6 +4028,103 @@ using (
 -- END COPY: Awards and Recognition Module
 -- ============================================================
 
+-- ============================================================
+-- START COPY: Other Activities Module
+-- ============================================================
+create table if not exists public.other_activities (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default timezone('utc'::text, now()),
+  updated_at timestamptz not null default timezone('utc'::text, now()),
+  created_by uuid not null references auth.users(id) on delete cascade,
+  activity_date timestamptz,
+  activity_title text not null,
+  category text not null check (category in ('Meeting', 'Workshop', 'Planning', 'Capacity Building for Extensionists', 'Community Outreach Activity')),
+  purpose text not null,
+  participants text not null,
+  budget_involved numeric(14,2) not null default 0,
+  source_of_fund text not null check (source_of_fund in ('GAA', 'Income', 'External Project Fund', 'Donation', 'Others')),
+  source_of_fund_other text,
+  remarks text not null,
+  documents jsonb not null default '[]'::jsonb
+);
+
+create index if not exists idx_other_activities_created_by
+on public.other_activities (created_by);
+
+alter table public.other_activities enable row level security;
+
+drop policy if exists "Users can view own other activities" on public.other_activities;
+create policy "Users can view own other activities" on public.other_activities
+for select using (auth.uid() = created_by);
+
+drop policy if exists "Users can create own other activities" on public.other_activities;
+create policy "Users can create own other activities" on public.other_activities
+for insert with check (auth.uid() = created_by);
+
+drop policy if exists "Users can update own other activities" on public.other_activities;
+create policy "Users can update own other activities" on public.other_activities
+for update using (auth.uid() = created_by) with check (auth.uid() = created_by);
+
+drop policy if exists "Users can delete own other activities" on public.other_activities;
+create policy "Users can delete own other activities" on public.other_activities
+for delete using (auth.uid() = created_by);
+
+drop policy if exists "Super admins can manage all other activities" on public.other_activities;
+create policy "Super admins can manage all other activities" on public.other_activities
+for all using (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.user_type = 'super_admin'
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.user_type = 'super_admin'
+  )
+);
+
+insert into storage.buckets (id, name, public)
+values (
+  'cqer-otheract_pdf',
+  'cqer-otheract_pdf',
+  false
+)
+on conflict (id) do nothing;
+
+drop policy if exists "Other Activities PDFs allow authenticated reads" on storage.objects;
+create policy "Other Activities PDFs allow authenticated reads"
+on storage.objects for select
+to authenticated
+using (
+  bucket_id = 'cqer-otheract_pdf'
+);
+
+drop policy if exists "Other Activities PDFs allow authenticated uploads" on storage.objects;
+create policy "Other Activities PDFs allow authenticated uploads"
+on storage.objects for insert
+to authenticated
+with check (
+  bucket_id = 'cqer-otheract_pdf' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+
+drop policy if exists "Other Activities PDFs owner delete" on storage.objects;
+create policy "Other Activities PDFs owner delete"
+on storage.objects for delete
+to authenticated
+using (
+  bucket_id = 'cqer-otheract_pdf' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+-- ============================================================
+-- END COPY: Other Activities Module
+-- ============================================================
+
 notify pgrst, 'reload schema';
 -- ============================================================
 -- END: Cleanup Removed Modules
