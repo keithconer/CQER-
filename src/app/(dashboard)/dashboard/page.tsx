@@ -37,6 +37,8 @@ import { getBudgetUtilizations, type BudgetUtilizationRecord } from "@/lib/actio
 import { BudgetUtilizationManagement } from "@/components/dashboard/budget-utilization-management";
 import { getOrdinanceResolutions, type OrdinanceResolutionRecord } from "@/lib/actions/ordinance-resolution";
 import { OrdinanceResolutionManagement } from "@/components/dashboard/ordinance-resolution-management";
+import { getImpactAssessments, type ImpactAssessmentRecord } from "@/lib/actions/impact-assessment";
+import { ImpactAssessmentManagement } from "@/components/dashboard/impact-assessment-management";
 
 
 function extractPartnerAgencyNames(projects: Project[]) {
@@ -224,6 +226,7 @@ export default async function DashboardPage({
     panelParam === "iec-materials" ||
     panelParam === "budget-utilization" ||
     panelParam === "ordinance-resolution" ||
+    panelParam === "impact-assessment" ||
     panelParam === "projects"
       ? panelParam
       : "overview";
@@ -253,7 +256,7 @@ export default async function DashboardPage({
     super_admin: ["overview", "community", "backup", "account-management", "accounts"],
     college_coordinator: ["overview", "community", "backup", "account-management", "accounts"],
     unit_coordinator: ["overview", "community", "backup"],
-    project_leader: ["overview", "backup", "projects", "budget-utilization", "ordinance-resolution", "trainings", "consultancy", "technical-advisory", "adopters-with-enterprise", "technologies-innovations-commercialized", "iec-materials"],
+    project_leader: ["overview", "backup", "projects", "budget-utilization", "ordinance-resolution", "impact-assessment", "trainings", "consultancy", "technical-advisory", "adopters-with-enterprise", "technologies-innovations-commercialized", "iec-materials"],
     extension_office: ["overview"],
   };
   const allowedPanels = allowedPanelsByRole[profile.user_type] || ["overview"];
@@ -273,6 +276,7 @@ export default async function DashboardPage({
   let iecMaterialRecords: IecMaterialRecord[] = [];
   let budgetUtilizationRecords: BudgetUtilizationRecord[] = [];
   let ordinanceResolutionRecords: OrdinanceResolutionRecord[] = [];
+  let impactAssessmentRecords: ImpactAssessmentRecord[] = [];
   let trainingPartnerAgencyOptions: string[] = [];
   let trainingProjectOptions: { id: string; title: string }[] = [];
   let publicCommunityPosts: CommunityPost[] = [];
@@ -345,6 +349,10 @@ export default async function DashboardPage({
       projects = (leaderProjectsResult.data || []) as Project[];
     } else if (activePanel === "ordinance-resolution") {
       ordinanceResolutionRecords = (await getOrdinanceResolutions()).data || [];
+      const leaderProjectsResult = await getProjectLeaderProjects();
+      projects = (leaderProjectsResult.data || []) as Project[];
+    } else if (activePanel === "impact-assessment") {
+      impactAssessmentRecords = (await getImpactAssessments()).data || [];
       const leaderProjectsResult = await getProjectLeaderProjects();
       projects = (leaderProjectsResult.data || []) as Project[];
     } else if (hasEntitySelection) {
@@ -714,6 +722,7 @@ export default async function DashboardPage({
     "iec-materials": "IEC Materials",
     "budget-utilization": "Budget Utilization",
     "ordinance-resolution": "Ordinance / Resolution",
+    "impact-assessment": "Impact / Assessment",
     community: "CQER Community",
     backup: "Create Backup",
     "account-management": "Account Management",
@@ -885,6 +894,8 @@ export default async function DashboardPage({
           <BudgetUtilizationManagement records={budgetUtilizationRecords} projects={projects} />
         ) : activePanel === "ordinance-resolution" ? (
           <OrdinanceResolutionManagement records={ordinanceResolutionRecords} projects={projects} />
+        ) : activePanel === "impact-assessment" ? (
+          <ImpactAssessmentManagement records={impactAssessmentRecords} projects={projects} />
         ) : hasEntitySelection ? (
           <ProjectLeaderRegistrationManagement
             projects={projects}

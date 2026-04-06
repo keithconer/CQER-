@@ -53,6 +53,7 @@ import {
   Megaphone,
   Wallet,
   Landmark,
+  ClipboardCheck,
   type LucideIcon,
 } from "lucide-react";
 import Image from "next/image";
@@ -118,6 +119,7 @@ export function Navbar({ user }: NavbarProps) {
     panelParam === "iec-materials" ||
     panelParam === "budget-utilization" ||
     panelParam === "ordinance-resolution" ||
+    panelParam === "impact-assessment" ||
     panelParam === "projects"
       ? panelParam
       : "overview";
@@ -135,6 +137,7 @@ export function Navbar({ user }: NavbarProps) {
     router.prefetch("/dashboard?panel=iec-materials");
     router.prefetch("/dashboard?panel=budget-utilization");
     router.prefetch("/dashboard?panel=ordinance-resolution");
+    router.prefetch("/dashboard?panel=impact-assessment");
     router.prefetch("/dashboard?panel=accounts");
     router.prefetch("/dashboard?panel=account-management&account=register");
     router.prefetch("/dashboard?panel=projects&view=project-registration");
@@ -258,6 +261,15 @@ export function Navbar({ user }: NavbarProps) {
         keywords: ["ordinance", "resolution", "approval", "endorsed", "policy"],
         description: "Open the ordinance and resolution page.",
         icon: Landmark,
+        roles: ["project_leader"],
+      },
+      {
+        id: "impact-assessment",
+        label: "Impact / Assessment",
+        href: "/dashboard?panel=impact-assessment",
+        keywords: ["impact", "assessment", "evaluation", "lead evaluator", "needs assessment"],
+        description: "Open the impact and assessment page.",
+        icon: ClipboardCheck,
         roles: ["project_leader"],
       },
       {
@@ -560,6 +572,13 @@ export function Navbar({ user }: NavbarProps) {
                     panel: "ordinance-resolution",
                     href: "/dashboard?panel=ordinance-resolution",
                     icon: Landmark,
+                    roles: ["project_leader"],
+                  },
+                  {
+                    label: "Impact / Assessment",
+                    panel: "impact-assessment",
+                    href: "/dashboard?panel=impact-assessment",
+                    icon: ClipboardCheck,
                     roles: ["project_leader"],
                   },
                   {
