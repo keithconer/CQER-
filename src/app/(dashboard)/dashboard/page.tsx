@@ -41,6 +41,8 @@ import { getImpactAssessments, type ImpactAssessmentRecord } from "@/lib/actions
 import { ImpactAssessmentManagement } from "@/components/dashboard/impact-assessment-management";
 import { getExtensionPrograms, type ExtensionProgramRecord } from "@/lib/actions/extension-program";
 import { ExtensionProgramManagement } from "@/components/dashboard/extension-program-management";
+import { getAwardsRecognitions, type AwardsRecognitionRecord } from "@/lib/actions/awards-recognition";
+import { AwardsRecognitionManagement } from "@/components/dashboard/awards-recognition-management";
 
 
 function extractPartnerAgencyNames(projects: Project[]) {
@@ -230,6 +232,7 @@ export default async function DashboardPage({
     panelParam === "ordinance-resolution" ||
     panelParam === "impact-assessment" ||
     panelParam === "extension-program" ||
+    panelParam === "awards-recognition" ||
     panelParam === "projects"
       ? panelParam
       : "overview";
@@ -259,7 +262,7 @@ export default async function DashboardPage({
     super_admin: ["overview", "community", "backup", "account-management", "accounts"],
     college_coordinator: ["overview", "community", "backup", "account-management", "accounts"],
     unit_coordinator: ["overview", "community", "backup"],
-    project_leader: ["overview", "backup", "projects", "budget-utilization", "ordinance-resolution", "impact-assessment", "extension-program", "trainings", "consultancy", "technical-advisory", "adopters-with-enterprise", "technologies-innovations-commercialized", "iec-materials"],
+    project_leader: ["overview", "backup", "projects", "budget-utilization", "ordinance-resolution", "impact-assessment", "extension-program", "awards-recognition", "trainings", "consultancy", "technical-advisory", "adopters-with-enterprise", "technologies-innovations-commercialized", "iec-materials"],
     extension_office: ["overview"],
   };
   const allowedPanels = allowedPanelsByRole[profile.user_type] || ["overview"];
@@ -281,6 +284,7 @@ export default async function DashboardPage({
   let ordinanceResolutionRecords: OrdinanceResolutionRecord[] = [];
   let impactAssessmentRecords: ImpactAssessmentRecord[] = [];
   let extensionProgramRecords: ExtensionProgramRecord[] = [];
+  let awardsRecognitionRecords: AwardsRecognitionRecord[] = [];
   let trainingPartnerAgencyOptions: string[] = [];
   let trainingProjectOptions: { id: string; title: string }[] = [];
   let publicCommunityPosts: CommunityPost[] = [];
@@ -361,6 +365,10 @@ export default async function DashboardPage({
       projects = (leaderProjectsResult.data || []) as Project[];
     } else if (activePanel === "extension-program") {
       extensionProgramRecords = (await getExtensionPrograms()).data || [];
+      const leaderProjectsResult = await getProjectLeaderProjects();
+      projects = (leaderProjectsResult.data || []) as Project[];
+    } else if (activePanel === "awards-recognition") {
+      awardsRecognitionRecords = (await getAwardsRecognitions()).data || [];
       const leaderProjectsResult = await getProjectLeaderProjects();
       projects = (leaderProjectsResult.data || []) as Project[];
     } else if (hasEntitySelection) {
@@ -732,6 +740,7 @@ export default async function DashboardPage({
     "ordinance-resolution": "Ordinance / Resolution",
     "impact-assessment": "Impact / Assessment",
     "extension-program": "Extension Program",
+    "awards-recognition": "Awards and Recognition",
     community: "CQER Community",
     backup: "Create Backup",
     "account-management": "Account Management",
@@ -907,6 +916,8 @@ export default async function DashboardPage({
           <ImpactAssessmentManagement records={impactAssessmentRecords} projects={projects} />
         ) : activePanel === "extension-program" ? (
           <ExtensionProgramManagement records={extensionProgramRecords} projects={projects} />
+        ) : activePanel === "awards-recognition" ? (
+          <AwardsRecognitionManagement records={awardsRecognitionRecords} projects={projects} />
         ) : hasEntitySelection ? (
           <ProjectLeaderRegistrationManagement
             projects={projects}

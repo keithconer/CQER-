@@ -55,6 +55,7 @@ import {
   Landmark,
   ClipboardCheck,
   Newspaper,
+  Trophy,
   type LucideIcon,
 } from "lucide-react";
 import Image from "next/image";
@@ -122,6 +123,7 @@ export function Navbar({ user }: NavbarProps) {
     panelParam === "ordinance-resolution" ||
     panelParam === "impact-assessment" ||
     panelParam === "extension-program" ||
+    panelParam === "awards-recognition" ||
     panelParam === "projects"
       ? panelParam
       : "overview";
@@ -141,6 +143,7 @@ export function Navbar({ user }: NavbarProps) {
     router.prefetch("/dashboard?panel=ordinance-resolution");
     router.prefetch("/dashboard?panel=impact-assessment");
     router.prefetch("/dashboard?panel=extension-program");
+    router.prefetch("/dashboard?panel=awards-recognition");
     router.prefetch("/dashboard?panel=accounts");
     router.prefetch("/dashboard?panel=account-management&account=register");
     router.prefetch("/dashboard?panel=projects&view=project-registration");
@@ -282,6 +285,15 @@ export function Navbar({ user }: NavbarProps) {
         keywords: ["extension", "program", "featured", "media", "ppa"],
         description: "Open the extension program page.",
         icon: Newspaper,
+        roles: ["project_leader"],
+      },
+      {
+        id: "awards-recognition",
+        label: "Awards and Recognition",
+        href: "/dashboard?panel=awards-recognition",
+        keywords: ["awards", "recognition", "award", "conference", "donor"],
+        description: "Open the awards and recognition page.",
+        icon: Trophy,
         roles: ["project_leader"],
       },
       {
@@ -598,6 +610,13 @@ export function Navbar({ user }: NavbarProps) {
                     panel: "extension-program",
                     href: "/dashboard?panel=extension-program",
                     icon: Newspaper,
+                    roles: ["project_leader"],
+                  },
+                  {
+                    label: "Awards and Recognition",
+                    panel: "awards-recognition",
+                    href: "/dashboard?panel=awards-recognition",
+                    icon: Trophy,
                     roles: ["project_leader"],
                   },
                   {
