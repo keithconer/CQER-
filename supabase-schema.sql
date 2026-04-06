@@ -3833,6 +3833,103 @@ using (
 -- END COPY: Impact Assessment Module
 -- ============================================================
 
+-- ============================================================
+-- START COPY: Extension Program Module
+-- ============================================================
+create table if not exists public.extension_programs (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default timezone('utc'::text, now()),
+  updated_at timestamptz not null default timezone('utc'::text, now()),
+  created_by uuid not null references auth.users(id) on delete cascade,
+  project_id uuid references public.projects(id) on delete set null,
+  project_title text,
+  activity_title text not null,
+  media_channels text not null,
+  date_featured timestamptz,
+  remarks text not null,
+  documents jsonb not null default '[]'::jsonb
+);
+
+create index if not exists idx_extension_programs_created_by
+on public.extension_programs (created_by);
+
+create index if not exists idx_extension_programs_project_id
+on public.extension_programs (project_id);
+
+alter table public.extension_programs enable row level security;
+
+drop policy if exists "Users can view own extension programs" on public.extension_programs;
+create policy "Users can view own extension programs" on public.extension_programs
+for select using (auth.uid() = created_by);
+
+drop policy if exists "Users can create own extension programs" on public.extension_programs;
+create policy "Users can create own extension programs" on public.extension_programs
+for insert with check (auth.uid() = created_by);
+
+drop policy if exists "Users can update own extension programs" on public.extension_programs;
+create policy "Users can update own extension programs" on public.extension_programs
+for update using (auth.uid() = created_by) with check (auth.uid() = created_by);
+
+drop policy if exists "Users can delete own extension programs" on public.extension_programs;
+create policy "Users can delete own extension programs" on public.extension_programs
+for delete using (auth.uid() = created_by);
+
+drop policy if exists "Super admins can manage all extension programs" on public.extension_programs;
+create policy "Super admins can manage all extension programs" on public.extension_programs
+for all using (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.user_type = 'super_admin'
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.user_type = 'super_admin'
+  )
+);
+
+insert into storage.buckets (id, name, public)
+values (
+  'cqer-extensionprog_pdf',
+  'cqer-extensionprog_pdf',
+  false
+)
+on conflict (id) do nothing;
+
+drop policy if exists "Extension Program PDFs allow authenticated reads" on storage.objects;
+create policy "Extension Program PDFs allow authenticated reads"
+on storage.objects for select
+to authenticated
+using (
+  bucket_id = 'cqer-extensionprog_pdf'
+);
+
+drop policy if exists "Extension Program PDFs allow authenticated uploads" on storage.objects;
+create policy "Extension Program PDFs allow authenticated uploads"
+on storage.objects for insert
+to authenticated
+with check (
+  bucket_id = 'cqer-extensionprog_pdf' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+
+drop policy if exists "Extension Program PDFs owner delete" on storage.objects;
+create policy "Extension Program PDFs owner delete"
+on storage.objects for delete
+to authenticated
+using (
+  bucket_id = 'cqer-extensionprog_pdf' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+-- ============================================================
+-- END COPY: Extension Program Module
+-- ============================================================
+
 notify pgrst, 'reload schema';
 -- ============================================================
 -- END: Cleanup Removed Modules

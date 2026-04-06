@@ -54,6 +54,7 @@ import {
   Wallet,
   Landmark,
   ClipboardCheck,
+  Newspaper,
   type LucideIcon,
 } from "lucide-react";
 import Image from "next/image";
@@ -120,6 +121,7 @@ export function Navbar({ user }: NavbarProps) {
     panelParam === "budget-utilization" ||
     panelParam === "ordinance-resolution" ||
     panelParam === "impact-assessment" ||
+    panelParam === "extension-program" ||
     panelParam === "projects"
       ? panelParam
       : "overview";
@@ -138,6 +140,7 @@ export function Navbar({ user }: NavbarProps) {
     router.prefetch("/dashboard?panel=budget-utilization");
     router.prefetch("/dashboard?panel=ordinance-resolution");
     router.prefetch("/dashboard?panel=impact-assessment");
+    router.prefetch("/dashboard?panel=extension-program");
     router.prefetch("/dashboard?panel=accounts");
     router.prefetch("/dashboard?panel=account-management&account=register");
     router.prefetch("/dashboard?panel=projects&view=project-registration");
@@ -270,6 +273,15 @@ export function Navbar({ user }: NavbarProps) {
         keywords: ["impact", "assessment", "evaluation", "lead evaluator", "needs assessment"],
         description: "Open the impact and assessment page.",
         icon: ClipboardCheck,
+        roles: ["project_leader"],
+      },
+      {
+        id: "extension-program",
+        label: "Extension Program",
+        href: "/dashboard?panel=extension-program",
+        keywords: ["extension", "program", "featured", "media", "ppa"],
+        description: "Open the extension program page.",
+        icon: Newspaper,
         roles: ["project_leader"],
       },
       {
@@ -579,6 +591,13 @@ export function Navbar({ user }: NavbarProps) {
                     panel: "impact-assessment",
                     href: "/dashboard?panel=impact-assessment",
                     icon: ClipboardCheck,
+                    roles: ["project_leader"],
+                  },
+                  {
+                    label: "Extension Program",
+                    panel: "extension-program",
+                    href: "/dashboard?panel=extension-program",
+                    icon: Newspaper,
                     roles: ["project_leader"],
                   },
                   {
