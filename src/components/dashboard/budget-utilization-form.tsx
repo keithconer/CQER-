@@ -130,6 +130,13 @@ function currency(value: number) {
   }).format(value || 0);
 }
 
+function sanitizeDecimalInput(value: string) {
+  const normalized = value.replace(/[^\d.]/g, "");
+  const [whole, ...decimals] = normalized.split(".");
+  if (decimals.length === 0) return whole;
+  return `${whole}.${decimals.join("")}`;
+}
+
 function buildMonthlyBreakdown(
   project: Project | null | undefined,
   existing?: BudgetUtilizationMonthEntry[] | null
@@ -467,16 +474,22 @@ export function BudgetUtilizationForm({
                                             <FormItem>
                                               <FormControl>
                                                 <Input
-                                                  type="number"
-                                                  min={0}
-                                                  step="0.01"
+                                                  type="text"
+                                                  inputMode="decimal"
                                                   name={field.name}
                                                   onBlur={field.onBlur}
                                                   ref={field.ref}
-                                                  value={Number(field.value ?? 0)}
-                                                  onChange={(event) => field.onChange(event.target.value)}
+                                                  value={
+                                                    field.value === 0 || field.value === "0" || field.value == null
+                                                      ? ""
+                                                      : String(field.value)
+                                                  }
+                                                  onChange={(event) =>
+                                                    field.onChange(sanitizeDecimalInput(event.target.value))
+                                                  }
+                                                  placeholder="Enter amount"
                                                   disabled={isViewOnly}
-                                                  className="h-10 rounded-xl text-right"
+                                                  className="h-10 rounded-xl text-right [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                                 />
                                               </FormControl>
                                               <FormMessage />
