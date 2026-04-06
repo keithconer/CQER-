@@ -114,12 +114,14 @@ export function OrdinanceResolutionForm({
 }: OrdinanceResolutionFormProps) {
   const [currentStep, setCurrentStep] = React.useState(1);
   const [saving, setSaving] = React.useState(false);
+  const [autoSaveMessage, setAutoSaveMessage] = React.useState<string>("");
   const form = useForm<InputValues, unknown, OutputValues>({
     resolver: zodResolver(formSchema),
     defaultValues: buildDefaultValues(record),
   });
   const typedControl = form.control as OrdinanceControl;
   const watchedValues = useWatch({ control: typedControl });
+  const lastAutoSavedPayloadRef = React.useRef<string>("");
 
   React.useEffect(() => {
     if (record || isViewOnly || typeof window === "undefined") {
@@ -188,7 +190,7 @@ export function OrdinanceResolutionForm({
     if (valid) setCurrentStep(2);
   };
 
-  const handleSave = async (values: OutputValues) => {
+  const handleSave = React.useCallback(async (values: OutputValues) => {
     setSaving(true);
     const payload = {
       name: values.name.trim(),
@@ -216,7 +218,51 @@ export function OrdinanceResolutionForm({
     }
 
     onSuccess?.();
-  };
+  }, [onSuccess, record]);
+
+  React.useEffect(() => {
+    if (isViewOnly || currentStep !== 2) return;
+
+    const serializedPayload = JSON.stringify({
+      name: watchedValues.name || "",
+      implementing_agency: watchedValues.implementing_agency || "",
+      status: watchedValues.status || "submitted",
+      date_of_approval:
+        watchedValues.date_of_approval instanceof Date
+          ? watchedValues.date_of_approval.toISOString()
+          : null,
+      project_id: watchedValues.project_id || null,
+      project_title: watchedValues.project_title || null,
+      documents: watchedValues.documents || [],
+    });
+
+    if (serializedPayload === lastAutoSavedPayloadRef.current) {
+      return;
+    }
+
+    setAutoSaveMessage("Auto-saving in a few seconds...");
+
+    const timeout = window.setTimeout(() => {
+      setAutoSaveMessage("Saving ordinance / resolution...");
+      void form.handleSubmit(async (values) => {
+        const nextPayload = JSON.stringify({
+          name: values.name.trim(),
+          implementing_agency: values.implementing_agency.trim(),
+          status: values.status,
+          date_of_approval: values.date_of_approval ? values.date_of_approval.toISOString() : null,
+          project_id: values.project_id || null,
+          project_title: values.project_title || null,
+          documents: values.documents || [],
+        });
+        lastAutoSavedPayloadRef.current = nextPayload;
+        await handleSave(values);
+      })();
+    }, 2500);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [currentStep, form, handleSave, isViewOnly, watchedValues]);
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-background">
@@ -417,6 +463,9 @@ export function OrdinanceResolutionForm({
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-5">
+                <div className="rounded-2xl border border-[#159E44]/20 bg-[#159E44]/5 px-4 py-3 text-sm text-foreground">
+                  {saving ? "Saving ordinance / resolution..." : autoSaveMessage || "This step saves automatically after a few seconds."}
+                </div>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="rounded-2xl border border-border/60 bg-muted/10 p-4">
                     <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Name</p>
@@ -485,17 +534,12 @@ export function OrdinanceResolutionForm({
             <ChevronRight className="ml-2 h-4 w-4" />
           </Button>
         ) : (
-          !isViewOnly && (
-            <Button
-              type="button"
-              className="rounded-xl bg-[#159E44] text-white hover:bg-[#128A3B]"
-              disabled={saving}
-              onClick={form.handleSubmit(handleSave)}
-            >
-              <Save className="mr-2 h-4 w-4" />
-              {saving ? "Saving..." : "Save Ordinance"}
-            </Button>
-          )
+          !isViewOnly ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Save className="h-4 w-4" />
+              <span>{saving ? "Saving..." : "Auto-save enabled"}</span>
+            </div>
+          ) : null
         )}
       </div>
     </div>
