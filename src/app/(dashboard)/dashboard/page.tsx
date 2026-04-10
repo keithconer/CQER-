@@ -1133,8 +1133,6 @@ export default async function DashboardPage({
         <div className="space-y-4">
           {userType === "project_leader" ? (
             <ProjectLeaderDashboard
-              leaderName={`${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "Project Leader"}
-              scopeLabel={analyticsScopeLabel}
               projectCount={projects.length}
               activeProjectCount={projectLeaderActiveProjects}
               outputCount={projectLeaderOutputCount}

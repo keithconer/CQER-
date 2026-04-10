@@ -42,7 +42,6 @@ import {
   YAxis,
 } from "recharts";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 
@@ -78,8 +77,6 @@ type RecentActivity = {
 };
 
 interface ProjectLeaderDashboardProps {
-  leaderName: string;
-  scopeLabel: string;
   projectCount: number;
   activeProjectCount: number;
   outputCount: number;
@@ -123,6 +120,9 @@ const formatCurrency = (value: number) =>
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(value);
+
+const chartTextColor = "var(--foreground)";
+const chartGridColor = "var(--border)";
 
 function ChartTooltip({
   active,
@@ -170,6 +170,35 @@ function ChartTooltip({
   );
 }
 
+function SimpleChartTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: Array<{ name?: string; value?: number; color?: string }>;
+  label?: string;
+}) {
+  if (!active || !payload?.length) return null;
+
+  return (
+    <div className="min-w-[160px] rounded-lg border border-border/50 bg-background/95 p-3 shadow-xl backdrop-blur-sm">
+      {label ? <p className="mb-2 border-b border-border/50 pb-1 text-[11px] font-bold text-foreground">{label}</p> : null}
+      <div className="space-y-2">
+        {payload.map((entry, index) => (
+          <div key={`${entry.name || "item"}-${index}`} className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-1.5">
+              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
+              <span className="text-[10px] text-muted-foreground">{entry.name}</span>
+            </div>
+            <span className="text-[10px] font-bold text-foreground">{(entry.value || 0).toLocaleString()}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function StatCard({
   label,
   value,
@@ -198,8 +227,6 @@ function StatCard({
 }
 
 export function ProjectLeaderDashboard({
-  leaderName,
-  scopeLabel,
   projectCount,
   activeProjectCount,
   outputCount,
@@ -217,34 +244,6 @@ export function ProjectLeaderDashboard({
 
   return (
     <div className="space-y-5">
-      <Card className="border-border/50 bg-card/50 shadow-sm">
-        <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-end sm:justify-between">
-          <div className="space-y-2">
-            <Badge variant="outline" className="w-fit text-[9px] uppercase tracking-[0.2em]">
-              Project Leader Workspace
-            </Badge>
-            <div className="space-y-1">
-              <h2 className="text-base font-semibold text-foreground">Focused dashboard for {leaderName}</h2>
-              <p className="max-w-2xl text-[11px] leading-5 text-muted-foreground">{scopeLabel}</p>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button asChild size="sm" className="h-8 text-[10px]">
-              <Link href="/dashboard?panel=projects&view=project-registration">
-                <FolderKanban className="mr-1.5 h-3.5 w-3.5" />
-                Project Registration
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="sm" className="h-8 text-[10px]">
-              <Link href="/dashboard?panel=community">
-                <Users2 className="mr-1.5 h-3.5 w-3.5" />
-                CQER Community
-              </Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard
           label="Projects"
@@ -289,7 +288,6 @@ export function ProjectLeaderDashboard({
                 <AreaChart
                   data={monthlyActivitySeries}
                   margin={{ top: 0, right: 10, left: -20, bottom: 0 }}
-                  className="[&_.recharts-cartesian-axis-tick-value]:fill-muted-foreground [&_.recharts-cartesian-grid-horizontal-line]:stroke-border [&_.recharts-cartesian-grid-vertical-line]:stroke-border"
                 >
                   <defs>
                     <linearGradient id="leaderActivityGradient" x1="0" y1="0" x2="0" y2="1">
@@ -297,15 +295,16 @@ export function ProjectLeaderDashboard({
                       <stop offset="95%" stopColor="hsl(142, 71%, 45%)" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.6} />
+                  <CartesianGrid stroke={chartGridColor} strokeDasharray="3 3" vertical={false} opacity={0.6} />
                   <XAxis
                     dataKey="label"
                     fontSize={9}
                     tickLine={false}
                     axisLine={false}
+                    tick={{ fill: chartTextColor }}
                     tickFormatter={(value) => String(value).split(" ")[0]}
                   />
-                  <YAxis fontSize={9} tickLine={false} axisLine={false} />
+                  <YAxis fontSize={9} tickLine={false} axisLine={false} tick={{ fill: chartTextColor }} />
                   <RechartsTooltip content={<ChartTooltip suffix=" records" />} />
                   <Area
                     type="monotone"
@@ -348,7 +347,7 @@ export function ProjectLeaderDashboard({
                       <Cell key={`project-status-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <RechartsTooltip />
+                  <RechartsTooltip content={<SimpleChartTooltip />} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -382,9 +381,8 @@ export function ProjectLeaderDashboard({
                 <BarChart
                   data={populatedModules}
                   margin={{ top: 0, right: 0, left: -20, bottom: 20 }}
-                  className="[&_.recharts-cartesian-axis-tick-value]:fill-muted-foreground [&_.recharts-cartesian-grid-horizontal-line]:stroke-border"
                 >
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.5} />
+                  <CartesianGrid stroke={chartGridColor} strokeDasharray="3 3" vertical={false} opacity={0.5} />
                   <XAxis
                     dataKey="label"
                     angle={-20}
@@ -394,9 +392,10 @@ export function ProjectLeaderDashboard({
                     fontSize={8}
                     tickLine={false}
                     axisLine={false}
+                    tick={{ fill: chartTextColor }}
                   />
-                  <YAxis fontSize={9} tickLine={false} axisLine={false} allowDecimals={false} />
-                  <RechartsTooltip />
+                  <YAxis fontSize={9} tickLine={false} axisLine={false} allowDecimals={false} tick={{ fill: chartTextColor }} />
+                  <RechartsTooltip content={<SimpleChartTooltip />} />
                   <Bar dataKey="value" name="Records" radius={[8, 8, 0, 0]} fill="hsl(142, 71%, 45%)" />
                 </BarChart>
               </ResponsiveContainer>
@@ -418,8 +417,8 @@ export function ProjectLeaderDashboard({
             <div className="h-[220px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <RadarChart data={radarSeries} outerRadius="70%">
-                  <PolarGrid stroke="hsl(var(--border))" />
-                  <PolarAngleAxis dataKey="label" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
+                  <PolarGrid stroke={chartGridColor} />
+                  <PolarAngleAxis dataKey="label" tick={{ fontSize: 9, fill: chartTextColor }} />
                   <PolarRadiusAxis domain={[0, maxRadar]} tick={false} axisLine={false} />
                   <Radar
                     name="Coverage"
@@ -429,7 +428,7 @@ export function ProjectLeaderDashboard({
                     fillOpacity={0.2}
                     strokeWidth={2}
                   />
-                  <RechartsTooltip />
+                  <RechartsTooltip content={<SimpleChartTooltip />} />
                 </RadarChart>
               </ResponsiveContainer>
             </div>
