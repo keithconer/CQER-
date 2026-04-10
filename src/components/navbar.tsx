@@ -234,7 +234,7 @@ export function Navbar({ user }: NavbarProps) {
         keywords: ["community", "announcements", "social", "feed", "ceit"],
         description: "Open the CQER Community announcement feed.",
         icon: Users2,
-        roles: ["super_admin", "college_coordinator", "unit_coordinator"],
+        roles: ["super_admin", "college_coordinator", "unit_coordinator", "project_leader"],
       },
       {
         id: "account-management",
@@ -587,7 +587,7 @@ export function Navbar({ user }: NavbarProps) {
                     panel: "community",
                     href: "/dashboard?panel=community",
                     icon: Users2,
-                    roles: ["super_admin", "college_coordinator", "unit_coordinator"],
+                    roles: ["super_admin", "college_coordinator", "unit_coordinator", "project_leader"],
                   },
                   {
                     label: "Project Registration",

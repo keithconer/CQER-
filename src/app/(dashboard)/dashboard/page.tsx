@@ -45,6 +45,7 @@ import { getAwardsRecognitions, type AwardsRecognitionRecord } from "@/lib/actio
 import { AwardsRecognitionManagement } from "@/components/dashboard/awards-recognition-management";
 import { getOtherActivities, type OtherActivityRecord } from "@/lib/actions/other-activities";
 import { OtherActivitiesManagement } from "@/components/dashboard/other-activities-management";
+import { ProjectLeaderDashboard } from "@/components/dashboard/project-leader-dashboard";
 
 
 function extractPartnerAgencyNames(projects: Project[]) {
@@ -88,6 +89,18 @@ type AnalyticsProject = Project & {
   created_at?: string | null;
   created_by_department?: string | null;
   created_by_unit?: string | null;
+};
+
+type TimelineRecord = {
+  created_at?: string | null;
+};
+
+type ProjectLeaderRecentActivity = {
+  id: string;
+  title: string;
+  meta: string;
+  href: string;
+  createdAt: string | null;
 };
 
 function getFundingType(project: Project) {
@@ -210,6 +223,65 @@ function buildRadarSeries(projects: AnalyticsProject[]) {
   });
 }
 
+function normalizeProjectCategory(value: string | null | undefined) {
+  const normalized = (value || "").toLowerCase().trim();
+  if (normalized === "new") return "New";
+  if (normalized === "proposal") return "Proposal";
+  if (normalized === "completed") return "Completed";
+  if (normalized === "terminated") return "Terminated";
+  if (
+    normalized === "existing" ||
+    normalized === "existing/ongoing" ||
+    normalized === "on process" ||
+    normalized === "processing"
+  ) {
+    return "Existing / Ongoing";
+  }
+  return "Uncategorized";
+}
+
+function buildProjectLeaderActivitySeries(
+  sources: { label: string; records: TimelineRecord[] }[]
+) {
+  const buckets = getMonthBuckets();
+  const bucketMap = new Map(
+    buckets.map((bucket) => [bucket.key, { total: 0, breakdown: new Map<string, number>() }])
+  );
+
+  sources.forEach((source) => {
+    source.records.forEach((record) => {
+      if (!record.created_at) return;
+      const createdAt = new Date(record.created_at);
+      if (Number.isNaN(createdAt.getTime())) return;
+      const key = format(startOfMonth(createdAt), "yyyy-MM");
+      const bucket = bucketMap.get(key);
+      if (!bucket) return;
+      bucket.total += 1;
+      bucket.breakdown.set(source.label, (bucket.breakdown.get(source.label) || 0) + 1);
+    });
+  });
+
+  return buckets.map((bucket) => {
+    const snapshot = bucketMap.get(bucket.key);
+    return {
+      label: bucket.label,
+      value: snapshot?.total || 0,
+      breakdown: snapshot
+        ? Array.from(snapshot.breakdown.entries())
+            .map(([name, count]) => ({ name, count }))
+            .sort((a, b) => b.count - a.count)
+        : [],
+    };
+  });
+}
+
+function buildProjectLeaderRecentActivities(items: ProjectLeaderRecentActivity[]) {
+  return [...items]
+    .filter((item) => item.createdAt)
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+    .slice(0, 5);
+}
+
 export default async function DashboardPage({
   searchParams,
 }: {
@@ -265,7 +337,7 @@ export default async function DashboardPage({
     super_admin: ["overview", "community", "backup", "account-management", "accounts"],
     college_coordinator: ["overview", "community", "backup", "account-management", "accounts"],
     unit_coordinator: ["overview", "community", "backup"],
-    project_leader: ["overview", "backup", "projects", "budget-utilization", "ordinance-resolution", "impact-assessment", "extension-program", "awards-recognition", "other-activities", "trainings", "consultancy", "technical-advisory", "adopters-with-enterprise", "technologies-innovations-commercialized", "iec-materials"],
+    project_leader: ["overview", "community", "backup", "projects", "budget-utilization", "ordinance-resolution", "impact-assessment", "extension-program", "awards-recognition", "other-activities", "trainings", "consultancy", "technical-advisory", "adopters-with-enterprise", "technologies-innovations-commercialized", "iec-materials"],
     extension_office: ["overview"],
   };
   const allowedPanels = allowedPanelsByRole[profile.user_type] || ["overview"];
@@ -330,6 +402,56 @@ export default async function DashboardPage({
   } else if (profile.user_type === "project_leader") {
     if (activePanel === "backup") {
       backupDatasets = (await getBackupSummary()).datasets;
+    } else if (activePanel === "community") {
+      const communityData = await getCommunityBootstrap(profile.department);
+      publicCommunityPosts = communityData.publicPosts;
+      departmentCommunityPosts = communityData.departmentPosts;
+      communityUsers = communityData.mentionableUsers;
+    } else if (showOverview) {
+      const [
+        leaderProjectsResult,
+        trainingsResult,
+        consultancyResult,
+        technicalAdvisoryResult,
+        adoptersResult,
+        technologyResult,
+        iecResult,
+        budgetResult,
+        ordinanceResult,
+        impactResult,
+        extensionResult,
+        awardsResult,
+        otherResult,
+      ] = await Promise.all([
+        getProjectLeaderProjects(),
+        getTrainings(),
+        getConsultancyExtensions(),
+        getTechnicalAdvisoryServices(),
+        getAdoptersWithEnterprise(),
+        getTechnologiesInnovationsCommercialized(),
+        getIecMaterials(),
+        getBudgetUtilizations(),
+        getOrdinanceResolutions(),
+        getImpactAssessments(),
+        getExtensionPrograms(),
+        getAwardsRecognitions(),
+        getOtherActivities(),
+      ]);
+
+      projects = (leaderProjectsResult.data || []) as Project[];
+      trainingRecords = (trainingsResult.data || []) as TrainingRecord[];
+      consultancyRecords = (consultancyResult.data || []) as ConsultancyExtension[];
+      technicalAdvisoryRecords = (technicalAdvisoryResult.data || []) as TechnicalAdvisoryServiceRecord[];
+      adoptersWithEnterpriseRecords = (adoptersResult.data || []) as AdoptersWithEnterpriseRecord[];
+      technologyCommercializationRecords =
+        (technologyResult.data || []) as TechnologyCommercializationRecord[];
+      iecMaterialRecords = (iecResult.data || []) as IecMaterialRecord[];
+      budgetUtilizationRecords = (budgetResult.data || []) as BudgetUtilizationRecord[];
+      ordinanceResolutionRecords = (ordinanceResult.data || []) as OrdinanceResolutionRecord[];
+      impactAssessmentRecords = (impactResult.data || []) as ImpactAssessmentRecord[];
+      extensionProgramRecords = (extensionResult.data || []) as ExtensionProgramRecord[];
+      awardsRecognitionRecords = (awardsResult.data || []) as AwardsRecognitionRecord[];
+      otherActivityRecords = (otherResult.data || []) as OtherActivityRecord[];
     } else if (activePanel === "trainings") {
       trainingRecords = (await getTrainings()).data || [];
       const leaderProjectsResult = await getProjectLeaderProjects();
@@ -405,6 +527,15 @@ export default async function DashboardPage({
   let analyticsMoaCompleted = 0;
   let analyticsMoaNew = 0;
   let analyticsScopeLabel = "Based on your current visibility.";
+  let projectLeaderModuleCounts: { label: string; value: number; href: string }[] = [];
+  let projectLeaderActivitySeries: { label: string; value: number; breakdown: { name: string; count: number }[] }[] = [];
+  let projectLeaderStatusShare: { label: string; value: number }[] = [];
+  let projectLeaderRadarSeries: { label: string; value: number; fullMark: number }[] = [];
+  let projectLeaderRecentActivities: ProjectLeaderRecentActivity[] = [];
+  let projectLeaderOutputCount = 0;
+  let projectLeaderActiveProjects = 0;
+  let projectLeaderUtilizedBudget = 0;
+  let projectLeaderUtilizationRate = 0;
 
   if (profile.user_type === "super_admin") {
     const adminClient = createAdminClient();
@@ -672,6 +803,218 @@ export default async function DashboardPage({
       : "Unit activity overview.";
   }
 
+  if (profile.user_type === "project_leader") {
+    const leaderProjects = projects as AnalyticsProject[];
+    analyticsProjects = leaderProjects;
+    analyticsUsers = 1;
+    analyticsTrainings = trainingRecords.length;
+    analyticsTotalBudget = leaderProjects.reduce((sum, project) => sum + getProjectBudget(project), 0);
+    analyticsScopeLabel = "Based on your own projects, extension outputs, and CQER participation.";
+
+    const fundingCounts = countFunding(leaderProjects);
+    analyticsInternalFunding = fundingCounts.internal;
+    analyticsExternalFunding = fundingCounts.external;
+
+    const normalizedCategories = leaderProjects.map((project) =>
+      normalizeProjectCategory(project.category)
+    );
+    analyticsMoaNew = normalizedCategories.filter((value) => value === "New" || value === "Proposal").length;
+    analyticsMoaExisting = normalizedCategories.filter((value) => value === "Existing / Ongoing").length;
+    analyticsMoaCompleted = normalizedCategories.filter((value) => value === "Completed").length;
+
+    projectLeaderModuleCounts = [
+      { label: "Project Registration", value: leaderProjects.length, href: "/dashboard?panel=projects&view=project-registration" },
+      { label: "Budget Utilization", value: budgetUtilizationRecords.length, href: "/dashboard?panel=budget-utilization" },
+      { label: "Ordinance / Resolution", value: ordinanceResolutionRecords.length, href: "/dashboard?panel=ordinance-resolution" },
+      { label: "Impact / Assessment", value: impactAssessmentRecords.length, href: "/dashboard?panel=impact-assessment" },
+      { label: "Extension Program", value: extensionProgramRecords.length, href: "/dashboard?panel=extension-program" },
+      { label: "Awards", value: awardsRecognitionRecords.length, href: "/dashboard?panel=awards-recognition" },
+      { label: "Other Activities", value: otherActivityRecords.length, href: "/dashboard?panel=other-activities" },
+      { label: "Trainings", value: trainingRecords.length, href: "/dashboard?panel=trainings" },
+      { label: "Consultancy", value: consultancyRecords.length, href: "/dashboard?panel=consultancy" },
+      { label: "Technical Advisory", value: technicalAdvisoryRecords.length, href: "/dashboard?panel=technical-advisory" },
+      { label: "Adopters with Enterprise", value: adoptersWithEnterpriseRecords.length, href: "/dashboard?panel=adopters-with-enterprise" },
+      { label: "Technologies", value: technologyCommercializationRecords.length, href: "/dashboard?panel=technologies-innovations-commercialized" },
+      { label: "IEC Materials", value: iecMaterialRecords.length, href: "/dashboard?panel=iec-materials" },
+    ];
+
+    projectLeaderOutputCount = projectLeaderModuleCounts
+      .filter((item) => item.label !== "Project Registration")
+      .reduce((sum, item) => sum + item.value, 0);
+
+    projectLeaderActiveProjects = normalizedCategories.filter(
+      (value) => value === "New" || value === "Proposal" || value === "Existing / Ongoing"
+    ).length;
+
+    projectLeaderUtilizedBudget = budgetUtilizationRecords.reduce(
+      (sum, record) => sum + (Number(record.utilized_total) || 0),
+      0
+    );
+    projectLeaderUtilizationRate =
+      analyticsTotalBudget > 0 ? (projectLeaderUtilizedBudget / analyticsTotalBudget) * 100 : 0;
+
+    projectLeaderActivitySeries = buildProjectLeaderActivitySeries([
+      { label: "Projects", records: leaderProjects },
+      { label: "Budget", records: budgetUtilizationRecords },
+      { label: "Ordinance", records: ordinanceResolutionRecords },
+      { label: "Impact", records: impactAssessmentRecords },
+      { label: "Extension", records: extensionProgramRecords },
+      { label: "Awards", records: awardsRecognitionRecords },
+      { label: "Other", records: otherActivityRecords },
+      {
+        label: "Trainings",
+        records: trainingRecords as Array<TrainingRecord & { created_at?: string | null }>,
+      },
+      { label: "Consultancy", records: consultancyRecords },
+      { label: "Adopters", records: adoptersWithEnterpriseRecords },
+      { label: "Technology", records: technologyCommercializationRecords },
+      { label: "IEC", records: iecMaterialRecords },
+      { label: "Technical Advisory", records: technicalAdvisoryRecords },
+    ]);
+
+    projectLeaderStatusShare = Array.from(
+      normalizedCategories.reduce((map, value) => {
+        map.set(value, (map.get(value) || 0) + 1);
+        return map;
+      }, new Map<string, number>())
+    )
+      .map(([label, value]) => ({ label, value }))
+      .sort((a, b) => b.value - a.value);
+
+    const radarValues = [
+      {
+        label: "Compliance",
+        value: budgetUtilizationRecords.length + ordinanceResolutionRecords.length + impactAssessmentRecords.length,
+      },
+      {
+        label: "Delivery",
+        value:
+          extensionProgramRecords.length +
+          trainingRecords.length +
+          consultancyRecords.length +
+          technicalAdvisoryRecords.length,
+      },
+      {
+        label: "Adoption",
+        value:
+          adoptersWithEnterpriseRecords.length +
+          technologyCommercializationRecords.length +
+          iecMaterialRecords.length,
+      },
+      {
+        label: "Recognition",
+        value: awardsRecognitionRecords.length + otherActivityRecords.length,
+      },
+      {
+        label: "Pipeline",
+        value: leaderProjects.length,
+      },
+    ];
+    const radarMax = Math.max(1, ...radarValues.map((item) => item.value));
+    projectLeaderRadarSeries = radarValues.map((item) => ({
+      ...item,
+      fullMark: radarMax,
+    }));
+
+    projectLeaderRecentActivities = buildProjectLeaderRecentActivities([
+      ...leaderProjects.map((project) => ({
+        id: `project-${project.id}`,
+        title: project.title || "Untitled project",
+        meta: "Project Registration",
+        href: "/dashboard?panel=projects&view=project-registration",
+        createdAt: project.created_at || null,
+      })),
+      ...budgetUtilizationRecords.map((record) => ({
+        id: `budget-${record.id}`,
+        title: record.project_title || "Budget utilization record",
+        meta: "Budget Utilization",
+        href: "/dashboard?panel=budget-utilization",
+        createdAt: record.created_at || null,
+      })),
+      ...ordinanceResolutionRecords.map((record) => ({
+        id: `ordinance-${record.id}`,
+        title: record.name || "Ordinance / resolution",
+        meta: "Ordinance / Resolution",
+        href: "/dashboard?panel=ordinance-resolution",
+        createdAt: record.created_at || null,
+      })),
+      ...impactAssessmentRecords.map((record) => ({
+        id: `impact-${record.id}`,
+        title: record.activity_name || "Impact / assessment",
+        meta: "Impact / Assessment",
+        href: "/dashboard?panel=impact-assessment",
+        createdAt: record.created_at || null,
+      })),
+      ...extensionProgramRecords.map((record) => ({
+        id: `extension-${record.id}`,
+        title: record.activity_title || "Extension program",
+        meta: "Extension Program",
+        href: "/dashboard?panel=extension-program",
+        createdAt: record.created_at || null,
+      })),
+      ...awardsRecognitionRecords.map((record) => ({
+        id: `award-${record.id}`,
+        title: record.award_title || "Award / recognition",
+        meta: "Awards",
+        href: "/dashboard?panel=awards-recognition",
+        createdAt: record.created_at || null,
+      })),
+      ...otherActivityRecords.map((record) => ({
+        id: `other-${record.id}`,
+        title: record.activity_title || "Other activity",
+        meta: "Other Activities",
+        href: "/dashboard?panel=other-activities",
+        createdAt: record.created_at || null,
+      })),
+      ...trainingRecords.map((record) => ({
+        id: `training-${String((record as { id?: string }).id || record.training_title)}`,
+        title: record.training_title || "Training record",
+        meta: "Trainings",
+        href: "/dashboard?panel=trainings",
+        createdAt: (record as { created_at?: string | null }).created_at || null,
+      })),
+      ...consultancyRecords.map((record) => ({
+        id: `consultancy-${record.id}`,
+        title: record.title_of_consultancy || "Consultancy",
+        meta: "Consultancy",
+        href: "/dashboard?panel=consultancy",
+        createdAt: record.created_at || null,
+      })),
+      ...technicalAdvisoryRecords.map((record) => ({
+        id: `technical-${record.id}`,
+        title: record.agency_name || "Technical advisory",
+        meta: "Technical Advisory",
+        href: "/dashboard?panel=technical-advisory",
+        createdAt: record.created_at || null,
+      })),
+      ...adoptersWithEnterpriseRecords.map((record) => ({
+        id: `adopters-${record.id}`,
+        title: record.technology_transferred || "Adopters with enterprise",
+        meta: "Adopters with Enterprise",
+        href: "/dashboard?panel=adopters-with-enterprise",
+        createdAt: record.created_at || null,
+      })),
+      ...technologyCommercializationRecords.map((record) => ({
+        id: `technology-${record.id}`,
+        title: record.technology_name || "Technology record",
+        meta: "Technologies",
+        href: "/dashboard?panel=technologies-innovations-commercialized",
+        createdAt: record.created_at || null,
+      })),
+      ...iecMaterialRecords.map((record) => ({
+        id: `iec-${record.id}`,
+        title: record.title || "IEC material",
+        meta: "IEC Materials",
+        href: "/dashboard?panel=iec-materials",
+        createdAt: record.created_at || null,
+      })),
+    ]);
+
+    if (projectLeaderStatusShare.length === 0) {
+      projectLeaderStatusShare = [{ label: "No Projects Yet", value: 1 }];
+    }
+  }
+
   // --- Leaderboard Logic (University-wide) ---
   let leaderboard: LeaderboardData[] = [];
   if (showOverview) {
@@ -788,38 +1131,58 @@ export default async function DashboardPage({
       )}
       {showOverview && (
         <div className="space-y-4">
-          <DashboardAnalytics
-            users={analyticsUsers}
-            internalFunding={analyticsInternalFunding}
-            externalFunding={analyticsExternalFunding}
-            trainings={analyticsTrainings}
-            totalBudget={analyticsTotalBudget}
-            internalBudget={analyticsInternalBudget}
-            externalBudget={analyticsExternalBudget}
-            moaExisting={analyticsMoaExisting}
-            moaCompleted={analyticsMoaCompleted}
-            moaNew={analyticsMoaNew}
-            activitySeries={activitySeries}
-            activityBreakdownLabel={activityBreakdownLabel}
-            budgetSeries={budgetSeries}
-            radarSeries={radarSeries}
-            trainingsShare={analyticsTrainings}
-            trainingsShareTotal={trainingShareTotal}
-            fundingShare={[
-              { label: "Internal", value: analyticsInternalFunding },
-              { label: "External", value: analyticsExternalFunding },
-            ]}
-            scopeLabel={analyticsScopeLabel}
-          />
-          
-          <div className="grid gap-4 lg:grid-cols-12">
-            <div className="lg:col-span-12">
-              <ActiveCoordinators 
-                coordinators={leaderboard} 
-                departments={[...DEPARTMENTS]} 
+          {userType === "project_leader" ? (
+            <ProjectLeaderDashboard
+              leaderName={`${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "Project Leader"}
+              scopeLabel={analyticsScopeLabel}
+              projectCount={projects.length}
+              activeProjectCount={projectLeaderActiveProjects}
+              outputCount={projectLeaderOutputCount}
+              totalBudget={analyticsTotalBudget}
+              utilizedBudget={projectLeaderUtilizedBudget}
+              utilizationRate={projectLeaderUtilizationRate}
+              moduleCounts={projectLeaderModuleCounts}
+              monthlyActivitySeries={projectLeaderActivitySeries}
+              projectStatusShare={projectLeaderStatusShare}
+              radarSeries={projectLeaderRadarSeries}
+              recentActivities={projectLeaderRecentActivities}
+            />
+          ) : (
+            <>
+              <DashboardAnalytics
+                users={analyticsUsers}
+                internalFunding={analyticsInternalFunding}
+                externalFunding={analyticsExternalFunding}
+                trainings={analyticsTrainings}
+                totalBudget={analyticsTotalBudget}
+                internalBudget={analyticsInternalBudget}
+                externalBudget={analyticsExternalBudget}
+                moaExisting={analyticsMoaExisting}
+                moaCompleted={analyticsMoaCompleted}
+                moaNew={analyticsMoaNew}
+                activitySeries={activitySeries}
+                activityBreakdownLabel={activityBreakdownLabel}
+                budgetSeries={budgetSeries}
+                radarSeries={radarSeries}
+                trainingsShare={analyticsTrainings}
+                trainingsShareTotal={trainingShareTotal}
+                fundingShare={[
+                  { label: "Internal", value: analyticsInternalFunding },
+                  { label: "External", value: analyticsExternalFunding },
+                ]}
+                scopeLabel={analyticsScopeLabel}
               />
-            </div>
-          </div>
+              
+              <div className="grid gap-4 lg:grid-cols-12">
+                <div className="lg:col-span-12">
+                  <ActiveCoordinators 
+                    coordinators={leaderboard} 
+                    departments={[...DEPARTMENTS]} 
+                  />
+                </div>
+              </div>
+            </>
+          )}
         </div>
       )}
 
