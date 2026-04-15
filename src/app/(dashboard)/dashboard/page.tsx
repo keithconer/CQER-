@@ -46,6 +46,7 @@ import { AwardsRecognitionManagement } from "@/components/dashboard/awards-recog
 import { getOtherActivities, type OtherActivityRecord } from "@/lib/actions/other-activities";
 import { OtherActivitiesManagement } from "@/components/dashboard/other-activities-management";
 import { ProjectLeaderDashboard } from "@/components/dashboard/project-leader-dashboard";
+import { getFacultyModuleData } from "@/lib/actions/faculty-involvement";
 
 
 function extractPartnerAgencyNames(projects: Project[]) {
@@ -101,6 +102,19 @@ type ProjectLeaderRecentActivity = {
   meta: string;
   href: string;
   createdAt: string | null;
+};
+
+type ProjectBudgetDetail = {
+  id: string;
+  title: string;
+  totalBudget: number;
+  utilizedBudget: number;
+  remainingBudget: number;
+};
+
+type FacultyInvolvementSummary = {
+  name: string;
+  hoursRendered: number;
 };
 
 function getFundingType(project: Project) {
@@ -367,6 +381,7 @@ export default async function DashboardPage({
   let departmentCommunityPosts: CommunityPost[] = [];
   let communityUsers = [] as Awaited<ReturnType<typeof getCommunityBootstrap>>["mentionableUsers"];
   let backupDatasets: BackupDatasetSummary[] = [];
+  let projectLeaderFacultyInvolvement: FacultyInvolvementSummary[] = [];
   let collegeUnitCoordinatorAccounts: {
     id: string;
     email: string | null;
@@ -422,6 +437,7 @@ export default async function DashboardPage({
         extensionResult,
         awardsResult,
         otherResult,
+        facultyResult,
       ] = await Promise.all([
         getProjectLeaderProjects(),
         getTrainings(),
@@ -436,6 +452,7 @@ export default async function DashboardPage({
         getExtensionPrograms(),
         getAwardsRecognitions(),
         getOtherActivities(),
+        getFacultyModuleData(),
       ]);
 
       projects = (leaderProjectsResult.data || []) as Project[];
@@ -452,6 +469,11 @@ export default async function DashboardPage({
       extensionProgramRecords = (extensionResult.data || []) as ExtensionProgramRecord[];
       awardsRecognitionRecords = (awardsResult.data || []) as AwardsRecognitionRecord[];
       otherActivityRecords = (otherResult.data || []) as OtherActivityRecord[];
+      const facultyData = facultyResult.data?.faculty || [];
+      projectLeaderFacultyInvolvement = (facultyData as Array<Record<string, unknown>>).map((entry) => ({
+        name: String(entry.faculty_name || "Unnamed Faculty"),
+        hoursRendered: Number(entry.total_hours_period || 0),
+      }));
     } else if (activePanel === "trainings") {
       trainingRecords = (await getTrainings()).data || [];
       const leaderProjectsResult = await getProjectLeaderProjects();
@@ -532,10 +554,11 @@ export default async function DashboardPage({
   let projectLeaderStatusShare: { label: string; value: number }[] = [];
   let projectLeaderRadarSeries: { label: string; value: number; fullMark: number }[] = [];
   let projectLeaderRecentActivities: ProjectLeaderRecentActivity[] = [];
-  let projectLeaderOutputCount = 0;
+  let projectLeaderTrainingCount = 0;
   let projectLeaderActiveProjects = 0;
   let projectLeaderUtilizedBudget = 0;
   let projectLeaderUtilizationRate = 0;
+  let projectLeaderBudgetDetails: ProjectBudgetDetail[] = [];
 
   if (profile.user_type === "super_admin") {
     const adminClient = createAdminClient();
@@ -838,9 +861,7 @@ export default async function DashboardPage({
       { label: "IEC Materials", value: iecMaterialRecords.length, href: "/dashboard?panel=iec-materials" },
     ];
 
-    projectLeaderOutputCount = projectLeaderModuleCounts
-      .filter((item) => item.label !== "Project Registration")
-      .reduce((sum, item) => sum + item.value, 0);
+    projectLeaderTrainingCount = trainingRecords.length;
 
     projectLeaderActiveProjects = normalizedCategories.filter(
       (value) => value === "New" || value === "Proposal" || value === "Existing / Ongoing"
@@ -852,6 +873,22 @@ export default async function DashboardPage({
     );
     projectLeaderUtilizationRate =
       analyticsTotalBudget > 0 ? (projectLeaderUtilizedBudget / analyticsTotalBudget) * 100 : 0;
+    const utilizedByProject = new Map(
+      budgetUtilizationRecords.map((record) => [record.project_id, Number(record.utilized_total || 0)])
+    );
+    projectLeaderBudgetDetails = leaderProjects
+      .map((project) => {
+        const totalBudget = getProjectBudget(project);
+        const utilizedBudget = utilizedByProject.get(project.id) || 0;
+        return {
+          id: project.id,
+          title: project.title || "Untitled project",
+          totalBudget,
+          utilizedBudget,
+          remainingBudget: Math.max(totalBudget - utilizedBudget, 0),
+        };
+      })
+      .sort((left, right) => right.totalBudget - left.totalBudget);
 
     projectLeaderActivitySeries = buildProjectLeaderActivitySeries([
       { label: "Projects", records: leaderProjects },
@@ -1135,7 +1172,7 @@ export default async function DashboardPage({
             <ProjectLeaderDashboard
               projectCount={projects.length}
               activeProjectCount={projectLeaderActiveProjects}
-              outputCount={projectLeaderOutputCount}
+              trainingCount={projectLeaderTrainingCount}
               totalBudget={analyticsTotalBudget}
               utilizedBudget={projectLeaderUtilizedBudget}
               utilizationRate={projectLeaderUtilizationRate}
@@ -1144,6 +1181,8 @@ export default async function DashboardPage({
               projectStatusShare={projectLeaderStatusShare}
               radarSeries={projectLeaderRadarSeries}
               recentActivities={projectLeaderRecentActivities}
+              budgetDetails={projectLeaderBudgetDetails}
+              facultyInvolvement={projectLeaderFacultyInvolvement}
             />
           ) : (
             <>

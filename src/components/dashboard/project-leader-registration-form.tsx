@@ -4,7 +4,7 @@ import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useFieldArray, useForm, useWatch, type Control } from "react-hook-form";
 import * as z from "zod";
-import { differenceInCalendarDays, format } from "date-fns";
+import { differenceInCalendarDays, format, isValid, parse } from "date-fns";
 import {
   CalendarIcon,
   ChevronLeft,
@@ -88,7 +88,8 @@ const sdgOptions = [
 const agencyCategoryOptions = ["government", "ngo", "private", "msme"] as const;
 const natureOptions = ["Internal", "External"] as const;
 const partnershipTypeOptions = ["MOA", "MOU", "LOA"] as const;
-const employmentOptions = ["Permanent", "COS"] as const;
+const levelOfPartnershipOptions = ["local", "regional", "national", "international"] as const;
+const employmentOptions = ["Permanent", "Contract of Service"] as const;
 
 const textValue = z.string().trim().min(1, "This field is required.");
 const optionalTextValue = z.string().trim().optional().or(z.literal(""));
@@ -133,7 +134,7 @@ const partnerAgencySchema = z
     contact_details: textValue,
     nature_of_partnership: z.enum(natureOptions),
     funding_agency_name: optionalTextValue,
-    level_of_partnership: textValue,
+    level_of_partnership: z.enum(levelOfPartnershipOptions),
     type_of_partnership: z.enum(partnershipTypeOptions),
     bor_approval_date: z.date().nullable(),
     date_notarized: z.date().nullable(),
@@ -152,7 +153,8 @@ const partnerAgencySchema = z
 const formSchema = z.object({
   project_title: textValue,
   budget: nonNegativeNumber,
-  inclusive_dates: z.array(z.date()).min(1, "Select at least one date."),
+  start_date: z.string().trim().min(1, "Start date is required."),
+  end_date: z.string().trim().min(1, "End date is required."),
   extension_agenda: z.array(z.string()).min(1, "Select at least one agenda."),
   sdg_main: z.array(z.string()).min(1, "Select at least one SDG."),
   sdg_sub: z.array(z.string()).min(1, "Select at least one SDG."),
@@ -163,21 +165,13 @@ const formSchema = z.object({
   objectives: textValue,
   strategies: z.array(strategySchema).min(1, "Add at least one strategy."),
   publication_text: optionalTextValue,
-  publication_count: nonNegativeNumber,
   patents_text: optionalTextValue,
-  patents_count: nonNegativeNumber,
   people_services_text: optionalTextValue,
-  people_services_count: nonNegativeNumber,
   places_partnerships_text: optionalTextValue,
-  places_partnerships_count: nonNegativeNumber,
   policy_text: optionalTextValue,
-  policy_count: nonNegativeNumber,
   social_impact_text: optionalTextValue,
-  social_impact_count: nonNegativeNumber,
   economic_impact_text: optionalTextValue,
-  economic_impact_count: nonNegativeNumber,
   environmental_impact_text: optionalTextValue,
-  environmental_impact_count: nonNegativeNumber,
   project_leader_name: textValue,
   project_leader_employment: z.enum(employmentOptions),
   co_project_leaders: z.array(staffMemberSchema),
@@ -186,7 +180,7 @@ const formSchema = z.object({
   project_assistants: z.array(staffMemberSchema),
   budget_summary: z
     .array(budgetYearSchema)
-    .min(1, "Budget years will be generated from the inclusive dates."),
+    .min(1, "Budget years will be generated from the project dates."),
   needs_assessment_title: optionalTextValue,
   needs_assessment_dates: z.array(z.date()),
   needs_assessment_place: optionalTextValue,
@@ -199,6 +193,33 @@ const formSchema = z.object({
       })
     )
     .default([]),
+}).superRefine((value, ctx) => {
+  const start = parseDateInput(value.start_date);
+  const end = parseDateInput(value.end_date);
+
+  if (!start) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["start_date"],
+      message: "Use M/D/YYYY format.",
+    });
+  }
+
+  if (!end) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["end_date"],
+      message: "Use M/D/YYYY format.",
+    });
+  }
+
+  if (start && end && end.getTime() < start.getTime()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["end_date"],
+      message: "End date must be on or after the start date.",
+    });
+  }
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -228,13 +249,57 @@ function formatDateRange(values: Date[]) {
     : `${format(start, "MMM d, yyyy")} to ${format(end, "MMM d, yyyy")}`;
 }
 
+function parseDateInput(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = parse(trimmed, "M/d/yyyy", new Date());
+  if (!isValid(parsed)) return null;
+  const normalized = format(parsed, "M/d/yyyy");
+  return normalized === trimmed ? parsed : null;
+}
+
+function formatDateInput(value?: Date | string | null) {
+  if (!value) return "";
+  const date = value instanceof Date ? value : new Date(value);
+  if (!isValid(date)) return "";
+  return format(date, "M/d/yyyy");
+}
+
+function buildInclusiveDatesFromRange(start: Date | null, end: Date | null) {
+  if (!start || !end) return [];
+  const dates: Date[] = [];
+  const pointer = new Date(start);
+  while (pointer.getTime() <= end.getTime()) {
+    dates.push(new Date(pointer));
+    pointer.setDate(pointer.getDate() + 1);
+  }
+  return dates;
+}
+
 function getDurationLabel(values: Date[]) {
   const sorted = sortDates(values);
   if (sorted.length === 0) return "0 days";
   const start = sorted[0];
   const end = sorted[sorted.length - 1];
   const days = differenceInCalendarDays(end, start) + 1;
-  return `${days} day${days === 1 ? "" : "s"}`;
+  if (days < 365) {
+    return `${days} day${days === 1 ? "" : "s"}`;
+  }
+
+  const years = Math.floor(days / 365);
+  const remainingDays = days % 365;
+  if (remainingDays === 0) {
+    return `${years} year${years === 1 ? "" : "s"}`;
+  }
+  return `${years} year${years === 1 ? "" : "s"} and ${remainingDays} day${remainingDays === 1 ? "" : "s"}`;
+}
+
+function normalizeEmploymentValue(value: unknown): (typeof employmentOptions)[number] {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "cos" || normalized === "contract of service") {
+    return "Contract of Service";
+  }
+  return "Permanent";
 }
 
 function getBudgetRowTotal(row?: FormValues["budget_summary"][number]) {
@@ -298,12 +363,16 @@ function buildDefaultValues(
   const uniqueInclusiveDates = Array.from(
     new Map(sortDates(inclusiveDates).map((item) => [item.toISOString(), item])).values()
   );
+  const startDateValue = uniqueInclusiveDates[0] || (project?.start_date ? new Date(project.start_date) : null);
+  const endDateValue =
+    uniqueInclusiveDates[uniqueInclusiveDates.length - 1] || (project?.end_date ? new Date(project.end_date) : null);
   const uniqueYears = getUniqueYears(uniqueInclusiveDates.length > 0 ? uniqueInclusiveDates : [new Date()]);
 
   return {
     project_title: String(registration?.project_title || project?.title || ""),
     budget: Number(registration?.budget || project?.budget_total || 0),
-    inclusive_dates: uniqueInclusiveDates,
+    start_date: formatDateInput(startDateValue),
+    end_date: formatDateInput(endDateValue),
     extension_agenda: Array.isArray(registration?.extension_agenda)
       ? registration.extension_agenda.map((item) => String(item))
       : Array.isArray(project?.classification)
@@ -328,7 +397,11 @@ function buildDefaultValues(
               contact_details: String(record.contact_details || ""),
               nature_of_partnership: String(record.nature_of_partnership || "Internal") as (typeof natureOptions)[number],
               funding_agency_name: String(record.funding_agency_name || ""),
-              level_of_partnership: String(record.level_of_partnership || ""),
+              level_of_partnership: (
+                levelOfPartnershipOptions.includes(String(record.level_of_partnership || "").toLowerCase() as never)
+                  ? String(record.level_of_partnership || "").toLowerCase()
+                  : "local"
+              ) as (typeof levelOfPartnershipOptions)[number],
               type_of_partnership: String(record.type_of_partnership || "MOA") as (typeof partnershipTypeOptions)[number],
               bor_approval_date: typeof record.bor_approval_date === "string" ? new Date(record.bor_approval_date) : null,
               date_notarized: typeof record.date_notarized === "string" ? new Date(record.date_notarized) : null,
@@ -347,7 +420,7 @@ function buildDefaultValues(
               contact_details: "",
               nature_of_partnership: "Internal",
               funding_agency_name: "",
-              level_of_partnership: "",
+              level_of_partnership: "local",
               type_of_partnership: "MOA",
               bor_approval_date: null,
               date_notarized: null,
@@ -367,44 +440,36 @@ function buildDefaultValues(
           })
         : [{ capacity_building: "", technical_assistance: "" }],
     publication_text: String(registration?.publication_text || ""),
-    publication_count: Number(registration?.publication_count || 0),
     patents_text: String(registration?.patents_text || ""),
-    patents_count: Number(registration?.patents_count || 0),
     people_services_text: String(registration?.people_services_text || ""),
-    people_services_count: Number(registration?.people_services_count || 0),
     places_partnerships_text: String(registration?.places_partnerships_text || ""),
-    places_partnerships_count: Number(registration?.places_partnerships_count || 0),
     policy_text: String(registration?.policy_text || ""),
-    policy_count: Number(registration?.policy_count || 0),
     social_impact_text: String(registration?.social_impact_text || ""),
-    social_impact_count: Number(registration?.social_impact_count || 0),
     economic_impact_text: String(registration?.economic_impact_text || ""),
-    economic_impact_count: Number(registration?.economic_impact_count || 0),
     environmental_impact_text: String(registration?.environmental_impact_text || ""),
-    environmental_impact_count: Number(registration?.environmental_impact_count || 0),
     project_leader_name: String(
       registration?.project_leader_name || project?.proponents?.[0]?.name || currentUserName
     ),
-    project_leader_employment: String(registration?.project_leader_employment || "Permanent") as (typeof employmentOptions)[number],
+    project_leader_employment: normalizeEmploymentValue(registration?.project_leader_employment),
     co_project_leaders: coLeadersRaw.map((item) => {
       const record = item as Record<string, unknown>;
       return {
         name: String(record.name || ""),
-        employment: String(record.employment || "Permanent") as (typeof employmentOptions)[number],
+        employment: normalizeEmploymentValue(record.employment),
       };
     }),
     project_coordinators: coordinatorsRaw.map((item) => {
       const record = item as Record<string, unknown>;
       return {
         name: String(record.name || ""),
-        employment: String(record.employment || "Permanent") as (typeof employmentOptions)[number],
+        employment: normalizeEmploymentValue(record.employment),
       };
     }),
     project_facilitators: facilitatorsRaw.map((item) => {
       const record = item as Record<string, unknown>;
       return {
         name: String(record.name || ""),
-        employment: String(record.employment || "Permanent") as (typeof employmentOptions)[number],
+        employment: normalizeEmploymentValue(record.employment),
       };
     }),
     project_assistants:
@@ -413,7 +478,7 @@ function buildDefaultValues(
             const record = item as Record<string, unknown>;
             return {
               name: String(record.name || ""),
-              employment: String(record.employment || "Permanent") as (typeof employmentOptions)[number],
+              employment: normalizeEmploymentValue(record.employment),
             };
           })
         : (((project as Project & { project_assistants?: { name: string }[] })?.project_assistants) || []).map((item) => ({
@@ -485,6 +550,29 @@ function MultiDatePicker({
         />
       </PopoverContent>
     </Popover>
+  );
+}
+
+function DateTextField({
+  value,
+  onChange,
+  disabled,
+  placeholder = "M/D/YYYY",
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  placeholder?: string;
+}) {
+  return (
+    <Input
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      disabled={disabled}
+      placeholder={placeholder}
+      inputMode="numeric"
+      className="h-9 rounded-xl text-xs"
+    />
   );
 }
 
@@ -693,9 +781,30 @@ function PartnerAgencyFields({
           <FormField control={control} name={`partner_agencies.${index}.contact_details`} render={({ field }) => (
             <FormItem><FormLabel className="text-xs">Contact Details</FormLabel><FormControl><Input {...field} disabled={disabled} className="h-9 rounded-xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
           )} />
-          <FormField control={control} name={`partner_agencies.${index}.level_of_partnership`} render={({ field }) => (
-            <FormItem><FormLabel className="text-xs">Level of Partnership</FormLabel><FormControl><Input {...field} disabled={disabled} className="h-9 rounded-xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
-          )} />
+          <FormField
+            control={control}
+            name={`partner_agencies.${index}.level_of_partnership`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs">Level of Partnership</FormLabel>
+                <Select value={field.value} onValueChange={field.onChange} disabled={disabled}>
+                  <FormControl>
+                    <SelectTrigger className="h-9 rounded-xl text-xs">
+                      <SelectValue placeholder="Select level" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {levelOfPartnershipOptions.map((option) => (
+                      <SelectItem key={option} value={option} className="text-xs capitalize">
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage className="text-xs" />
+              </FormItem>
+            )}
+          />
 
           <FormField
             control={control}
@@ -886,7 +995,12 @@ export function ProjectLeaderRegistrationForm({
   });
   const typedControl = form.control as Control<FormValues>;
 
-  const inclusiveDates = useWatch({ control: typedControl, name: "inclusive_dates" }) || [];
+  const startDateInput = useWatch({ control: typedControl, name: "start_date" }) || "";
+  const endDateInput = useWatch({ control: typedControl, name: "end_date" }) || "";
+  const inclusiveDates = React.useMemo(
+    () => buildInclusiveDatesFromRange(parseDateInput(startDateInput), parseDateInput(endDateInput)),
+    [startDateInput, endDateInput]
+  );
   const budgetSummary = useWatch({ control: typedControl, name: "budget_summary" }) || [];
   const partnerAgenciesArray = useFieldArray({ control: typedControl, name: "partner_agencies" });
   const strategiesArray = useFieldArray({ control: typedControl, name: "strategies" });
@@ -943,28 +1057,20 @@ export function ProjectLeaderRegistrationForm({
 
   const goNext = async () => {
     const fieldsByStep: Record<number, (keyof FormValues)[]> = {
-      1: ["project_title", "budget", "inclusive_dates", "extension_agenda", "sdg_main", "sdg_sub", "target_beneficiaries", "department_unit"],
+      1: ["project_title", "budget", "start_date", "end_date", "extension_agenda", "sdg_main", "sdg_sub", "target_beneficiaries", "department_unit"],
       2: ["partner_agencies"],
       3: [
         "rationale",
         "objectives",
         "strategies",
         "publication_text",
-        "publication_count",
         "patents_text",
-        "patents_count",
         "people_services_text",
-        "people_services_count",
         "places_partnerships_text",
-        "places_partnerships_count",
         "policy_text",
-        "policy_count",
         "social_impact_text",
-        "social_impact_count",
         "economic_impact_text",
-        "economic_impact_count",
         "environmental_impact_text",
-        "environmental_impact_count",
       ],
       4: ["project_leader_name", "project_leader_employment", "budget_summary"],
       5: [],
@@ -984,19 +1090,24 @@ export function ProjectLeaderRegistrationForm({
     if (isViewOnly) return;
     setIsSubmitting(true);
 
-    const sortedDates = sortDates(values.inclusive_dates);
-    const startDate = sortedDates[0];
-    const endDate = sortedDates[sortedDates.length - 1];
+    const startDate = parseDateInput(values.start_date);
+    const endDate = parseDateInput(values.end_date);
+    const generatedInclusiveDates = buildInclusiveDatesFromRange(startDate, endDate);
+    if (!startDate || !endDate || generatedInclusiveDates.length === 0) {
+      setIsSubmitting(false);
+      alert("Please provide a valid project start date and end date using M/D/YYYY.");
+      return;
+    }
     const registrationData = {
       ...values,
-      inclusive_dates: values.inclusive_dates.map((item) => item.toISOString()),
+      inclusive_dates: generatedInclusiveDates.map((item) => item.toISOString()),
       partner_agencies: values.partner_agencies.map((agency) => ({
         ...agency,
         bor_approval_date: agency.bor_approval_date ? agency.bor_approval_date.toISOString() : null,
         date_notarized: agency.date_notarized ? agency.date_notarized.toISOString() : null,
       })),
       needs_assessment_dates: values.needs_assessment_dates.map((item) => item.toISOString()),
-      duration: getDurationLabel(values.inclusive_dates),
+      duration: getDurationLabel(generatedInclusiveDates),
       budget_summary_total: budgetGrandTotal,
     };
     const budgetRequirements = values.budget_summary.map((yearRow) => ({
@@ -1025,8 +1136,8 @@ export function ProjectLeaderRegistrationForm({
       community_location: values.partner_agencies[0]?.location || "",
       category: "new",
       funding_source: fundingType,
-      start_date: startDate ? startDate.toISOString() : null,
-      end_date: endDate ? endDate.toISOString() : null,
+      start_date: startDate.toISOString(),
+      end_date: endDate.toISOString(),
       budget_requirements: budgetRequirements,
       budget_total: budgetGrandTotal > 0 ? budgetGrandTotal : values.budget,
       gad_score: 0,
@@ -1107,10 +1218,33 @@ export function ProjectLeaderRegistrationForm({
                       <FormItem className="min-w-0"><FormLabel className="text-xs">Budget</FormLabel><FormControl><Input value={field.value === 0 ? "" : (field.value ?? "")} onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))} onBlur={field.onBlur} name={field.name} ref={field.ref} type="number" min="0" disabled={isViewOnly} className="h-9 rounded-xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
                     )} />
                   </div>
-                  <div className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_220px]">
-                    <FormField control={form.control} name="inclusive_dates" render={({ field }) => (
-                      <FormItem className="min-w-0"><FormLabel className="text-xs">Inclusive Date</FormLabel><FormControl><MultiDatePicker value={field.value} onChange={field.onChange} disabled={isViewOnly} placeholder="Select inclusive dates" /></FormControl><FormMessage className="text-xs" /></FormItem>
-                    )} />
+                  <div className="grid gap-5 xl:grid-cols-3">
+                    <FormField
+                      control={form.control}
+                      name="start_date"
+                      render={({ field }) => (
+                        <FormItem className="min-w-0">
+                          <FormLabel className="text-xs">Start Date</FormLabel>
+                          <FormControl>
+                            <DateTextField value={field.value} onChange={field.onChange} disabled={isViewOnly} />
+                          </FormControl>
+                          <FormMessage className="text-xs" />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="end_date"
+                      render={({ field }) => (
+                        <FormItem className="min-w-0">
+                          <FormLabel className="text-xs">End Date</FormLabel>
+                          <FormControl>
+                            <DateTextField value={field.value} onChange={field.onChange} disabled={isViewOnly} />
+                          </FormControl>
+                          <FormMessage className="text-xs" />
+                        </FormItem>
+                      )}
+                    />
                     <FormItem><FormLabel className="text-xs">Duration</FormLabel><Input value={getDurationLabel(inclusiveDates)} readOnly className="h-9 rounded-xl bg-muted/20 text-xs" /></FormItem>
                   </div>
                   <div className="space-y-3">
@@ -1155,7 +1289,7 @@ export function ProjectLeaderRegistrationForm({
                       contact_details: "",
                       nature_of_partnership: "Internal",
                       funding_agency_name: "",
-                      level_of_partnership: "",
+                      level_of_partnership: "local",
                       type_of_partnership: "MOA",
                       bor_approval_date: null,
                       date_notarized: null,
@@ -1234,25 +1368,22 @@ export function ProjectLeaderRegistrationForm({
                   <Separator />
 
                   <div className="space-y-4">
-                    <div><h4 className="text-sm font-semibold">Expected Outputs (6Ps / 3Is)</h4><p className="text-xs text-muted-foreground">Capture narrative details and counts for each expected output.</p></div>
+                    <div><h4 className="text-sm font-semibold">Expected Outputs (6Ps / 3Is)</h4><p className="text-xs text-muted-foreground">Capture the narrative details for each expected output.</p></div>
                     <div className="grid gap-4 2xl:grid-cols-2">
                       {[
-                        ["publication_text", "publication_count", "Publication"],
-                        ["patents_text", "patents_count", "Patents / IP"],
-                        ["people_services_text", "people_services_count", "People Services"],
-                        ["places_partnerships_text", "places_partnerships_count", "Places and Partnerships"],
-                        ["policy_text", "policy_count", "Policy"],
-                        ["social_impact_text", "social_impact_count", "Social Impact"],
-                        ["economic_impact_text", "economic_impact_count", "Economic Impact"],
-                        ["environmental_impact_text", "environmental_impact_count", "Environmental Impact"],
-                      ].map(([textName, countName, label]) => (
+                        ["publication_text", "Publication"],
+                        ["patents_text", "Patents / IP"],
+                        ["people_services_text", "People Services"],
+                        ["places_partnerships_text", "Places and Partnerships"],
+                        ["policy_text", "Policy"],
+                        ["social_impact_text", "Social Impact"],
+                        ["economic_impact_text", "Economic Impact"],
+                        ["environmental_impact_text", "Environmental Impact"],
+                      ].map(([textName, label]) => (
                         <div key={label} className="rounded-2xl border border-border/40 bg-background p-4">
                           <div className="space-y-4">
                             <FormField control={form.control} name={textName as never} render={({ field }) => (
                               <FormItem><FormLabel className="text-xs">{label}</FormLabel><FormControl><Textarea value={String(field.value ?? "")} onChange={field.onChange} onBlur={field.onBlur} name={field.name} ref={field.ref} disabled={isViewOnly} className="min-h-20 rounded-2xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
-                            )} />
-                            <FormField control={form.control} name={countName as never} render={({ field }) => (
-                              <FormItem><FormLabel className="text-xs">{label} Count</FormLabel><FormControl><Input value={field.value === 0 ? "" : (field.value ?? "")} onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))} onBlur={field.onBlur} name={field.name} ref={field.ref} type="number" min="0" disabled={isViewOnly} className="h-9 rounded-xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
                             )} />
                           </div>
                         </div>
@@ -1305,7 +1436,7 @@ export function ProjectLeaderRegistrationForm({
                   <StaffListFields control={typedControl} name="project_assistants" label="Project Assistants" disabled={isViewOnly} />
 
                   <Card className="rounded-3xl border-border/40 shadow-none">
-                    <CardHeader><CardTitle className="text-sm">Budget Summary</CardTitle><CardDescription className="text-xs">Budget rows are automatically generated from the inclusive dates and grouped by year.</CardDescription></CardHeader>
+                    <CardHeader><CardTitle className="text-sm">Budget Summary</CardTitle><CardDescription className="text-xs">Budget rows are automatically generated from the project start date and end date, then grouped by year.</CardDescription></CardHeader>
                     <CardContent className="space-y-4">
                       {budgetYearsArray.fields.map((field, index) => (
                         <div key={field.id} className="rounded-2xl border border-border/40 bg-background p-4">

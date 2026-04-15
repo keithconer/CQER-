@@ -71,7 +71,7 @@ const formSchema = z.object({
       other_mooe: nonNegativeNumber,
       total: nonNegativeNumber,
     })
-  ).min(1, "The selected project must have inclusive dates."),
+  ).min(1, "The selected project must have a valid start date and end date."),
   documents: z.array(z.object({
     url: z.string(),
     name: z.string(),
@@ -102,6 +102,10 @@ function getProjectRegistrationData(project?: Project | null) {
 function getProjectDateRange(project?: Project | null) {
   if (!project) return null;
   const registration = getProjectRegistrationData(project);
+  const registrationStart =
+    typeof registration?.start_date === "string" ? new Date(registration.start_date) : null;
+  const registrationEnd =
+    typeof registration?.end_date === "string" ? new Date(registration.end_date) : null;
   const inclusiveDatesRaw = Array.isArray(registration?.inclusive_dates)
     ? registration?.inclusive_dates
     : [];
@@ -110,9 +114,14 @@ function getProjectDateRange(project?: Project | null) {
     .filter((value) => !Number.isNaN(value.getTime()))
     .sort((left, right) => left.getTime() - right.getTime());
 
-  const start = inclusiveDates[0] || (project.start_date ? new Date(project.start_date) : null);
+  const start =
+    registrationStart ||
+    inclusiveDates[0] ||
+    (project.start_date ? new Date(project.start_date) : null);
   const end =
-    inclusiveDates[inclusiveDates.length - 1] || (project.end_date ? new Date(project.end_date) : null);
+    registrationEnd ||
+    inclusiveDates[inclusiveDates.length - 1] ||
+    (project.end_date ? new Date(project.end_date) : null);
 
   if (!start || !end || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
     return null;
@@ -319,7 +328,7 @@ export function BudgetUtilizationForm({
             {isViewOnly ? "Budget Utilization Details" : record ? "Edit Budget Utilization" : "Utilize Budget"}
           </h2>
           <p className="text-sm text-muted-foreground">
-            The monthly fields are generated from the project overview inclusive dates.
+            The monthly fields are generated from the project start date and end date.
           </p>
         </div>
         <Button type="button" variant="ghost" size="icon" className="rounded-full" onClick={onClose}>
@@ -394,7 +403,7 @@ export function BudgetUtilizationForm({
                   <div className="rounded-2xl border border-border/60 bg-muted/10 p-4">
                     <Label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       <CalendarRange className="h-3.5 w-3.5" />
-                      Project Overview Inclusive Dates
+                      Project Date Coverage
                     </Label>
                     <p className="mt-2 text-sm font-medium text-foreground">
                       {coverageStart && coverageEnd
@@ -424,7 +433,7 @@ export function BudgetUtilizationForm({
                   <div>
                     <h3 className="text-sm font-semibold">Monthly Budget Summary</h3>
                     <p className="text-xs text-muted-foreground">
-                      Only the months included in the selected project duration are shown below.
+                      Only the months included in the selected project date range are shown below.
                     </p>
                   </div>
 
@@ -435,7 +444,7 @@ export function BudgetUtilizationForm({
                           <div>
                             <h4 className="text-base font-semibold">Year {year}</h4>
                             <p className="text-xs text-muted-foreground">
-                              Coverage for this year is based on the project overview inclusive dates.
+                              Coverage for this year is based on the project start and end dates.
                             </p>
                           </div>
                           <p className="text-sm font-medium text-[#159E44]">
@@ -516,7 +525,7 @@ export function BudgetUtilizationForm({
                     ))
                   ) : (
                     <div className="rounded-2xl border border-dashed border-border/60 px-4 py-10 text-center text-sm text-muted-foreground">
-                      Select a project with inclusive dates to generate the monthly utilization fields.
+                      Select a project with a valid start date and end date to generate the monthly utilization fields.
                     </div>
                   )}
                 </div>

@@ -86,7 +86,7 @@ async function exportExcel(projects: Project[]) {
   const columns = [
     { header: "Project Title", key: "title", width: 40 },
     { header: "Department / Unit", key: "departmentUnit", width: 28 },
-    { header: "Inclusive Dates", key: "inclusiveDates", width: 28 },
+    { header: "Project Dates", key: "inclusiveDates", width: 28 },
     { header: "Duration", key: "duration", width: 16 },
     { header: "Target Beneficiaries", key: "beneficiaries", width: 24 },
     { header: "Budget Total", key: "budget", width: 18 },
@@ -139,7 +139,7 @@ async function exportPdf(projects: Project[]) {
     head: [[
       "Project Title",
       "Department / Unit",
-      "Inclusive Dates",
+      "Project Dates",
       "Duration",
       "Beneficiaries",
       "Budget",
@@ -299,7 +299,7 @@ export function ProjectLeaderRegistrationManagement({
                   <TableHead className="h-12 text-base font-semibold">Project Title</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Department / Unit</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Beneficiaries</TableHead>
-                  <TableHead className="h-12 text-base font-semibold">Inclusive Dates</TableHead>
+                  <TableHead className="h-12 text-base font-semibold">Project Dates</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Duration</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Budget Total</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Documents</TableHead>
