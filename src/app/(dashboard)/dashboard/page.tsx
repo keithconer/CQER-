@@ -808,7 +808,7 @@ export default async function DashboardPage({
     if (profile.user_type === "unit_coordinator" && profile.department && profile.unit) {
       const { data: departmentProfiles } = await adminClient
         .from("profiles")
-        .select("id, first_name, last_name, user_type, unit, department")
+        .select("id, first_name, last_name, user_type, unit, department, avatar_url")
         .in("user_type", ["college_coordinator", "unit_coordinator", "project_leader"])
         .eq("department", profile.department);
 
@@ -823,6 +823,7 @@ export default async function DashboardPage({
         userType: item.user_type,
         unit: item.unit || null,
         department: item.department || null,
+        avatarUrl: item.avatar_url || null,
       }));
 
       const scopedCreatorIds = Array.from(new Set(scopedUsers.map((item) => item.id)));

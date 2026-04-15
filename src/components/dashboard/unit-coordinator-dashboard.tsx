@@ -4,6 +4,7 @@ import * as React from "react";
 import Image from "next/image";
 import { format } from "date-fns";
 import {
+  ChevronLeft,
   BookOpenCheck,
   Briefcase,
   Building2,
@@ -14,6 +15,7 @@ import {
   Users,
 } from "lucide-react";
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,6 +41,7 @@ export type UnitDashboardUser = {
   userType: string;
   unit: string | null;
   department: string | null;
+  avatarUrl: string | null;
 };
 
 export type UnitDashboardTraining = {
@@ -90,7 +93,10 @@ export function UnitCoordinatorDashboard({
   const [activeDialog, setActiveDialog] = React.useState<"users" | "trainings" | null>(null);
   const [loadingDialog, setLoadingDialog] = React.useState<"users" | "trainings" | null>(null);
   const [trainingFilter, setTrainingFilter] = React.useState<"all" | "created_by_me">("all");
+  const [usersPage, setUsersPage] = React.useState(1);
+  const [recordsPage, setRecordsPage] = React.useState(1);
   const timeoutRef = React.useRef<number | null>(null);
+  const pageSize = 5;
 
   React.useEffect(() => {
     return () => {
@@ -119,6 +125,26 @@ export function UnitCoordinatorDashboard({
     return trainings;
   }, [currentUserId, trainingFilter, trainings]);
 
+  const totalUsersPages = Math.max(1, Math.ceil(users.length / pageSize));
+  const paginatedUsers = React.useMemo(() => {
+    const start = (usersPage - 1) * pageSize;
+    return users.slice(start, start + pageSize);
+  }, [users, usersPage]);
+
+  const totalRecordsPages = Math.max(1, Math.ceil(records.length / pageSize));
+  const paginatedRecords = React.useMemo(() => {
+    const start = (recordsPage - 1) * pageSize;
+    return records.slice(start, start + pageSize);
+  }, [records, recordsPage]);
+
+  React.useEffect(() => {
+    setUsersPage(1);
+  }, [users]);
+
+  React.useEffect(() => {
+    setRecordsPage(1);
+  }, [records]);
+
   return (
     <>
       {loadingDialog ? (
@@ -134,97 +160,124 @@ export function UnitCoordinatorDashboard({
         </div>
       ) : null}
 
-      <div className="space-y-4">
-        <Card className="border-border/50 bg-card/50 shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-              <Layers3 className="h-4 w-4 text-primary" />
+      <div className="space-y-3">
+        <Card className="border-border/50 bg-card/40 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-[13px] font-semibold">
+              <Layers3 className="h-3.5 w-3.5 text-primary" />
               Unit Overview
             </CardTitle>
-            <CardDescription className="text-xs">{scopeLabel}</CardDescription>
+            <CardDescription className="text-[11px]">{scopeLabel}</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-4 lg:grid-cols-2">
+          <CardContent className="grid gap-3 lg:grid-cols-2">
             <button
               type="button"
               onClick={() => openDialogWithLoader("users")}
-              className="rounded-2xl border border-border/50 bg-background p-5 text-left transition hover:border-primary/40 hover:bg-muted/20"
+              className="rounded-xl border border-border/50 bg-background p-4 text-left transition hover:border-primary/40 hover:bg-muted/20"
             >
               <div className="flex items-start justify-between gap-3">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-semibold">
-                    <Users className="h-4 w-4 text-primary" />
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 text-[12px] font-semibold">
+                    <Users className="h-3.5 w-3.5 text-primary" />
                     Total Unit Users
                   </div>
-                  <p className="text-3xl font-bold">{users.length}</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-2xl font-bold leading-none">{users.length}</p>
+                  <p className="text-[11px] text-muted-foreground">
                     View all users in your department and unit, including their role and unit.
                   </p>
                 </div>
-                <ChevronRight className="mt-1 h-4 w-4 text-muted-foreground" />
+                <ChevronRight className="mt-1 h-3.5 w-3.5 text-muted-foreground" />
               </div>
             </button>
 
             <button
               type="button"
               onClick={() => openDialogWithLoader("trainings")}
-              className="rounded-2xl border border-border/50 bg-background p-5 text-left transition hover:border-primary/40 hover:bg-muted/20"
+              className="rounded-xl border border-border/50 bg-background p-4 text-left transition hover:border-primary/40 hover:bg-muted/20"
             >
               <div className="flex items-start justify-between gap-3">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-semibold">
-                    <BookOpenCheck className="h-4 w-4 text-primary" />
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 text-[12px] font-semibold">
+                    <BookOpenCheck className="h-3.5 w-3.5 text-primary" />
                     Total Created Trainings
                   </div>
-                  <p className="text-3xl font-bold">{trainings.length}</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-2xl font-bold leading-none">{trainings.length}</p>
+                  <p className="text-[11px] text-muted-foreground">
                     Open the unit training list and filter down to records you created.
                   </p>
                 </div>
-                <ChevronRight className="mt-1 h-4 w-4 text-muted-foreground" />
+                <ChevronRight className="mt-1 h-3.5 w-3.5 text-muted-foreground" />
               </div>
             </button>
           </CardContent>
         </Card>
 
-        <Card className="border-border/50 bg-card/50 shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-              <FileText className="h-4 w-4 text-primary" />
+        <Card className="border-border/50 bg-card/40 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-[13px] font-semibold">
+              <FileText className="h-3.5 w-3.5 text-primary" />
               All Records from Your Unit
             </CardTitle>
-            <CardDescription className="text-xs">
+            <CardDescription className="text-[11px]">
               Consolidated records created by users from your department and unit.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <ScrollArea className="h-[340px] pr-4">
-              <div className="space-y-3">
-                {records.length > 0 ? (
-                  records.map((record) => (
-                    <div key={record.id} className="rounded-2xl border border-border/50 bg-background p-4">
+          <CardContent className="space-y-3">
+            <div className="space-y-2">
+              {paginatedRecords.length > 0 ? (
+                paginatedRecords.map((record) => (
+                    <div key={record.id} className="rounded-xl border border-border/50 bg-background p-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="space-y-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-sm font-semibold text-foreground">{record.title}</p>
-                            <Badge variant="outline" className="text-[10px]">
+                            <p className="text-[12px] font-semibold text-foreground">{record.title}</p>
+                            <Badge variant="outline" className="text-[9px]">
                               {record.moduleLabel}
                             </Badge>
                           </div>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-[11px] text-muted-foreground">
                             Created by {record.creatorName} on {formatDate(record.createdAt)}
                           </p>
                         </div>
-                        <Briefcase className="h-4 w-4 text-muted-foreground" />
+                        <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="rounded-2xl border border-dashed border-border/50 px-4 py-8 text-center text-sm text-muted-foreground">
+                  <div className="rounded-xl border border-dashed border-border/50 px-4 py-8 text-center text-sm text-muted-foreground">
                     No unit records found yet.
                   </div>
                 )}
+            </div>
+            {records.length > pageSize ? (
+              <div className="flex items-center justify-between border-t border-border/40 pt-2">
+                <span className="text-[10px] text-muted-foreground">
+                  Page {recordsPage} of {totalRecordsPages}
+                </span>
+                <div className="flex items-center gap-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-7 w-7 rounded-lg"
+                    disabled={recordsPage === 1}
+                    onClick={() => setRecordsPage((current) => Math.max(1, current - 1))}
+                  >
+                    <ChevronLeft className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-7 w-7 rounded-lg"
+                    disabled={recordsPage === totalRecordsPages}
+                    onClick={() => setRecordsPage((current) => Math.min(totalRecordsPages, current + 1))}
+                  >
+                    <ChevronRight className="h-3 w-3" />
+                  </Button>
+                </div>
               </div>
-            </ScrollArea>
+            ) : null}
           </CardContent>
         </Card>
       </div>
@@ -237,25 +290,68 @@ export function UnitCoordinatorDashboard({
               Users visible from your department and unit, including their role and assigned unit.
             </DialogDescription>
           </DialogHeader>
-          <ScrollArea className="max-h-[60vh] pr-4">
-            <div className="space-y-3">
-              {users.map((user) => (
-                <div key={user.id} className="rounded-2xl border border-border/50 bg-muted/10 p-4">
+          <div className="space-y-3">
+            <div className="space-y-2">
+              {paginatedUsers.map((user) => (
+                <div key={user.id} className="rounded-xl border border-border/50 bg-muted/10 p-3">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="space-y-1">
-                      <p className="text-sm font-semibold">{user.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {user.department || "No department"}{user.unit ? ` • ${user.unit}` : ""}
-                      </p>
+                    <div className="flex items-start gap-3">
+                      <Avatar className="h-9 w-9 border border-border/40">
+                        <AvatarImage src={user.avatarUrl || ""} alt={user.name} />
+                        <AvatarFallback className="text-[10px] font-semibold">
+                          {user.name
+                            .split(" ")
+                            .filter(Boolean)
+                            .slice(0, 2)
+                            .map((part) => part[0])
+                            .join("")
+                            .toUpperCase() || "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="space-y-0.5">
+                        <p className="text-[12px] font-semibold">{user.name}</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {user.department || "No department"}{user.unit ? ` • ${user.unit}` : ""}
+                        </p>
+                      </div>
                     </div>
-                    <Badge variant="outline" className="text-[10px]">
+                    <Badge variant="outline" className="text-[9px]">
                       {formatRole(user.userType)}
                     </Badge>
                   </div>
                 </div>
               ))}
             </div>
-          </ScrollArea>
+            {users.length > pageSize ? (
+              <div className="flex items-center justify-between border-t border-border/40 pt-2">
+                <span className="text-[10px] text-muted-foreground">
+                  Page {usersPage} of {totalUsersPages}
+                </span>
+                <div className="flex items-center gap-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-7 w-7 rounded-lg"
+                    disabled={usersPage === 1}
+                    onClick={() => setUsersPage((current) => Math.max(1, current - 1))}
+                  >
+                    <ChevronLeft className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-7 w-7 rounded-lg"
+                    disabled={usersPage === totalUsersPages}
+                    onClick={() => setUsersPage((current) => Math.min(totalUsersPages, current + 1))}
+                  >
+                    <ChevronRight className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+          </div>
         </DialogContent>
       </Dialog>
 
