@@ -380,6 +380,7 @@ interface TrainingsFormProps {
   unitOptions?: string[];
   existingPartnerAgencies?: string[];
   projectOptions?: TrainingProjectOption[];
+  hideProjectField?: boolean;
   record?: TrainingRecord | null;
   isViewOnly?: boolean;
   onSuccess: (action: "created" | "updated") => void;
@@ -613,7 +614,7 @@ function MaskedDateField({
   value,
   onChange,
   disabled,
-  placeholder = "MM/dd/yyyy",
+  placeholder = "MM/DD/YYYY",
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -918,14 +919,15 @@ function buildDefaultValues(
 export function TrainingsForm({
   department,
   currentUserName,
-  unit,
-  existingPartnerAgencies = [],
-  projectOptions = [],
-  record,
-  isViewOnly = false,
-  onSuccess,
-  onClose,
-}: TrainingsFormProps) {
+    unit,
+    existingPartnerAgencies = [],
+    projectOptions = [],
+    hideProjectField = false,
+    record,
+    isViewOnly = false,
+    onSuccess,
+    onClose,
+  }: TrainingsFormProps) {
   const [currentStep, setCurrentStep] = React.useState(1);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const autoSubmitStartedRef = React.useRef(false);
@@ -1055,8 +1057,8 @@ export function TrainingsForm({
   }
 
   const handleSubmit = React.useCallback(async (values: FormValues) => {
-    setIsSubmitting(true);
-    const selectedProject = projectOptions.find((item) => item.id === values.related_project_id);
+      setIsSubmitting(true);
+    const selectedProject = hideProjectField ? null : projectOptions.find((item) => item.id === values.related_project_id);
     const sortedInclusiveDates = sortDateInputs(values.inclusive_dates)
       .map((value) => parseDateInput(value))
       .filter((value): value is Date => value instanceof Date)
@@ -1072,8 +1074,8 @@ export function TrainingsForm({
       contact_details: values.contact_details,
       related_curricular_offerings: values.related_curricular_offerings,
       training_title: values.training_title,
-      related_project_id: values.related_project_id || null,
-      related_project_title: selectedProject?.title || values.related_project_title || "",
+        related_project_id: hideProjectField ? null : values.related_project_id || null,
+        related_project_title: hideProjectField ? "" : selectedProject?.title || values.related_project_title || "",
       number_of_days: values.number_of_days,
       date_mode: values.date_mode,
       inclusive_dates: sortedInclusiveDates,
@@ -1149,7 +1151,7 @@ export function TrainingsForm({
     }
 
     onSuccess(record?.id ? "updated" : "created");
-  }, [onSuccess, projectOptions, record]);
+    }, [hideProjectField, onSuccess, projectOptions, record]);
 
   React.useEffect(() => {
     if (currentStep !== 4 || isViewOnly || autoSubmitStartedRef.current) return;
@@ -1315,7 +1317,7 @@ export function TrainingsForm({
                                   <FormItem>
                                     <FormLabel className="text-xs">Date {index + 1}</FormLabel>
                                     <FormControl>
-                                      <MaskedDateField value={field.value || ""} onChange={field.onChange} disabled={isViewOnly} placeholder="MM/dd/yyyy" />
+                                      <MaskedDateField value={field.value || ""} onChange={field.onChange} disabled={isViewOnly} placeholder="MM/DD/YYYY" />
                                     </FormControl>
                                     <FormMessage className="text-xs" />
                                   </FormItem>
@@ -1499,40 +1501,42 @@ export function TrainingsForm({
                     />
                   )}
 
-                  <FormField
-                    control={form.control}
-                    name="related_project_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">Name of the Project if Part of the Project</FormLabel>
-                        <Select
-                          value={field.value || "none"}
-                          onValueChange={(value) => {
-                            const normalizedValue = value === "none" ? "" : value;
-                            field.onChange(normalizedValue);
-                            const selected = projectOptions.find((project) => project.id === normalizedValue);
-                            form.setValue("related_project_title", selected?.title || "", { shouldDirty: true });
-                          }}
-                          disabled={isViewOnly}
-                        >
-                          <FormControl>
-                            <SelectTrigger className="h-10 rounded-xl text-sm">
-                              <SelectValue placeholder="Select project" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="none" className="text-sm">Not linked to a project</SelectItem>
-                            {projectOptions.map((project) => (
-                              <SelectItem key={project.id} value={project.id} className="text-sm">
-                                {project.title}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage className="text-xs" />
-                      </FormItem>
-                    )}
-                  />
+                  {!hideProjectField && (
+                    <FormField
+                      control={form.control}
+                      name="related_project_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Name of the Project if Part of the Project</FormLabel>
+                          <Select
+                            value={field.value || "none"}
+                            onValueChange={(value) => {
+                              const normalizedValue = value === "none" ? "" : value;
+                              field.onChange(normalizedValue);
+                              const selected = projectOptions.find((project) => project.id === normalizedValue);
+                              form.setValue("related_project_title", selected?.title || "", { shouldDirty: true });
+                            }}
+                            disabled={isViewOnly}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="h-10 rounded-xl text-sm">
+                                <SelectValue placeholder="Select project" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="none" className="text-sm">Not linked to a project</SelectItem>
+                              {projectOptions.map((project) => (
+                                <SelectItem key={project.id} value={project.id} className="text-sm">
+                                  {project.title}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage className="text-xs" />
+                        </FormItem>
+                      )}
+                    />
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -1558,7 +1562,7 @@ export function TrainingsForm({
                         <NumberField control={form.control} name="faculty_male" label="Male" disabled={isViewOnly} />
                         <NumberField control={form.control} name="faculty_female" label="Female" disabled={isViewOnly} />
                         <NumberField control={form.control} name="faculty_permanent" label="Permanent" disabled={isViewOnly} />
-                        <NumberField control={form.control} name="faculty_cos" label="COS" disabled={isViewOnly} />
+                        <NumberField control={form.control} name="faculty_cos" label="Contract of Service" disabled={isViewOnly} />
                       </CardContent>
                     </Card>
                     <Card className="rounded-2xl border-border/40 shadow-none">
@@ -1620,38 +1624,6 @@ export function TrainingsForm({
                     </CardContent>
                   </Card>
 
-                  <Card className="rounded-2xl border-border/40 shadow-none">
-                    <CardHeader>
-                      <CardTitle className="text-sm">Counted Participants</CardTitle>
-                      <CardDescription className="text-xs">
-                        Only these groups are counted in the participant totals and training computations.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="grid gap-4 xl:grid-cols-2">
-                      {participantCategoryConfig.map((item) => (
-                        <div key={item.key} className="rounded-2xl border border-border/40 bg-background p-4">
-                          <div className="mb-3 flex items-center gap-2">
-                            <Users className="h-4 w-4 text-muted-foreground" />
-                            <p className="text-sm font-semibold">{item.label}</p>
-                          </div>
-                          <div className="grid gap-4 md:grid-cols-2">
-                            <NumberField
-                              control={form.control}
-                              name={`participant_breakdown.${item.key}.male`}
-                              label="Male"
-                              disabled={isViewOnly}
-                            />
-                            <NumberField
-                              control={form.control}
-                              name={`participant_breakdown.${item.key}.female`}
-                              label="Female"
-                              disabled={isViewOnly}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
                 </CardContent>
               </Card>
             </div>
@@ -1761,6 +1733,39 @@ export function TrainingsForm({
                     <NumberField control={form.control} name="participants_female_total" label="Total Female" disabled readOnly />
                     <NumberField control={form.control} name="participants_overall_total" label="Grand Total of Participants" disabled readOnly />
                   </div>
+
+                  <Card className="rounded-2xl border-border/40 shadow-none">
+                    <CardHeader>
+                      <CardTitle className="text-sm">Counted Participants</CardTitle>
+                      <CardDescription className="text-xs">
+                        Only these groups are counted in the participant totals and training computations.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid gap-4 xl:grid-cols-2">
+                      {participantCategoryConfig.map((item) => (
+                        <div key={item.key} className="rounded-2xl border border-border/40 bg-background p-4">
+                          <div className="mb-3 flex items-center gap-2">
+                            <Users className="h-4 w-4 text-muted-foreground" />
+                            <p className="text-sm font-semibold">{item.label}</p>
+                          </div>
+                          <div className="grid gap-4 md:grid-cols-2">
+                            <NumberField
+                              control={form.control}
+                              name={`participant_breakdown.${item.key}.male`}
+                              label="Male"
+                              disabled={isViewOnly}
+                            />
+                            <NumberField
+                              control={form.control}
+                              name={`participant_breakdown.${item.key}.female`}
+                              label="Female"
+                              disabled={isViewOnly}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
 
                   <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                     <NumberField control={form.control} name="total_persons_trained" label="Total Persons Trained" disabled readOnly />

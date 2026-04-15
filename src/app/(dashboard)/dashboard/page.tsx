@@ -349,7 +349,7 @@ export default async function DashboardPage({
   const allowedPanelsByRole: Record<string, string[]> = {
     super_admin: ["overview", "community", "backup", "account-management", "accounts"],
     college_coordinator: ["overview", "community", "backup", "account-management", "accounts"],
-    unit_coordinator: ["overview", "community", "backup"],
+    unit_coordinator: ["overview", "community", "backup", "trainings"],
     project_leader: ["overview", "community", "backup", "projects", "budget-utilization", "ordinance-resolution", "impact-assessment", "extension-program", "awards-recognition", "other-activities", "trainings", "consultancy", "technical-advisory", "adopters-with-enterprise", "technologies-innovations-commercialized", "iec-materials"],
     extension_office: ["overview"],
   };
@@ -399,6 +399,8 @@ export default async function DashboardPage({
       publicCommunityPosts = communityData.publicPosts;
       departmentCommunityPosts = communityData.departmentPosts;
       communityUsers = communityData.mentionableUsers;
+    } else if (activePanel === "trainings" && profile.user_type === "unit_coordinator") {
+      trainingRecords = (await getTrainings()).data || [];
     }
   } else if (
     profile.user_type === "college_coordinator" &&
@@ -1285,6 +1287,18 @@ export default async function DashboardPage({
       {userType === "unit_coordinator" && activePanel !== "community" && (
         activePanel === "backup" ? (
           <BackupManagement datasets={backupDatasets} />
+        ) : activePanel === "trainings" ? (
+          <TrainingsManagement
+            initialRecords={trainingRecords}
+            department={profile.department}
+            userType={userType}
+            unit={profile.unit}
+            unitOptions={[]}
+            partnerAgencyOptions={trainingPartnerAgencyOptions}
+            projectOptions={trainingProjectOptions}
+            currentUserName={`${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "Unit Coordinator"}
+            currentUserId={user.id}
+          />
         ) : null
       )}
 

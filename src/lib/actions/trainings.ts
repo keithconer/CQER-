@@ -90,7 +90,7 @@ async function getCurrentContext() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("department, user_type")
+    .select("department, user_type, unit")
     .eq("id", user.id)
     .single();
 
@@ -98,6 +98,7 @@ async function getCurrentContext() {
     supabase,
     user,
     department: profile?.department || "",
+    unit: profile?.unit || "",
     userType: profile?.user_type || null,
   };
 }
@@ -128,7 +129,7 @@ function trainingVisibleToDepartment(
 }
 
 export async function getTrainings() {
-  const { user, department, userType } = await getCurrentContext();
+  const { user, department, unit, userType } = await getCurrentContext();
   const adminClient = createAdminClient();
   if (userType === "super_admin") {
     const { data, error } = await adminClient
@@ -149,6 +150,42 @@ export async function getTrainings() {
       .from("trainings")
       .select("*")
       .eq("created_by", user.id)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching trainings:", error);
+      return { error: error.message };
+    }
+
+    return { data };
+  }
+
+  if (userType === "unit_coordinator") {
+    if (!department || !unit) {
+      return { data: [] };
+    }
+
+    const { data: unitProfiles, error: unitProfilesError } = await adminClient
+      .from("profiles")
+      .select("id")
+      .in("user_type", ["unit_coordinator", "project_leader"])
+      .eq("department", department)
+      .eq("unit", unit);
+
+    if (unitProfilesError) {
+      console.error("Error fetching unit profiles:", unitProfilesError);
+      return { error: unitProfilesError.message };
+    }
+
+    const creatorIds = Array.from(new Set((unitProfiles || []).map((item) => item.id)));
+    if (creatorIds.length === 0) {
+      return { data: [] };
+    }
+
+    const { data, error } = await adminClient
+      .from("trainings")
+      .select("*")
+      .in("created_by", creatorIds)
       .order("created_at", { ascending: false });
 
     if (error) {

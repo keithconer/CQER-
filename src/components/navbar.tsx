@@ -324,7 +324,7 @@ export function Navbar({ user }: NavbarProps) {
         keywords: ["training", "trainings"],
         description: "Open the trainings page.",
         icon: BookOpenCheck,
-        roles: ["project_leader"],
+        roles: ["project_leader", "unit_coordinator"],
       },
       {
         id: "consultancy",
@@ -643,7 +643,7 @@ export function Navbar({ user }: NavbarProps) {
                     panel: "trainings",
                     href: "/dashboard?panel=trainings",
                     icon: BookOpenCheck,
-                    roles: ["project_leader"],
+                    roles: ["project_leader", "unit_coordinator"],
                   },
                   {
                     label: "Consultancy",

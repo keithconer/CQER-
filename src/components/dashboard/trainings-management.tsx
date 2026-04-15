@@ -167,6 +167,7 @@ export function TrainingsManagement({
   unitOptions = [],
   partnerAgencyOptions = [],
   projectOptions = [],
+  currentUserId,
   currentUserName,
   isViewOnly = false,
 }: TrainingsManagementProps) {
@@ -178,6 +179,7 @@ export function TrainingsManagement({
   const [createOpen, setCreateOpen] = React.useState(false);
   const [successOpen, setSuccessOpen] = React.useState(false);
   const [deleteTarget, setDeleteTarget] = React.useState<TrainingRecord | null>(null);
+  const hideProjectField = userType === "unit_coordinator";
 
   const filteredRecords = React.useMemo(() => {
     const year = new Date().getFullYear();
@@ -221,6 +223,11 @@ export function TrainingsManagement({
     setDeleteTarget(null);
     router.refresh();
   };
+
+  const canMutateRecord = React.useCallback(
+    (record: TrainingRecord) => !isViewOnly && record.created_by === currentUserId,
+    [currentUserId, isViewOnly]
+  );
 
   return (
     <div className="space-y-5">
@@ -325,7 +332,7 @@ export function TrainingsManagement({
                           <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl" onClick={() => setSelectedRecord(record)}>
                             <Eye className="h-4 w-4" />
                           </Button>
-                          {!isViewOnly && (
+                          {canMutateRecord(record) && (
                             <>
                               <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl" onClick={() => setEditingRecord(record)}>
                                 <Pencil className="h-4 w-4" />
@@ -362,6 +369,7 @@ export function TrainingsManagement({
             unitOptions={unitOptions}
             existingPartnerAgencies={partnerAgencyOptions}
             projectOptions={projectOptions}
+            hideProjectField={hideProjectField}
             onSuccess={handleSaved}
             onClose={() => setCreateOpen(false)}
           />
@@ -379,6 +387,7 @@ export function TrainingsManagement({
               unitOptions={unitOptions}
               existingPartnerAgencies={partnerAgencyOptions}
               projectOptions={projectOptions}
+              hideProjectField={hideProjectField}
               record={selectedRecord}
               isViewOnly
               onSuccess={() => setSelectedRecord(null)}
@@ -399,6 +408,7 @@ export function TrainingsManagement({
               unitOptions={unitOptions}
               existingPartnerAgencies={partnerAgencyOptions}
               projectOptions={projectOptions}
+              hideProjectField={hideProjectField}
               record={editingRecord}
               onSuccess={handleSaved}
               onClose={() => setEditingRecord(null)}
