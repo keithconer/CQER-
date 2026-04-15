@@ -365,6 +365,9 @@ export interface TrainingRecord {
   remarks: string | null;
   documents: { url: string; name: string }[] | null;
   created_by?: string | null;
+  creator_first_name?: string | null;
+  creator_last_name?: string | null;
+  creator_full_name?: string | null;
 }
 
 export interface TrainingProjectOption {

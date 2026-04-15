@@ -128,6 +128,33 @@ function trainingVisibleToDepartment(
   return training.department === department;
 }
 
+function attachCreatorDetails<T extends { created_by?: string | null }>(
+  records: T[],
+  profiles: Array<{ id: string; first_name: string | null; last_name: string | null }>
+) {
+  const profileMap = new Map(
+    profiles.map((profile) => [
+      profile.id,
+      {
+        firstName: profile.first_name,
+        lastName: profile.last_name,
+      },
+    ])
+  );
+
+  return records.map((record) => {
+    const creator = record.created_by ? profileMap.get(record.created_by) : null;
+    const creatorFullName = `${creator?.firstName || ""} ${creator?.lastName || ""}`.trim();
+
+    return {
+      ...record,
+      creator_first_name: creator?.firstName || null,
+      creator_last_name: creator?.lastName || null,
+      creator_full_name: creatorFullName || null,
+    };
+  });
+}
+
 export async function getTrainings() {
   const { user, department, unit, userType } = await getCurrentContext();
   const adminClient = createAdminClient();
@@ -142,7 +169,12 @@ export async function getTrainings() {
       return { error: error.message };
     }
 
-    return { data };
+    const creatorIds = Array.from(new Set((data || []).map((item) => item.created_by).filter(Boolean)));
+    const { data: profiles } = creatorIds.length
+      ? await adminClient.from("profiles").select("id, first_name, last_name").in("id", creatorIds)
+      : { data: [] as Array<{ id: string; first_name: string | null; last_name: string | null }> };
+
+    return { data: attachCreatorDetails(data || [], profiles || []) };
   }
 
   if (userType === "project_leader") {
@@ -157,7 +189,12 @@ export async function getTrainings() {
       return { error: error.message };
     }
 
-    return { data };
+    const creatorIds = Array.from(new Set((data || []).map((item) => item.created_by).filter(Boolean)));
+    const { data: profiles } = creatorIds.length
+      ? await adminClient.from("profiles").select("id, first_name, last_name").in("id", creatorIds)
+      : { data: [] as Array<{ id: string; first_name: string | null; last_name: string | null }> };
+
+    return { data: attachCreatorDetails(data || [], profiles || []) };
   }
 
   if (userType === "unit_coordinator") {
@@ -193,7 +230,12 @@ export async function getTrainings() {
       return { error: error.message };
     }
 
-    return { data };
+    const creatorIdsWithData = Array.from(new Set((data || []).map((item) => item.created_by).filter(Boolean)));
+    const { data: profiles } = creatorIdsWithData.length
+      ? await adminClient.from("profiles").select("id, first_name, last_name").in("id", creatorIdsWithData)
+      : { data: [] as Array<{ id: string; first_name: string | null; last_name: string | null }> };
+
+    return { data: attachCreatorDetails(data || [], profiles || []) };
   }
 
   if (!department) {
@@ -238,11 +280,17 @@ export async function getTrainings() {
     return { error: error.message };
   }
 
+  const visibleData = (data || []).filter((training) => {
+    if (creatorIds.includes(training.created_by)) return true;
+    return trainingVisibleToDepartment(training, department);
+  });
+  const creatorIdsWithData = Array.from(new Set(visibleData.map((item) => item.created_by).filter(Boolean)));
+  const { data: profiles } = creatorIdsWithData.length
+    ? await adminClient.from("profiles").select("id, first_name, last_name").in("id", creatorIdsWithData)
+    : { data: [] as Array<{ id: string; first_name: string | null; last_name: string | null }> };
+
   return {
-    data: (data || []).filter((training) => {
-      if (creatorIds.includes(training.created_by)) return true;
-      return trainingVisibleToDepartment(training, department);
-    }),
+    data: attachCreatorDetails(visibleData, profiles || []),
   };
 }
 

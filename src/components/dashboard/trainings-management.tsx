@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { deleteTraining } from "@/lib/actions/trainings";
 import { DocumentPreview } from "@/components/dashboard/document-preview";
 
@@ -46,7 +47,7 @@ interface TrainingsManagementProps {
   isViewOnly?: boolean;
 }
 
-type FilterMode = "all" | "with_documents" | "this_year";
+type FilterMode = "all" | "with_documents" | "this_year" | "created_by_me";
 
 function getDateRange(record: TrainingRecord) {
   if (record.date_mode === "hours") {
@@ -196,6 +197,7 @@ export function TrainingsManagement({
         .toLowerCase();
       if (searchTerm && !haystack.includes(searchTerm.toLowerCase())) return false;
       if (filterMode === "with_documents" && (!record.documents || record.documents.length === 0)) return false;
+      if (filterMode === "created_by_me" && record.created_by !== currentUserId) return false;
       if (filterMode === "this_year") {
         const startDate = record.inclusive_dates?.[0];
         const startYear = startDate ? new Date(startDate).getFullYear() : null;
@@ -288,6 +290,9 @@ export function TrainingsManagement({
                 <DropdownMenuCheckboxItem checked={filterMode === "with_documents"} onCheckedChange={() => setFilterMode("with_documents")}>
                   With documents only
                 </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={filterMode === "created_by_me"} onCheckedChange={() => setFilterMode("created_by_me")}>
+                  Created by me
+                </DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem checked={filterMode === "this_year"} onCheckedChange={() => setFilterMode("this_year")}>
                   This year only
                 </DropdownMenuCheckboxItem>
@@ -314,8 +319,35 @@ export function TrainingsManagement({
               <TableBody>
                 {filteredRecords.length > 0 ? (
                   filteredRecords.map((record) => (
-                    <TableRow key={record.id}>
-                      <TableCell className="py-4 text-base font-medium">{record.training_title}</TableCell>
+                    <TableRow
+                      key={record.id}
+                      title={
+                        userType === "unit_coordinator" &&
+                        record.created_by !== currentUserId &&
+                        record.creator_full_name
+                          ? `Training is created by: ${record.creator_full_name}`
+                          : undefined
+                      }
+                    >
+                      <TableCell className="py-4 text-base font-medium">
+                        <div className="flex items-center gap-2">
+                          <span>{record.training_title}</span>
+                          {userType === "unit_coordinator" && record.created_by !== currentUserId && record.creator_full_name ? (
+                            <TooltipProvider delayDuration={150}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="cursor-help text-xs text-muted-foreground underline decoration-dotted underline-offset-4">
+                                    coworker
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Training is created by: {record.creator_full_name}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : null}
+                        </div>
+                      </TableCell>
                       <TableCell className="py-4 text-base">{record.related_project_title || "-"}</TableCell>
                       <TableCell className="py-4 text-base">
                         {getCategoryLabel(record)}

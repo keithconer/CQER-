@@ -46,6 +46,12 @@ import { AwardsRecognitionManagement } from "@/components/dashboard/awards-recog
 import { getOtherActivities, type OtherActivityRecord } from "@/lib/actions/other-activities";
 import { OtherActivitiesManagement } from "@/components/dashboard/other-activities-management";
 import { ProjectLeaderDashboard } from "@/components/dashboard/project-leader-dashboard";
+import {
+  UnitCoordinatorDashboard,
+  type UnitDashboardRecord,
+  type UnitDashboardTraining,
+  type UnitDashboardUser,
+} from "@/components/dashboard/unit-coordinator-dashboard";
 
 
 function extractPartnerAgencyNames(projects: Project[]) {
@@ -115,6 +121,16 @@ type FacultyInvolvementSummary = {
   name: string;
   hoursRendered: number;
 };
+
+function buildUnitRecordTitle(
+  value: unknown,
+  fallback: string
+) {
+  if (typeof value === "string" && value.trim()) {
+    return value.trim();
+  }
+  return fallback;
+}
 
 function getFundingType(project: Project) {
   const source = (project.funding_source || "").toLowerCase();
@@ -553,6 +569,9 @@ export default async function DashboardPage({
   let projectLeaderUtilizationRate = 0;
   let projectLeaderBudgetDetails: ProjectBudgetDetail[] = [];
   let projectLeaderFacultyInvolvement: FacultyInvolvementSummary[] = [];
+  let unitDashboardUsers: UnitDashboardUser[] = [];
+  let unitDashboardTrainings: UnitDashboardTraining[] = [];
+  let unitDashboardRecords: UnitDashboardRecord[] = [];
 
   if (profile.user_type === "super_admin") {
     const adminClient = createAdminClient();
@@ -785,6 +804,176 @@ export default async function DashboardPage({
     const trainings =
       trainingRecords.length > 0 ? trainingRecords : (await getTrainings()).data || [];
     analyticsTrainings = trainings.length;
+
+    if (profile.user_type === "unit_coordinator" && profile.department && profile.unit) {
+      const { data: departmentProfiles } = await adminClient
+        .from("profiles")
+        .select("id, first_name, last_name, user_type, unit, department")
+        .in("user_type", ["college_coordinator", "unit_coordinator", "project_leader"])
+        .eq("department", profile.department);
+
+      const scopedUsers = (departmentProfiles || []).filter((item) => {
+        if (item.user_type === "college_coordinator") return true;
+        return item.unit === profile.unit;
+      });
+
+      unitDashboardUsers = scopedUsers.map((item) => ({
+        id: item.id,
+        name: `${item.first_name || ""} ${item.last_name || ""}`.trim() || "Unnamed user",
+        userType: item.user_type,
+        unit: item.unit || null,
+        department: item.department || null,
+      }));
+
+      const scopedCreatorIds = Array.from(new Set(scopedUsers.map((item) => item.id)));
+      const creatorNameMap = new Map(
+        unitDashboardUsers.map((item) => [item.id, item.name])
+      );
+
+      unitDashboardTrainings = trainings
+        .filter((training) => training.created_by && scopedCreatorIds.includes(training.created_by))
+        .map((training) => ({
+          id: training.id,
+          title: training.training_title,
+          creatorName:
+            training.creator_full_name ||
+            (training.created_by ? creatorNameMap.get(training.created_by) : null) ||
+            "Unknown user",
+          createdBy: training.created_by || null,
+          createdAt: (training as { created_at?: string | null }).created_at || null,
+          venue: training.venue_platform || null,
+          participants: training.participants_overall_total || 0,
+        }));
+
+      const [
+        projectsResult,
+        budgetResult,
+        ordinanceResult,
+        impactResult,
+        extensionResult,
+        awardsResult,
+        otherResult,
+        consultancyResult,
+        technicalResult,
+        adoptersResult,
+        technologyResult,
+        iecResult,
+      ] = scopedCreatorIds.length
+        ? await Promise.all([
+            adminClient.from("projects").select("id, created_by, created_at, title").in("created_by", scopedCreatorIds),
+            adminClient.from("budget_utilizations").select("id, created_by, created_at, project_title").in("created_by", scopedCreatorIds),
+            adminClient.from("ordinance_resolutions").select("id, created_by, created_at, name").in("created_by", scopedCreatorIds),
+            adminClient.from("impact_assessments").select("id, created_by, created_at, activity_name").in("created_by", scopedCreatorIds),
+            adminClient.from("extension_programs").select("id, created_by, created_at, activity_title").in("created_by", scopedCreatorIds),
+            adminClient.from("awards_recognitions").select("id, created_by, created_at, award_title").in("created_by", scopedCreatorIds),
+            adminClient.from("other_activities").select("id, created_by, created_at, activity_title").in("created_by", scopedCreatorIds),
+            adminClient.from("consultancy_extensions").select("id, created_by, created_at, title_of_consultancy").in("created_by", scopedCreatorIds),
+            adminClient.from("technical_advisory_services").select("id, created_by, created_at, agency_name").in("created_by", scopedCreatorIds),
+            adminClient.from("adopters_with_enterprise").select("id, created_by, created_at, technology_transferred").in("created_by", scopedCreatorIds),
+            adminClient.from("technologies_innovations_commercialized").select("id, created_by, created_at, technology_name").in("created_by", scopedCreatorIds),
+            adminClient.from("iec_materials").select("id, created_by, created_at, title").in("created_by", scopedCreatorIds),
+          ])
+        : Array(12).fill({ data: [] });
+
+      unitDashboardRecords = [
+        ...((projectsResult.data || []).map((record: { id: string; created_by: string; created_at: string | null; title: string | null }) => ({
+          id: `projects-${record.id}`,
+          title: buildUnitRecordTitle(record.title, "Untitled project"),
+          moduleLabel: "Project Registration",
+          creatorName: creatorNameMap.get(record.created_by) || "Unknown user",
+          createdAt: record.created_at || null,
+        })) as UnitDashboardRecord[]),
+        ...((unitDashboardTrainings.map((record) => ({
+          id: `trainings-${record.id}`,
+          title: buildUnitRecordTitle(record.title, "Training record"),
+          moduleLabel: "Trainings",
+          creatorName: record.creatorName,
+          createdAt: record.createdAt,
+        })) as UnitDashboardRecord[])),
+        ...((budgetResult.data || []).map((record: { id: string; created_by: string; created_at: string | null; project_title: string | null }) => ({
+          id: `budget-${record.id}`,
+          title: buildUnitRecordTitle(record.project_title, "Budget utilization"),
+          moduleLabel: "Budget Utilization",
+          creatorName: creatorNameMap.get(record.created_by) || "Unknown user",
+          createdAt: record.created_at || null,
+        })) as UnitDashboardRecord[]),
+        ...((ordinanceResult.data || []).map((record: { id: string; created_by: string; created_at: string | null; name: string | null }) => ({
+          id: `ordinance-${record.id}`,
+          title: buildUnitRecordTitle(record.name, "Ordinance / resolution"),
+          moduleLabel: "Ordinance / Resolution",
+          creatorName: creatorNameMap.get(record.created_by) || "Unknown user",
+          createdAt: record.created_at || null,
+        })) as UnitDashboardRecord[]),
+        ...((impactResult.data || []).map((record: { id: string; created_by: string; created_at: string | null; activity_name: string | null }) => ({
+          id: `impact-${record.id}`,
+          title: buildUnitRecordTitle(record.activity_name, "Impact / assessment"),
+          moduleLabel: "Impact / Assessment",
+          creatorName: creatorNameMap.get(record.created_by) || "Unknown user",
+          createdAt: record.created_at || null,
+        })) as UnitDashboardRecord[]),
+        ...((extensionResult.data || []).map((record: { id: string; created_by: string; created_at: string | null; activity_title: string | null }) => ({
+          id: `extension-${record.id}`,
+          title: buildUnitRecordTitle(record.activity_title, "Extension program"),
+          moduleLabel: "Extension Program",
+          creatorName: creatorNameMap.get(record.created_by) || "Unknown user",
+          createdAt: record.created_at || null,
+        })) as UnitDashboardRecord[]),
+        ...((awardsResult.data || []).map((record: { id: string; created_by: string; created_at: string | null; award_title: string | null }) => ({
+          id: `awards-${record.id}`,
+          title: buildUnitRecordTitle(record.award_title, "Award / recognition"),
+          moduleLabel: "Awards and Recognition",
+          creatorName: creatorNameMap.get(record.created_by) || "Unknown user",
+          createdAt: record.created_at || null,
+        })) as UnitDashboardRecord[]),
+        ...((otherResult.data || []).map((record: { id: string; created_by: string; created_at: string | null; activity_title: string | null }) => ({
+          id: `other-${record.id}`,
+          title: buildUnitRecordTitle(record.activity_title, "Other activity"),
+          moduleLabel: "Other Activities",
+          creatorName: creatorNameMap.get(record.created_by) || "Unknown user",
+          createdAt: record.created_at || null,
+        })) as UnitDashboardRecord[]),
+        ...((consultancyResult.data || []).map((record: { id: string; created_by: string; created_at: string | null; title_of_consultancy: string | null }) => ({
+          id: `consultancy-${record.id}`,
+          title: buildUnitRecordTitle(record.title_of_consultancy, "Consultancy"),
+          moduleLabel: "Consultancy",
+          creatorName: creatorNameMap.get(record.created_by) || "Unknown user",
+          createdAt: record.created_at || null,
+        })) as UnitDashboardRecord[]),
+        ...((technicalResult.data || []).map((record: { id: string; created_by: string; created_at: string | null; agency_name: string | null }) => ({
+          id: `technical-${record.id}`,
+          title: buildUnitRecordTitle(record.agency_name, "Technical advisory"),
+          moduleLabel: "Technical Advisory",
+          creatorName: creatorNameMap.get(record.created_by) || "Unknown user",
+          createdAt: record.created_at || null,
+        })) as UnitDashboardRecord[]),
+        ...((adoptersResult.data || []).map((record: { id: string; created_by: string; created_at: string | null; technology_transferred: string | null }) => ({
+          id: `adopters-${record.id}`,
+          title: buildUnitRecordTitle(record.technology_transferred, "Adopters with enterprise"),
+          moduleLabel: "Adopters with Enterprise",
+          creatorName: creatorNameMap.get(record.created_by) || "Unknown user",
+          createdAt: record.created_at || null,
+        })) as UnitDashboardRecord[]),
+        ...((technologyResult.data || []).map((record: { id: string; created_by: string; created_at: string | null; technology_name: string | null }) => ({
+          id: `technology-${record.id}`,
+          title: buildUnitRecordTitle(record.technology_name, "Technology record"),
+          moduleLabel: "Technologies / Innovations Commercialized",
+          creatorName: creatorNameMap.get(record.created_by) || "Unknown user",
+          createdAt: record.created_at || null,
+        })) as UnitDashboardRecord[]),
+        ...((iecResult.data || []).map((record: { id: string; created_by: string; created_at: string | null; title: string | null }) => ({
+          id: `iec-${record.id}`,
+          title: buildUnitRecordTitle(record.title, "IEC material"),
+          moduleLabel: "IEC Materials",
+          creatorName: creatorNameMap.get(record.created_by) || "Unknown user",
+          createdAt: record.created_at || null,
+        })) as UnitDashboardRecord[]),
+      ].sort((left, right) => {
+        const leftTime = left.createdAt ? new Date(left.createdAt).getTime() : 0;
+        const rightTime = right.createdAt ? new Date(right.createdAt).getTime() : 0;
+        return rightTime - leftTime;
+      });
+    }
+
     const budgetTotals = resolvedProjects.reduce(
       (acc, project) => {
         const budgetFromTotal =
@@ -1190,6 +1379,25 @@ export default async function DashboardPage({
               budgetDetails={projectLeaderBudgetDetails}
               facultyInvolvement={projectLeaderFacultyInvolvement}
             />
+          ) : userType === "unit_coordinator" ? (
+            <>
+              <UnitCoordinatorDashboard
+                currentUserId={user.id}
+                scopeLabel={analyticsScopeLabel}
+                users={unitDashboardUsers}
+                trainings={unitDashboardTrainings}
+                records={unitDashboardRecords}
+              />
+
+              <div className="grid gap-4 lg:grid-cols-12">
+                <div className="lg:col-span-12">
+                  <ActiveCoordinators
+                    coordinators={leaderboard}
+                    departments={[...DEPARTMENTS]}
+                  />
+                </div>
+              </div>
+            </>
           ) : (
             <>
               <DashboardAnalytics
