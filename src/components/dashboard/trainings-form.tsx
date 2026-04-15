@@ -443,6 +443,56 @@ function parseDateInput(value: string) {
   return parsed;
 }
 
+function daysInMonth(month: number, year?: number | null) {
+  if (!month || month < 1 || month > 12) return 31;
+  const safeYear = year && year >= 1 ? year : 2024;
+  return new Date(safeYear, month, 0).getDate();
+}
+
+function maskDateInput(rawValue: string) {
+  const digits = rawValue.replace(/\D/g, "").slice(0, 8);
+  if (!digits) return "";
+  const monthRaw = digits.slice(0, 2);
+  const dayRaw = digits.slice(2, 4);
+  const yearRaw = digits.slice(4, 8);
+
+  let masked = "";
+
+  if (monthRaw.length > 0) {
+    if (monthRaw.length === 1) {
+      masked += monthRaw;
+    } else {
+      const month = Math.min(Math.max(Number(monthRaw), 1), 12);
+      masked += String(month).padStart(2, "0");
+    }
+  }
+
+  if (digits.length >= 2) {
+    masked += "/";
+  }
+
+  if (dayRaw.length > 0) {
+    if (dayRaw.length === 1) {
+      masked += dayRaw;
+    } else {
+      const month = monthRaw.length === 2 ? Math.min(Math.max(Number(monthRaw), 1), 12) : 1;
+      const year = yearRaw.length === 4 ? Number(yearRaw) : 2024;
+      const day = Math.min(Math.max(Number(dayRaw), 1), daysInMonth(month, year));
+      masked += String(day).padStart(2, "0");
+    }
+  }
+
+  if (digits.length >= 4) {
+    masked += "/";
+  }
+
+  if (yearRaw.length > 0) {
+    masked += yearRaw;
+  }
+
+  return masked;
+}
+
 function sortDateInputs(values: string[]) {
   return [...values]
     .map((value) => ({ raw: value, parsed: parseDateInput(value) }))
@@ -555,6 +605,37 @@ function NumberField({
           <FormMessage className="text-xs" />
         </FormItem>
       )}
+    />
+  );
+}
+
+function MaskedDateField({
+  value,
+  onChange,
+  disabled,
+  placeholder = "MM/dd/yyyy",
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  placeholder?: string;
+}) {
+  return (
+    <Input
+      value={value}
+      onChange={(event) => onChange(maskDateInput(event.target.value))}
+      onKeyDown={(event) => {
+        const allowedKeys = ["Backspace", "Delete", "Tab", "ArrowLeft", "ArrowRight", "Home", "End"];
+        if (allowedKeys.includes(event.key) || event.ctrlKey || event.metaKey) return;
+        if (!/^\d$/.test(event.key)) {
+          event.preventDefault();
+        }
+      }}
+      disabled={disabled}
+      placeholder={placeholder}
+      inputMode="numeric"
+      maxLength={10}
+      className="h-9 rounded-xl text-xs"
     />
   );
 }
@@ -780,7 +861,7 @@ function buildDefaultValues(
     training_title: record?.training_title || "",
     related_project_id: String(record?.related_project_id || ""),
     related_project_title: String(record?.related_project_title || ""),
-    number_of_days: Number(record?.number_of_days || record?.inclusive_dates?.length || 0),
+    number_of_days: record ? Number(record?.number_of_days || record?.inclusive_dates?.length || 0) : "",
     date_mode: record?.date_mode || "days",
     inclusive_dates: normalizeDateInputArray(record?.inclusive_dates),
     manual_hours: record?.manual_hours ?? null,
@@ -1170,10 +1251,13 @@ export function TrainingsForm({
                             <FormLabel className="text-xs">Number of Days</FormLabel>
                             <FormControl>
                               <Input
-                                type="number"
-                                min="0"
-                                value={typeof field.value === "number" ? field.value : ""}
-                                onChange={(event) => field.onChange(event.target.value === "" ? 0 : Number(event.target.value))}
+                                type="text"
+                                inputMode="numeric"
+                                value={field.value === "" ? "" : String(field.value ?? "")}
+                                onChange={(event) => {
+                                  const digitsOnly = event.target.value.replace(/\D/g, "");
+                                  field.onChange(digitsOnly === "" ? "" : Number(digitsOnly));
+                                }}
                                 disabled={isViewOnly}
                                 className="h-9 rounded-xl text-xs"
                                 placeholder="e.g. 5"
@@ -1231,12 +1315,7 @@ export function TrainingsForm({
                                   <FormItem>
                                     <FormLabel className="text-xs">Date {index + 1}</FormLabel>
                                     <FormControl>
-                                      <Input
-                                        {...field}
-                                        disabled={isViewOnly}
-                                        placeholder="MM/dd/yyyy"
-                                        className="h-9 rounded-xl text-xs"
-                                      />
+                                      <MaskedDateField value={field.value || ""} onChange={field.onChange} disabled={isViewOnly} placeholder="MM/dd/yyyy" />
                                     </FormControl>
                                     <FormMessage className="text-xs" />
                                   </FormItem>
@@ -1599,25 +1678,31 @@ export function TrainingsForm({
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <div className="overflow-hidden rounded-2xl border border-border/40">
-                          <div className="grid grid-cols-[minmax(0,1fr)_110px] bg-muted/30 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                            <span>Category</span>
-                            <span className="text-right">Total</span>
-                          </div>
-                          {participantCategoryConfig.map((item) => {
-                            const total =
-                              Number(participantBreakdown[item.key]?.male || 0) +
-                              Number(participantBreakdown[item.key]?.female || 0);
-                            return (
-                              <div key={item.key} className="grid grid-cols-[minmax(0,1fr)_110px] border-t border-border/40 px-4 py-3 text-sm">
-                                <span>{item.label}</span>
-                                <span className="text-right font-semibold">{total}</span>
+                        <div className="overflow-x-auto rounded-2xl border border-border/40">
+                          <div className="min-w-[900px]">
+                            <div className="grid grid-cols-9 bg-muted/30 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                              {participantCategoryConfig.map((item) => (
+                                <div key={`header-${item.key}`} className="border-r border-border/40 px-3 py-3 text-center last:border-r-0">
+                                  {item.label}
+                                </div>
+                              ))}
+                              <div className="px-3 py-3 text-center">Total</div>
+                            </div>
+                            <div className="grid grid-cols-9 text-sm">
+                              {participantCategoryConfig.map((item) => {
+                                const total =
+                                  Number(participantBreakdown[item.key]?.male || 0) +
+                                  Number(participantBreakdown[item.key]?.female || 0);
+                                return (
+                                  <div key={`value-${item.key}`} className="border-r border-t border-border/40 px-3 py-4 text-center font-semibold last:border-r-0">
+                                    {total}
+                                  </div>
+                                );
+                              })}
+                              <div className="border-t border-border/40 bg-muted/20 px-3 py-4 text-center font-semibold">
+                                {grandTotal}
                               </div>
-                            );
-                          })}
-                          <div className="grid grid-cols-[minmax(0,1fr)_110px] border-t border-border/40 bg-muted/20 px-4 py-3 text-sm font-semibold">
-                            <span>Total</span>
-                            <span className="text-right">{grandTotal}</span>
+                            </div>
                           </div>
                         </div>
                       </CardContent>
