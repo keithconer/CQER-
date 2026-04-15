@@ -17,6 +17,7 @@ export interface TrainingPayload {
   training_title: string;
   related_project_id?: string | null;
   related_project_title?: string;
+  number_of_days?: number;
   date_mode: "days" | "hours";
   inclusive_dates: string[];
   manual_hours: number | null;
@@ -25,6 +26,7 @@ export interface TrainingPayload {
   sdg_main?: string[];
   sdg_sub?: string[];
   training_category: "TVL" | "CE" | "GAD" | "AE" | "BE" | "OTHERS";
+  training_categories?: ("TVL" | "CE" | "GAD" | "AE" | "BE" | "OTHERS")[];
   training_category_other: string;
   training_mode: "FTF" | "O" | "H";
   faculty_male: number;
@@ -38,6 +40,7 @@ export interface TrainingPayload {
   cvsu_students_female: number;
   partner_agencies_male: number;
   partner_agencies_female: number;
+  participant_breakdown?: Record<string, { male: number; female: number }>;
   participants_prefer_not_say: number;
   participants_male_total: number;
   participants_female_total: number;
@@ -71,7 +74,6 @@ export interface TrainingPayload {
   total_requests_responded_next_3_days: number;
   amount_charged_to_cvsu: number;
   amount_charged_to_partner_agency: number;
-  partner_agency_amount_type?: "estimated" | "exact";
   expense_partner_agency_name?: string;
   partner_agencies: string[];
   thematic_area: string[];

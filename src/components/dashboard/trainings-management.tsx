@@ -65,7 +65,18 @@ function getDuration(record: TrainingRecord) {
   if (record.date_mode === "hours") {
     return `${record.manual_hours || 0} hour/s`;
   }
-  return `${record.conducted_days_count || record.inclusive_dates?.length || 0} day/s`;
+  return `${record.number_of_days || record.conducted_days_count || record.inclusive_dates?.length || 0} day/s`;
+}
+
+function getCategoryLabel(record: TrainingRecord) {
+  const categories = record.training_categories?.length ? record.training_categories : [record.training_category];
+  const labels = categories.map((value) => {
+    if (value === "OTHERS") {
+      return record.training_category_other ? `Others: ${record.training_category_other}` : "Others";
+    }
+    return value;
+  });
+  return labels.join(", ");
 }
 
 async function exportExcel(records: TrainingRecord[]) {
@@ -96,7 +107,7 @@ async function exportExcel(records: TrainingRecord[]) {
     sheet.addRow({
       title: record.training_title,
       project: record.related_project_title || "-",
-      category: record.training_category === "OTHERS" ? `Others: ${record.training_category_other || "-"}` : record.training_category,
+      category: getCategoryLabel(record),
       mode: record.training_mode,
       venue: record.venue_platform,
       dates: getDateRange(record),
@@ -135,7 +146,7 @@ async function exportPdf(records: TrainingRecord[]) {
     body: records.map((record) => ([
       record.training_title,
       record.related_project_title || "-",
-      record.training_category === "OTHERS" ? `Others: ${record.training_category_other || "-"}` : record.training_category,
+      getCategoryLabel(record),
       record.training_mode,
       record.venue_platform,
       getDateRange(record),
@@ -175,7 +186,7 @@ export function TrainingsManagement({
         record.training_title,
         record.related_project_title || "",
         record.venue_platform,
-        record.training_category,
+        getCategoryLabel(record),
         record.training_category_other || "",
         getDateRange(record),
       ]
@@ -300,7 +311,7 @@ export function TrainingsManagement({
                       <TableCell className="py-4 text-base font-medium">{record.training_title}</TableCell>
                       <TableCell className="py-4 text-base">{record.related_project_title || "-"}</TableCell>
                       <TableCell className="py-4 text-base">
-                        {record.training_category === "OTHERS" ? `Others: ${record.training_category_other || "-"}` : record.training_category}
+                        {getCategoryLabel(record)}
                       </TableCell>
                       <TableCell className="py-4 text-base">{record.venue_platform}</TableCell>
                       <TableCell className="py-4 text-base">

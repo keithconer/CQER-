@@ -4,7 +4,7 @@ import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useFieldArray, useForm, useWatch, type Control, type FieldPath } from "react-hook-form";
 import * as z from "zod";
-import { format } from "date-fns";
+import { format, isValid, parse } from "date-fns";
 import {
   BookOpenCheck,
   Briefcase,
@@ -25,7 +25,6 @@ import {
 import { StepIndicator } from "@/components/step-indicator";
 import { FileUpload } from "@/components/dashboard/file-upload";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -83,15 +82,15 @@ const categoryOptions = [
   { value: "OTHERS", label: "Others" },
 ] as const;
 
+const trainingCategoryValues = categoryOptions.map((option) => option.value) as [
+  (typeof categoryOptions)[number]["value"],
+  ...(typeof categoryOptions)[number]["value"][]
+];
+
 const modeOptions = [
   { value: "FTF", label: "F2F - Face-to-face" },
   { value: "O", label: "O - Online / Videoconferencing" },
   { value: "H", label: "H - Hybrid" },
-] as const;
-
-const partnerAmountTypeOptions = [
-  { value: "estimated", label: "Estimated" },
-  { value: "exact", label: "Exact" },
 ] as const;
 
 const disabilityOptions = [
@@ -112,6 +111,7 @@ const programOptions = Array.from(new Set([...DEPARTMENTS, ...getAllUnits()])).s
 const textValue = z.string().trim().min(1, "This field is required.");
 const optionalTextValue = z.string().trim().optional().or(z.literal(""));
 const nonNegativeNumber = z.coerce.number().min(0, "Value must be 0 or greater.");
+const dateInputSchema = z.string().trim().regex(/^\d{2}\/\d{2}\/\d{4}$/, "Use MM/dd/yyyy format.");
 
 const ratingBreakdownSchema = z.object({
   "5": nonNegativeNumber.default(0),
@@ -128,6 +128,22 @@ const studentSchema = z.object({
 
 const disabilitySchema = z.object({
   disability_type: textValue,
+});
+
+const participantBucketSchema = z.object({
+  male: nonNegativeNumber.default(0),
+  female: nonNegativeNumber.default(0),
+});
+
+const participantBreakdownSchema = z.object({
+  student: participantBucketSchema,
+  farmer: participantBucketSchema,
+  fisherfolk: participantBucketSchema,
+  ag_technical: participantBucketSchema,
+  government_employee: participantBucketSchema,
+  private_employee: participantBucketSchema,
+  four_ps: participantBucketSchema,
+  others: participantBucketSchema,
 });
 
 const formSchema = z
@@ -147,14 +163,15 @@ const formSchema = z
       .regex(/^[A-Za-z0-9\s.,()/-]+$/, "Use letters, numbers, and basic punctuation only."),
     related_project_id: optionalTextValue,
     related_project_title: optionalTextValue,
+    number_of_days: z.coerce.number().int().min(0).default(0),
     date_mode: z.enum(["days", "hours"]).default("days"),
-    inclusive_dates: z.array(z.date()).default([]),
+    inclusive_dates: z.array(dateInputSchema).default([]),
     manual_hours: z.coerce.number().min(0).max(8).nullable().default(null),
     venue_platform: textValue,
     sdg_main: z.array(z.string()).min(1, "Select at least one main SDG."),
     sdg_sub: z.array(z.string()).min(1, "Select at least one sub SDG."),
     thematic_area: z.array(z.string()).min(1, "Select at least one thematic area."),
-    training_category: z.enum(["TVL", "CE", "GAD", "AE", "BE", "OTHERS"]),
+    training_categories: z.array(z.enum(trainingCategoryValues)).min(1, "Select at least one category."),
     training_category_other: optionalTextValue,
     training_mode: z.enum(["FTF", "O", "H"]),
     faculty_male: nonNegativeNumber.default(0),
@@ -168,6 +185,7 @@ const formSchema = z
     cvsu_students_female: nonNegativeNumber.default(0),
     partner_agencies_male: nonNegativeNumber.default(0),
     partner_agencies_female: nonNegativeNumber.default(0),
+    participant_breakdown: participantBreakdownSchema,
     participants_male_total: nonNegativeNumber.default(0),
     participants_female_total: nonNegativeNumber.default(0),
     participants_overall_total: nonNegativeNumber.default(0),
@@ -188,7 +206,6 @@ const formSchema = z
     total_requests_responded_next_3_days: nonNegativeNumber.default(0),
     amount_charged_to_cvsu: z.coerce.number().min(0).default(0),
     amount_charged_to_partner_agency: z.coerce.number().min(0).default(0),
-    partner_agency_amount_type: z.enum(["estimated", "exact"]).default("estimated"),
     expense_partner_agency_name: optionalTextValue,
     partner_agencies: z.array(z.string()).default([]),
     remarks: optionalTextValue,
@@ -202,11 +219,40 @@ const formSchema = z
       .default([]),
   })
   .superRefine((values, ctx) => {
+    if (values.date_mode === "days" && values.number_of_days <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["number_of_days"],
+        message: "Enter the number of days first.",
+      });
+    }
+
+    if (values.date_mode === "days" && values.inclusive_dates.length !== values.number_of_days) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["inclusive_dates"],
+        message: "Provide one date for each declared day.",
+      });
+    }
+
     if (values.date_mode === "days" && values.inclusive_dates.length === 0) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["inclusive_dates"],
         message: "Select at least one date.",
+      });
+    }
+
+    if (values.date_mode === "days") {
+      values.inclusive_dates.forEach((rawDate, index) => {
+        const parsedDate = parse(rawDate, "MM/dd/yyyy", new Date());
+        if (!isValid(parsedDate) || format(parsedDate, "MM/dd/yyyy") !== rawDate) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["inclusive_dates", index],
+            message: "Enter a valid date in MM/dd/yyyy format.",
+          });
+        }
       });
     }
 
@@ -218,7 +264,7 @@ const formSchema = z
       });
     }
 
-    if (values.training_category === "OTHERS" && !(values.training_category_other ?? "").trim()) {
+    if (values.training_categories.includes("OTHERS") && !(values.training_category_other ?? "").trim()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["training_category_other"],
@@ -226,7 +272,7 @@ const formSchema = z
       });
     }
 
-    if (values.training_category === "TVL" && values.tvl_disabilities_count !== values.tvl_disability_breakdown.length) {
+    if (values.training_categories.includes("TVL") && values.tvl_disabilities_count !== values.tvl_disability_breakdown.length) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["tvl_disability_breakdown"],
@@ -237,6 +283,7 @@ const formSchema = z
 
 type FormValues = z.infer<typeof formSchema>;
 type RatingBreakdown = FormValues["rating_relevance_breakdown"];
+type ParticipantBreakdown = FormValues["participant_breakdown"];
 type InputValues = z.input<typeof formSchema>;
 type OutputValues = z.output<typeof formSchema>;
 type TrainingsControl = Control<InputValues, unknown, OutputValues>;
@@ -254,6 +301,7 @@ export interface TrainingRecord {
   training_title: string;
   related_project_id?: string | null;
   related_project_title?: string | null;
+  number_of_days?: number | null;
   date_mode: "days" | "hours";
   inclusive_dates: string[] | null;
   manual_hours: number | null;
@@ -262,6 +310,7 @@ export interface TrainingRecord {
   sdg_main?: string[] | null;
   sdg_sub?: string[] | null;
   training_category: "TVL" | "CE" | "GAD" | "AE" | "BE" | "OTHERS";
+  training_categories?: ("TVL" | "CE" | "GAD" | "AE" | "BE" | "OTHERS")[] | null;
   training_category_other: string | null;
   training_mode: "FTF" | "O" | "H";
   faculty_male: number;
@@ -275,6 +324,7 @@ export interface TrainingRecord {
   cvsu_students_female: number;
   partner_agencies_male: number;
   partner_agencies_female: number;
+  participant_breakdown?: ParticipantBreakdown | null;
   participants_prefer_not_say?: number | null;
   participants_male_total: number;
   participants_female_total: number;
@@ -309,7 +359,6 @@ export interface TrainingRecord {
   total_requests_responded_next_3_days: number;
   amount_charged_to_cvsu: number;
   amount_charged_to_partner_agency: number;
-  partner_agency_amount_type?: "estimated" | "exact" | null;
   expense_partner_agency_name?: string | null;
   partner_agencies: string[] | null;
   thematic_area: string[] | null;
@@ -372,30 +421,72 @@ function normalizeRatingBreakdown(value: unknown): RatingBreakdown {
   };
 }
 
-function toDateArray(value: unknown): Date[] {
+function normalizeDateInputArray(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value
     .map((item) => {
-      if (item instanceof Date) return item;
-      if (typeof item === "string") return new Date(item);
-      return null;
+      const raw = String(item || "").trim();
+      if (!raw) return "";
+      const parsed =
+        /^\d{4}-\d{2}-\d{2}$/.test(raw)
+          ? parse(raw, "yyyy-MM-dd", new Date())
+          : parse(raw, "MM/dd/yyyy", new Date());
+      if (!isValid(parsed)) return raw;
+      return format(parsed, "MM/dd/yyyy");
     })
-    .filter((item): item is Date => item instanceof Date && !Number.isNaN(item.getTime()));
+    .filter((item) => item.length > 0);
 }
 
-function sortDates(values: Date[]) {
-  return [...values].sort((left, right) => left.getTime() - right.getTime());
+function parseDateInput(value: string) {
+  const parsed = parse(value, "MM/dd/yyyy", new Date());
+  if (!isValid(parsed) || format(parsed, "MM/dd/yyyy") !== value) return null;
+  return parsed;
 }
 
-function formatDateRange(values: Date[]) {
-  const sorted = sortDates(values);
-  if (sorted.length === 0) return "No dates selected";
-  const start = sorted[0];
-  const end = sorted[sorted.length - 1];
-  return start.getTime() === end.getTime()
-    ? format(start, "MMM d, yyyy")
-    : `${format(start, "MMM d, yyyy")} to ${format(end, "MMM d, yyyy")}`;
+function sortDateInputs(values: string[]) {
+  return [...values]
+    .map((value) => ({ raw: value, parsed: parseDateInput(value) }))
+    .sort((left, right) => {
+      if (!left.parsed && !right.parsed) return left.raw.localeCompare(right.raw);
+      if (!left.parsed) return 1;
+      if (!right.parsed) return -1;
+      return left.parsed.getTime() - right.parsed.getTime();
+    })
+    .map((item) => item.raw);
 }
+
+function normalizeParticipantBreakdown(value: unknown): ParticipantBreakdown {
+  const source = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  const getBucket = (key: keyof ParticipantBreakdown) => {
+    const bucket = source[key] && typeof source[key] === "object" ? (source[key] as Record<string, unknown>) : {};
+    return {
+      male: Number(bucket.male || 0),
+      female: Number(bucket.female || 0),
+    };
+  };
+
+  return {
+    student: getBucket("student"),
+    farmer: getBucket("farmer"),
+    fisherfolk: getBucket("fisherfolk"),
+    ag_technical: getBucket("ag_technical"),
+    government_employee: getBucket("government_employee"),
+    private_employee: getBucket("private_employee"),
+    four_ps: getBucket("four_ps"),
+    others: getBucket("others"),
+  };
+}
+
+const participantCategoryConfig: Array<{ key: keyof ParticipantBreakdown; label: string }> = [
+  { key: "student", label: "Student" },
+  { key: "farmer", label: "Farmer" },
+  { key: "fisherfolk", label: "Fisherfolk" },
+  { key: "ag_technical", label: "Ag Technical" },
+  { key: "government_employee", label: "Government Employee" },
+  { key: "private_employee", label: "Private Employee" },
+  { key: "four_ps", label: "4PS" },
+  { key: "others", label: "Others" },
+];
 
 function getDayMultiplier(mode: "days" | "hours", dayCount: number) {
   if (mode === "hours") return 0.5;
@@ -427,40 +518,6 @@ function getEditableNumberValue(value: unknown, readOnly = false) {
   if (readOnly) return Number(value ?? 0);
   if (value === "" || value == null) return "";
   return Number(value);
-}
-
-function MultiDatePicker({
-  value,
-  onChange,
-  disabled,
-  placeholder,
-}: {
-  value: Date[];
-  onChange: (value: Date[]) => void;
-  disabled?: boolean;
-  placeholder?: string;
-}) {
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          className={cn(
-            "h-9 w-full justify-start rounded-xl border-border/60 bg-background px-3 text-left text-xs font-normal",
-            value.length === 0 && "text-muted-foreground"
-          )}
-          disabled={disabled}
-        >
-          <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-          <span className="truncate">{value.length > 0 ? formatDateRange(value) : placeholder || "Select dates"}</span>
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
-        <Calendar mode="multiple" selected={value} onSelect={(dates) => onChange(dates || [])} initialFocus />
-      </PopoverContent>
-    </Popover>
-  );
 }
 
 function NumberField({
@@ -502,6 +559,80 @@ function NumberField({
   );
 }
 
+function MultiSelectField({
+  control,
+  name,
+  label,
+  options,
+  disabled,
+  placeholder,
+}: {
+  control: TrainingsControl;
+  name: FieldPath<FormValues>;
+  label: string;
+  options: readonly { value: string; label: string }[];
+  disabled?: boolean;
+  placeholder?: string;
+}) {
+  return (
+    <FormField
+      control={control}
+      name={name}
+      render={({ field }) => {
+        const selectedValues = Array.isArray(field.value) ? field.value : [];
+        const selectedLabels = options.filter((option) => selectedValues.includes(option.value)).map((option) => option.label);
+
+        return (
+          <FormItem>
+            <FormLabel className="text-xs">{label}</FormLabel>
+            <Popover>
+              <PopoverTrigger asChild>
+                <FormControl>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={disabled}
+                    className="h-9 w-full justify-between rounded-xl border-border/60 px-3 text-xs font-normal"
+                  >
+                    <span className="truncate text-left">
+                      {selectedLabels.length > 0 ? selectedLabels.join(", ") : placeholder || "Select option/s"}
+                    </span>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+                </FormControl>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-[min(28rem,calc(100vw-2rem))] rounded-2xl p-3">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {options.map((option) => {
+                    const checked = selectedValues.includes(option.value);
+                    return (
+                      <label key={option.value} className="flex items-start gap-3 rounded-xl border border-border/40 px-3 py-2">
+                        <Checkbox
+                          checked={checked}
+                          disabled={disabled}
+                          onCheckedChange={() =>
+                            field.onChange(
+                              checked
+                                ? selectedValues.filter((item: string) => item !== option.value)
+                                : [...selectedValues, option.value]
+                            )
+                          }
+                        />
+                        <span className="text-xs leading-5">{option.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </PopoverContent>
+            </Popover>
+            <FormMessage className="text-xs" />
+          </FormItem>
+        );
+      }}
+    />
+  );
+}
+
 function RatingBreakdownFields({
   control,
   name,
@@ -514,11 +645,12 @@ function RatingBreakdownFields({
   disabled?: boolean;
 }) {
   return (
-    <div className="rounded-2xl border border-border/40 bg-background p-4">
-      <div className="mb-4">
+    <div className="rounded-2xl border border-border/40 bg-background p-3">
+      <div className="mb-3 flex items-center justify-between gap-3">
         <h4 className="text-sm font-semibold">{title}</h4>
+        <BookOpenCheck className="h-4 w-4 text-muted-foreground" />
       </div>
-      <div className="grid gap-4 md:grid-cols-5">
+      <div className="grid gap-3 grid-cols-2 md:grid-cols-5">
         {(["5", "4", "3", "2", "1"] as const).map((score) => (
           <FormField
             key={score}
@@ -535,7 +667,7 @@ function RatingBreakdownFields({
                     value={getEditableNumberValue(field.value)}
                     onChange={(event) => field.onChange(event.target.value === "" ? "" : Number(event.target.value))}
                     disabled={disabled}
-                    className="h-10 rounded-xl text-sm"
+                    className="h-9 rounded-xl text-xs"
                   />
                 </FormControl>
                 <FormMessage className="text-xs" />
@@ -648,14 +780,18 @@ function buildDefaultValues(
     training_title: record?.training_title || "",
     related_project_id: String(record?.related_project_id || ""),
     related_project_title: String(record?.related_project_title || ""),
+    number_of_days: Number(record?.number_of_days || record?.inclusive_dates?.length || 0),
     date_mode: record?.date_mode || "days",
-    inclusive_dates: toDateArray(record?.inclusive_dates),
+    inclusive_dates: normalizeDateInputArray(record?.inclusive_dates),
     manual_hours: record?.manual_hours ?? null,
     venue_platform: record?.venue_platform || "",
     sdg_main: normalizeStringArray(record?.sdg_main),
     sdg_sub: normalizeStringArray(record?.sdg_sub),
     thematic_area: normalizeStringArray(record?.thematic_area),
-    training_category: record?.training_category || "TVL",
+    training_categories:
+      normalizeStringArray(record?.training_categories).length > 0
+        ? (normalizeStringArray(record?.training_categories) as InputValues["training_categories"])
+        : ([record?.training_category || "TVL"] as InputValues["training_categories"]),
     training_category_other: record?.training_category_other || "",
     training_mode: record?.training_mode || "FTF",
     faculty_male: editableNumber(record?.faculty_male),
@@ -669,6 +805,7 @@ function buildDefaultValues(
     cvsu_students_female: editableNumber(record?.cvsu_students_female),
     partner_agencies_male: editableNumber(record?.partner_agencies_male),
     partner_agencies_female: editableNumber(record?.partner_agencies_female),
+    participant_breakdown: normalizeParticipantBreakdown(record?.participant_breakdown),
     participants_male_total: Number(record?.participants_male_total || 0),
     participants_female_total: Number(record?.participants_female_total || 0),
     participants_overall_total: Number(record?.participants_overall_total || 0),
@@ -689,7 +826,6 @@ function buildDefaultValues(
     total_requests_responded_next_3_days: editableNumber(record?.total_requests_responded_next_3_days),
     amount_charged_to_cvsu: editableNumber(record?.amount_charged_to_cvsu),
     amount_charged_to_partner_agency: editableNumber(record?.amount_charged_to_partner_agency),
-    partner_agency_amount_type: record?.partner_agency_amount_type || "estimated",
     expense_partner_agency_name:
       record?.expense_partner_agency_name || normalizeStringArray(record?.partner_agencies)[0] || "",
     partner_agencies: normalizeStringArray(record?.partner_agencies),
@@ -728,28 +864,30 @@ export function TrainingsForm({
     name: "tvl_disability_breakdown",
   });
 
+  const numberOfDays = Number(useWatch({ control: form.control, name: "number_of_days" }) || 0);
   const dateMode = useWatch({ control: form.control, name: "date_mode" }) ?? "days";
   const selectedDates = useWatch({ control: form.control, name: "inclusive_dates" }) || [];
   const manualHours = Number(useWatch({ control: form.control, name: "manual_hours" }) || 0);
-  const trainingCategory = useWatch({ control: form.control, name: "training_category" });
+  const trainingCategories = useWatch({ control: form.control, name: "training_categories" }) || [];
   const disabilityCount = Number(useWatch({ control: form.control, name: "tvl_disabilities_count" }) || 0);
 
-  const facultyMale = Number(useWatch({ control: form.control, name: "faculty_male" }) || 0);
-  const facultyFemale = Number(useWatch({ control: form.control, name: "faculty_female" }) || 0);
-  const nonAcademicMale = Number(useWatch({ control: form.control, name: "non_academic_male" }) || 0);
-  const nonAcademicFemale = Number(useWatch({ control: form.control, name: "non_academic_female" }) || 0);
-  const studentsMale = Number(useWatch({ control: form.control, name: "cvsu_students_male" }) || 0);
-  const studentsFemale = Number(useWatch({ control: form.control, name: "cvsu_students_female" }) || 0);
-  const partnerMale = Number(useWatch({ control: form.control, name: "partner_agencies_male" }) || 0);
-  const partnerFemale = Number(useWatch({ control: form.control, name: "partner_agencies_female" }) || 0);
+  const participantBreakdown = useWatch({ control: form.control, name: "participant_breakdown" }) ?? normalizeParticipantBreakdown(null);
 
-  const maleTotal = facultyMale + nonAcademicMale + studentsMale + partnerMale;
-  const femaleTotal = facultyFemale + nonAcademicFemale + studentsFemale + partnerFemale;
+  const maleTotal = participantCategoryConfig.reduce((sum, item) => sum + Number(participantBreakdown[item.key]?.male || 0), 0);
+  const femaleTotal = participantCategoryConfig.reduce((sum, item) => sum + Number(participantBreakdown[item.key]?.female || 0), 0);
   const grandTotal = maleTotal + femaleTotal;
-  const conductedDays = dateMode === "days" ? selectedDates.length : 0;
+  const conductedDays = dateMode === "days" ? numberOfDays : 0;
   const dayMultiplier = getDayMultiplier(dateMode, conductedDays);
   const daysTrainedPerWeight = dateMode === "hours" ? 0.5 : Number((conductedDays * dayMultiplier).toFixed(2));
   const weightedDaysTrained = Number((grandTotal * daysTrainedPerWeight).toFixed(2));
+
+  React.useEffect(() => {
+    const currentDates = form.getValues("inclusive_dates") || [];
+    const nextLength = Math.max(0, numberOfDays);
+    if (currentDates.length === nextLength) return;
+    const nextDates = Array.from({ length: nextLength }, (_, index) => currentDates[index] || "");
+    form.setValue("inclusive_dates", nextDates, { shouldDirty: true });
+  }, [form, numberOfDays]);
 
   React.useEffect(() => {
     form.setValue("participants_male_total", maleTotal, { shouldDirty: true });
@@ -787,7 +925,8 @@ export function TrainingsForm({
     "sdg_main",
     "sdg_sub",
     "thematic_area",
-    "training_category",
+    "number_of_days",
+    "training_categories",
     "training_mode",
   ];
   const stepTwoFields: FieldPath<FormValues>[] = [
@@ -806,7 +945,6 @@ export function TrainingsForm({
     "total_trainees_surveyed",
     "amount_charged_to_cvsu",
     "amount_charged_to_partner_agency",
-    "partner_agency_amount_type",
   ];
 
   async function validateStep(step: number) {
@@ -838,6 +976,11 @@ export function TrainingsForm({
   const handleSubmit = React.useCallback(async (values: FormValues) => {
     setIsSubmitting(true);
     const selectedProject = projectOptions.find((item) => item.id === values.related_project_id);
+    const sortedInclusiveDates = sortDateInputs(values.inclusive_dates)
+      .map((value) => parseDateInput(value))
+      .filter((value): value is Date => value instanceof Date)
+      .map((date) => format(date, "yyyy-MM-dd"));
+    const hasTVL = values.training_categories.includes("TVL");
     const payload = {
       college: values.college,
       department: values.department,
@@ -850,14 +993,16 @@ export function TrainingsForm({
       training_title: values.training_title,
       related_project_id: values.related_project_id || null,
       related_project_title: selectedProject?.title || values.related_project_title || "",
+      number_of_days: values.number_of_days,
       date_mode: values.date_mode,
-      inclusive_dates: sortDates(values.inclusive_dates).map((date) => format(date, "yyyy-MM-dd")),
+      inclusive_dates: sortedInclusiveDates,
       manual_hours: values.date_mode === "hours" ? values.manual_hours : null,
       venue_platform: values.venue_platform,
       sdg_goals: Array.from(new Set([...values.sdg_main, ...values.sdg_sub])),
       sdg_main: values.sdg_main,
       sdg_sub: values.sdg_sub,
-      training_category: values.training_category,
+      training_category: values.training_categories[0],
+      training_categories: values.training_categories,
       training_category_other: values.training_category_other || "",
       training_mode: values.training_mode,
       faculty_male: values.faculty_male,
@@ -871,23 +1016,24 @@ export function TrainingsForm({
       cvsu_students_female: values.cvsu_students_female,
       partner_agencies_male: values.partner_agencies_male,
       partner_agencies_female: values.partner_agencies_female,
+      participant_breakdown: values.participant_breakdown,
       participants_prefer_not_say: 0,
       participants_male_total: values.participants_male_total,
       participants_female_total: values.participants_female_total,
       participants_overall_total: values.participants_overall_total,
-      category_student: 0,
-      category_farmer: 0,
-      category_fisherfolk: 0,
-      category_ag_technical: 0,
-      category_government_employee: 0,
-      category_private_employee: 0,
-      category_4ps: 0,
-      category_others: 0,
+      category_student: Number(values.participant_breakdown.student.male) + Number(values.participant_breakdown.student.female),
+      category_farmer: Number(values.participant_breakdown.farmer.male) + Number(values.participant_breakdown.farmer.female),
+      category_fisherfolk: Number(values.participant_breakdown.fisherfolk.male) + Number(values.participant_breakdown.fisherfolk.female),
+      category_ag_technical: Number(values.participant_breakdown.ag_technical.male) + Number(values.participant_breakdown.ag_technical.female),
+      category_government_employee: Number(values.participant_breakdown.government_employee.male) + Number(values.participant_breakdown.government_employee.female),
+      category_private_employee: Number(values.participant_breakdown.private_employee.male) + Number(values.participant_breakdown.private_employee.female),
+      category_4ps: Number(values.participant_breakdown.four_ps.male) + Number(values.participant_breakdown.four_ps.female),
+      category_others: Number(values.participant_breakdown.others.male) + Number(values.participant_breakdown.others.female),
       category_total: values.participants_overall_total,
-      tvl_solo_parent: values.training_category === "TVL" ? values.tvl_solo_parent : 0,
-      tvl_4ps_members: values.training_category === "TVL" ? values.tvl_4ps_members : 0,
-      tvl_disabilities_count: values.training_category === "TVL" ? values.tvl_disabilities_count : 0,
-      tvl_disability_breakdown: values.training_category === "TVL" ? values.tvl_disability_breakdown : [],
+      tvl_solo_parent: hasTVL ? values.tvl_solo_parent : 0,
+      tvl_4ps_members: hasTVL ? values.tvl_4ps_members : 0,
+      tvl_disabilities_count: hasTVL ? values.tvl_disabilities_count : 0,
+      tvl_disability_breakdown: hasTVL ? values.tvl_disability_breakdown : [],
       tvl_total_persons_trained: values.total_persons_trained,
       total_persons_trained: values.total_persons_trained,
       conducted_days_count: values.conducted_days_count,
@@ -905,7 +1051,6 @@ export function TrainingsForm({
       total_requests_responded_next_3_days: values.total_requests_responded_next_3_days,
       amount_charged_to_cvsu: values.amount_charged_to_cvsu,
       amount_charged_to_partner_agency: values.amount_charged_to_partner_agency,
-      partner_agency_amount_type: values.partner_agency_amount_type,
       expense_partner_agency_name: values.expense_partner_agency_name || "",
       partner_agencies: values.expense_partner_agency_name ? [values.expense_partner_agency_name] : [],
       thematic_area: values.thematic_area,
@@ -957,7 +1102,7 @@ export function TrainingsForm({
              </div>
              <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-2.5">
                <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80">Training Category</p>
-               <p className="truncate text-xs font-medium text-foreground">{trainingCategory || "N/A"}</p>
+               <p className="truncate text-xs font-medium text-foreground">{trainingCategories.join(", ") || "N/A"}</p>
              </div>
              <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-2.5">
                <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80">Participants</p>
@@ -1016,7 +1161,28 @@ export function TrainingsForm({
                   </div>
 
                   <div className="rounded-2xl border border-border/40 bg-muted/10 p-4">
-                    <div className="grid gap-5 xl:grid-cols-[220px_minmax(0,1fr)_200px_200px]">
+                    <div className="grid gap-5 xl:grid-cols-[220px_220px_minmax(0,1fr)]">
+                      <FormField
+                        control={form.control}
+                        name="number_of_days"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Number of Days</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min="0"
+                                value={typeof field.value === "number" ? field.value : ""}
+                                onChange={(event) => field.onChange(event.target.value === "" ? 0 : Number(event.target.value))}
+                                disabled={isViewOnly}
+                                className="h-9 rounded-xl text-xs"
+                                placeholder="e.g. 5"
+                              />
+                            </FormControl>
+                            <FormMessage className="text-xs" />
+                          </FormItem>
+                        )}
+                      />
                       <FormField
                         control={form.control}
                         name="date_mode"
@@ -1031,33 +1197,61 @@ export function TrainingsForm({
                               </FormControl>
                               <SelectContent>
                                 <SelectItem value="days" className="text-sm">Inclusive dates</SelectItem>
-                                <SelectItem value="hours" className="text-sm">Less than 8 hours</SelectItem>
+                                <SelectItem value="hours" className="text-sm">Hours only</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage className="text-xs" />
                           </FormItem>
                         )}
                       />
-                      {dateMode === "days" ? (
-                        <FormField
-                          control={form.control}
-                          name="inclusive_dates"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-xs">Inclusive Dates</FormLabel>
-                              <FormControl>
-                                <MultiDatePicker
-                                  value={field.value ?? []}
-                                  onChange={field.onChange}
-                                  disabled={isViewOnly}
-                                  placeholder="Select one or more dates"
-                                />
-                              </FormControl>
-                              <FormMessage className="text-xs" />
-                            </FormItem>
+                      <div className="rounded-2xl border border-border/40 bg-background px-4 py-3">
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Schedule Preview</p>
+                        <p className="mt-1 text-xs font-medium text-foreground">
+                          {dateMode === "days"
+                            ? `${numberOfDays || 0} day/s with ${selectedDates.filter(Boolean).length} date field/s ready`
+                            : `${manualHours || 0} hour/s training`}
+                        </p>
+                      </div>
+                    </div>
+
+                    {dateMode === "days" ? (
+                      <div className="mt-5 space-y-4">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                          <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                          Inclusive Dates
+                        </div>
+                        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                          {selectedDates.length > 0 ? (
+                            selectedDates.map((_, index) => (
+                              <FormField
+                                key={`inclusive-date-${index}`}
+                                control={form.control}
+                                name={`inclusive_dates.${index}`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel className="text-xs">Date {index + 1}</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        {...field}
+                                        disabled={isViewOnly}
+                                        placeholder="MM/dd/yyyy"
+                                        className="h-9 rounded-xl text-xs"
+                                      />
+                                    </FormControl>
+                                    <FormMessage className="text-xs" />
+                                  </FormItem>
+                                )}
+                              />
+                            ))
+                          ) : (
+                            <div className="rounded-2xl border border-dashed border-border/50 px-4 py-6 text-center text-xs text-muted-foreground md:col-span-2 xl:col-span-3">
+                              Enter the number of days to generate the date fields.
+                            </div>
                           )}
-                        />
-                      ) : (
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-5 max-w-xs">
                         <FormField
                           control={form.control}
                           name="manual_hours"
@@ -1083,16 +1277,8 @@ export function TrainingsForm({
                             </FormItem>
                           )}
                         />
-                      )}
-                      <FormItem>
-                        <FormLabel className="text-xs">Number of Days</FormLabel>
-                        <Input value={String(conductedDays)} readOnly className="h-9 rounded-xl bg-muted/20 text-xs" />
-                      </FormItem>
-                      <FormItem>
-                        <FormLabel className="text-xs">Number of Hours</FormLabel>
-                        <Input value={dateMode === "hours" ? String(manualHours) : "-"} readOnly className="h-9 rounded-xl bg-muted/20 text-xs" />
-                      </FormItem>
-                    </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="grid gap-6 xl:grid-cols-2">
@@ -1184,29 +1370,13 @@ export function TrainingsForm({
                   />
 
                   <div className="grid gap-4 xl:grid-cols-2">
-                    <FormField
+                    <MultiSelectField
                       control={form.control}
-                      name="training_category"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">Category of Training</FormLabel>
-                          <Select value={field.value} onValueChange={field.onChange} disabled={isViewOnly}>
-                            <FormControl>
-                              <SelectTrigger className="h-9 rounded-xl text-xs">
-                                <SelectValue placeholder="Select category" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {categoryOptions.map((option) => (
-                                <SelectItem key={option.value} value={option.value} className="text-sm">
-                                  {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage className="text-xs" />
-                        </FormItem>
-                      )}
+                      name="training_categories"
+                      label="Category of Training"
+                      options={categoryOptions}
+                      disabled={isViewOnly}
+                      placeholder="Select category/ies"
                     />
                     <FormField
                       control={form.control}
@@ -1234,7 +1404,7 @@ export function TrainingsForm({
                     />
                   </div>
 
-                  {trainingCategory === "OTHERS" && (
+                  {trainingCategories.includes("OTHERS") && (
                     <FormField
                       control={form.control}
                       name="training_category_other"
@@ -1298,7 +1468,7 @@ export function TrainingsForm({
                     Organizing Committee
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    Enter committee counts and list CvSU student organizers with their programs.
+                    Record the organizing committee separately, then encode the participant counts that should be included in the total.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -1370,6 +1540,39 @@ export function TrainingsForm({
                       <NumberField control={form.control} name="partner_agencies_female" label="Female" disabled={isViewOnly} />
                     </CardContent>
                   </Card>
+
+                  <Card className="rounded-2xl border-border/40 shadow-none">
+                    <CardHeader>
+                      <CardTitle className="text-sm">Counted Participants</CardTitle>
+                      <CardDescription className="text-xs">
+                        Only these groups are counted in the participant totals and training computations.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid gap-4 xl:grid-cols-2">
+                      {participantCategoryConfig.map((item) => (
+                        <div key={item.key} className="rounded-2xl border border-border/40 bg-background p-4">
+                          <div className="mb-3 flex items-center gap-2">
+                            <Users className="h-4 w-4 text-muted-foreground" />
+                            <p className="text-sm font-semibold">{item.label}</p>
+                          </div>
+                          <div className="grid gap-4 md:grid-cols-2">
+                            <NumberField
+                              control={form.control}
+                              name={`participant_breakdown.${item.key}.male`}
+                              label="Male"
+                              disabled={isViewOnly}
+                            />
+                            <NumberField
+                              control={form.control}
+                              name={`participant_breakdown.${item.key}.female`}
+                              label="Female"
+                              disabled={isViewOnly}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
                 </CardContent>
               </Card>
             </div>
@@ -1387,21 +1590,85 @@ export function TrainingsForm({
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                    {[
-                      { label: "Faculty Member", male: facultyMale, female: facultyFemale },
-                      { label: "Non-Acad", male: nonAcademicMale, female: nonAcademicFemale },
-                      { label: "CvSU Students", male: studentsMale, female: studentsFemale },
-                      { label: "Partner Agencies", male: partnerMale, female: partnerFemale },
-                    ].map((item) => (
-                      <div key={item.label} className="rounded-2xl border border-border/40 bg-background p-4">
-                        <p className="text-xs font-semibold text-muted-foreground">{item.label}</p>
-                        <div className="mt-3 space-y-1 text-sm">
-                          <p>Male: <span className="font-semibold">{item.male}</span></p>
-                          <p>Female: <span className="font-semibold">{item.female}</span></p>
+                  <div className={cn("grid gap-4", trainingCategories.includes("TVL") ? "xl:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.8fr)]" : "")}>
+                    <Card className="rounded-2xl border-border/40 shadow-none">
+                      <CardHeader>
+                        <CardTitle className="text-sm">Participant Summary</CardTitle>
+                        <CardDescription className="text-xs">
+                          Faculty member, non-acad, and CvSU student organizers are still recorded, but they are not included in this total.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="overflow-hidden rounded-2xl border border-border/40">
+                          <div className="grid grid-cols-[minmax(0,1fr)_110px] bg-muted/30 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                            <span>Category</span>
+                            <span className="text-right">Total</span>
+                          </div>
+                          {participantCategoryConfig.map((item) => {
+                            const total =
+                              Number(participantBreakdown[item.key]?.male || 0) +
+                              Number(participantBreakdown[item.key]?.female || 0);
+                            return (
+                              <div key={item.key} className="grid grid-cols-[minmax(0,1fr)_110px] border-t border-border/40 px-4 py-3 text-sm">
+                                <span>{item.label}</span>
+                                <span className="text-right font-semibold">{total}</span>
+                              </div>
+                            );
+                          })}
+                          <div className="grid grid-cols-[minmax(0,1fr)_110px] border-t border-border/40 bg-muted/20 px-4 py-3 text-sm font-semibold">
+                            <span>Total</span>
+                            <span className="text-right">{grandTotal}</span>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      </CardContent>
+                    </Card>
+
+                    {trainingCategories.includes("TVL") && (
+                      <Card className="rounded-2xl border-border/40 shadow-none">
+                        <CardHeader>
+                          <CardTitle className="text-sm">For TVL Trainings</CardTitle>
+                          <CardDescription className="text-xs">
+                            Record the additional TVL participant breakdown alongside the main total table.
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <NumberField control={form.control} name="tvl_solo_parent" label="No. of participants who are solo parent" disabled={isViewOnly} />
+                          <NumberField control={form.control} name="tvl_4ps_members" label="No. of participants who are 4ps members" disabled={isViewOnly} />
+                          <NumberField control={form.control} name="tvl_disabilities_count" label="No. of participants with disabilities" disabled={isViewOnly} />
+                          {disabilityArray.fields.length > 0 && (
+                            <div className="grid gap-4">
+                              {disabilityArray.fields.map((field, index) => (
+                                <FormField
+                                  key={field.id}
+                                  control={form.control}
+                                  name={`tvl_disability_breakdown.${index}.disability_type`}
+                                  render={({ field: itemField }) => (
+                                    <FormItem>
+                                      <FormLabel className="text-xs">Type of disability {index + 1}</FormLabel>
+                                      <Select value={itemField.value} onValueChange={itemField.onChange} disabled={isViewOnly}>
+                                        <FormControl>
+                                          <SelectTrigger className="h-9 rounded-xl text-xs">
+                                            <SelectValue placeholder="Select disability" />
+                                          </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                          {disabilityOptions.map((option) => (
+                                            <SelectItem key={option} value={option} className="text-sm">
+                                              {option}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                      <FormMessage className="text-xs" />
+                                    </FormItem>
+                                  )}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
                   </div>
 
                   <div className="grid gap-4 md:grid-cols-3">
@@ -1409,50 +1676,6 @@ export function TrainingsForm({
                     <NumberField control={form.control} name="participants_female_total" label="Total Female" disabled readOnly />
                     <NumberField control={form.control} name="participants_overall_total" label="Grand Total of Participants" disabled readOnly />
                   </div>
-
-                  {trainingCategory === "TVL" && (
-                    <Card className="rounded-2xl border-border/40 shadow-none">
-                      <CardHeader><CardTitle className="text-sm">TVL-Specific Fields</CardTitle></CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid gap-4 lg:grid-cols-3">
-                          <NumberField control={form.control} name="tvl_solo_parent" label="Solo Parents" disabled={isViewOnly} />
-                          <NumberField control={form.control} name="tvl_4ps_members" label="4PS Members" disabled={isViewOnly} />
-                          <NumberField control={form.control} name="tvl_disabilities_count" label="With Disabilities" disabled={isViewOnly} />
-                        </div>
-                        {disabilityArray.fields.length > 0 && (
-                          <div className="grid gap-4 lg:grid-cols-2">
-                            {disabilityArray.fields.map((field, index) => (
-                              <FormField
-                                key={field.id}
-                                control={form.control}
-                                name={`tvl_disability_breakdown.${index}.disability_type`}
-                                render={({ field: itemField }) => (
-                                  <FormItem>
-                                    <FormLabel className="text-xs">Disability Type {index + 1}</FormLabel>
-                                    <Select value={itemField.value} onValueChange={itemField.onChange} disabled={isViewOnly}>
-                                      <FormControl>
-                                        <SelectTrigger className="h-10 rounded-xl text-sm">
-                                          <SelectValue placeholder="Select disability" />
-                                        </SelectTrigger>
-                                      </FormControl>
-                                      <SelectContent>
-                                        {disabilityOptions.map((option) => (
-                                          <SelectItem key={option} value={option} className="text-sm">
-                                            {option}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                    <FormMessage className="text-xs" />
-                                  </FormItem>
-                                )}
-                              />
-                            ))}
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  )}
 
                   <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                     <NumberField control={form.control} name="total_persons_trained" label="Total Persons Trained" disabled readOnly />
@@ -1487,30 +1710,6 @@ export function TrainingsForm({
                       <NumberField control={form.control} name="amount_charged_to_partner_agency" label="Amount Charged to Partner Agency" disabled={isViewOnly} />
                     </div>
                     <div className="grid gap-4 xl:grid-cols-2">
-                      <FormField
-                        control={form.control}
-                        name="partner_agency_amount_type"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-xs">Partner Agency Amount Type</FormLabel>
-                            <Select value={field.value} onValueChange={field.onChange} disabled={isViewOnly}>
-                              <FormControl>
-                                <SelectTrigger className="h-10 rounded-xl text-sm">
-                                  <SelectValue placeholder="Select type" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {partnerAmountTypeOptions.map((option) => (
-                                  <SelectItem key={option.value} value={option.value} className="text-sm">
-                                    {option.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage className="text-xs" />
-                          </FormItem>
-                        )}
-                      />
                       <FormField
                         control={form.control}
                         name="expense_partner_agency_name"

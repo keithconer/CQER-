@@ -4125,7 +4125,37 @@ using (
 -- END COPY: Other Activities Module
 -- ============================================================
 
-notify pgrst, 'reload schema';
 -- ============================================================
 -- END: Cleanup Removed Modules
 -- ============================================================
+
+-- ============================================================
+-- Trainings Form Refresh: dynamic dates, multi-category, participant breakdown
+-- ============================================================
+alter table public.trainings
+  add column if not exists number_of_days integer not null default 0,
+  add column if not exists training_categories jsonb not null default '[]'::jsonb,
+  add column if not exists participant_breakdown jsonb not null default '{
+    "student":{"male":0,"female":0},
+    "farmer":{"male":0,"female":0},
+    "fisherfolk":{"male":0,"female":0},
+    "ag_technical":{"male":0,"female":0},
+    "government_employee":{"male":0,"female":0},
+    "private_employee":{"male":0,"female":0},
+    "four_ps":{"male":0,"female":0},
+    "others":{"male":0,"female":0}
+  }'::jsonb;
+
+update public.trainings
+set number_of_days = coalesce(number_of_days, jsonb_array_length(coalesce(inclusive_dates, '[]'::jsonb)))
+where number_of_days = 0;
+
+update public.trainings
+set training_categories = case
+  when jsonb_typeof(training_categories) = 'array' and jsonb_array_length(training_categories) > 0
+    then training_categories
+  else jsonb_build_array(training_category)
+end
+where training_category is not null;
+
+notify pgrst, 'reload schema';
