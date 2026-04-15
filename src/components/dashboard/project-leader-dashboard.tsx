@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   Activity,
@@ -9,6 +10,8 @@ import {
   BriefcaseBusiness,
   BookOpenCheck,
   CalendarRange,
+  ChevronLeft,
+  ChevronRight,
   ClipboardCheck,
   Cpu,
   Factory,
@@ -22,7 +25,6 @@ import {
   Users2,
   Wallet,
   Wrench,
-  LoaderCircle,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -57,6 +59,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 type ModuleCount = {
   label: string;
@@ -234,7 +237,6 @@ function SummaryCard({
   icon: Icon,
   href,
   onClick,
-  loading = false,
 }: {
   label: string;
   value: string | number;
@@ -242,7 +244,6 @@ function SummaryCard({
   icon: LucideIcon;
   href?: string;
   onClick?: () => void;
-  loading?: boolean;
 }) {
   const content = (
     <Card className="border-border/50 bg-card/50 shadow-sm transition-colors hover:bg-muted/30">
@@ -253,7 +254,7 @@ function SummaryCard({
           <p className="text-[10px] text-muted-foreground">{sub}</p>
         </div>
         <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-foreground">
-          {loading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Icon className="h-4 w-4" />}
+          <Icon className="h-4 w-4" />
         </div>
       </CardContent>
     </Card>
@@ -267,6 +268,29 @@ function SummaryCard({
     <button type="button" onClick={onClick} className="block w-full text-left">
       {content}
     </button>
+  );
+}
+
+function getInitials(name: string) {
+  const parts = name
+    .split(" ")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .slice(0, 2);
+  if (parts.length === 0) return "NA";
+  return parts.map((part) => part[0]?.toUpperCase() || "").join("");
+}
+
+function LogoPreloaderOverlay() {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+      <div className="flex flex-col items-center rounded-3xl border border-border/60 bg-background px-8 py-7 shadow-lg">
+        <div className="relative h-20 w-20 preloader-logo">
+          <Image src="/CQERFINAL.png" alt="CQER Logo" fill className="object-contain" />
+        </div>
+        <p className="mt-3 text-[10px] font-medium text-muted-foreground">Loading dashboard...</p>
+      </div>
+    </div>
   );
 }
 
@@ -335,44 +359,6 @@ function BudgetDetailsDialog({
   );
 }
 
-function FacultyDialog({
-  open,
-  onOpenChange,
-  items,
-}: {
-  open: boolean;
-  onOpenChange: (value: boolean) => void;
-  items: FacultyInvolvementSummary[];
-}) {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Faculty Involvement</DialogTitle>
-          <DialogDescription>Faculty members and their rendered hours from technical advisory records.</DialogDescription>
-        </DialogHeader>
-        <ScrollArea className="max-h-[60vh] pr-4">
-          <div className="space-y-3">
-            {items.length > 0 ? (
-              items.map((item) => (
-                <div key={`${item.name}-${item.hoursRendered}`} className="flex items-center justify-between rounded-2xl border border-border/50 bg-muted/20 px-4 py-3">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{item.name}</p>
-                    <p className="text-xs text-muted-foreground">Hours rendered</p>
-                  </div>
-                  <Badge variant="outline">{item.hoursRendered.toLocaleString()} hrs</Badge>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-muted-foreground">No faculty involvement records found.</p>
-            )}
-          </div>
-        </ScrollArea>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 export function ProjectLeaderDashboard({
   projectCount,
   activeProjectCount,
@@ -389,13 +375,19 @@ export function ProjectLeaderDashboard({
   facultyInvolvement,
 }: ProjectLeaderDashboardProps) {
   const router = useRouter();
-  const [isPending, startTransition] = React.useTransition();
+  const [, startTransition] = React.useTransition();
   const [navigatingTo, setNavigatingTo] = React.useState<string | null>(null);
   const [budgetOpen, setBudgetOpen] = React.useState(false);
   const [utilizedOpen, setUtilizedOpen] = React.useState(false);
-  const [facultyOpen, setFacultyOpen] = React.useState(false);
+  const [facultyPage, setFacultyPage] = React.useState(1);
   const populatedModules = moduleCounts.filter((item) => item.value > 0);
   const maxRadar = Math.max(1, ...radarSeries.map((item) => item.fullMark));
+  const facultyPageSize = 5;
+  const facultyTotalPages = Math.max(1, Math.ceil(facultyInvolvement.length / facultyPageSize));
+  const facultyPageItems = facultyInvolvement.slice(
+    (facultyPage - 1) * facultyPageSize,
+    facultyPage * facultyPageSize
+  );
 
   const handleNavigate = React.useCallback((href: string) => {
     setNavigatingTo(href);
@@ -404,19 +396,13 @@ export function ProjectLeaderDashboard({
     });
   }, [router]);
 
+  React.useEffect(() => {
+    setFacultyPage((current) => Math.min(current, facultyTotalPages));
+  }, [facultyTotalPages]);
+
   return (
     <>
-      {navigatingTo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/75 backdrop-blur-sm">
-          <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-background px-5 py-4 shadow-lg">
-            <LoaderCircle className="h-5 w-5 animate-spin text-foreground" />
-            <div>
-              <p className="text-sm font-medium text-foreground">Opening page</p>
-              <p className="text-xs text-muted-foreground">Please wait a moment.</p>
-            </div>
-          </div>
-        </div>
-      )}
+      {navigatingTo ? <LogoPreloaderOverlay /> : null}
       <div className="space-y-5">
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <SummaryCard
@@ -425,7 +411,6 @@ export function ProjectLeaderDashboard({
             sub={`${activeProjectCount} active or ongoing`}
             icon={FolderKanban}
             onClick={() => handleNavigate("/dashboard?panel=projects&view=project-registration")}
-            loading={isPending && navigatingTo === "/dashboard?panel=projects&view=project-registration"}
           />
           <SummaryCard
             label="Trainings"
@@ -433,7 +418,6 @@ export function ProjectLeaderDashboard({
             sub="Training records created"
             icon={BookOpenCheck}
             onClick={() => handleNavigate("/dashboard?panel=trainings")}
-            loading={isPending && navigatingTo === "/dashboard?panel=trainings"}
           />
           <SummaryCard
             label="Budget"
@@ -618,31 +602,77 @@ export function ProjectLeaderDashboard({
           </Card>
         </div>
 
-        <button type="button" onClick={() => setFacultyOpen(true)} className="block w-full text-left">
-          <Card className="border-border/50 bg-card/50 shadow-sm transition-colors hover:bg-muted/30">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-                <Users2 className="h-4 w-4 text-emerald-600" />
-                Faculty Involvement
-              </CardTitle>
-              <CardDescription className="text-xs">
-                View faculty members and the hours they rendered in technical advisory.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {facultyInvolvement.length > 0 ? (
-                facultyInvolvement.slice(0, 4).map((item) => (
-                  <div key={`${item.name}-${item.hoursRendered}`} className="flex items-center justify-between rounded-xl border border-border/40 bg-background/60 px-3 py-2">
-                    <span className="truncate pr-3 text-sm font-medium text-foreground">{item.name}</span>
-                    <Badge variant="outline">{item.hoursRendered.toLocaleString()} hrs</Badge>
+        <Card className="border-border/50 bg-card/50 shadow-sm">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                  <Users2 className="h-4 w-4 text-foreground" />
+                  Faculty Involvement
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Faculty members and rendered hours from technical advisory records.
+                </CardDescription>
+              </div>
+              <Badge variant="outline" className="text-[10px]">
+                {facultyInvolvement.length} total
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {facultyInvolvement.length > 0 ? (
+              <>
+                <div className="space-y-2">
+                  {facultyPageItems.map((item) => (
+                    <div key={`${item.name}-${item.hoursRendered}`} className="flex items-center justify-between rounded-xl border border-border/40 bg-background/70 px-3 py-2.5">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <Avatar size="sm" className="border border-border/50">
+                          <AvatarFallback>{getInitials(item.name)}</AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-foreground">{item.name}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 pl-3">
+                        <Activity className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-xs font-medium text-foreground">{item.hoursRendered.toLocaleString()} hrs</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {facultyTotalPages > 1 ? (
+                  <div className="flex items-center justify-between rounded-xl border border-border/40 bg-muted/20 px-3 py-2">
+                    <p className="text-[11px] text-muted-foreground">
+                      Page {facultyPage} of {facultyTotalPages}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setFacultyPage((page) => Math.max(1, page - 1))}
+                        disabled={facultyPage === 1}
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-border/50 bg-background text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        <ChevronLeft className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFacultyPage((page) => Math.min(facultyTotalPages, page + 1))}
+                        disabled={facultyPage === facultyTotalPages}
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-border/50 bg-background text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        <ChevronRight className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground">No faculty involvement records found.</p>
-              )}
-            </CardContent>
-          </Card>
-        </button>
+                ) : null}
+              </>
+            ) : (
+              <div className="rounded-xl border border-dashed border-border/50 px-4 py-6 text-sm text-muted-foreground">
+                No faculty involvement records found.
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       <BudgetDetailsDialog
@@ -661,7 +691,6 @@ export function ProjectLeaderDashboard({
         items={budgetDetails}
         mode="utilized"
       />
-      <FacultyDialog open={facultyOpen} onOpenChange={setFacultyOpen} items={facultyInvolvement} />
     </>
   );
 }

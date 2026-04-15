@@ -201,7 +201,7 @@ const formSchema = z.object({
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["start_date"],
-      message: "Use M/D/YYYY format.",
+      message: "Use MM/dd/YYYY format.",
     });
   }
 
@@ -209,7 +209,7 @@ const formSchema = z.object({
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["end_date"],
-      message: "Use M/D/YYYY format.",
+      message: "Use MM/dd/YYYY format.",
     });
   }
 
@@ -252,9 +252,9 @@ function formatDateRange(values: Date[]) {
 function parseDateInput(value: string) {
   const trimmed = value.trim();
   if (!trimmed) return null;
-  const parsed = parse(trimmed, "M/d/yyyy", new Date());
+  const parsed = parse(trimmed, "MM/dd/yyyy", new Date());
   if (!isValid(parsed)) return null;
-  const normalized = format(parsed, "M/d/yyyy");
+  const normalized = format(parsed, "MM/dd/yyyy");
   return normalized === trimmed ? parsed : null;
 }
 
@@ -267,91 +267,42 @@ function daysInMonth(month: number, year?: number | null) {
 function maskDateInput(rawValue: string) {
   const digits = rawValue.replace(/\D/g, "").slice(0, 8);
   if (!digits) return "";
+  const monthRaw = digits.slice(0, 2);
+  const dayRaw = digits.slice(2, 4);
+  const yearRaw = digits.slice(4, 8);
 
-  let cursor = 0;
-  let monthDigits = "";
-  const firstMonthDigit = digits[cursor];
+  let masked = "";
 
-  if (!firstMonthDigit) return "";
-
-  if (firstMonthDigit === "0") {
-    if (digits.length >= 2) {
-      monthDigits = String(Math.min(Math.max(Number(digits.slice(0, 2)), 1), 12));
-      cursor = 2;
+  if (monthRaw.length > 0) {
+    if (monthRaw.length === 1) {
+      masked += monthRaw;
     } else {
-      monthDigits = "0";
-      cursor = 1;
-    }
-  } else if (Number(firstMonthDigit) > 1) {
-    monthDigits = firstMonthDigit;
-    cursor = 1;
-  } else if (digits.length >= 2) {
-    const candidate = Number(digits.slice(0, 2));
-    if (candidate >= 10 && candidate <= 12) {
-      monthDigits = String(candidate);
-      cursor = 2;
-    } else {
-      monthDigits = firstMonthDigit;
-      cursor = 1;
-    }
-  } else {
-    monthDigits = firstMonthDigit;
-    cursor = 1;
-  }
-
-  const monthNumber = Number(monthDigits);
-  const remainingAfterMonth = digits.slice(cursor);
-
-  let dayDigits = "";
-  let yearDigits = "";
-
-  if (remainingAfterMonth) {
-    const firstDayDigit = remainingAfterMonth[0];
-    if (firstDayDigit === "0") {
-      if (remainingAfterMonth.length >= 2) {
-        const candidate = Number(remainingAfterMonth.slice(0, 2));
-        dayDigits = String(Math.min(Math.max(candidate, 1), daysInMonth(monthNumber)));
-        yearDigits = remainingAfterMonth.slice(2, 6);
-      } else {
-        dayDigits = "0";
-      }
-    } else if (Number(firstDayDigit) > 3) {
-      dayDigits = firstDayDigit;
-      yearDigits = remainingAfterMonth.slice(1, 5);
-    } else if (remainingAfterMonth.length >= 2) {
-      const possibleYear = remainingAfterMonth.slice(2, 6);
-      const yearNumber = possibleYear.length === 4 ? Number(possibleYear) : null;
-      const maxDay = daysInMonth(monthNumber, yearNumber);
-      const candidate = Number(remainingAfterMonth.slice(0, 2));
-      if (candidate >= 1 && candidate <= maxDay) {
-        dayDigits = String(candidate);
-        yearDigits = possibleYear;
-      } else {
-        dayDigits = firstDayDigit;
-        yearDigits = remainingAfterMonth.slice(1, 5);
-      }
-    } else {
-      dayDigits = firstDayDigit;
+      const month = Math.min(Math.max(Number(monthRaw), 1), 12);
+      masked += String(month).padStart(2, "0");
     }
   }
 
-  let masked = monthDigits;
-  const monthComplete = monthNumber >= 1 && monthNumber <= 12 && monthDigits !== "0";
-  if (monthComplete) {
+  if (digits.length >= 2) {
     masked += "/";
   }
 
-  if (dayDigits) {
-    masked += dayDigits;
-    const dayNumber = Number(dayDigits);
-    const dayComplete = dayNumber >= 1 && dayNumber <= daysInMonth(monthNumber) && dayDigits !== "0";
-    if (dayComplete) {
-      masked += "/";
+  if (dayRaw.length > 0) {
+    if (dayRaw.length === 1) {
+      masked += dayRaw;
+    } else {
+      const month = monthRaw.length === 2 ? Math.min(Math.max(Number(monthRaw), 1), 12) : 1;
+      const year = yearRaw.length === 4 ? Number(yearRaw) : 2024;
+      const day = Math.min(Math.max(Number(dayRaw), 1), daysInMonth(month, year));
+      masked += String(day).padStart(2, "0");
     }
   }
 
-  if (yearDigits) {
-    masked += yearDigits;
+  if (digits.length >= 4) {
+    masked += "/";
+  }
+
+  if (yearRaw.length > 0) {
+    masked += yearRaw;
   }
 
   return masked;
@@ -361,7 +312,7 @@ function formatDateInput(value?: Date | string | null) {
   if (!value) return "";
   const date = value instanceof Date ? value : new Date(value);
   if (!isValid(date)) return "";
-  return format(date, "M/d/yyyy");
+  return format(date, "MM/dd/yyyy");
 }
 
 function buildInclusiveDatesFromRange(start: Date | null, end: Date | null) {
@@ -381,12 +332,13 @@ function getDurationLabel(values: Date[]) {
   const start = sorted[0];
   const end = sorted[sorted.length - 1];
   const days = differenceInCalendarDays(end, start) + 1;
-  if (days < 365) {
+  const reportingYearDays = 270;
+  if (days < reportingYearDays) {
     return `${days} day${days === 1 ? "" : "s"}`;
   }
 
-  const years = Math.floor(days / 365);
-  const remainingDays = days % 365;
+  const years = Math.floor(days / reportingYearDays);
+  const remainingDays = days % reportingYearDays;
   if (remainingDays === 0) {
     return `${years} year${years === 1 ? "" : "s"}`;
   }
@@ -656,7 +608,7 @@ function DateTextField({
   value,
   onChange,
   disabled,
-  placeholder = "M/D/YYYY",
+  placeholder = "MM/dd/YYYY",
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -1210,7 +1162,7 @@ export function ProjectLeaderRegistrationForm({
     const generatedInclusiveDates = buildInclusiveDatesFromRange(startDate, endDate);
     if (!startDate || !endDate || generatedInclusiveDates.length === 0) {
       setIsSubmitting(false);
-      alert("Please provide a valid project start date and end date using M/D/YYYY.");
+      alert("Please provide a valid project start date and end date using MM/dd/YYYY.");
       return;
     }
     const registrationData = {
