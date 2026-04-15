@@ -258,6 +258,105 @@ function parseDateInput(value: string) {
   return normalized === trimmed ? parsed : null;
 }
 
+function daysInMonth(month: number, year?: number | null) {
+  if (!month || month < 1 || month > 12) return 31;
+  const safeYear = year && year >= 1 ? year : 2024;
+  return new Date(safeYear, month, 0).getDate();
+}
+
+function maskDateInput(rawValue: string) {
+  const digits = rawValue.replace(/\D/g, "").slice(0, 8);
+  if (!digits) return "";
+
+  let cursor = 0;
+  let monthDigits = "";
+  const firstMonthDigit = digits[cursor];
+
+  if (!firstMonthDigit) return "";
+
+  if (firstMonthDigit === "0") {
+    if (digits.length >= 2) {
+      monthDigits = String(Math.min(Math.max(Number(digits.slice(0, 2)), 1), 12));
+      cursor = 2;
+    } else {
+      monthDigits = "0";
+      cursor = 1;
+    }
+  } else if (Number(firstMonthDigit) > 1) {
+    monthDigits = firstMonthDigit;
+    cursor = 1;
+  } else if (digits.length >= 2) {
+    const candidate = Number(digits.slice(0, 2));
+    if (candidate >= 10 && candidate <= 12) {
+      monthDigits = String(candidate);
+      cursor = 2;
+    } else {
+      monthDigits = firstMonthDigit;
+      cursor = 1;
+    }
+  } else {
+    monthDigits = firstMonthDigit;
+    cursor = 1;
+  }
+
+  const monthNumber = Number(monthDigits);
+  const remainingAfterMonth = digits.slice(cursor);
+
+  let dayDigits = "";
+  let yearDigits = "";
+
+  if (remainingAfterMonth) {
+    const firstDayDigit = remainingAfterMonth[0];
+    if (firstDayDigit === "0") {
+      if (remainingAfterMonth.length >= 2) {
+        const candidate = Number(remainingAfterMonth.slice(0, 2));
+        dayDigits = String(Math.min(Math.max(candidate, 1), daysInMonth(monthNumber)));
+        yearDigits = remainingAfterMonth.slice(2, 6);
+      } else {
+        dayDigits = "0";
+      }
+    } else if (Number(firstDayDigit) > 3) {
+      dayDigits = firstDayDigit;
+      yearDigits = remainingAfterMonth.slice(1, 5);
+    } else if (remainingAfterMonth.length >= 2) {
+      const possibleYear = remainingAfterMonth.slice(2, 6);
+      const yearNumber = possibleYear.length === 4 ? Number(possibleYear) : null;
+      const maxDay = daysInMonth(monthNumber, yearNumber);
+      const candidate = Number(remainingAfterMonth.slice(0, 2));
+      if (candidate >= 1 && candidate <= maxDay) {
+        dayDigits = String(candidate);
+        yearDigits = possibleYear;
+      } else {
+        dayDigits = firstDayDigit;
+        yearDigits = remainingAfterMonth.slice(1, 5);
+      }
+    } else {
+      dayDigits = firstDayDigit;
+    }
+  }
+
+  let masked = monthDigits;
+  const monthComplete = monthNumber >= 1 && monthNumber <= 12 && monthDigits !== "0";
+  if (monthComplete) {
+    masked += "/";
+  }
+
+  if (dayDigits) {
+    masked += dayDigits;
+    const dayNumber = Number(dayDigits);
+    const dayComplete = dayNumber >= 1 && dayNumber <= daysInMonth(monthNumber) && dayDigits !== "0";
+    if (dayComplete) {
+      masked += "/";
+    }
+  }
+
+  if (yearDigits) {
+    masked += yearDigits;
+  }
+
+  return masked;
+}
+
 function formatDateInput(value?: Date | string | null) {
   if (!value) return "";
   const date = value instanceof Date ? value : new Date(value);
@@ -567,10 +666,26 @@ function DateTextField({
   return (
     <Input
       value={value}
-      onChange={(event) => onChange(event.target.value)}
+      onChange={(event) => onChange(maskDateInput(event.target.value))}
+      onKeyDown={(event) => {
+        const allowedKeys = [
+          "Backspace",
+          "Delete",
+          "Tab",
+          "ArrowLeft",
+          "ArrowRight",
+          "Home",
+          "End",
+        ];
+        if (allowedKeys.includes(event.key) || (event.ctrlKey || event.metaKey)) return;
+        if (!/^\d$/.test(event.key)) {
+          event.preventDefault();
+        }
+      }}
       disabled={disabled}
       placeholder={placeholder}
       inputMode="numeric"
+      maxLength={10}
       className="h-9 rounded-xl text-xs"
     />
   );

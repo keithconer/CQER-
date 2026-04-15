@@ -46,7 +46,6 @@ import { AwardsRecognitionManagement } from "@/components/dashboard/awards-recog
 import { getOtherActivities, type OtherActivityRecord } from "@/lib/actions/other-activities";
 import { OtherActivitiesManagement } from "@/components/dashboard/other-activities-management";
 import { ProjectLeaderDashboard } from "@/components/dashboard/project-leader-dashboard";
-import { getFacultyModuleData } from "@/lib/actions/faculty-involvement";
 
 
 function extractPartnerAgencyNames(projects: Project[]) {
@@ -381,7 +380,6 @@ export default async function DashboardPage({
   let departmentCommunityPosts: CommunityPost[] = [];
   let communityUsers = [] as Awaited<ReturnType<typeof getCommunityBootstrap>>["mentionableUsers"];
   let backupDatasets: BackupDatasetSummary[] = [];
-  let projectLeaderFacultyInvolvement: FacultyInvolvementSummary[] = [];
   let collegeUnitCoordinatorAccounts: {
     id: string;
     email: string | null;
@@ -437,7 +435,6 @@ export default async function DashboardPage({
         extensionResult,
         awardsResult,
         otherResult,
-        facultyResult,
       ] = await Promise.all([
         getProjectLeaderProjects(),
         getTrainings(),
@@ -452,7 +449,6 @@ export default async function DashboardPage({
         getExtensionPrograms(),
         getAwardsRecognitions(),
         getOtherActivities(),
-        getFacultyModuleData(),
       ]);
 
       projects = (leaderProjectsResult.data || []) as Project[];
@@ -469,11 +465,6 @@ export default async function DashboardPage({
       extensionProgramRecords = (extensionResult.data || []) as ExtensionProgramRecord[];
       awardsRecognitionRecords = (awardsResult.data || []) as AwardsRecognitionRecord[];
       otherActivityRecords = (otherResult.data || []) as OtherActivityRecord[];
-      const facultyData = facultyResult.data?.faculty || [];
-      projectLeaderFacultyInvolvement = (facultyData as Array<Record<string, unknown>>).map((entry) => ({
-        name: String(entry.faculty_name || "Unnamed Faculty"),
-        hoursRendered: Number(entry.total_hours_period || 0),
-      }));
     } else if (activePanel === "trainings") {
       trainingRecords = (await getTrainings()).data || [];
       const leaderProjectsResult = await getProjectLeaderProjects();
@@ -559,6 +550,7 @@ export default async function DashboardPage({
   let projectLeaderUtilizedBudget = 0;
   let projectLeaderUtilizationRate = 0;
   let projectLeaderBudgetDetails: ProjectBudgetDetail[] = [];
+  let projectLeaderFacultyInvolvement: FacultyInvolvementSummary[] = [];
 
   if (profile.user_type === "super_admin") {
     const adminClient = createAdminClient();
@@ -889,6 +881,18 @@ export default async function DashboardPage({
         };
       })
       .sort((left, right) => right.totalBudget - left.totalBudget);
+    const facultyHoursMap = new Map<string, number>();
+    technicalAdvisoryRecords.forEach((record) => {
+      const hours = Number(record.number_of_hours || 0);
+      record.faculty_members.forEach((member) => {
+        const name = String(member.name || "").trim();
+        if (!name) return;
+        facultyHoursMap.set(name, (facultyHoursMap.get(name) || 0) + hours);
+      });
+    });
+    projectLeaderFacultyInvolvement = Array.from(facultyHoursMap.entries())
+      .map(([name, hoursRendered]) => ({ name, hoursRendered }))
+      .sort((left, right) => right.hoursRendered - left.hoursRendered);
 
     projectLeaderActivitySeries = buildProjectLeaderActivitySeries([
       { label: "Projects", records: leaderProjects },

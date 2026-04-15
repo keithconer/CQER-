@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Activity,
   ArrowUpRight,
@@ -21,6 +22,7 @@ import {
   Users2,
   Wallet,
   Wrench,
+  LoaderCircle,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -232,6 +234,7 @@ function SummaryCard({
   icon: Icon,
   href,
   onClick,
+  loading = false,
 }: {
   label: string;
   value: string | number;
@@ -239,6 +242,7 @@ function SummaryCard({
   icon: LucideIcon;
   href?: string;
   onClick?: () => void;
+  loading?: boolean;
 }) {
   const content = (
     <Card className="border-border/50 bg-card/50 shadow-sm transition-colors hover:bg-muted/30">
@@ -249,7 +253,7 @@ function SummaryCard({
           <p className="text-[10px] text-muted-foreground">{sub}</p>
         </div>
         <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-foreground">
-          <Icon className="h-4 w-4" />
+          {loading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Icon className="h-4 w-4" />}
         </div>
       </CardContent>
     </Card>
@@ -345,7 +349,7 @@ function FacultyDialog({
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Faculty Involvement</DialogTitle>
-          <DialogDescription>Faculty members and their rendered hours from the recorded involvement data.</DialogDescription>
+          <DialogDescription>Faculty members and their rendered hours from technical advisory records.</DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[60vh] pr-4">
           <div className="space-y-3">
@@ -384,14 +388,35 @@ export function ProjectLeaderDashboard({
   budgetDetails,
   facultyInvolvement,
 }: ProjectLeaderDashboardProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = React.useTransition();
+  const [navigatingTo, setNavigatingTo] = React.useState<string | null>(null);
   const [budgetOpen, setBudgetOpen] = React.useState(false);
   const [utilizedOpen, setUtilizedOpen] = React.useState(false);
   const [facultyOpen, setFacultyOpen] = React.useState(false);
   const populatedModules = moduleCounts.filter((item) => item.value > 0);
   const maxRadar = Math.max(1, ...radarSeries.map((item) => item.fullMark));
 
+  const handleNavigate = React.useCallback((href: string) => {
+    setNavigatingTo(href);
+    startTransition(() => {
+      router.push(href);
+    });
+  }, [router]);
+
   return (
     <>
+      {navigatingTo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/75 backdrop-blur-sm">
+          <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-background px-5 py-4 shadow-lg">
+            <LoaderCircle className="h-5 w-5 animate-spin text-foreground" />
+            <div>
+              <p className="text-sm font-medium text-foreground">Opening page</p>
+              <p className="text-xs text-muted-foreground">Please wait a moment.</p>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="space-y-5">
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <SummaryCard
@@ -399,14 +424,16 @@ export function ProjectLeaderDashboard({
             value={projectCount}
             sub={`${activeProjectCount} active or ongoing`}
             icon={FolderKanban}
-            href="/dashboard?panel=projects&view=project-registration"
+            onClick={() => handleNavigate("/dashboard?panel=projects&view=project-registration")}
+            loading={isPending && navigatingTo === "/dashboard?panel=projects&view=project-registration"}
           />
           <SummaryCard
             label="Trainings"
             value={trainingCount}
             sub="Training records created"
             icon={BookOpenCheck}
-            href="/dashboard?panel=trainings"
+            onClick={() => handleNavigate("/dashboard?panel=trainings")}
+            loading={isPending && navigatingTo === "/dashboard?panel=trainings"}
           />
           <SummaryCard
             label="Budget"
@@ -599,7 +626,7 @@ export function ProjectLeaderDashboard({
                 Faculty Involvement
               </CardTitle>
               <CardDescription className="text-xs">
-                View faculty members and the hours they have rendered.
+                View faculty members and the hours they rendered in technical advisory.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
