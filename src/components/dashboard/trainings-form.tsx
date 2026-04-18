@@ -770,7 +770,12 @@ function RatingBreakdownFields({
           <h4 className="text-sm font-semibold">{title}</h4>
           <p className="text-xs text-muted-foreground">Ratings total must match counted participants: {expectedTotal}</p>
         </div>
-        <BookOpenCheck className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <div className="flex items-center gap-2">
+          <div className="rounded-full border border-border/50 bg-muted/30 px-3 py-1 text-xs font-semibold">
+            {total}/{expectedTotal}
+          </div>
+          <BookOpenCheck className="h-4 w-4 shrink-0 text-muted-foreground" />
+        </div>
       </div>
       <div className="grid gap-3 grid-cols-2 md:grid-cols-6">
         {(["5", "4", "3", "2", "1"] as const).map((score) => (
