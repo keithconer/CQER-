@@ -279,6 +279,29 @@ const formSchema = z
         message: "Match the disability entries to the declared count.",
       });
     }
+
+    if (values.total_trainees_surveyed !== values.participants_overall_total) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["total_trainees_surveyed"],
+        message: "Total trainees surveyed must equal the counted participants.",
+      });
+    }
+
+    [
+      ["rating_relevance_breakdown", "Relevance"],
+      ["rating_quality_breakdown", "Quality"],
+      ["rating_timeliness_breakdown", "Timeliness"],
+    ].forEach(([fieldName, label]) => {
+      const breakdown = values[fieldName as keyof typeof values] as RatingBreakdown;
+      if (getRatingsTotal(breakdown) !== values.participants_overall_total) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [fieldName],
+          message: `${label} ratings total must equal the counted participants.`,
+        });
+      }
+    });
   });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -542,6 +565,10 @@ const participantCategoryConfig: Array<{ key: keyof ParticipantBreakdown; label:
   { key: "others", label: "Others" },
 ];
 
+function getRatingsTotal(breakdown: RatingBreakdown) {
+  return Number(breakdown["5"] || 0) + Number(breakdown["4"] || 0) + Number(breakdown["3"] || 0) + Number(breakdown["2"] || 0) + Number(breakdown["1"] || 0);
+}
+
 function getDayMultiplier(mode: "days" | "hours", dayCount: number) {
   if (mode === "hours") return 0.5;
   if (dayCount >= 5) return 2;
@@ -722,20 +749,30 @@ function RatingBreakdownFields({
   control,
   name,
   title,
+  expectedTotal,
+  error,
   disabled,
 }: {
   control: TrainingsControl;
   name: "rating_relevance_breakdown" | "rating_quality_breakdown" | "rating_timeliness_breakdown";
   title: string;
+  expectedTotal: number;
+  error?: string;
   disabled?: boolean;
 }) {
+  const watchedBreakdown = useWatch({ control, name }) ?? { "5": 0, "4": 0, "3": 0, "2": 0, "1": 0 };
+  const total = getRatingsTotal(normalizeRatingBreakdown(watchedBreakdown));
+
   return (
     <div className="rounded-2xl border border-border/40 bg-background p-3">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h4 className="text-sm font-semibold">{title}</h4>
-        <BookOpenCheck className="h-4 w-4 text-muted-foreground" />
+        <div className="space-y-1">
+          <h4 className="text-sm font-semibold">{title}</h4>
+          <p className="text-xs text-muted-foreground">Ratings total must match counted participants: {expectedTotal}</p>
+        </div>
+        <BookOpenCheck className="h-4 w-4 shrink-0 text-muted-foreground" />
       </div>
-      <div className="grid gap-3 grid-cols-2 md:grid-cols-5">
+      <div className="grid gap-3 grid-cols-2 md:grid-cols-6">
         {(["5", "4", "3", "2", "1"] as const).map((score) => (
           <FormField
             key={score}
@@ -760,7 +797,12 @@ function RatingBreakdownFields({
             )}
           />
         ))}
+        <div className="space-y-2">
+          <p className="text-xs font-medium">Total</p>
+          <Input value={total} readOnly disabled className="h-9 rounded-xl bg-muted/20 text-xs" />
+        </div>
       </div>
+      {error ? <p className="mt-3 text-xs text-destructive">{error}</p> : null}
     </div>
   );
 }
@@ -958,10 +1000,16 @@ export function TrainingsForm({
   const disabilityCount = Number(useWatch({ control: form.control, name: "tvl_disabilities_count" }) || 0);
 
   const participantBreakdown = useWatch({ control: form.control, name: "participant_breakdown" }) ?? normalizeParticipantBreakdown(null);
+  const ratingRelevanceBreakdown = useWatch({ control: form.control, name: "rating_relevance_breakdown" });
+  const ratingQualityBreakdown = useWatch({ control: form.control, name: "rating_quality_breakdown" });
+  const ratingTimelinessBreakdown = useWatch({ control: form.control, name: "rating_timeliness_breakdown" });
 
   const maleTotal = participantCategoryConfig.reduce((sum, item) => sum + Number(participantBreakdown[item.key]?.male || 0), 0);
   const femaleTotal = participantCategoryConfig.reduce((sum, item) => sum + Number(participantBreakdown[item.key]?.female || 0), 0);
   const grandTotal = maleTotal + femaleTotal;
+  const relevanceTotal = getRatingsTotal(normalizeRatingBreakdown(ratingRelevanceBreakdown));
+  const qualityTotal = getRatingsTotal(normalizeRatingBreakdown(ratingQualityBreakdown));
+  const timelinessTotal = getRatingsTotal(normalizeRatingBreakdown(ratingTimelinessBreakdown));
   const conductedDays = dateMode === "days" ? numberOfDays : 0;
   const dayMultiplier = getDayMultiplier(dateMode, conductedDays);
   const daysTrainedPerWeight = dateMode === "hours" ? 0.5 : Number((conductedDays * dayMultiplier).toFixed(2));
@@ -980,6 +1028,7 @@ export function TrainingsForm({
     form.setValue("participants_female_total", femaleTotal, { shouldDirty: true });
     form.setValue("participants_overall_total", grandTotal, { shouldDirty: true });
     form.setValue("total_persons_trained", grandTotal, { shouldDirty: true });
+    form.setValue("total_trainees_surveyed", grandTotal, { shouldDirty: true });
     form.setValue("conducted_days_count", conductedDays, { shouldDirty: true });
     form.setValue("days_multiplier", dayMultiplier, { shouldDirty: true });
     form.setValue("days_trained_per_weight", daysTrainedPerWeight, { shouldDirty: true });
@@ -1029,6 +1078,9 @@ export function TrainingsForm({
   ];
   const stepThreeFields: FieldPath<FormValues>[] = [
     "total_trainees_surveyed",
+    "rating_relevance_breakdown",
+    "rating_quality_breakdown",
+    "rating_timeliness_breakdown",
     "amount_charged_to_cvsu",
     "amount_charged_to_partner_agency",
   ];
@@ -1779,12 +1831,33 @@ export function TrainingsForm({
 
                   <div className="grid gap-4 md:grid-cols-2">
                     <NumberField control={form.control} name="weighted_days_trained" label="Weighted Days Trained" disabled readOnly />
-                    <NumberField control={form.control} name="total_trainees_surveyed" label="Total Number of Trainees Surveyed" disabled={isViewOnly} />
+                    <NumberField control={form.control} name="total_trainees_surveyed" label="Total Number of Trainees Surveyed" disabled readOnly />
                   </div>
 
-                  <RatingBreakdownFields control={form.control} name="rating_relevance_breakdown" title="Clients Ratings Based on Relevance of the Training" disabled={isViewOnly} />
-                  <RatingBreakdownFields control={form.control} name="rating_quality_breakdown" title="Clients Ratings Based on Quality of the Training" disabled={isViewOnly} />
-                  <RatingBreakdownFields control={form.control} name="rating_timeliness_breakdown" title="Clients Ratings Based on Timeliness of the Training" disabled={isViewOnly} />
+                  <RatingBreakdownFields
+                    control={form.control}
+                    name="rating_relevance_breakdown"
+                    title={`Clients Ratings Based on Relevance of the Training (${relevanceTotal}/${grandTotal})`}
+                    expectedTotal={grandTotal}
+                    error={form.formState.errors.rating_relevance_breakdown?.message as string | undefined}
+                    disabled={isViewOnly}
+                  />
+                  <RatingBreakdownFields
+                    control={form.control}
+                    name="rating_quality_breakdown"
+                    title={`Clients Ratings Based on Quality of the Training (${qualityTotal}/${grandTotal})`}
+                    expectedTotal={grandTotal}
+                    error={form.formState.errors.rating_quality_breakdown?.message as string | undefined}
+                    disabled={isViewOnly}
+                  />
+                  <RatingBreakdownFields
+                    control={form.control}
+                    name="rating_timeliness_breakdown"
+                    title={`Clients Ratings Based on Timeliness of the Training (${timelinessTotal}/${grandTotal})`}
+                    expectedTotal={grandTotal}
+                    error={form.formState.errors.rating_timeliness_breakdown?.message as string | undefined}
+                    disabled={isViewOnly}
+                  />
 
                   <div className="grid gap-4 md:grid-cols-2">
                     <NumberField control={form.control} name="total_clients_requesting_trainings" label="Total Number of Clients Requesting Trainings" disabled={isViewOnly} />

@@ -376,6 +376,138 @@ export function Navbar({ user }: NavbarProps) {
     return items.filter((item) => item.roles.includes(user.userType));
   }, [user.userType]);
 
+  const sidebarSections = useMemo(
+    () => [
+      {
+        id: "general",
+        label: "General",
+        items: [
+          {
+            label: "Dashboard",
+            panel: "overview",
+            href: "/dashboard?panel=overview",
+            icon: LayoutDashboard,
+            roles: ["super_admin", "college_coordinator", "unit_coordinator", "project_leader"],
+          },
+          {
+            label: "CQER Community",
+            panel: "community",
+            href: "/dashboard?panel=community",
+            icon: Users2,
+            roles: ["super_admin", "college_coordinator", "unit_coordinator", "project_leader"],
+          },
+          {
+            label: "Create Backup",
+            panel: "backup",
+            href: "/dashboard?panel=backup",
+            icon: Download,
+            roles: ["super_admin", "college_coordinator", "unit_coordinator", "project_leader"],
+          },
+        ],
+      },
+      {
+        id: "records",
+        label: "Records",
+        items: [
+          {
+            label: "Project Registration",
+            panel: "projects",
+            href: "/dashboard?panel=projects&view=project-registration",
+            icon: FolderKanban,
+            roles: ["project_leader"],
+          },
+          {
+            label: "Budget Utilization",
+            panel: "budget-utilization",
+            href: "/dashboard?panel=budget-utilization",
+            icon: Wallet,
+            roles: ["project_leader"],
+          },
+          {
+            label: "Ordinance / Resolution",
+            panel: "ordinance-resolution",
+            href: "/dashboard?panel=ordinance-resolution",
+            icon: Landmark,
+            roles: ["project_leader"],
+          },
+          {
+            label: "Impact / Assessment",
+            panel: "impact-assessment",
+            href: "/dashboard?panel=impact-assessment",
+            icon: ClipboardCheck,
+            roles: ["project_leader"],
+          },
+          {
+            label: "Extension Program",
+            panel: "extension-program",
+            href: "/dashboard?panel=extension-program",
+            icon: Newspaper,
+            roles: ["project_leader"],
+          },
+          {
+            label: "Awards and Recognition",
+            panel: "awards-recognition",
+            href: "/dashboard?panel=awards-recognition",
+            icon: Trophy,
+            roles: ["project_leader"],
+          },
+          {
+            label: "Other Activities",
+            panel: "other-activities",
+            href: "/dashboard?panel=other-activities",
+            icon: NotepadText,
+            roles: ["project_leader"],
+          },
+          {
+            label: "Trainings",
+            panel: "trainings",
+            href: "/dashboard?panel=trainings",
+            icon: BookOpenCheck,
+            roles: ["project_leader", "unit_coordinator"],
+          },
+          {
+            label: "Consultancy",
+            panel: "consultancy",
+            href: "/dashboard?panel=consultancy",
+            icon: BriefcaseBusiness,
+            roles: ["project_leader"],
+          },
+          {
+            label: "Technical Advisory",
+            panel: "technical-advisory",
+            href: "/dashboard?panel=technical-advisory",
+            icon: Wrench,
+            roles: ["project_leader"],
+          },
+          {
+            label: "Adopters with Enterprise",
+            panel: "adopters-with-enterprise",
+            href: "/dashboard?panel=adopters-with-enterprise",
+            icon: Factory,
+            roles: ["project_leader"],
+          },
+          {
+            label: "Technologies / Innovations Commercialized",
+            panel: "technologies-innovations-commercialized",
+            href: "/dashboard?panel=technologies-innovations-commercialized",
+            icon: Cpu,
+            roles: ["project_leader"],
+          },
+          {
+            label: "IEC Materials",
+            panel: "iec-materials",
+            href: "/dashboard?panel=iec-materials",
+            icon: Megaphone,
+            roles: ["project_leader"],
+          },
+        ],
+      },
+    ],
+    []
+  );
+  const showAccountSection = user.userType === "super_admin" || user.userType === "college_coordinator";
+  const accountRegistrationLabel = user.userType === "super_admin" ? "Register College Coordinators" : "Register Unit Coordinators";
+
   const withTooltip = (label: string, content: ReactNode) => {
     if (sidebarOpen) return content;
     return (
@@ -573,153 +705,40 @@ export function Navbar({ user }: NavbarProps) {
 
           <TooltipProvider delayDuration={150}>
             <ScrollArea className="h-[calc(100vh-48px)]">
-              <div className={cn("space-y-1 py-3", sidebarOpen ? "px-2" : "px-0")}>
-                {[
-                  {
-                    label: "Dashboard",
-                    panel: "overview",
-                    href: "/dashboard?panel=overview",
-                    icon: LayoutDashboard,
-                    roles: ["super_admin", "college_coordinator", "unit_coordinator", "project_leader"],
-                  },
-                  {
-                    label: "CQER Community",
-                    panel: "community",
-                    href: "/dashboard?panel=community",
-                    icon: Users2,
-                    roles: ["super_admin", "college_coordinator", "unit_coordinator", "project_leader"],
-                  },
-                  {
-                    label: "Project Registration",
-                    panel: "projects",
-                    href: "/dashboard?panel=projects&view=project-registration",
-                    icon: FolderKanban,
-                    roles: ["project_leader"],
-                  },
-                  {
-                    label: "Budget Utilization",
-                    panel: "budget-utilization",
-                    href: "/dashboard?panel=budget-utilization",
-                    icon: Wallet,
-                    roles: ["project_leader"],
-                  },
-                  {
-                    label: "Ordinance / Resolution",
-                    panel: "ordinance-resolution",
-                    href: "/dashboard?panel=ordinance-resolution",
-                    icon: Landmark,
-                    roles: ["project_leader"],
-                  },
-                  {
-                    label: "Impact / Assessment",
-                    panel: "impact-assessment",
-                    href: "/dashboard?panel=impact-assessment",
-                    icon: ClipboardCheck,
-                    roles: ["project_leader"],
-                  },
-                  {
-                    label: "Extension Program",
-                    panel: "extension-program",
-                    href: "/dashboard?panel=extension-program",
-                    icon: Newspaper,
-                    roles: ["project_leader"],
-                  },
-                  {
-                    label: "Awards and Recognition",
-                    panel: "awards-recognition",
-                    href: "/dashboard?panel=awards-recognition",
-                    icon: Trophy,
-                    roles: ["project_leader"],
-                  },
-                  {
-                    label: "Other Activities",
-                    panel: "other-activities",
-                    href: "/dashboard?panel=other-activities",
-                    icon: NotepadText,
-                    roles: ["project_leader"],
-                  },
-                  {
-                    label: "Trainings",
-                    panel: "trainings",
-                    href: "/dashboard?panel=trainings",
-                    icon: BookOpenCheck,
-                    roles: ["project_leader", "unit_coordinator"],
-                  },
-                  {
-                    label: "Consultancy",
-                    panel: "consultancy",
-                    href: "/dashboard?panel=consultancy",
-                    icon: BriefcaseBusiness,
-                    roles: ["project_leader"],
-                  },
-                  {
-                    label: "Technical Advisory",
-                    panel: "technical-advisory",
-                    href: "/dashboard?panel=technical-advisory",
-                    icon: Wrench,
-                    roles: ["project_leader"],
-                  },
-                  {
-                    label: "Adopters with Enterprise",
-                    panel: "adopters-with-enterprise",
-                    href: "/dashboard?panel=adopters-with-enterprise",
-                    icon: Factory,
-                    roles: ["project_leader"],
-                  },
-                  {
-                    label: "Technologies / Innovations Commercialized",
-                    panel: "technologies-innovations-commercialized",
-                    href: "/dashboard?panel=technologies-innovations-commercialized",
-                    icon: Cpu,
-                    roles: ["project_leader"],
-                  },
-                  {
-                    label: "IEC Materials",
-                    panel: "iec-materials",
-                    href: "/dashboard?panel=iec-materials",
-                    icon: Megaphone,
-                    roles: ["project_leader"],
-                  },
-                  {
-                    label: "Create Backup",
-                    panel: "backup",
-                    href: "/dashboard?panel=backup",
-                    icon: Download,
-                    roles: ["super_admin", "college_coordinator", "unit_coordinator", "project_leader"],
-                  },
-                  {
-                    label: "Account Management",
-                    panel: "account-management",
-                    href: "/dashboard?panel=account-management&account=register",
-                    icon: UserCog,
-                    roles: ["super_admin", "college_coordinator"],
-                  },
-                ]
-                  .filter((item) => item.roles.includes(user.userType))
-                  .map((item) => (
-                    <div key={item.label} className="flex justify-center w-full">
-                      {withTooltip(
-                        item.label,
-                        <Button
-                          variant="ghost"
-                          className={cn(
-                            "transition-all duration-200",
-                            sidebarOpen ? "h-8 w-full justify-start px-3" : collapsedButtonClass,
-                            activePanel === item.panel
-                              ? "border border-border/40 bg-muted/30 text-foreground"
-                              : "border border-transparent text-foreground"
+              <div className={cn("space-y-3 py-3", sidebarOpen ? "px-2" : "px-0")}>
+                {sidebarSections.map((section) => {
+                  const items = section.items.filter((item) => item.roles.includes(user.userType));
+                  if (items.length === 0) return null;
+                  return (
+                    <div key={section.id} className="space-y-1">
+                      {sidebarOpen ? <p className="px-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground/70">{section.label}</p> : null}
+                      {items.map((item) => (
+                        <div key={item.label} className="flex justify-center w-full">
+                          {withTooltip(
+                            item.label,
+                            <Button
+                              variant="ghost"
+                              className={cn(
+                                "transition-all duration-200",
+                                sidebarOpen ? "h-8 w-full justify-start px-3" : collapsedButtonClass,
+                                activePanel === item.panel
+                                  ? "border border-border/40 bg-muted/30 text-foreground"
+                                  : "border border-transparent text-foreground"
+                              )}
+                              onClick={() => goTo(item.href)}
+                            >
+                              <item.icon className={cn("shrink-0", sidebarOpen ? "mr-2 h-3.5 w-3.5" : collapsedIconClass)} />
+                              {sidebarOpen && <span className="text-[9px] font-medium">{item.label}</span>}
+                            </Button>
                           )}
-                          onClick={() => goTo(item.href)}
-                        >
-                          <item.icon className={cn("shrink-0", sidebarOpen ? "mr-2 h-3.5 w-3.5" : collapsedIconClass)} />
-                          {sidebarOpen && <span className="text-[9px] font-medium">{item.label}</span>}
-                        </Button>
-                      )}
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  );
+                })}
               </div>
 
-              {user.userType === "super_admin" && (
+              {showAccountSection && (
                 <>
                   {!sidebarOpen ? (
                     <Popover>
@@ -755,7 +774,7 @@ export function Navbar({ user }: NavbarProps) {
                             onClick={() => goTo("/dashboard?panel=account-management&account=register")}
                           >
                             <UserPlus className="mr-2 h-3 w-3" />
-                            Register College Coordinators
+                            {accountRegistrationLabel}
                           </Button>
                         </div>
                       </PopoverContent>
@@ -775,14 +794,15 @@ export function Navbar({ user }: NavbarProps) {
                     </Button>
                   )}
                   {accountExpanded && sidebarOpen && (
-                    <div className="space-y-1 pl-2">
+                    <div className="space-y-1 px-2 pb-3">
+                      <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground/70">Administration</p>
                       <Button
                         variant="ghost"
                         className={navItemClass(isAccountPanel)}
                         onClick={() => goTo("/dashboard?panel=account-management&account=register")}
                       >
                         <UserPlus className="mr-2 h-3 w-3" />
-                        Register College Coordinators
+                        {accountRegistrationLabel}
                       </Button>
                     </div>
                   )}
