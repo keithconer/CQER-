@@ -364,7 +364,7 @@ export default async function DashboardPage({
 
   const allowedPanelsByRole: Record<string, string[]> = {
     super_admin: ["overview", "community", "backup", "account-management", "accounts"],
-    college_coordinator: ["overview", "community", "backup", "account-management", "accounts"],
+    college_coordinator: ["overview", "community", "backup", "account-management", "accounts", "projects", "budget-utilization", "ordinance-resolution", "impact-assessment", "extension-program", "awards-recognition", "other-activities", "trainings", "consultancy", "technical-advisory", "adopters-with-enterprise", "technologies-innovations-commercialized", "iec-materials"],
     unit_coordinator: ["overview", "community", "backup", "trainings"],
     project_leader: ["overview", "community", "backup", "projects", "budget-utilization", "ordinance-resolution", "impact-assessment", "extension-program", "awards-recognition", "other-activities", "trainings", "consultancy", "technical-advisory", "adopters-with-enterprise", "technologies-innovations-commercialized", "iec-materials"],
     extension_office: ["overview"],
@@ -418,10 +418,7 @@ export default async function DashboardPage({
     } else if (activePanel === "trainings" && profile.user_type === "unit_coordinator") {
       trainingRecords = (await getTrainings()).data || [];
     }
-  } else if (
-    profile.user_type === "college_coordinator" &&
-    activePanel !== "unit-coordinators"
-  ) {
+  } else if (profile.user_type === "college_coordinator") {
     if (activePanel === "backup") {
       backupDatasets = (await getBackupSummary()).datasets;
     } else if (activePanel === "community") {
@@ -429,6 +426,55 @@ export default async function DashboardPage({
       publicCommunityPosts = communityData.publicPosts;
       departmentCommunityPosts = communityData.departmentPosts;
       communityUsers = communityData.mentionableUsers;
+    } else if (activePanel === "trainings") {
+      trainingRecords = (await getTrainings()).data || [];
+      const collegeProjectsResult = await getCollegeProjects();
+      const collegeProjects = (collegeProjectsResult.data || []) as Project[];
+      trainingPartnerAgencyOptions = extractPartnerAgencyNames(collegeProjects);
+      trainingProjectOptions = extractProjectOptions(collegeProjects);
+    } else if (activePanel === "consultancy") {
+      consultancyRecords = (await getConsultancyExtensions()).data || [];
+      const collegeProjectsResult = await getCollegeProjects();
+      projects = (collegeProjectsResult.data || []) as Project[];
+    } else if (activePanel === "technical-advisory") {
+      technicalAdvisoryRecords = (await getTechnicalAdvisoryServices()).data || [];
+    } else if (activePanel === "adopters-with-enterprise") {
+      adoptersWithEnterpriseRecords = (await getAdoptersWithEnterprise()).data || [];
+      const collegeProjectsResult = await getCollegeProjects();
+      projects = (collegeProjectsResult.data || []) as Project[];
+    } else if (activePanel === "technologies-innovations-commercialized") {
+      technologyCommercializationRecords = (await getTechnologiesInnovationsCommercialized()).data || [];
+      const collegeProjectsResult = await getCollegeProjects();
+      projects = (collegeProjectsResult.data || []) as Project[];
+    } else if (activePanel === "iec-materials") {
+      iecMaterialRecords = (await getIecMaterials()).data || [];
+      const collegeProjectsResult = await getCollegeProjects();
+      projects = (collegeProjectsResult.data || []) as Project[];
+    } else if (activePanel === "budget-utilization") {
+      budgetUtilizationRecords = (await getBudgetUtilizations()).data || [];
+      const collegeProjectsResult = await getCollegeProjects();
+      projects = (collegeProjectsResult.data || []) as Project[];
+    } else if (activePanel === "ordinance-resolution") {
+      ordinanceResolutionRecords = (await getOrdinanceResolutions()).data || [];
+      const collegeProjectsResult = await getCollegeProjects();
+      projects = (collegeProjectsResult.data || []) as Project[];
+    } else if (activePanel === "impact-assessment") {
+      impactAssessmentRecords = (await getImpactAssessments()).data || [];
+      const collegeProjectsResult = await getCollegeProjects();
+      projects = (collegeProjectsResult.data || []) as Project[];
+    } else if (activePanel === "extension-program") {
+      extensionProgramRecords = (await getExtensionPrograms()).data || [];
+      const collegeProjectsResult = await getCollegeProjects();
+      projects = (collegeProjectsResult.data || []) as Project[];
+    } else if (activePanel === "awards-recognition") {
+      awardsRecognitionRecords = (await getAwardsRecognitions()).data || [];
+      const collegeProjectsResult = await getCollegeProjects();
+      projects = (collegeProjectsResult.data || []) as Project[];
+    } else if (activePanel === "other-activities") {
+      otherActivityRecords = (await getOtherActivities()).data || [];
+    } else if (hasEntitySelection) {
+      const collegeProjectsResult = await getCollegeProjects();
+      projects = (collegeProjectsResult.data || []) as Project[];
     }
   } else if (profile.user_type === "project_leader") {
     if (activePanel === "backup") {
@@ -1482,13 +1528,61 @@ export default async function DashboardPage({
 
       {userType === "college_coordinator" && activePanel !== "community" && (
         <div className="space-y-4">
-          {activePanel === "unit-coordinators" || accountPanelSelected ? (
+          {accountPanelSelected ? (
             <UnitCoordinatorsPanel
               accounts={collegeUnitCoordinatorAccounts}
               department={profile.department}
             />
           ) : activePanel === "backup" ? (
             <BackupManagement datasets={backupDatasets} />
+          ) : activePanel === "trainings" ? (
+            <TrainingsManagement
+              initialRecords={trainingRecords}
+              department={profile.department}
+              userType={userType}
+              unit={profile.unit}
+              unitOptions={[]}
+              partnerAgencyOptions={trainingPartnerAgencyOptions}
+              projectOptions={trainingProjectOptions}
+              currentUserName={`${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "College Coordinator"}
+              currentUserId={user.id}
+            />
+          ) : activePanel === "consultancy" ? (
+            <ConsultancyExtensionManagement
+              initialExtensions={consultancyRecords}
+              assignedProjects={projects}
+            />
+          ) : activePanel === "technical-advisory" ? (
+            <TechnicalAdvisoryServicesManagement initialRecords={technicalAdvisoryRecords} />
+          ) : activePanel === "adopters-with-enterprise" ? (
+            <AdoptersWithEnterpriseManagement initialRecords={adoptersWithEnterpriseRecords} projects={projects} />
+          ) : activePanel === "technologies-innovations-commercialized" ? (
+            <TechnologiesInnovationsCommercializedManagement
+              initialRecords={technologyCommercializationRecords}
+              projects={projects}
+            />
+          ) : activePanel === "iec-materials" ? (
+            <IecMaterialsManagement initialRecords={iecMaterialRecords} projects={projects} />
+          ) : activePanel === "budget-utilization" ? (
+            <BudgetUtilizationManagement records={budgetUtilizationRecords} projects={projects} />
+          ) : activePanel === "ordinance-resolution" ? (
+            <OrdinanceResolutionManagement records={ordinanceResolutionRecords} projects={projects} />
+          ) : activePanel === "impact-assessment" ? (
+            <ImpactAssessmentManagement records={impactAssessmentRecords} projects={projects} />
+          ) : activePanel === "extension-program" ? (
+            <ExtensionProgramManagement records={extensionProgramRecords} projects={projects} />
+          ) : activePanel === "awards-recognition" ? (
+            <AwardsRecognitionManagement records={awardsRecognitionRecords} projects={projects} />
+          ) : activePanel === "other-activities" ? (
+            <OtherActivitiesManagement records={otherActivityRecords} />
+          ) : hasEntitySelection ? (
+            <ProjectLeaderRegistrationManagement
+              projects={projects}
+              currentUserId={user.id}
+              currentUserName={`${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "College Coordinator"}
+              department={profile.department}
+              unit={profile.unit}
+            />
           ) : null}
         </div>
       )}

@@ -252,7 +252,7 @@ export function Navbar({ user }: NavbarProps) {
         keywords: ["project registration", "project leader", "projects folder", "project page"],
         description: "Open the project registration page.",
         icon: FolderKanban,
-        roles: ["project_leader"],
+        roles: ["project_leader", "college_coordinator"],
       },
       {
         id: "budget-utilization",
@@ -261,7 +261,7 @@ export function Navbar({ user }: NavbarProps) {
         keywords: ["budget", "utilization", "expenses", "spent", "spending"],
         description: "Open the budget utilization page.",
         icon: Wallet,
-        roles: ["project_leader"],
+        roles: ["project_leader", "college_coordinator"],
       },
       {
         id: "ordinance-resolution",
@@ -270,7 +270,7 @@ export function Navbar({ user }: NavbarProps) {
         keywords: ["ordinance", "resolution", "approval", "endorsed", "policy"],
         description: "Open the ordinance and resolution page.",
         icon: Landmark,
-        roles: ["project_leader"],
+        roles: ["project_leader", "college_coordinator"],
       },
       {
         id: "impact-assessment",
@@ -279,7 +279,7 @@ export function Navbar({ user }: NavbarProps) {
         keywords: ["impact", "assessment", "evaluation", "lead evaluator", "needs assessment"],
         description: "Open the impact and assessment page.",
         icon: ClipboardCheck,
-        roles: ["project_leader"],
+        roles: ["project_leader", "college_coordinator"],
       },
       {
         id: "extension-program",
@@ -288,7 +288,7 @@ export function Navbar({ user }: NavbarProps) {
         keywords: ["extension", "program", "featured", "media", "ppa"],
         description: "Open the extension program page.",
         icon: Newspaper,
-        roles: ["project_leader"],
+        roles: ["project_leader", "college_coordinator"],
       },
       {
         id: "awards-recognition",
@@ -297,7 +297,7 @@ export function Navbar({ user }: NavbarProps) {
         keywords: ["awards", "recognition", "award", "conference", "donor"],
         description: "Open the awards and recognition page.",
         icon: Trophy,
-        roles: ["project_leader"],
+        roles: ["project_leader", "college_coordinator"],
       },
       {
         id: "other-activities",
@@ -306,7 +306,7 @@ export function Navbar({ user }: NavbarProps) {
         keywords: ["other activities", "meeting", "workshop", "planning", "outreach"],
         description: "Open the other activities page.",
         icon: NotepadText,
-        roles: ["project_leader"],
+        roles: ["project_leader", "college_coordinator"],
       },
       {
         id: "backup",
@@ -324,7 +324,7 @@ export function Navbar({ user }: NavbarProps) {
         keywords: ["training", "trainings"],
         description: "Open the trainings page.",
         icon: BookOpenCheck,
-        roles: ["project_leader", "unit_coordinator"],
+        roles: ["project_leader", "unit_coordinator", "college_coordinator"],
       },
       {
         id: "consultancy",
@@ -333,7 +333,7 @@ export function Navbar({ user }: NavbarProps) {
         keywords: ["consultancy", "consulting", "consultancy records"],
         description: "Open the consultancy page.",
         icon: BriefcaseBusiness,
-        roles: ["project_leader"],
+        roles: ["project_leader", "college_coordinator"],
       },
       {
         id: "technical-advisory",
@@ -342,7 +342,7 @@ export function Navbar({ user }: NavbarProps) {
         keywords: ["technical advisory", "advisory", "technical advisory services"],
         description: "Open the technical advisory page.",
         icon: Wrench,
-        roles: ["project_leader"],
+        roles: ["project_leader", "college_coordinator"],
       },
       {
         id: "adopters-with-enterprise",
@@ -351,7 +351,7 @@ export function Navbar({ user }: NavbarProps) {
         keywords: ["adopters", "enterprise", "adopters with enterprise"],
         description: "Open the adopters with enterprise page.",
         icon: Factory,
-        roles: ["project_leader"],
+        roles: ["project_leader", "college_coordinator"],
       },
       {
         id: "technologies-innovations-commercialized",
@@ -360,7 +360,7 @@ export function Navbar({ user }: NavbarProps) {
         keywords: ["technologies", "innovations", "commercialized", "technology commercialization"],
         description: "Open the technologies / innovations commercialized page.",
         icon: Cpu,
-        roles: ["project_leader"],
+        roles: ["project_leader", "college_coordinator"],
       },
       {
         id: "iec-materials",
@@ -369,7 +369,7 @@ export function Navbar({ user }: NavbarProps) {
         keywords: ["iec", "iec materials", "information education communication"],
         description: "Open the IEC materials page.",
         icon: Megaphone,
-        roles: ["project_leader"],
+        roles: ["project_leader", "college_coordinator"],
       },
     ];
 
@@ -414,91 +414,91 @@ export function Navbar({ user }: NavbarProps) {
             panel: "projects",
             href: "/dashboard?panel=projects&view=project-registration",
             icon: FolderKanban,
-            roles: ["project_leader"],
+            roles: ["project_leader", "college_coordinator"],
           },
           {
             label: "Budget Utilization",
             panel: "budget-utilization",
             href: "/dashboard?panel=budget-utilization",
             icon: Wallet,
-            roles: ["project_leader"],
+            roles: ["project_leader", "college_coordinator"],
           },
           {
             label: "Ordinance / Resolution",
             panel: "ordinance-resolution",
             href: "/dashboard?panel=ordinance-resolution",
             icon: Landmark,
-            roles: ["project_leader"],
+            roles: ["project_leader", "college_coordinator"],
           },
           {
             label: "Impact / Assessment",
             panel: "impact-assessment",
             href: "/dashboard?panel=impact-assessment",
             icon: ClipboardCheck,
-            roles: ["project_leader"],
+            roles: ["project_leader", "college_coordinator"],
           },
           {
             label: "Extension Program",
             panel: "extension-program",
             href: "/dashboard?panel=extension-program",
             icon: Newspaper,
-            roles: ["project_leader"],
+            roles: ["project_leader", "college_coordinator"],
           },
           {
             label: "Awards and Recognition",
             panel: "awards-recognition",
             href: "/dashboard?panel=awards-recognition",
             icon: Trophy,
-            roles: ["project_leader"],
+            roles: ["project_leader", "college_coordinator"],
           },
           {
             label: "Other Activities",
             panel: "other-activities",
             href: "/dashboard?panel=other-activities",
             icon: NotepadText,
-            roles: ["project_leader"],
+            roles: ["project_leader", "college_coordinator"],
           },
           {
             label: "Trainings",
             panel: "trainings",
             href: "/dashboard?panel=trainings",
             icon: BookOpenCheck,
-            roles: ["project_leader", "unit_coordinator"],
+            roles: ["project_leader", "unit_coordinator", "college_coordinator"],
           },
           {
             label: "Consultancy",
             panel: "consultancy",
             href: "/dashboard?panel=consultancy",
             icon: BriefcaseBusiness,
-            roles: ["project_leader"],
+            roles: ["project_leader", "college_coordinator"],
           },
           {
             label: "Technical Advisory",
             panel: "technical-advisory",
             href: "/dashboard?panel=technical-advisory",
             icon: Wrench,
-            roles: ["project_leader"],
+            roles: ["project_leader", "college_coordinator"],
           },
           {
             label: "Adopters with Enterprise",
             panel: "adopters-with-enterprise",
             href: "/dashboard?panel=adopters-with-enterprise",
             icon: Factory,
-            roles: ["project_leader"],
+            roles: ["project_leader", "college_coordinator"],
           },
           {
             label: "Technologies / Innovations Commercialized",
             panel: "technologies-innovations-commercialized",
             href: "/dashboard?panel=technologies-innovations-commercialized",
             icon: Cpu,
-            roles: ["project_leader"],
+            roles: ["project_leader", "college_coordinator"],
           },
           {
             label: "IEC Materials",
             panel: "iec-materials",
             href: "/dashboard?panel=iec-materials",
             icon: Megaphone,
-            roles: ["project_leader"],
+            roles: ["project_leader", "college_coordinator"],
           },
         ],
       },
@@ -711,7 +711,6 @@ export function Navbar({ user }: NavbarProps) {
                   if (items.length === 0) return null;
                   return (
                     <div key={section.id} className="space-y-1">
-                      {sidebarOpen ? <p className="px-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground/70">{section.label}</p> : null}
                       {items.map((item) => (
                         <div key={item.label} className="flex justify-center w-full">
                           {withTooltip(
@@ -795,7 +794,6 @@ export function Navbar({ user }: NavbarProps) {
                   )}
                   {accountExpanded && sidebarOpen && (
                     <div className="space-y-1 px-2 pb-3">
-                      <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground/70">Administration</p>
                       <Button
                         variant="ghost"
                         className={navItemClass(isAccountPanel)}
