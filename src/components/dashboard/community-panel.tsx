@@ -60,6 +60,47 @@ function formatTimestamp(value: string) {
   });
 }
 
+const URL_PATTERN = /((?:https?:\/\/|www\.)[^\s<]+)/gi;
+
+function normalizeHref(value: string) {
+  return value.toLowerCase().startsWith("http://") || value.toLowerCase().startsWith("https://")
+    ? value
+    : `https://${value}`;
+}
+
+function LinkifiedText({
+  text,
+  className,
+}: {
+  text: string;
+  className?: string;
+}) {
+  const parts = text.split(URL_PATTERN);
+
+  return (
+    <p className={className}>
+      {parts.map((part, index) => {
+        const isUrl = /^(?:https?:\/\/|www\.)[^\s<]+$/i.test(part);
+        if (!isUrl) {
+          return <React.Fragment key={`${part}-${index}`}>{part}</React.Fragment>;
+        }
+
+        return (
+          <a
+            key={`${part}-${index}`}
+            href={normalizeHref(part)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-primary underline underline-offset-2 break-all"
+          >
+            {part}
+          </a>
+        );
+      })}
+    </p>
+  );
+}
+
 function MentionSelector({
   users,
   selectedIds,
@@ -197,7 +238,7 @@ function CommentThread({
                 </p>
                 <span className="text-[8px] text-muted-foreground">{formatTimestamp(comment.created_at)}</span>
               </div>
-              <p className="mt-1 whitespace-pre-wrap text-[10px] leading-4">{comment.content}</p>
+              <LinkifiedText text={comment.content} className="mt-1 whitespace-pre-wrap text-[10px] leading-4" />
               <button
                 type="button"
                 className="mt-2 text-[9px] font-medium text-foreground hover:underline"
@@ -253,7 +294,7 @@ function CommentThread({
                       </p>
                       <span className="text-[8px] text-muted-foreground">{formatTimestamp(reply.created_at)}</span>
                     </div>
-                    <p className="mt-1 whitespace-pre-wrap text-[10px] leading-4">{reply.content}</p>
+                    <LinkifiedText text={reply.content} className="mt-1 whitespace-pre-wrap text-[10px] leading-4" />
                   </div>
                 </div>
               ))}
@@ -599,9 +640,7 @@ export function CommunityPanel({
                     ) : null}
                   </div>
 
-                  <p className="whitespace-pre-wrap text-[10px] leading-5 text-foreground/90">
-                    {post.content}
-                  </p>
+                  <LinkifiedText text={post.content} className="whitespace-pre-wrap text-[10px] leading-5 text-foreground/90" />
 
                   {post.mentioned_users.length > 0 ? (
                     <div className="flex flex-wrap gap-1.5">

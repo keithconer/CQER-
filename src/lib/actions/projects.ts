@@ -239,8 +239,8 @@ export async function getCollegeProjects() {
 
     const { data: deptProfiles, error: deptProfilesError } = await adminClient
         .from("profiles")
-        .select("id, user_type, unit")
-        .in("user_type", ["college_coordinator", "unit_coordinator", "super_admin"])
+        .select("id, user_type, unit, department, first_name, last_name")
+        .in("user_type", ["college_coordinator", "unit_coordinator", "project_leader", "super_admin"])
         .eq("department", profile.department);
 
     if (deptProfilesError) {
@@ -249,11 +249,20 @@ export async function getCollegeProjects() {
     }
 
     const profileMap = new Map(
-        (deptProfiles || []).map((p) => [p.id, { user_type: p.user_type, unit: p.unit }])
+        (deptProfiles || []).map((p) => [
+            p.id,
+            {
+                user_type: p.user_type,
+                unit: p.unit,
+                department: p.department,
+                first_name: p.first_name,
+                last_name: p.last_name,
+            },
+        ])
     );
     const { data: superAdmins, error: superAdminError } = await adminClient
         .from("profiles")
-        .select("id, user_type, unit")
+        .select("id, user_type, unit, department, first_name, last_name")
         .eq("user_type", "super_admin");
 
     if (superAdminError) {
@@ -261,7 +270,15 @@ export async function getCollegeProjects() {
         return { error: superAdminError.message };
     }
 
-    (superAdmins || []).forEach((entry) => profileMap.set(entry.id, { user_type: entry.user_type, unit: entry.unit }));
+    (superAdmins || []).forEach((entry) =>
+        profileMap.set(entry.id, {
+            user_type: entry.user_type,
+            unit: entry.unit,
+            department: entry.department,
+            first_name: entry.first_name,
+            last_name: entry.last_name,
+        })
+    );
 
     const creatorIds = Array.from(new Set([...(deptProfiles?.map((p) => p.id) || []), ...((superAdmins || []).map((p) => p.id))]));
     if (creatorIds.length === 0) {
@@ -295,6 +312,10 @@ export async function getCollegeProjects() {
                 ...project,
                 created_by_user_type: creator?.user_type || null,
                 created_by_unit: creator?.unit || null,
+                created_by_department: creator?.department || null,
+                creator_first_name: creator?.first_name || null,
+                creator_last_name: creator?.last_name || null,
+                creator_full_name: `${creator?.first_name || ""} ${creator?.last_name || ""}`.trim() || null,
             };
         }) || [];
 

@@ -46,6 +46,7 @@ import { AwardsRecognitionManagement } from "@/components/dashboard/awards-recog
 import { getOtherActivities, type OtherActivityRecord } from "@/lib/actions/other-activities";
 import { OtherActivitiesManagement } from "@/components/dashboard/other-activities-management";
 import { ProjectLeaderDashboard } from "@/components/dashboard/project-leader-dashboard";
+import { CollegeCoordinatorDashboard } from "@/components/dashboard/college-coordinator-dashboard";
 import {
   UnitCoordinatorDashboard,
   type UnitDashboardRecord,
@@ -618,6 +619,17 @@ export default async function DashboardPage({
   let unitDashboardUsers: UnitDashboardUser[] = [];
   let unitDashboardTrainings: UnitDashboardTraining[] = [];
   let unitDashboardRecords: UnitDashboardRecord[] = [];
+  let collegeOverviewTrainings: TrainingRecord[] = [];
+  let collegeOverviewBudgetUtilizations: BudgetUtilizationRecord[] = [];
+  let collegeOverviewEmployees: {
+    id: string;
+    email: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    userType: string;
+    unit: string | null;
+    department: string | null;
+  }[] = [];
 
   if (profile.user_type === "super_admin") {
     const adminClient = createAdminClient();
@@ -785,12 +797,45 @@ export default async function DashboardPage({
       resolvedProjects = ((await getCollegeProjects()).data || []) as AnalyticsProject[];
     }
     analyticsProjects = resolvedProjects;
+    if (showOverview) {
+      const adminClient = createAdminClient();
+      const overviewTrainings =
+        trainingRecords.length > 0 ? trainingRecords : (((await getTrainings()).data || []) as TrainingRecord[]);
+      collegeOverviewTrainings = overviewTrainings;
+
+      const { data: departmentProfiles } = await adminClient
+        .from("profiles")
+        .select("id, email, first_name, last_name, user_type, unit, department")
+        .in("user_type", ["college_coordinator", "unit_coordinator", "project_leader", "extension_office"])
+        .eq("department", profile.department);
+
+      collegeOverviewEmployees =
+        (departmentProfiles || []).map((entry) => ({
+          id: entry.id,
+          email: entry.email || null,
+          firstName: entry.first_name || null,
+          lastName: entry.last_name || null,
+          userType: entry.user_type,
+          unit: entry.unit || null,
+          department: entry.department || null,
+        })) || [];
+
+      const projectIds = resolvedProjects.map((project) => project.id).filter(Boolean);
+      if (projectIds.length > 0) {
+        const { data: budgetRows } = await adminClient
+          .from("budget_utilizations")
+          .select("*")
+          .in("project_id", projectIds);
+        collegeOverviewBudgetUtilizations = (budgetRows || []) as BudgetUtilizationRecord[];
+      }
+    }
     const fundingCounts = countFunding(resolvedProjects);
     analyticsInternalFunding = fundingCounts.internal;
     analyticsExternalFunding = fundingCounts.external;
 
     const trainings =
       trainingRecords.length > 0 ? trainingRecords : (await getTrainings()).data || [];
+    collegeOverviewTrainings = trainings as TrainingRecord[];
     analyticsTrainings = trainings.length;
     const budgetTotals = resolvedProjects.reduce(
       (acc, project) => {
@@ -1434,6 +1479,25 @@ export default async function DashboardPage({
                 users={unitDashboardUsers}
                 trainings={unitDashboardTrainings}
                 records={unitDashboardRecords}
+              />
+
+              <div className="grid gap-4 lg:grid-cols-12">
+                <div className="lg:col-span-12">
+                  <ActiveCoordinators
+                    coordinators={leaderboard}
+                    departments={[...DEPARTMENTS]}
+                  />
+                </div>
+              </div>
+            </>
+          ) : userType === "college_coordinator" ? (
+            <>
+              <CollegeCoordinatorDashboard
+                department={profile.department || "Department"}
+                projects={analyticsProjects}
+                trainings={collegeOverviewTrainings}
+                budgetUtilizations={collegeOverviewBudgetUtilizations}
+                employees={collegeOverviewEmployees}
               />
 
               <div className="grid gap-4 lg:grid-cols-12">

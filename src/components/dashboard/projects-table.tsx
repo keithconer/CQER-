@@ -18,12 +18,10 @@ import {
   ChevronLeft,
   ChevronRight,
   AlertTriangle,
-  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { deleteProject } from "@/lib/actions/projects";
-import { createClient } from "@/lib/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -32,12 +30,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { ProjectForm } from "./project-form";
 import { useRouter } from "next/navigation";
 import { DocumentPreview } from "./document-preview";
@@ -45,8 +37,12 @@ import { DocumentPreview } from "./document-preview";
 export interface Project {
   id: string;
   created_by?: string | null;
+  created_by_department?: string | null;
   created_by_user_type?: "super_admin" | "college_coordinator" | "unit_coordinator" | "project_leader" | "extension_office" | null;
   created_by_unit?: string | null;
+  creator_first_name?: string | null;
+  creator_last_name?: string | null;
+  creator_full_name?: string | null;
   entry_type?: "project" | "project_proposal" | null;
   project_no?: string | null;
   project_leader_id?: string | null;

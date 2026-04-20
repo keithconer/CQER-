@@ -245,7 +245,7 @@ export async function getTrainings() {
   const { data: deptProfiles, error: deptProfilesError } = await adminClient
     .from("profiles")
     .select("id")
-    .in("user_type", ["college_coordinator", "unit_coordinator"])
+    .in("user_type", ["college_coordinator", "unit_coordinator", "project_leader"])
     .eq("department", department);
 
   if (deptProfilesError) {
