@@ -19,6 +19,7 @@ import {
   Megaphone,
   Newspaper,
   NotepadText,
+  PiggyBank,
   Sparkles,
   Trophy,
   Users2,
@@ -65,7 +66,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -477,6 +477,41 @@ function SummaryCard({
   );
 }
 
+function CompactMetricCard({
+  title,
+  description,
+  value,
+  icon: Icon,
+  onClick,
+}: {
+  title: string;
+  description: string;
+  value: string;
+  icon: LucideIcon;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-2xl border border-border/50 bg-card/70 text-left shadow-sm transition hover:border-primary/30 hover:bg-muted/20"
+    >
+      <div className="flex items-start justify-between gap-3 p-4">
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-muted text-foreground">
+              <Icon className="h-4 w-4" />
+            </div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{title}</p>
+          </div>
+          <p className="text-lg font-semibold leading-none text-foreground">{value}</p>
+          <p className="text-[11px] leading-4 text-muted-foreground">{description}</p>
+        </div>
+      </div>
+    </button>
+  );
+}
+
 function getInitials(name: string) {
   const parts = name
     .split(" ")
@@ -502,51 +537,76 @@ function BudgetDetailsDialog({
   items: ProjectBudgetDetail[];
   mode: "budget" | "utilized";
 }) {
+  const totalBudget = items.reduce((sum, item) => sum + item.totalBudget, 0);
+  const totalUtilized = items.reduce((sum, item) => sum + item.utilizedBudget, 0);
+  const totalRemaining = items.reduce((sum, item) => sum + item.remainingBudget, 0);
+  const primaryValue = mode === "budget" ? totalBudget : totalUtilized;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl">
+      <DialogContent className="sm:max-w-5xl">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        <ScrollArea className="max-h-[60vh] pr-4">
-          <div className="space-y-3">
-            {items.length > 0 ? (
-              items.map((item) => (
-                <div key={item.id} className="rounded-2xl border border-border/50 bg-muted/20 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">{item.title}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Total Budget: {formatCurrency(item.totalBudget)}
-                      </p>
-                    </div>
-                    <Badge variant="outline" className="text-[10px]">
-                      {mode === "budget" ? formatCurrency(item.remainingBudget) : formatCurrency(item.utilizedBudget)}
-                    </Badge>
-                  </div>
-                  <Separator className="my-3" />
-                  <div className="grid gap-2 sm:grid-cols-3">
-                    <div className="rounded-xl bg-background px-3 py-2">
-                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Budget</p>
-                      <p className="text-sm font-medium">{formatCurrency(item.totalBudget)}</p>
-                    </div>
-                    <div className="rounded-xl bg-background px-3 py-2">
-                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Utilized</p>
-                      <p className="text-sm font-medium">{formatCurrency(item.utilizedBudget)}</p>
-                    </div>
-                    <div className="rounded-xl bg-background px-3 py-2">
-                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Balance</p>
-                      <p className="text-sm font-medium">{formatCurrency(item.remainingBudget)}</p>
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-muted-foreground">No project budget records found.</p>
-            )}
+        <div className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-3">
+            <Card className="border-border/50">
+              <CardContent className="p-4">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                  {mode === "budget" ? "Overall Budget" : "Overall Utilized"}
+                </p>
+                <p className="mt-1 text-xl font-semibold">{formatCurrency(primaryValue)}</p>
+              </CardContent>
+            </Card>
+            <Card className="border-border/50">
+              <CardContent className="p-4">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                  {mode === "budget" ? "Utilized" : "Total Budget"}
+                </p>
+                <p className="mt-1 text-xl font-semibold">
+                  {formatCurrency(mode === "budget" ? totalUtilized : totalBudget)}
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="border-border/50">
+              <CardContent className="p-4">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Remaining</p>
+                <p className="mt-1 text-xl font-semibold">{formatCurrency(totalRemaining)}</p>
+              </CardContent>
+            </Card>
           </div>
-        </ScrollArea>
+          <ScrollArea className="max-h-[60vh] rounded-xl border border-border/50">
+            <Table>
+              <TableHeader className="bg-muted/30">
+                <TableRow className="border-border/40">
+                  <TableHead className="text-[10px]">Project</TableHead>
+                  <TableHead className="text-[10px]">Total Budget</TableHead>
+                  <TableHead className="text-[10px]">Utilized</TableHead>
+                  <TableHead className="text-[10px]">Remaining</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {items.length > 0 ? (
+                  items.map((item) => (
+                    <TableRow key={item.id} className="border-border/30">
+                      <TableCell className="text-[11px] font-medium">{item.title}</TableCell>
+                      <TableCell className="text-[11px]">{formatCurrency(item.totalBudget)}</TableCell>
+                      <TableCell className="text-[11px]">{formatCurrency(item.utilizedBudget)}</TableCell>
+                      <TableCell className="text-[11px]">{formatCurrency(item.remainingBudget)}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={4} className="py-8 text-center text-xs text-muted-foreground">
+                      No project budget records found.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -688,18 +748,18 @@ export function ProjectLeaderDashboard({
             icon={BookOpenCheck}
             onClick={() => setTrainingsOpen(true)}
           />
-          <SummaryCard
-            label="Budget"
+          <CompactMetricCard
+            title="Budget"
             value={formatCurrency(totalBudget)}
-            sub="Combined project budget"
-            icon={Wallet}
+            description="Per-project budget totals and your overall budget."
+            icon={PiggyBank}
             onClick={() => setBudgetOpen(true)}
           />
-          <SummaryCard
-            label="Utilized"
+          <CompactMetricCard
+            title="Utilized"
             value={formatCurrency(utilizedBudget)}
-            sub={`${Math.round(utilizationRate)}% of tracked budget`}
-            icon={ArrowUpRight}
+            description={`${Math.round(utilizationRate)}% of tracked budget already utilized.`}
+            icon={Wallet}
             onClick={() => setUtilizedOpen(true)}
           />
         </div>
