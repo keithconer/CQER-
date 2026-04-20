@@ -608,60 +608,66 @@ export function CollegeCoordinatorDashboard({
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="grid gap-2 md:grid-cols-[minmax(0,1.5fr)_180px_220px_220px_auto]">
-              <Input
-                value={projectSearch}
-                onChange={(event) => setProjectSearch(event.target.value)}
-                placeholder="Search project, leader, or creator..."
-                className="h-9 text-xs"
-              />
-              <Select value={projectRoleFilter} onValueChange={(value: ProjectCreatorRole) => setProjectRoleFilter(value)}>
-                <SelectTrigger className="h-9 text-xs">
-                  <Filter className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
-                  <SelectValue placeholder="Creator role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all" className="text-xs">All creators</SelectItem>
-                  <SelectItem value="college_coordinator" className="text-xs">College coordinator</SelectItem>
-                  <SelectItem value="unit_coordinator" className="text-xs">Unit coordinator</SelectItem>
-                  <SelectItem value="project_leader" className="text-xs">Project leader</SelectItem>
-                  <SelectItem value="super_admin" className="text-xs">Super admin</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={projectDepartmentFilter} onValueChange={setProjectDepartmentFilter}>
-                <SelectTrigger className="h-9 text-xs">
-                  <SelectValue placeholder="Department" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all" className="text-xs">All departments</SelectItem>
-                  {projectDepartmentOptions.map((option) => (
-                    <SelectItem key={option} value={option} className="text-xs">{option}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={projectUnitFilter} onValueChange={setProjectUnitFilter}>
-                <SelectTrigger className="h-9 text-xs">
-                  <SelectValue placeholder="Unit" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all" className="text-xs">All units</SelectItem>
-                  {projectUnitOptions.map((option) => (
-                    <SelectItem key={option} value={option} className="text-xs">{option}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="h-9 text-xs">
-                    <Download className="mr-2 h-3.5 w-3.5" />
-                    Export
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => void exportProjectsExcel(filteredProjects.filter(isActiveProject))}>Export Excel</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => void exportProjectsPdf(filteredProjects.filter(isActiveProject))}>Export PDF</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+            <div className="grid gap-2 lg:grid-cols-12">
+              <div className="min-w-0 lg:col-span-4">
+                <Input
+                  value={projectSearch}
+                  onChange={(event) => setProjectSearch(event.target.value)}
+                  placeholder="Search project, leader, or creator..."
+                  className="h-9 w-full min-w-0 text-xs"
+                />
+              </div>
+              <div className="min-w-0 sm:grid sm:grid-cols-2 sm:gap-2 lg:col-span-7 lg:grid-cols-3">
+                <Select value={projectRoleFilter} onValueChange={(value: ProjectCreatorRole) => setProjectRoleFilter(value)}>
+                  <SelectTrigger className="h-9 w-full min-w-0 text-xs">
+                    <Filter className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
+                    <SelectValue placeholder="Creator role" className="truncate" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all" className="text-xs">All creators</SelectItem>
+                    <SelectItem value="college_coordinator" className="text-xs">College coordinator</SelectItem>
+                    <SelectItem value="unit_coordinator" className="text-xs">Unit coordinator</SelectItem>
+                    <SelectItem value="project_leader" className="text-xs">Project leader</SelectItem>
+                    <SelectItem value="super_admin" className="text-xs">Super admin</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={projectDepartmentFilter} onValueChange={setProjectDepartmentFilter}>
+                  <SelectTrigger className="h-9 w-full min-w-0 text-xs">
+                    <SelectValue placeholder="Department" className="truncate" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all" className="text-xs">All departments</SelectItem>
+                    {projectDepartmentOptions.map((option) => (
+                      <SelectItem key={option} value={option} className="text-xs">{option}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={projectUnitFilter} onValueChange={setProjectUnitFilter}>
+                  <SelectTrigger className="h-9 w-full min-w-0 text-xs">
+                    <SelectValue placeholder="Unit" className="truncate" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all" className="text-xs">All units</SelectItem>
+                    {projectUnitOptions.map((option) => (
+                      <SelectItem key={option} value={option} className="text-xs">{option}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="min-w-0 lg:col-span-1">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="h-9 w-full text-xs">
+                      <Download className="mr-2 h-3.5 w-3.5" />
+                      Export
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => void exportProjectsExcel(filteredProjects.filter(isActiveProject))}>Export Excel</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => void exportProjectsPdf(filteredProjects.filter(isActiveProject))}>Export PDF</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
             <ScrollArea className="max-h-[60vh] rounded-xl border border-border/50">
               <Table>

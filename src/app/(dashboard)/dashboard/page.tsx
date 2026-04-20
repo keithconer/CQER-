@@ -1460,6 +1460,8 @@ export default async function DashboardPage({
               projectCount={projects.length}
               activeProjectCount={projectLeaderActiveProjects}
               trainingCount={projectLeaderTrainingCount}
+              projects={projects}
+              trainings={trainingRecords}
               totalBudget={analyticsTotalBudget}
               utilizedBudget={projectLeaderUtilizedBudget}
               utilizationRate={projectLeaderUtilizationRate}

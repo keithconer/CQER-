@@ -2,8 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { format } from "date-fns";
 import {
   Activity,
   ArrowUpRight,
@@ -48,6 +47,7 @@ import {
 } from "recharts";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -56,10 +56,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { type Project } from "@/components/dashboard/projects-table";
+import { type TrainingRecord } from "@/components/dashboard/trainings-form";
 
 type ModuleCount = {
   label: string;
@@ -109,6 +120,8 @@ interface ProjectLeaderDashboardProps {
   projectCount: number;
   activeProjectCount: number;
   trainingCount: number;
+  projects: Project[];
+  trainings: TrainingRecord[];
   totalBudget: number;
   utilizedBudget: number;
   utilizationRate: number;
@@ -154,6 +167,199 @@ const formatCurrency = (value: number) =>
 
 const chartTextColor = "var(--foreground)";
 const chartGridColor = "var(--border)";
+
+type TrainingTimeFilter = "all" | "this_month" | "custom_period";
+type ParticipantFilter = "all" | "up_to_25" | "26_to_50" | "51_to_100" | "101_plus";
+type WeightedDaysFilter = "all" | "up_to_1" | "1_to_5" | "above_5";
+
+function formatDate(value: string | null | undefined) {
+  if (!value) return "-";
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? "-" : format(parsed, "MMM d, yyyy");
+}
+
+function formatProjectDuration(project: Project) {
+  if (!project.start_date || !project.end_date) return "-";
+  return `${formatDate(project.start_date)} - ${formatDate(project.end_date)}`;
+}
+
+function getProjectLeaderNames(project: Project) {
+  const leaders = Array.isArray(project.proponents)
+    ? project.proponents.map((item) => item?.name?.trim()).filter(Boolean)
+    : [];
+  return leaders.length > 0 ? leaders.join(", ") : "-";
+}
+
+function getProjectBudget(project: Project) {
+  if (typeof project.budget_total === "number") return project.budget_total;
+  if (!Array.isArray(project.budget_requirements)) return 0;
+  return project.budget_requirements.reduce((sum, item) => sum + (Number(item?.amount) || 0), 0);
+}
+
+function getTrainingDate(record: TrainingRecord) {
+  const sortedDates = [...(record.inclusive_dates || [])].sort();
+  return sortedDates.length > 0 ? sortedDates[0] : null;
+}
+
+function getTrainingSchedule(record: TrainingRecord) {
+  if (record.date_mode === "hours") {
+    return `${record.manual_hours || 0} hour/s`;
+  }
+  const sortedDates = [...(record.inclusive_dates || [])].sort();
+  if (sortedDates.length === 0) return "-";
+  const start = sortedDates[0];
+  const end = sortedDates[sortedDates.length - 1];
+  return start === end ? formatDate(start) : `${formatDate(start)} - ${formatDate(end)}`;
+}
+
+function matchesParticipantFilter(record: TrainingRecord, filter: ParticipantFilter) {
+  const participants = Number(record.participants_overall_total || 0);
+  if (filter === "up_to_25") return participants <= 25;
+  if (filter === "26_to_50") return participants >= 26 && participants <= 50;
+  if (filter === "51_to_100") return participants >= 51 && participants <= 100;
+  if (filter === "101_plus") return participants >= 101;
+  return true;
+}
+
+function matchesWeightedDaysFilter(record: TrainingRecord, filter: WeightedDaysFilter) {
+  const weightedDays = Number(record.weighted_days_trained || 0);
+  if (filter === "up_to_1") return weightedDays <= 1;
+  if (filter === "1_to_5") return weightedDays > 1 && weightedDays <= 5;
+  if (filter === "above_5") return weightedDays > 5;
+  return true;
+}
+
+async function exportProjectsExcel(records: Project[]) {
+  const ExcelJSImport = await import("exceljs/dist/exceljs.min.js");
+  const ExcelJS = ExcelJSImport?.default ?? ExcelJSImport;
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet("Projects");
+  const columns = [
+    { header: "Project Name", key: "title", width: 36 },
+    { header: "Duration", key: "duration", width: 28 },
+    { header: "Project Leader", key: "leader", width: 26 },
+    { header: "Total Budget", key: "budget", width: 18 },
+    { header: "Category", key: "category", width: 20 },
+  ];
+  sheet.columns = columns.map((column) => ({ key: column.key, width: column.width }));
+  sheet.mergeCells("A1:E1");
+  sheet.getCell("A1").value = "Project Records";
+  sheet.getCell("A1").font = { bold: true, size: 14 };
+  sheet.getCell("A1").alignment = { horizontal: "center" };
+  sheet.getRow(2).values = columns.map((column) => column.header);
+  sheet.getRow(2).eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF159E44" } };
+  });
+  records.forEach((project) => {
+    sheet.addRow({
+      title: project.title || "Untitled project",
+      duration: formatProjectDuration(project),
+      leader: getProjectLeaderNames(project),
+      budget: getProjectBudget(project),
+      category: project.category || "-",
+    });
+  });
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `project-leader-projects-${new Date().toISOString().slice(0, 10)}.xlsx`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+async function exportProjectsPdf(records: Project[]) {
+  const { jsPDF } = await import("jspdf");
+  const { default: autoTable } = await import("jspdf-autotable");
+  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+  doc.setFontSize(12);
+  doc.text("Project Records", doc.internal.pageSize.getWidth() / 2, 12, { align: "center" });
+  autoTable(doc, {
+    startY: 18,
+    head: [["Project Name", "Duration", "Project Leader", "Total Budget", "Category"]],
+    body: records.map((project) => [
+      project.title || "Untitled project",
+      formatProjectDuration(project),
+      getProjectLeaderNames(project),
+      formatCurrency(getProjectBudget(project)),
+      project.category || "-",
+    ]),
+    theme: "grid",
+    headStyles: { fillColor: [21, 158, 68], textColor: [255, 255, 255], fontSize: 8 },
+    styles: { fontSize: 7, cellPadding: 2, overflow: "linebreak" },
+  });
+  doc.save(`project-leader-projects-${new Date().toISOString().slice(0, 10)}.pdf`);
+}
+
+async function exportTrainingsExcel(records: TrainingRecord[]) {
+  const ExcelJSImport = await import("exceljs/dist/exceljs.min.js");
+  const ExcelJS = ExcelJSImport?.default ?? ExcelJSImport;
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet("Trainings");
+  const columns = [
+    { header: "Training Title", key: "title", width: 34 },
+    { header: "Related Project", key: "project", width: 28 },
+    { header: "Schedule", key: "schedule", width: 24 },
+    { header: "Participants", key: "participants", width: 16 },
+    { header: "Weighted Days", key: "weightedDays", width: 16 },
+  ];
+  sheet.columns = columns.map((column) => ({ key: column.key, width: column.width }));
+  sheet.mergeCells("A1:E1");
+  sheet.getCell("A1").value = "Training Records";
+  sheet.getCell("A1").font = { bold: true, size: 14 };
+  sheet.getCell("A1").alignment = { horizontal: "center" };
+  sheet.getRow(2).values = columns.map((column) => column.header);
+  sheet.getRow(2).eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF159E44" } };
+  });
+  records.forEach((record) => {
+    sheet.addRow({
+      title: record.training_title,
+      project: record.related_project_title || "-",
+      schedule: getTrainingSchedule(record),
+      participants: Number(record.participants_overall_total || 0),
+      weightedDays: Number(record.weighted_days_trained || 0),
+    });
+  });
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `project-leader-trainings-${new Date().toISOString().slice(0, 10)}.xlsx`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+async function exportTrainingsPdf(records: TrainingRecord[]) {
+  const { jsPDF } = await import("jspdf");
+  const { default: autoTable } = await import("jspdf-autotable");
+  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+  doc.setFontSize(12);
+  doc.text("Training Records", doc.internal.pageSize.getWidth() / 2, 12, { align: "center" });
+  autoTable(doc, {
+    startY: 18,
+    head: [["Training Title", "Related Project", "Schedule", "Participants", "Weighted Days"]],
+    body: records.map((record) => [
+      record.training_title,
+      record.related_project_title || "-",
+      getTrainingSchedule(record),
+      String(record.participants_overall_total || 0),
+      String(record.weighted_days_trained || 0),
+    ]),
+    theme: "grid",
+    headStyles: { fillColor: [21, 158, 68], textColor: [255, 255, 255], fontSize: 8 },
+    styles: { fontSize: 7, cellPadding: 2, overflow: "linebreak" },
+  });
+  doc.save(`project-leader-trainings-${new Date().toISOString().slice(0, 10)}.pdf`);
+}
 
 function ChartTooltip({
   active,
@@ -281,19 +487,6 @@ function getInitials(name: string) {
   return parts.map((part) => part[0]?.toUpperCase() || "").join("");
 }
 
-function LogoPreloaderOverlay() {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-      <div className="flex flex-col items-center rounded-3xl border border-border/60 bg-background px-8 py-7 shadow-lg">
-        <div className="relative h-20 w-20 preloader-logo">
-          <Image src="/CQERFINAL.png" alt="CQER Logo" fill className="object-contain" />
-        </div>
-        <p className="mt-3 text-[10px] font-medium text-muted-foreground">Loading dashboard...</p>
-      </div>
-    </div>
-  );
-}
-
 function BudgetDetailsDialog({
   open,
   onOpenChange,
@@ -363,6 +556,8 @@ export function ProjectLeaderDashboard({
   projectCount,
   activeProjectCount,
   trainingCount,
+  projects,
+  trainings,
   totalBudget,
   utilizedBudget,
   utilizationRate,
@@ -374,12 +569,19 @@ export function ProjectLeaderDashboard({
   budgetDetails,
   facultyInvolvement,
 }: ProjectLeaderDashboardProps) {
-  const router = useRouter();
-  const [, startTransition] = React.useTransition();
-  const [navigatingTo, setNavigatingTo] = React.useState<string | null>(null);
+  const [projectsOpen, setProjectsOpen] = React.useState(false);
+  const [trainingsOpen, setTrainingsOpen] = React.useState(false);
   const [budgetOpen, setBudgetOpen] = React.useState(false);
   const [utilizedOpen, setUtilizedOpen] = React.useState(false);
   const [facultyPage, setFacultyPage] = React.useState(1);
+  const [projectSearch, setProjectSearch] = React.useState("");
+  const [projectCategoryFilter, setProjectCategoryFilter] = React.useState("all");
+  const [trainingSearch, setTrainingSearch] = React.useState("");
+  const [trainingTimeFilter, setTrainingTimeFilter] = React.useState<TrainingTimeFilter>("all");
+  const [trainingParticipantsFilter, setTrainingParticipantsFilter] = React.useState<ParticipantFilter>("all");
+  const [trainingWeightedDaysFilter, setTrainingWeightedDaysFilter] = React.useState<WeightedDaysFilter>("all");
+  const [trainingPeriodFrom, setTrainingPeriodFrom] = React.useState("");
+  const [trainingPeriodTo, setTrainingPeriodTo] = React.useState("");
   const populatedModules = moduleCounts.filter((item) => item.value > 0);
   const maxRadar = Math.max(1, ...radarSeries.map((item) => item.fullMark));
   const facultyPageSize = 5;
@@ -389,20 +591,87 @@ export function ProjectLeaderDashboard({
     facultyPage * facultyPageSize
   );
 
-  const handleNavigate = React.useCallback((href: string) => {
-    setNavigatingTo(href);
-    startTransition(() => {
-      router.push(href);
-    });
-  }, [router]);
-
   React.useEffect(() => {
     setFacultyPage((current) => Math.min(current, facultyTotalPages));
   }, [facultyTotalPages]);
 
+  const filteredProjects = React.useMemo(() => {
+    return projects.filter((project) => {
+      const haystack = [
+        project.title,
+        getProjectLeaderNames(project),
+        project.category || "",
+      ]
+        .join(" ")
+        .toLowerCase();
+      if (projectSearch && !haystack.includes(projectSearch.toLowerCase())) return false;
+      if (projectCategoryFilter !== "all" && (project.category || "") !== projectCategoryFilter) return false;
+      return true;
+    });
+  }, [projectCategoryFilter, projectSearch, projects]);
+
+  const projectLinkedTrainings = React.useMemo(
+    () =>
+      trainings.filter((record) =>
+        Boolean(
+          (record.related_project_id && String(record.related_project_id).trim()) ||
+            (record.related_project_title && String(record.related_project_title).trim())
+        )
+      ),
+    [trainings]
+  );
+
+  const filteredTrainings = React.useMemo(() => {
+    const now = new Date();
+    return projectLinkedTrainings.filter((record) => {
+      const haystack = [
+        record.training_title,
+        record.related_project_title || "",
+        record.venue_platform || "",
+      ]
+        .join(" ")
+        .toLowerCase();
+      if (trainingSearch && !haystack.includes(trainingSearch.toLowerCase())) return false;
+      if (!matchesParticipantFilter(record, trainingParticipantsFilter)) return false;
+      if (!matchesWeightedDaysFilter(record, trainingWeightedDaysFilter)) return false;
+
+      const trainingDate = getTrainingDate(record);
+      if (trainingTimeFilter === "this_month") {
+        if (!trainingDate) return false;
+        const parsed = new Date(trainingDate);
+        if (parsed.getMonth() !== now.getMonth() || parsed.getFullYear() !== now.getFullYear()) return false;
+      }
+      if (trainingTimeFilter === "custom_period") {
+        if (!trainingDate || !trainingPeriodFrom || !trainingPeriodTo) return false;
+        const parsed = new Date(trainingDate).getTime();
+        const start = new Date(trainingPeriodFrom).getTime();
+        const end = new Date(trainingPeriodTo).getTime();
+        if (Number.isNaN(parsed) || Number.isNaN(start) || Number.isNaN(end)) return false;
+        if (parsed < start || parsed > end) return false;
+      }
+
+      return true;
+    });
+  }, [
+    projectLinkedTrainings,
+    trainingParticipantsFilter,
+    trainingPeriodFrom,
+    trainingPeriodTo,
+    trainingSearch,
+    trainingTimeFilter,
+    trainingWeightedDaysFilter,
+  ]);
+
+  const projectCategories = React.useMemo(
+    () =>
+      Array.from(new Set(projects.map((project) => project.category).filter(Boolean) as string[])).sort((a, b) =>
+        a.localeCompare(b)
+      ),
+    [projects]
+  );
+
   return (
     <>
-      {navigatingTo ? <LogoPreloaderOverlay /> : null}
       <div className="space-y-5">
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <SummaryCard
@@ -410,14 +679,14 @@ export function ProjectLeaderDashboard({
             value={projectCount}
             sub={`${activeProjectCount} active or ongoing`}
             icon={FolderKanban}
-            onClick={() => handleNavigate("/dashboard?panel=projects&view=project-registration")}
+            onClick={() => setProjectsOpen(true)}
           />
           <SummaryCard
             label="Trainings"
             value={trainingCount}
             sub="Training records created"
             icon={BookOpenCheck}
-            onClick={() => handleNavigate("/dashboard?panel=trainings")}
+            onClick={() => setTrainingsOpen(true)}
           />
           <SummaryCard
             label="Budget"
@@ -675,6 +944,194 @@ export function ProjectLeaderDashboard({
         </Card>
       </div>
 
+      <Dialog open={projectsOpen} onOpenChange={setProjectsOpen}>
+        <DialogContent className="sm:max-w-5xl">
+          <DialogHeader>
+            <DialogTitle>Project Records</DialogTitle>
+            <DialogDescription>
+              View and export the projects you created without routing away from the dashboard.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid gap-2 lg:grid-cols-12">
+              <div className="min-w-0 lg:col-span-8">
+                <Input
+                  value={projectSearch}
+                  onChange={(event) => setProjectSearch(event.target.value)}
+                  placeholder="Search project, leader, or category..."
+                  className="h-9 w-full min-w-0 text-xs"
+                />
+              </div>
+              <div className="min-w-0 sm:grid sm:grid-cols-2 sm:gap-2 lg:col-span-4">
+                <Select value={projectCategoryFilter} onValueChange={setProjectCategoryFilter}>
+                  <SelectTrigger className="h-9 w-full min-w-0 text-xs">
+                    <SelectValue placeholder="Category" className="truncate" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all" className="text-xs">All categories</SelectItem>
+                    {projectCategories.map((category) => (
+                      <SelectItem key={category} value={category} className="text-xs">
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="h-9 w-full text-xs">
+                      <ArrowUpRight className="mr-2 h-3.5 w-3.5" />
+                      Export
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => void exportProjectsExcel(filteredProjects)}>Export Excel</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => void exportProjectsPdf(filteredProjects)}>Export PDF</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+            <ScrollArea className="max-h-[60vh] rounded-xl border border-border/50">
+              <Table>
+                <TableHeader className="bg-muted/30">
+                  <TableRow className="border-border/40">
+                    <TableHead className="text-[10px]">Project</TableHead>
+                    <TableHead className="text-[10px]">Duration</TableHead>
+                    <TableHead className="text-[10px]">Project Leader</TableHead>
+                    <TableHead className="text-[10px]">Budget</TableHead>
+                    <TableHead className="text-[10px]">Category</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredProjects.map((project) => (
+                    <TableRow key={project.id} className="border-border/30">
+                      <TableCell className="text-[11px] font-medium">{project.title || "Untitled project"}</TableCell>
+                      <TableCell className="text-[11px]">{formatProjectDuration(project)}</TableCell>
+                      <TableCell className="text-[11px]">{getProjectLeaderNames(project)}</TableCell>
+                      <TableCell className="text-[11px]">{formatCurrency(getProjectBudget(project))}</TableCell>
+                      <TableCell className="text-[11px]">{project.category || "-"}</TableCell>
+                    </TableRow>
+                  ))}
+                  {filteredProjects.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="py-8 text-center text-xs text-muted-foreground">
+                        No project records match the active filters.
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={trainingsOpen} onOpenChange={setTrainingsOpen}>
+        <DialogContent className="sm:max-w-5xl">
+          <DialogHeader>
+            <DialogTitle>Training Records</DialogTitle>
+            <DialogDescription>
+              View and export your project-linked training records from the dashboard.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid gap-2 lg:grid-cols-12">
+              <div className="min-w-0 lg:col-span-6">
+                <Input
+                  value={trainingSearch}
+                  onChange={(event) => setTrainingSearch(event.target.value)}
+                  placeholder="Search training, project, or venue..."
+                  className="h-9 w-full min-w-0 text-xs"
+                />
+              </div>
+              <div className="min-w-0 sm:grid sm:grid-cols-2 sm:gap-2 lg:col-span-5 lg:grid-cols-3">
+                <Select value={trainingTimeFilter} onValueChange={(value: TrainingTimeFilter) => setTrainingTimeFilter(value)}>
+                  <SelectTrigger className="h-9 w-full min-w-0 text-xs">
+                    <SelectValue placeholder="Time filter" className="truncate" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all" className="text-xs">All records</SelectItem>
+                    <SelectItem value="this_month" className="text-xs">This month</SelectItem>
+                    <SelectItem value="custom_period" className="text-xs">This period</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={trainingParticipantsFilter} onValueChange={(value: ParticipantFilter) => setTrainingParticipantsFilter(value)}>
+                  <SelectTrigger className="h-9 w-full min-w-0 text-xs">
+                    <SelectValue placeholder="Participants" className="truncate" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all" className="text-xs">All participants</SelectItem>
+                    <SelectItem value="up_to_25" className="text-xs">Up to 25</SelectItem>
+                    <SelectItem value="26_to_50" className="text-xs">26 to 50</SelectItem>
+                    <SelectItem value="51_to_100" className="text-xs">51 to 100</SelectItem>
+                    <SelectItem value="101_plus" className="text-xs">101 and above</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={trainingWeightedDaysFilter} onValueChange={(value: WeightedDaysFilter) => setTrainingWeightedDaysFilter(value)}>
+                  <SelectTrigger className="h-9 w-full min-w-0 text-xs">
+                    <SelectValue placeholder="Weighted days" className="truncate" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all" className="text-xs">All weighted days</SelectItem>
+                    <SelectItem value="up_to_1" className="text-xs">Up to 1</SelectItem>
+                    <SelectItem value="1_to_5" className="text-xs">1 to 5</SelectItem>
+                    <SelectItem value="above_5" className="text-xs">Above 5</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="min-w-0 lg:col-span-1">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="h-9 w-full text-xs">
+                      <ArrowUpRight className="mr-2 h-3.5 w-3.5" />
+                      Export
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => void exportTrainingsExcel(filteredTrainings)}>Export Excel</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => void exportTrainingsPdf(filteredTrainings)}>Export PDF</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+            {trainingTimeFilter === "custom_period" ? (
+              <div className="grid gap-2 md:grid-cols-2">
+                <Input type="date" value={trainingPeriodFrom} onChange={(event) => setTrainingPeriodFrom(event.target.value)} className="h-9 text-xs" />
+                <Input type="date" value={trainingPeriodTo} onChange={(event) => setTrainingPeriodTo(event.target.value)} className="h-9 text-xs" />
+              </div>
+            ) : null}
+            <ScrollArea className="max-h-[60vh] rounded-xl border border-border/50">
+              <Table>
+                <TableHeader className="bg-muted/30">
+                  <TableRow className="border-border/40">
+                    <TableHead className="text-[10px]">Training</TableHead>
+                    <TableHead className="text-[10px]">Related Project</TableHead>
+                    <TableHead className="text-[10px]">Schedule</TableHead>
+                    <TableHead className="text-[10px]">Participants</TableHead>
+                    <TableHead className="text-[10px]">Weighted Days</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredTrainings.map((record) => (
+                    <TableRow key={record.id} className="border-border/30">
+                      <TableCell className="text-[11px] font-medium">{record.training_title}</TableCell>
+                      <TableCell className="text-[11px]">{record.related_project_title || "-"}</TableCell>
+                      <TableCell className="text-[11px]">{getTrainingSchedule(record)}</TableCell>
+                      <TableCell className="text-[11px]">{record.participants_overall_total || 0}</TableCell>
+                      <TableCell className="text-[11px]">{record.weighted_days_trained || 0}</TableCell>
+                    </TableRow>
+                  ))}
+                  {filteredTrainings.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="py-8 text-center text-xs text-muted-foreground">
+                        No training records match the active filters.
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          </div>
+        </DialogContent>
+      </Dialog>
       <BudgetDetailsDialog
         open={budgetOpen}
         onOpenChange={setBudgetOpen}
