@@ -1109,8 +1109,8 @@ export function CommunityMessenger({
             </div>
           </DialogHeader>
 
-          <div className="grid min-h-0 flex-1 md:grid-cols-[260px_minmax(0,1fr)]">
-            <div className="flex min-h-0 flex-col border-b border-border/50 md:border-b-0 md:border-r">
+          <div className="grid h-full min-h-0 flex-1 md:grid-cols-[260px_minmax(0,1fr)]">
+            <div className="flex min-h-0 flex-col overflow-hidden border-b border-border/50 md:border-b-0 md:border-r">
               <div className="space-y-2 p-3">
                 <div className="relative">
                   <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -1186,10 +1186,10 @@ export function CommunityMessenger({
               </ScrollArea>
             </div>
 
-            <div className="flex min-h-0 flex-col">
+            <div className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden">
               {threadDetail ? (
                 <>
-                  <div className="border-b border-border/50 px-4 py-3">
+                  <div className="shrink-0 border-b border-border/50 px-4 py-3">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-9 w-9 border border-border/50">
                         <AvatarImage
@@ -1209,86 +1209,88 @@ export function CommunityMessenger({
                     </div>
                   </div>
 
-                  <ScrollArea className="flex-1 bg-muted/10 px-4 py-3">
-                    <div className="space-y-3">
-                      {isThreadLoading ? (
-                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          Loading messages...
-                        </div>
-                      ) : threadDetail.messages.length === 0 ? (
-                        <p className="text-[10px] text-muted-foreground">No messages yet. Start the conversation.</p>
-                      ) : (
-                        threadDetail.messages.map((message) => {
-                          const isMine = message.sender_id === currentUser.id;
-                          return (
-                            <div
-                              key={message.id}
-                              className={cn("flex gap-2", isMine ? "justify-end" : "justify-start")}
-                            >
-                              {!isMine ? (
-                                <Avatar className="mt-1 h-7 w-7 border border-border/50">
-                                  <AvatarImage src={message.sender.avatar_url || undefined} alt={message.sender.display_name} />
-                                  <AvatarFallback className="text-[8px]">{initials(message.sender)}</AvatarFallback>
-                                </Avatar>
-                              ) : null}
+                  <div className="min-h-0 overflow-hidden bg-muted/10">
+                    <ScrollArea className="h-full">
+                      <div className="space-y-3 px-4 py-3">
+                        {isThreadLoading ? (
+                          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            Loading messages...
+                          </div>
+                        ) : threadDetail.messages.length === 0 ? (
+                          <p className="text-[10px] text-muted-foreground">No messages yet. Start the conversation.</p>
+                        ) : (
+                          threadDetail.messages.map((message) => {
+                            const isMine = message.sender_id === currentUser.id;
+                            return (
                               <div
-                                className={cn(
-                                  "max-w-[80%] rounded-2xl px-3 py-2 shadow-sm",
-                                  isMine
-                                    ? "bg-foreground text-background"
-                                    : "border border-border/50 bg-background"
-                                )}
+                                key={message.id}
+                                className={cn("flex gap-2", isMine ? "justify-end" : "justify-start")}
                               >
-                                {!isMine && threadDetail.thread.thread_type === "group" ? (
-                                  <p className="mb-1 text-[8px] font-semibold text-muted-foreground">
-                                    {message.sender.display_name}
-                                  </p>
+                                {!isMine ? (
+                                  <Avatar className="mt-1 h-7 w-7 border border-border/50">
+                                    <AvatarImage src={message.sender.avatar_url || undefined} alt={message.sender.display_name} />
+                                    <AvatarFallback className="text-[8px]">{initials(message.sender)}</AvatarFallback>
+                                  </Avatar>
                                 ) : null}
-                                {message.body ? (
-                                  <p className="whitespace-pre-wrap text-[10px] leading-5">{message.body}</p>
-                                ) : null}
-                                {message.attachments.length > 0 ? (
-                                  <div className={cn("mt-2 space-y-1.5", !message.body ? "mt-0" : "")}>
-                                    {message.attachments.map((attachment) => (
-                                      <button
-                                        key={attachment.path}
-                                        type="button"
-                                        onClick={() => void openAttachment(attachment)}
-                                        className={cn(
-                                          "flex w-full items-center gap-2 rounded-xl border px-2 py-2 text-left",
-                                          isMine
-                                            ? "border-white/15 bg-white/10 text-background"
-                                            : "border-border/50 bg-muted/20"
-                                        )}
-                                      >
-                                        <FileText className="h-4 w-4 shrink-0" />
-                                        <div className="min-w-0">
-                                          <p className="truncate text-[10px] font-medium">{attachment.name}</p>
-                                          <p className="text-[8px] opacity-80">Open PDF</p>
-                                        </div>
-                                      </button>
-                                    ))}
-                                  </div>
-                                ) : null}
-                                <p
+                                <div
                                   className={cn(
-                                    "mt-1 text-[8px]",
-                                    isMine ? "text-background/70" : "text-muted-foreground"
+                                    "max-w-[80%] rounded-2xl px-3 py-2 shadow-sm",
+                                    isMine
+                                      ? "bg-foreground text-background"
+                                      : "border border-border/50 bg-background"
                                   )}
                                 >
-                                  {formatTime(message.created_at)}
-                                </p>
+                                  {!isMine && threadDetail.thread.thread_type === "group" ? (
+                                    <p className="mb-1 text-[8px] font-semibold text-muted-foreground">
+                                      {message.sender.display_name}
+                                    </p>
+                                  ) : null}
+                                  {message.body ? (
+                                    <p className="whitespace-pre-wrap text-[10px] leading-5">{message.body}</p>
+                                  ) : null}
+                                  {message.attachments.length > 0 ? (
+                                    <div className={cn("mt-2 space-y-1.5", !message.body ? "mt-0" : "")}>
+                                      {message.attachments.map((attachment) => (
+                                        <button
+                                          key={attachment.path}
+                                          type="button"
+                                          onClick={() => void openAttachment(attachment)}
+                                          className={cn(
+                                            "flex w-full items-center gap-2 rounded-xl border px-2 py-2 text-left",
+                                            isMine
+                                              ? "border-white/15 bg-white/10 text-background"
+                                              : "border-border/50 bg-muted/20"
+                                          )}
+                                        >
+                                          <FileText className="h-4 w-4 shrink-0" />
+                                          <div className="min-w-0">
+                                            <p className="truncate text-[10px] font-medium">{attachment.name}</p>
+                                            <p className="text-[8px] opacity-80">Open PDF</p>
+                                          </div>
+                                        </button>
+                                      ))}
+                                    </div>
+                                  ) : null}
+                                  <p
+                                    className={cn(
+                                      "mt-1 text-[8px]",
+                                      isMine ? "text-background/70" : "text-muted-foreground"
+                                    )}
+                                  >
+                                    {formatTime(message.created_at)}
+                                  </p>
+                                </div>
                               </div>
-                            </div>
-                          );
-                        })
-                      )}
-                      <div ref={messagesEndRef} />
-                    </div>
-                  </ScrollArea>
+                            );
+                          })
+                        )}
+                        <div ref={messagesEndRef} />
+                      </div>
+                    </ScrollArea>
+                  </div>
 
-                  <div className="border-t border-border/50 px-4 py-3">
+                  <div className="shrink-0 border-t border-border/50 bg-background px-4 py-3">
                     {latestOwnStatus ? (
                       <div className="mb-2 flex items-center justify-end gap-1 text-[8px] text-muted-foreground">
                         <CheckCheck className="h-3 w-3" />
@@ -1362,7 +1364,7 @@ export function CommunityMessenger({
                   </div>
                 </>
               ) : (
-                <div className="flex h-full min-h-[360px] flex-col items-center justify-center gap-2 px-6 text-center">
+                <div className="flex min-h-0 flex-col items-center justify-center gap-2 px-6 text-center">
                   <Circle className="h-7 w-7 text-muted-foreground/40" />
                   <p className="text-[11px] font-semibold">Select a conversation</p>
                   <p className="text-[10px] text-muted-foreground">
