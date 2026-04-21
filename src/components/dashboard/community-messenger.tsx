@@ -70,6 +70,11 @@ type RealtimeMessageChange = {
   sender_id: string;
 };
 
+type RealtimeNotificationChange = {
+  action_type: string;
+  route: string;
+};
+
 function formatName(user: Pick<CommunityMessengerUser, "display_name">) {
   return user.display_name;
 }
@@ -177,6 +182,14 @@ function mergeMessages(
     (left, right) =>
       new Date(left.created_at).getTime() - new Date(right.created_at).getTime()
   );
+}
+
+function parseChatThreadId(route: string) {
+  try {
+    return new URL(route, "https://cqer.local").searchParams.get("chat");
+  } catch {
+    return null;
+  }
 }
 
 function AccountHoverCard({
@@ -578,6 +591,26 @@ export function CommunityMessenger({
     queueActiveThreadSync(row.thread_id, 60);
   });
 
+  const handleMessageNotificationRealtime = React.useEffectEvent((payload: { new: unknown }) => {
+    const row = getRealtimeRow<RealtimeNotificationChange>(payload.new);
+
+    if (!row || row.action_type !== "message_received") {
+      return;
+    }
+
+    const threadId = parseChatThreadId(row.route);
+    if (!threadId) {
+      queueBootstrapRefresh(40);
+      return;
+    }
+
+    if (selectedThreadIdRef.current === threadId) {
+      queueActiveThreadSync(threadId, 20);
+    }
+
+    queueBootstrapRefresh(40);
+  });
+
   React.useEffect(() => {
     void loadBootstrap({ showLoading: true });
   }, [loadBootstrap]);
@@ -690,6 +723,26 @@ export function CommunityMessenger({
           filter: `user_id=eq.${currentUser.id}`,
         },
         handleOwnMembershipRealtime
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [currentUser.id, supabase]);
+
+  React.useEffect(() => {
+    const channel = supabase
+      .channel(`community-messenger-notifications:${currentUser.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `recipient_id=eq.${currentUser.id}`,
+        },
+        handleMessageNotificationRealtime
       )
       .subscribe();
 
