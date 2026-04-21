@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import {
   CheckCheck,
   Circle,
@@ -73,6 +74,17 @@ type RealtimeMessageChange = {
 type RealtimeNotificationChange = {
   action_type: string;
   route: string;
+};
+
+type RealtimeBroadcastMessage = {
+  thread_id: string;
+  sent_at?: string;
+};
+
+type RealtimeTypingPresence = {
+  user_id?: string;
+  typing?: boolean;
+  updated_at?: string;
 };
 
 function formatName(user: Pick<CommunityMessengerUser, "display_name">) {
@@ -192,6 +204,15 @@ function parseChatThreadId(route: string) {
   }
 }
 
+function getBroadcastPayload<T extends Record<string, unknown>>(value: unknown) {
+  const event = getRealtimeRow<{ payload?: unknown }>(value);
+  if (!event?.payload || typeof event.payload !== "object") {
+    return null;
+  }
+
+  return event.payload as T;
+}
+
 async function fetchRealtimeThreadState(threadId: string, afterCreatedAt?: string | null) {
   const params = new URLSearchParams({ threadId });
   if (afterCreatedAt) {
@@ -293,6 +314,8 @@ export function CommunityMessenger({
   const [threadFilter, setThreadFilter] = React.useState("");
   const [hoveredUserId, setHoveredUserId] = React.useState<string | null>(null);
   const [onlineIds, setOnlineIds] = React.useState<Set<string>>(new Set());
+  const [typingNames, setTypingNames] = React.useState<string[]>([]);
+  const [isComposerFocused, setIsComposerFocused] = React.useState(false);
   const [isSending, startSendTransition] = React.useTransition();
   const [isBootstrappingThread, startDirectTransition] = React.useTransition();
   const [isGroupDialogOpen, setIsGroupDialogOpen] = React.useState(false);
@@ -304,6 +327,10 @@ export function CommunityMessenger({
   const bootstrapRequestRef = React.useRef(0);
   const threadRequestRef = React.useRef(0);
   const activeThreadSyncRequestRef = React.useRef(0);
+  const activeThreadChannelRef = React.useRef<RealtimeChannel | null>(null);
+  const composerTypingTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastTypingTrackAtRef = React.useRef(0);
+  const ownTypingStateRef = React.useRef(false);
   const bootstrapRefreshTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const threadRefreshTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeThreadSyncTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -527,6 +554,58 @@ export function CommunityMessenger({
     }, delay);
   });
 
+  const syncTypingPresence = React.useEffectEvent(() => {
+    const channel = activeThreadChannelRef.current;
+    if (!channel) {
+      setTypingNames([]);
+      return;
+    }
+
+    const presenceState = channel.presenceState() as Record<string, RealtimeTypingPresence[]>;
+    const nextTypingNames = Array.from(
+      new Set(
+        Object.values(presenceState)
+          .flat()
+          .filter((presence) => Boolean(presence?.typing) && presence.user_id && presence.user_id !== currentUser.id)
+          .map((presence) => {
+            const userId = presence.user_id || "";
+            return (
+              threadDetail?.thread.members.find((member) => member.id === userId)?.display_name ||
+              users.find((user) => user.id === userId)?.display_name ||
+              "CQER User"
+            );
+          })
+      )
+    );
+
+    setTypingNames(nextTypingNames);
+  });
+
+  const updateOwnTypingPresence = React.useEffectEvent(async (typing: boolean) => {
+    const channel = activeThreadChannelRef.current;
+    if (!channel || !selectedThreadIdRef.current) {
+      ownTypingStateRef.current = false;
+      return;
+    }
+
+    const now = Date.now();
+    if (
+      ownTypingStateRef.current === typing &&
+      (typing ? now - lastTypingTrackAtRef.current < 1200 : true)
+    ) {
+      return;
+    }
+
+    ownTypingStateRef.current = typing;
+    lastTypingTrackAtRef.current = now;
+
+    await channel.track({
+      user_id: currentUser.id,
+      typing,
+      updated_at: new Date().toISOString(),
+    });
+  });
+
   const clearUnreadState = React.useEffectEvent((threadId: string) => {
     setThreadDetail((current) =>
       current && current.thread.id === threadId
@@ -643,6 +722,16 @@ export function CommunityMessenger({
     queueActiveThreadSync(row.thread_id, 60);
   });
 
+  const handleActiveThreadBroadcastMessage = React.useEffectEvent((payload: unknown) => {
+    const row = getBroadcastPayload<RealtimeBroadcastMessage>(payload);
+
+    if (!row?.thread_id || row.thread_id !== selectedThreadIdRef.current) {
+      return;
+    }
+
+    queueActiveThreadSync(row.thread_id, 5);
+  });
+
   const handleMessageNotificationRealtime = React.useEffectEvent((payload: { new: unknown }) => {
     const row = getRealtimeRow<RealtimeNotificationChange>(payload.new);
 
@@ -681,6 +770,9 @@ export function CommunityMessenger({
 
   React.useEffect(() => {
     return () => {
+      if (composerTypingTimeoutRef.current) {
+        clearTimeout(composerTypingTimeoutRef.current);
+      }
       if (bootstrapRefreshTimeoutRef.current) {
         clearTimeout(bootstrapRefreshTimeoutRef.current);
       }
@@ -697,6 +789,39 @@ export function CommunityMessenger({
     if (!threadDetail) return;
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [threadDetail]);
+
+  React.useEffect(() => {
+    if (!isMessengerOpen || !selectedThreadId) {
+      if (composerTypingTimeoutRef.current) {
+        clearTimeout(composerTypingTimeoutRef.current);
+        composerTypingTimeoutRef.current = null;
+      }
+      void updateOwnTypingPresence(false);
+      return;
+    }
+
+    const shouldShowTyping = isComposerFocused && composer.trim().length > 0;
+
+    if (!shouldShowTyping) {
+      if (composerTypingTimeoutRef.current) {
+        clearTimeout(composerTypingTimeoutRef.current);
+        composerTypingTimeoutRef.current = null;
+      }
+      void updateOwnTypingPresence(false);
+      return;
+    }
+
+    void updateOwnTypingPresence(true);
+
+    if (composerTypingTimeoutRef.current) {
+      clearTimeout(composerTypingTimeoutRef.current);
+    }
+
+    composerTypingTimeoutRef.current = setTimeout(() => {
+      composerTypingTimeoutRef.current = null;
+      void updateOwnTypingPresence(false);
+    }, 1800);
+  }, [composer, isComposerFocused, isMessengerOpen, selectedThreadId]);
 
   React.useEffect(() => {
     if (!selectedThreadId || !threadDetail || threadDetail.thread.id !== selectedThreadId) {
@@ -805,11 +930,22 @@ export function CommunityMessenger({
 
   React.useEffect(() => {
     if (!selectedThreadId) {
+      activeThreadChannelRef.current = null;
+      setTypingNames([]);
       return;
     }
 
     const channel = supabase
-      .channel(`community-messenger-thread:${currentUser.id}:${selectedThreadId}`)
+      .channel(`community-messenger-thread:${selectedThreadId}`, {
+        config: {
+          broadcast: { ack: true },
+          presence: { key: currentUser.id },
+        },
+      })
+      .on("presence", { event: "sync" }, syncTypingPresence)
+      .on("presence", { event: "join" }, syncTypingPresence)
+      .on("presence", { event: "leave" }, syncTypingPresence)
+      .on("broadcast", { event: "message-sent" }, handleActiveThreadBroadcastMessage)
       .on(
         "postgres_changes",
         {
@@ -830,9 +966,32 @@ export function CommunityMessenger({
         },
         handleActiveThreadMemberRealtime
       )
-      .subscribe();
+      .subscribe(async (status) => {
+        if (status !== "SUBSCRIBED") {
+          return;
+        }
+
+        activeThreadChannelRef.current = channel;
+        await channel.track({
+          user_id: currentUser.id,
+          typing: false,
+          updated_at: new Date().toISOString(),
+        });
+        syncTypingPresence();
+      });
 
     return () => {
+      if (composerTypingTimeoutRef.current) {
+        clearTimeout(composerTypingTimeoutRef.current);
+        composerTypingTimeoutRef.current = null;
+      }
+      ownTypingStateRef.current = false;
+      lastTypingTrackAtRef.current = 0;
+      setTypingNames([]);
+      if (activeThreadChannelRef.current === channel) {
+        activeThreadChannelRef.current = null;
+      }
+      void channel.untrack();
       void supabase.removeChannel(channel);
     };
   }, [currentUser.id, selectedThreadId, supabase]);
@@ -919,6 +1078,13 @@ export function CommunityMessenger({
 
     return `Delivered • ${formatTime(latestOwnMessage.created_at)}`;
   }, [latestOwnMessage, threadDetail]);
+
+  const typingLabel = React.useMemo(() => {
+    if (typingNames.length === 0) return null;
+    if (typingNames.length === 1) return `${typingNames[0]} is typing...`;
+    if (typingNames.length === 2) return `${typingNames[0]} and ${typingNames[1]} are typing...`;
+    return "Several people are typing...";
+  }, [typingNames]);
 
   const openDirectMessage = (userId: string) => {
     setIsMessengerOpen(true);
@@ -1037,8 +1203,20 @@ export function CommunityMessenger({
 
       setComposer("");
       setComposerAttachments([]);
+      setIsComposerFocused(false);
+      void updateOwnTypingPresence(false);
       if (result?.message && result.thread) {
         applyOptimisticMessage(result.message, result.thread);
+      }
+      if (result?.thread) {
+        void activeThreadChannelRef.current?.send({
+          type: "broadcast",
+          event: "message-sent",
+          payload: {
+            thread_id: result.thread.id,
+            sent_at: result.thread.last_message_at,
+          } satisfies RealtimeBroadcastMessage,
+        });
       }
     });
   };
@@ -1333,10 +1511,15 @@ export function CommunityMessenger({
                   </div>
 
                   <div className="shrink-0 border-t border-border/50 bg-background px-4 py-3">
-                    {latestOwnStatus ? (
-                      <div className="mb-2 flex items-center justify-end gap-1 text-[8px] text-muted-foreground">
-                        <CheckCheck className="h-3 w-3" />
-                        <span>{latestOwnStatus}</span>
+                    {typingLabel || latestOwnStatus ? (
+                      <div className="mb-2 flex items-center justify-between gap-2 text-[8px] text-muted-foreground">
+                        <div className="min-w-0 truncate">{typingLabel ? <span>{typingLabel}</span> : <span />}</div>
+                        {latestOwnStatus ? (
+                          <div className="flex shrink-0 items-center gap-1">
+                            <CheckCheck className="h-3 w-3" />
+                            <span>{latestOwnStatus}</span>
+                          </div>
+                        ) : null}
                       </div>
                     ) : null}
 
@@ -1374,6 +1557,8 @@ export function CommunityMessenger({
                       <Input
                         value={composer}
                         onChange={(event) => setComposer(event.target.value)}
+                        onFocus={() => setIsComposerFocused(true)}
+                        onBlur={() => setIsComposerFocused(false)}
                         onKeyDown={(event) => {
                           if (event.key === "Enter" && !event.shiftKey) {
                             event.preventDefault();
