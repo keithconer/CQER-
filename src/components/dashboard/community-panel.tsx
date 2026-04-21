@@ -37,6 +37,8 @@ import {
   type CommunityPost,
   updateCommunityPost,
 } from "@/lib/actions/community";
+import { CommunityMessenger } from "./community-messenger";
+import type { CommunityMessengerUser } from "@/lib/actions/community-messenger";
 import { CommunityAttachmentUpload, type CommunityAttachmentInput } from "./community-attachment-upload";
 import { DEPARTMENTS } from "@/lib/departments";
 import { cn } from "@/lib/utils";
@@ -318,6 +320,7 @@ export function CommunityPanel({
   mentionableUsers: CommunityBootstrap["mentionableUsers"];
 }) {
   const router = useRouter();
+  const supabase = React.useMemo(() => createClient(), []);
   const [isPending, startTransition] = React.useTransition();
   const [activeScope, setActiveScope] = React.useState<"ceit" | "department">("ceit");
   const [content, setContent] = React.useState("");
@@ -410,47 +413,101 @@ export function CommunityPanel({
   };
 
   const selectedMentionUsers = mentionableUsers.filter((user) => mentionedUserIds.includes(user.id));
+  type MentionableMessengerUser = CommunityBootstrap["mentionableUsers"][number] & {
+    user_type: CommunityMessengerUser["user_type"];
+  };
+  const messengerUsers = React.useMemo(
+    () =>
+      mentionableUsers
+        .filter(
+          (user): user is MentionableMessengerUser =>
+            ["super_admin", "college_coordinator", "unit_coordinator", "project_leader"].includes(user.user_type)
+        )
+        .map((user) => ({
+          ...user,
+          display_name: `${user.first_name || ""} ${user.last_name || ""}`.trim() || user.email || "CQER User",
+          position_label:
+            user.user_type === "super_admin"
+              ? "Super Admin"
+              : user.user_type === "college_coordinator"
+                ? "College Coordinator"
+                : user.user_type === "unit_coordinator"
+                  ? "Unit Coordinator"
+                  : "Project Leader",
+        })),
+    [mentionableUsers]
+  );
+
+  React.useEffect(() => {
+    const channel = supabase
+      .channel(`community-feed:${currentUser.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "community_posts" },
+        () => router.refresh()
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "community_comments" },
+        () => router.refresh()
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [currentUser.id, router, supabase]);
 
   return (
     <div className="grid gap-4 xl:grid-cols-[250px_minmax(0,1fr)]">
-      <Card className="border-0 bg-[linear-gradient(155deg,#0b2f25_0%,#106c4f_42%,#1ca96c_78%,#9ce2b2_100%)] text-white shadow-[0_16px_40px_rgba(21,158,68,0.25)] xl:sticky xl:top-4 xl:h-fit">
-        <CardHeader className="space-y-1 pb-3">
-          <CardTitle className="text-xs font-semibold">CQER Community</CardTitle>
-          <p className="text-[10px] text-white/80">
-            Share announcements, files, and updates with the CQER community.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <button
-            type="button"
-            onClick={() => setActiveScope("ceit")}
-            className={cn(
-              "flex w-full items-start gap-2 rounded-lg px-3 py-2.5 text-left text-[10px] transition-colors",
-              activeScope === "ceit" ? "bg-white/20 text-white" : "text-white/70 hover:bg-white/10 hover:text-white"
-            )}
-          >
-            <Globe2 className="mt-0.5 h-4 w-4 shrink-0" />
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold">CEIT</p>
-              <p className="text-[9px] leading-4 opacity-80">Public community announcements</p>
-            </div>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveScope("department")}
-            className={cn(
-              "flex w-full items-start gap-2 rounded-lg px-3 py-2.5 text-left text-[10px] transition-colors",
-              activeScope === "department" ? "bg-white/20 text-white" : "text-white/70 hover:bg-white/10 hover:text-white"
-            )}
-          >
-            <Building2 className="mt-0.5 h-4 w-4 shrink-0" />
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold">{currentUser.department || "Department"}</p>
-              <p className="text-[9px] leading-4 opacity-80">Department-only announcements</p>
-            </div>
-          </button>
-        </CardContent>
-      </Card>
+      <div className="space-y-4 xl:sticky xl:top-4 xl:h-fit">
+        <Card className="border-0 bg-[linear-gradient(155deg,#0b2f25_0%,#106c4f_42%,#1ca96c_78%,#9ce2b2_100%)] text-white shadow-[0_16px_40px_rgba(21,158,68,0.25)]">
+          <CardHeader className="space-y-1 pb-3">
+            <CardTitle className="text-xs font-semibold">CQER Community</CardTitle>
+            <p className="text-[10px] text-white/80">
+              Share announcements, files, and updates with the CQER community.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <button
+              type="button"
+              onClick={() => setActiveScope("ceit")}
+              className={cn(
+                "flex w-full items-start gap-2 rounded-lg px-3 py-2.5 text-left text-[10px] transition-colors",
+                activeScope === "ceit" ? "bg-white/20 text-white" : "text-white/70 hover:bg-white/10 hover:text-white"
+              )}
+            >
+              <Globe2 className="mt-0.5 h-4 w-4 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold">CEIT</p>
+                <p className="text-[9px] leading-4 opacity-80">Public community announcements</p>
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveScope("department")}
+              className={cn(
+                "flex w-full items-start gap-2 rounded-lg px-3 py-2.5 text-left text-[10px] transition-colors",
+                activeScope === "department" ? "bg-white/20 text-white" : "text-white/70 hover:bg-white/10 hover:text-white"
+              )}
+            >
+              <Building2 className="mt-0.5 h-4 w-4 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold">{currentUser.department || "Department"}</p>
+                <p className="text-[9px] leading-4 opacity-80">Department-only announcements</p>
+              </div>
+            </button>
+          </CardContent>
+        </Card>
+
+        <CommunityMessenger
+          currentUser={{
+            id: currentUser.id,
+            department: currentUser.department,
+          }}
+          users={messengerUsers}
+        />
+      </div>
 
       <div className="space-y-4">
         <Card className="border-border/50 shadow-sm">

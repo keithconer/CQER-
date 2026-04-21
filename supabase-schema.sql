@@ -592,6 +592,233 @@ $$;
 -- ============================================================
 -- Run this after adding/altering columns to refresh PostgREST schema cache.
 notify pgrst, 'reload schema';
+
+-- ============================================================
+-- START COPY: CQER Community Messenger
+-- ============================================================
+
+create table if not exists public.community_chat_threads (
+  id uuid primary key default gen_random_uuid(),
+  thread_type text not null check (thread_type in ('direct', 'group')),
+  direct_key text unique,
+  name text,
+  created_by uuid references public.profiles(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  last_message_at timestamptz not null default now(),
+  constraint community_chat_threads_name_required check (
+    (thread_type = 'direct' and name is null)
+    or (thread_type = 'group' and coalesce(length(trim(name)), 0) > 0)
+  )
+);
+
+create table if not exists public.community_chat_members (
+  thread_id uuid not null references public.community_chat_threads(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  role text not null default 'member' check (role in ('owner', 'member')),
+  joined_at timestamptz not null default now(),
+  last_read_message_id uuid,
+  last_read_at timestamptz,
+  primary key (thread_id, user_id)
+);
+
+create table if not exists public.community_chat_messages (
+  id uuid primary key default gen_random_uuid(),
+  thread_id uuid not null references public.community_chat_threads(id) on delete cascade,
+  sender_id uuid not null references public.profiles(id) on delete cascade,
+  body_encrypted text,
+  attachment_files jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint community_chat_messages_payload_required check (
+    coalesce(length(body_encrypted), 0) > 0
+    or coalesce(jsonb_array_length(attachment_files), 0) > 0
+  )
+);
+
+create index if not exists idx_community_chat_threads_last_message_at
+on public.community_chat_threads (last_message_at desc);
+
+create index if not exists idx_community_chat_members_user_id
+on public.community_chat_members (user_id, joined_at desc);
+
+create index if not exists idx_community_chat_messages_thread_created_at
+on public.community_chat_messages (thread_id, created_at asc);
+
+create index if not exists idx_community_chat_messages_sender_created_at
+on public.community_chat_messages (sender_id, created_at desc);
+
+create or replace function public.set_community_chat_threads_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists community_chat_threads_set_updated_at on public.community_chat_threads;
+create trigger community_chat_threads_set_updated_at
+before update on public.community_chat_threads
+for each row execute function public.set_community_chat_threads_updated_at();
+
+create or replace function public.set_community_chat_messages_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists community_chat_messages_set_updated_at on public.community_chat_messages;
+create trigger community_chat_messages_set_updated_at
+before update on public.community_chat_messages
+for each row execute function public.set_community_chat_messages_updated_at();
+
+create or replace function public.bump_community_chat_thread_activity()
+returns trigger as $$
+begin
+  update public.community_chat_threads
+  set last_message_at = new.created_at,
+      updated_at = now()
+  where id = new.thread_id;
+
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists community_chat_messages_bump_thread_activity on public.community_chat_messages;
+create trigger community_chat_messages_bump_thread_activity
+after insert on public.community_chat_messages
+for each row execute function public.bump_community_chat_thread_activity();
+
+alter table public.community_chat_threads enable row level security;
+alter table public.community_chat_members enable row level security;
+alter table public.community_chat_messages enable row level security;
+
+drop policy if exists "Community chat members can view own threads" on public.community_chat_threads;
+create policy "Community chat members can view own threads" on public.community_chat_threads
+for select using (
+  exists (
+    select 1
+    from public.community_chat_members member
+    where member.thread_id = community_chat_threads.id
+      and member.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "Community chat members can view thread members" on public.community_chat_members;
+create policy "Community chat members can view thread members" on public.community_chat_members
+for select using (
+  exists (
+    select 1
+    from public.community_chat_members viewer
+    where viewer.thread_id = community_chat_members.thread_id
+      and viewer.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "Community chat members can update own read state" on public.community_chat_members;
+create policy "Community chat members can update own read state" on public.community_chat_members
+for update using (user_id = auth.uid())
+with check (user_id = auth.uid());
+
+drop policy if exists "Community chat members can view messages" on public.community_chat_messages;
+create policy "Community chat members can view messages" on public.community_chat_messages
+for select using (
+  exists (
+    select 1
+    from public.community_chat_members member
+    where member.thread_id = community_chat_messages.thread_id
+      and member.user_id = auth.uid()
+  )
+);
+
+do $$
+begin
+  if exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'community_chat_threads'
+  ) then
+    null;
+  else
+    alter publication supabase_realtime add table public.community_chat_threads;
+  end if;
+end
+$$;
+
+do $$
+begin
+  if exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'community_chat_members'
+  ) then
+    null;
+  else
+    alter publication supabase_realtime add table public.community_chat_members;
+  end if;
+end
+$$;
+
+do $$
+begin
+  if exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'community_chat_messages'
+  ) then
+    null;
+  else
+    alter publication supabase_realtime add table public.community_chat_messages;
+  end if;
+end
+$$;
+
+drop policy if exists "Allow messenger authenticated uploads" on storage.objects;
+create policy "Allow messenger authenticated uploads"
+on storage.objects
+for insert
+to authenticated
+with check (
+  bucket_id = 'cqer-community-messenger'
+  and (storage.foldername(name))[1] = auth.uid()::text
+  and lower(storage.extension(name)) = 'pdf'
+);
+
+drop policy if exists "Allow messenger authenticated reads" on storage.objects;
+create policy "Allow messenger authenticated reads"
+on storage.objects
+for select
+to authenticated
+using (bucket_id = 'cqer-community-messenger');
+
+drop policy if exists "Allow messenger owner delete" on storage.objects;
+create policy "Allow messenger owner delete"
+on storage.objects
+for delete
+to authenticated
+using (
+  bucket_id = 'cqer-community-messenger'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
+
+notify pgrst, 'reload schema';
+
+-- Manual bucket step:
+-- Create a private storage bucket named: cqer-community-messenger
+-- Recommended mime restriction: application/pdf
+-- App-side validation enforces a 5 MB maximum file size.
+
+-- ============================================================
+-- END COPY: CQER Community Messenger
+-- ============================================================
 -- ============================================================
 -- END COPY: Supabase Schema Cache Reload (Funding Data)
 -- ============================================================
@@ -1657,7 +1884,7 @@ begin
   ) then
     alter table public.notifications
       add constraint notifications_entity_table_check
-      check (entity_table in ('projects', 'trainings', 'community_posts', 'community_comments'));
+      check (entity_table in ('projects', 'trainings', 'community_posts', 'community_comments', 'community_chat_threads', 'community_chat_messages'));
   end if;
 
   if exists (
@@ -1670,7 +1897,7 @@ begin
   ) then
     alter table public.notifications
       add constraint notifications_entity_kind_check
-      check (entity_kind in ('project', 'proposal', 'program', 'training', 'announcement', 'community_comment'));
+      check (entity_kind in ('project', 'proposal', 'program', 'training', 'announcement', 'community_comment', 'chat'));
   end if;
 
   if exists (
@@ -1683,7 +1910,7 @@ begin
   ) then
     alter table public.notifications
       add constraint notifications_action_type_check
-      check (action_type in ('created', 'updated', 'document_uploaded', 'assigned', 'community_post', 'mentioned', 'commented', 'replied'));
+      check (action_type in ('created', 'updated', 'document_uploaded', 'assigned', 'community_post', 'mentioned', 'commented', 'replied', 'message_received'));
   end if;
 end
 $$;

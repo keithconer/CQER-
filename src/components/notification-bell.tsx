@@ -13,7 +13,7 @@ type NotificationItem = {
   id: string;
   actor_name: string;
   actor_avatar_url: string | null;
-  entity_kind: "project" | "proposal" | "program" | "training" | "announcement" | "community_comment";
+  entity_kind: "project" | "proposal" | "program" | "training" | "announcement" | "community_comment" | "chat";
   entity_title: string;
   action_type:
     | "created"
@@ -23,7 +23,8 @@ type NotificationItem = {
     | "community_post"
     | "mentioned"
     | "commented"
-    | "replied";
+    | "replied"
+    | "message_received";
   route: string;
   created_at: string;
   read_at: string | null;
@@ -88,6 +89,10 @@ function buildMessage(item: NotificationItem) {
 
   if (item.action_type === "community_post") {
     return `${actorName} shared a new public post from CQER Community: "${item.entity_title}"`;
+  }
+
+  if (item.action_type === "message_received") {
+    return `${actorName} sent a new message in "${item.entity_title}"`;
   }
 
   if (item.action_type === "updated") {
