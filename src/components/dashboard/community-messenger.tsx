@@ -21,10 +21,10 @@ import {
   ensureCommunityDirectThread,
   getCommunityMessengerBootstrap,
   getCommunityThreadDetail,
-  getCommunityThreadRealtimeState,
   markCommunityThreadRead,
   sendCommunityMessage,
   type CommunityMessengerBootstrap,
+  type CommunityMessengerMessage,
   type CommunityMessengerThread,
   type CommunityMessengerThreadDetail,
   type CommunityMessengerUser,
@@ -190,6 +190,37 @@ function parseChatThreadId(route: string) {
   } catch {
     return null;
   }
+}
+
+async function fetchRealtimeThreadState(threadId: string, afterCreatedAt?: string | null) {
+  const params = new URLSearchParams({ threadId });
+  if (afterCreatedAt) {
+    params.set("afterCreatedAt", afterCreatedAt);
+  }
+
+  const response = await fetch(`/api/community-messenger/realtime?${params.toString()}`, {
+    method: "GET",
+    cache: "no-store",
+    credentials: "same-origin",
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to sync conversation.");
+  }
+
+  return (await response.json()) as {
+    thread: {
+      id: string;
+      name: string;
+      last_message_at: string;
+      last_message_preview: string | null;
+    };
+    messages: CommunityMessengerMessage[];
+    receipt: {
+      other_user_id: string | null;
+      last_read_at: string | null;
+    };
+  };
 }
 
 function AccountHoverCard({
@@ -386,10 +417,16 @@ export function CommunityMessenger({
 
     const afterCreatedAt = currentDetail.messages[currentDetail.messages.length - 1]?.created_at || null;
     const requestId = ++activeThreadSyncRequestRef.current;
-    const result = await getCommunityThreadRealtimeState({
-      threadId,
-      afterCreatedAt,
-    });
+    let result: Awaited<ReturnType<typeof fetchRealtimeThreadState>>;
+
+    try {
+      result = await fetchRealtimeThreadState(threadId, afterCreatedAt);
+    } catch {
+      if (selectedThreadIdRef.current === threadId) {
+        queueThreadRefresh(threadId, 40);
+      }
+      return;
+    }
 
     if (activeThreadSyncRequestRef.current !== requestId || selectedThreadIdRef.current !== threadId) {
       return;
@@ -1062,7 +1099,7 @@ export function CommunityMessenger({
       </Card>
 
       <Dialog open={isMessengerOpen} onOpenChange={setIsMessengerOpen}>
-        <DialogContent className="max-w-5xl gap-0 overflow-hidden p-0 sm:max-w-5xl">
+        <DialogContent className="flex h-[85vh] max-h-[760px] max-w-5xl flex-col gap-0 overflow-hidden p-0 sm:max-w-5xl">
           <DialogHeader className="border-b border-border/50 px-4 py-3">
             <div>
               <DialogTitle className="text-sm">CQER Community Messenger</DialogTitle>
@@ -1072,8 +1109,8 @@ export function CommunityMessenger({
             </div>
           </DialogHeader>
 
-          <div className="grid min-h-[70vh] md:grid-cols-[260px_minmax(0,1fr)]">
-            <div className="border-b border-border/50 md:border-b-0 md:border-r">
+          <div className="grid min-h-0 flex-1 md:grid-cols-[260px_minmax(0,1fr)]">
+            <div className="flex min-h-0 flex-col border-b border-border/50 md:border-b-0 md:border-r">
               <div className="space-y-2 p-3">
                 <div className="relative">
                   <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -1095,7 +1132,7 @@ export function CommunityMessenger({
                   New Group
                 </Button>
               </div>
-              <ScrollArea className="h-[calc(70vh-4.5rem)]">
+              <ScrollArea className="min-h-0 flex-1">
                 <div className="space-y-1 px-2 pb-3">
                   {isLoading ? (
                     <div className="flex items-center gap-2 px-2 py-4 text-[10px] text-muted-foreground">
