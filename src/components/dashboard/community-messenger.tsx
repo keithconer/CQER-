@@ -438,6 +438,21 @@ export function CommunityMessenger({
     const hasIncomingFromOtherUser = incomingMessages.some(
       (message) => message.sender_id !== currentUser.id
     );
+    const lastKnownMessage = currentDetail.messages[currentDetail.messages.length - 1] || null;
+    const hasThreadMetaChanged =
+      result.thread.last_message_at !== currentDetail.thread.last_message_at ||
+      (result.thread.last_message_preview || currentDetail.thread.last_message_preview) !==
+        currentDetail.thread.last_message_preview;
+    const hasReceiptChanged = result.receipt.last_read_at !== currentDetail.receipt.last_read_at;
+
+    if (
+      incomingMessages.length === 0 &&
+      !hasThreadMetaChanged &&
+      !hasReceiptChanged &&
+      lastKnownMessage?.created_at === result.thread.last_message_at
+    ) {
+      return;
+    }
 
     setThreadDetail((current) => {
       if (!current || current.thread.id !== threadId) {
@@ -821,6 +836,33 @@ export function CommunityMessenger({
       void supabase.removeChannel(channel);
     };
   }, [currentUser.id, selectedThreadId, supabase]);
+
+  React.useEffect(() => {
+    if (!isMessengerOpen || !selectedThreadId) {
+      return;
+    }
+
+    const runSync = () => {
+      if (document.visibilityState !== "visible" || selectedThreadIdRef.current !== selectedThreadId) {
+        return;
+      }
+
+      void syncActiveThreadState(selectedThreadId);
+    };
+
+    const interval = window.setInterval(runSync, 1500);
+    const handleFocus = () => runSync();
+    const handleVisibilityChange = () => runSync();
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [isMessengerOpen, selectedThreadId]);
 
   React.useEffect(() => {
     const chatFromQuery = searchParams.get("chat");
