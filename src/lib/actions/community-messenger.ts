@@ -103,6 +103,20 @@ export type CommunityMessengerBootstrap = {
   threads: CommunityMessengerThread[];
 };
 
+export type CommunityMessengerRealtimeState = {
+  thread: {
+    id: string;
+    name: string;
+    last_message_at: string;
+    last_message_preview: string | null;
+  };
+  messages: CommunityMessengerMessage[];
+  receipt: {
+    other_user_id: string | null;
+    last_read_at: string | null;
+  };
+};
+
 function previewFromContent(body: string, attachments: MessengerMessageAttachment[]) {
   const trimmed = body.trim();
   if (trimmed) {
@@ -528,6 +542,103 @@ export async function getCommunityThreadDetail(threadId: string): Promise<Commun
       last_message_preview: lastMessage
         ? previewFromContent(lastMessage.body, lastMessage.attachments)
         : "No messages yet",
+    },
+    messages: normalizedMessages,
+    receipt: {
+      other_user_id: otherMember?.user_id || null,
+      last_read_at:
+        thread.thread_type === "direct"
+          ? (memberRows.find((member) => member.user_id !== profile.id)?.last_read_at || null)
+          : null,
+    },
+  };
+}
+
+export async function getCommunityThreadRealtimeState(input: {
+  threadId: string;
+  afterCreatedAt?: string | null;
+}): Promise<CommunityMessengerRealtimeState> {
+  const { adminClient, profile } = await getMessengerActor();
+  await getThreadMembershipOrThrow(adminClient, input.threadId, profile.id);
+
+  const afterCreatedAt = input.afterCreatedAt?.trim() || null;
+
+  let messagesQuery = adminClient
+    .from("community_chat_messages")
+    .select("id, thread_id, sender_id, body_encrypted, attachment_files, created_at, updated_at")
+    .eq("thread_id", input.threadId)
+    .order("created_at", { ascending: true })
+    .limit(25);
+
+  if (afterCreatedAt) {
+    messagesQuery = messagesQuery.gte("created_at", afterCreatedAt);
+  }
+
+  const [{ data: thread }, { data: members }, { data: messages }] = await Promise.all([
+    adminClient
+      .from("community_chat_threads")
+      .select("id, thread_type, name, last_message_at")
+      .eq("id", input.threadId)
+      .single(),
+    adminClient
+      .from("community_chat_members")
+      .select("thread_id, user_id, role, joined_at, last_read_message_id, last_read_at")
+      .eq("thread_id", input.threadId),
+    messagesQuery,
+  ]);
+
+  if (!thread) {
+    throw new Error("Conversation not found.");
+  }
+
+  const memberRows = (members || []) as MessengerMemberRow[];
+  const profileIds = memberRows.map((member) => member.user_id);
+  const { data: profiles } = profileIds.length
+    ? await adminClient
+        .from("profiles")
+        .select("id, first_name, last_name, email, avatar_url, department, unit, user_type")
+        .in("id", profileIds)
+    : { data: [] as MessengerProfile[] | null };
+
+  const profileMap = new Map(
+    ((profiles || []) as MessengerProfile[]).map((memberProfile) => [memberProfile.id, mapUser(memberProfile)])
+  );
+
+  const otherMember =
+    thread.thread_type === "direct"
+      ? memberRows.find((member) => member.user_id !== profile.id) || null
+      : null;
+
+  const normalizedMessages = ((messages || []) as MessengerMessageRow[])
+    .map((message) => {
+      const sender = profileMap.get(message.sender_id);
+      if (!sender) return null;
+
+      return {
+        id: message.id,
+        thread_id: message.thread_id,
+        sender_id: message.sender_id,
+        body: decryptCommunityMessage(message.body_encrypted),
+        attachments: normalizeAttachments(message.attachment_files),
+        created_at: message.created_at,
+        sender,
+      } satisfies CommunityMessengerMessage;
+    })
+    .filter((item): item is CommunityMessengerMessage => Boolean(item));
+
+  const lastMessage = normalizedMessages[normalizedMessages.length - 1] || null;
+
+  return {
+    thread: {
+      id: thread.id,
+      name:
+        thread.thread_type === "direct"
+          ? profileMap.get(otherMember?.user_id || "")?.display_name || "Direct message"
+          : thread.name || "Group chat",
+      last_message_at: lastMessage?.created_at || thread.last_message_at,
+      last_message_preview: lastMessage
+        ? previewFromContent(lastMessage.body, lastMessage.attachments)
+        : null,
     },
     messages: normalizedMessages,
     receipt: {

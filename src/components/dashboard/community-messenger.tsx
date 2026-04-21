@@ -21,6 +21,7 @@ import {
   ensureCommunityDirectThread,
   getCommunityMessengerBootstrap,
   getCommunityThreadDetail,
+  getCommunityThreadRealtimeState,
   markCommunityThreadRead,
   sendCommunityMessage,
   type CommunityMessengerBootstrap,
@@ -56,10 +57,6 @@ type ThreadSummaryUpdate = Pick<
   "id" | "last_message_at" | "last_message_preview"
 > &
   Partial<Pick<CommunityMessengerThread, "name" | "unread_count">>;
-
-type RealtimeThreadChange = {
-  id: string;
-};
 
 type RealtimeMemberChange = {
   thread_id: string;
@@ -163,6 +160,25 @@ function getRealtimeRow<T extends Record<string, unknown>>(value: unknown) {
   return value as T;
 }
 
+function mergeMessages(
+  currentMessages: CommunityMessengerThreadDetail["messages"],
+  nextMessages: CommunityMessengerThreadDetail["messages"]
+) {
+  if (nextMessages.length === 0) {
+    return currentMessages;
+  }
+
+  const messageMap = new Map(currentMessages.map((message) => [message.id, message]));
+  nextMessages.forEach((message) => {
+    messageMap.set(message.id, message);
+  });
+
+  return Array.from(messageMap.values()).sort(
+    (left, right) =>
+      new Date(left.created_at).getTime() - new Date(right.created_at).getTime()
+  );
+}
+
 function AccountHoverCard({
   user,
   isOnline,
@@ -243,8 +259,10 @@ export function CommunityMessenger({
   const selectedThreadIdRef = React.useRef<string | null>(null);
   const bootstrapRequestRef = React.useRef(0);
   const threadRequestRef = React.useRef(0);
+  const activeThreadSyncRequestRef = React.useRef(0);
   const bootstrapRefreshTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const threadRefreshTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const activeThreadSyncTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadBootstrap = React.useCallback(
     async ({ showLoading = false }: { showLoading?: boolean } = {}) => {
@@ -347,6 +365,103 @@ export function CommunityMessenger({
     [loadThreadDetail]
   );
 
+  const syncActiveThreadState = React.useEffectEvent(async (threadId: string) => {
+    const currentDetail = threadDetail;
+    if (!currentDetail || currentDetail.thread.id !== threadId) {
+      return;
+    }
+
+    const afterCreatedAt = currentDetail.messages[currentDetail.messages.length - 1]?.created_at || null;
+    const requestId = ++activeThreadSyncRequestRef.current;
+    const result = await getCommunityThreadRealtimeState({
+      threadId,
+      afterCreatedAt,
+    });
+
+    if (activeThreadSyncRequestRef.current !== requestId || selectedThreadIdRef.current !== threadId) {
+      return;
+    }
+
+    const incomingMessages = result.messages.filter(
+      (message) => !currentDetail.messages.some((currentMessage) => currentMessage.id === message.id)
+    );
+    const hasIncomingFromOtherUser = incomingMessages.some(
+      (message) => message.sender_id !== currentUser.id
+    );
+
+    setThreadDetail((current) => {
+      if (!current || current.thread.id !== threadId) {
+        return current;
+      }
+
+      const mergedMessages = mergeMessages(current.messages, result.messages);
+
+      return {
+        ...current,
+        thread: {
+          ...current.thread,
+          name: current.thread.thread_type === "group" ? result.thread.name : current.thread.name,
+          unread_count: 0,
+          last_message_at: result.thread.last_message_at,
+          last_message_preview: result.thread.last_message_preview || current.thread.last_message_preview,
+        },
+        messages: mergedMessages,
+        receipt: result.receipt,
+      };
+    });
+
+    setBootstrap((current) => {
+      const existingThread = current.threads.find((thread) => thread.id === threadId) || null;
+      const fallbackThread =
+        currentDetail.thread.id === threadId
+          ? {
+              ...currentDetail.thread,
+              unread_count: 0,
+              last_message_at: result.thread.last_message_at,
+              last_message_preview:
+                result.thread.last_message_preview || currentDetail.thread.last_message_preview,
+            }
+          : null;
+
+      return {
+        threads: upsertThreadSummary(
+          current.threads,
+          {
+            id: threadId,
+            name: result.thread.name,
+            unread_count: 0,
+            last_message_at: result.thread.last_message_at,
+            last_message_preview:
+              result.thread.last_message_preview ||
+              existingThread?.last_message_preview ||
+              "No messages yet",
+          },
+          fallbackThread
+        ),
+      };
+    });
+
+    if (hasIncomingFromOtherUser) {
+      const readResult = await markCommunityThreadRead(threadId);
+      if (!(readResult && "error" in readResult)) {
+        clearUnreadState(threadId);
+      }
+    }
+  });
+
+  const queueActiveThreadSync = React.useEffectEvent((threadId: string, delay = 50) => {
+    if (activeThreadSyncTimeoutRef.current) {
+      clearTimeout(activeThreadSyncTimeoutRef.current);
+    }
+
+    activeThreadSyncTimeoutRef.current = setTimeout(() => {
+      activeThreadSyncTimeoutRef.current = null;
+      if (selectedThreadIdRef.current === threadId) {
+        void syncActiveThreadState(threadId);
+      }
+    }, delay);
+  });
+
   const clearUnreadState = React.useEffectEvent((threadId: string) => {
     setThreadDetail((current) =>
       current && current.thread.id === threadId
@@ -421,77 +536,46 @@ export function CommunityMessenger({
     }
   );
 
-  const handleThreadRealtime = React.useEffectEvent((payload: { eventType: string; new: unknown; old: unknown }) => {
-    const row =
-      getRealtimeRow<RealtimeThreadChange>(payload.new) || getRealtimeRow<RealtimeThreadChange>(payload.old);
-
+  const handleThreadRealtime = React.useEffectEvent(() => {
     queueBootstrapRefresh();
-    if (row?.id && selectedThreadIdRef.current === row.id) {
-      queueThreadRefresh(row.id);
-    }
   });
 
-  const handleMemberRealtime = React.useEffectEvent((payload: { eventType: string; new: unknown; old: unknown }) => {
+  const handleOwnMembershipRealtime = React.useEffectEvent((payload: { eventType: string; new: unknown; old: unknown }) => {
     const row =
       getRealtimeRow<RealtimeMemberChange>(payload.new) || getRealtimeRow<RealtimeMemberChange>(payload.old);
-
-    if (!row?.thread_id || !row.user_id) {
-      queueBootstrapRefresh();
-      return;
-    }
-
-    if (row.user_id === currentUser.id) {
-      if (payload.eventType !== "UPDATE") {
-        queueBootstrapRefresh();
-        if (selectedThreadIdRef.current === row.thread_id) {
-          queueThreadRefresh(row.thread_id);
-        }
-      }
-      return;
-    }
-
-    if (
-      threadDetail?.thread.thread_type === "direct" &&
-      threadDetail.thread.id === row.thread_id &&
-      threadDetail.receipt.other_user_id === row.user_id
-    ) {
-      setThreadDetail((current) =>
-        current && current.thread.id === row.thread_id
-          ? {
-              ...current,
-              receipt: {
-                ...current.receipt,
-                last_read_at: row.last_read_at,
-              },
-            }
-          : current
-      );
-      return;
-    }
-
-    queueBootstrapRefresh();
-    if (selectedThreadIdRef.current === row.thread_id) {
-      queueThreadRefresh(row.thread_id);
-    }
-  });
-
-  const handleMessageRealtime = React.useEffectEvent((payload: { eventType: string; new: unknown; old: unknown }) => {
-    const row =
-      getRealtimeRow<RealtimeMessageChange>(payload.new) || getRealtimeRow<RealtimeMessageChange>(payload.old);
 
     if (!row?.thread_id) {
       queueBootstrapRefresh();
       return;
     }
 
-    const isOwnInsert = payload.eventType === "INSERT" && row.sender_id === currentUser.id;
-    if (!isOwnInsert) {
+    if (payload.eventType !== "UPDATE") {
       queueBootstrapRefresh();
+      if (selectedThreadIdRef.current === row.thread_id) {
+        queueThreadRefresh(row.thread_id);
+      }
+    }
+  });
+
+  const handleActiveThreadMessageRealtime = React.useEffectEvent((payload: { new: unknown }) => {
+    const row = getRealtimeRow<RealtimeMessageChange>(payload.new);
+
+    if (!row?.thread_id || row.sender_id === currentUser.id) {
+      return;
     }
 
-    if (selectedThreadIdRef.current === row.thread_id && !isOwnInsert) {
-      queueThreadRefresh(row.thread_id, payload.eventType === "INSERT" ? 60 : 120);
+    queueActiveThreadSync(row.thread_id, 35);
+  });
+
+  const handleActiveThreadMemberRealtime = React.useEffectEvent((payload: { new: unknown; old: unknown }) => {
+    const row =
+      getRealtimeRow<RealtimeMemberChange>(payload.new) || getRealtimeRow<RealtimeMemberChange>(payload.old);
+
+    if (!row?.thread_id || row.user_id === currentUser.id) {
+      return;
     }
+
+    queueActiveThreadSync(row.thread_id, 60);
   });
 
   React.useEffect(() => {
@@ -517,6 +601,9 @@ export function CommunityMessenger({
       }
       if (threadRefreshTimeoutRef.current) {
         clearTimeout(threadRefreshTimeoutRef.current);
+      }
+      if (activeThreadSyncTimeoutRef.current) {
+        clearTimeout(activeThreadSyncTimeoutRef.current);
       }
     };
   }, []);
@@ -596,13 +683,13 @@ export function CommunityMessenger({
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "community_chat_members" },
-        handleMemberRealtime
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "community_chat_messages" },
-        handleMessageRealtime
+        {
+          event: "*",
+          schema: "public",
+          table: "community_chat_members",
+          filter: `user_id=eq.${currentUser.id}`,
+        },
+        handleOwnMembershipRealtime
       )
       .subscribe();
 
@@ -610,6 +697,40 @@ export function CommunityMessenger({
       void supabase.removeChannel(channel);
     };
   }, [currentUser.id, supabase]);
+
+  React.useEffect(() => {
+    if (!selectedThreadId) {
+      return;
+    }
+
+    const channel = supabase
+      .channel(`community-messenger-thread:${currentUser.id}:${selectedThreadId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "community_chat_messages",
+          filter: `thread_id=eq.${selectedThreadId}`,
+        },
+        handleActiveThreadMessageRealtime
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "community_chat_members",
+          filter: `thread_id=eq.${selectedThreadId}`,
+        },
+        handleActiveThreadMemberRealtime
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [currentUser.id, selectedThreadId, supabase]);
 
   React.useEffect(() => {
     const chatFromQuery = searchParams.get("chat");
@@ -890,25 +1011,17 @@ export function CommunityMessenger({
       <Dialog open={isMessengerOpen} onOpenChange={setIsMessengerOpen}>
         <DialogContent className="max-w-5xl gap-0 overflow-hidden p-0 sm:max-w-5xl">
           <DialogHeader className="border-b border-border/50 px-4 py-3">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <DialogTitle className="text-sm">CQER Community Messenger</DialogTitle>
-                <p className="text-[10px] text-muted-foreground">
-                  Realtime direct and group chat with PDF sharing.
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button type="button" size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => openGroupCreator()}>
-                  <Plus className="mr-1.5 h-3.5 w-3.5" />
-                  New Group
-                </Button>
-              </div>
+            <div>
+              <DialogTitle className="text-sm">CQER Community Messenger</DialogTitle>
+              <p className="text-[10px] text-muted-foreground">
+                Realtime direct and group chat with PDF sharing.
+              </p>
             </div>
           </DialogHeader>
 
           <div className="grid min-h-[70vh] md:grid-cols-[260px_minmax(0,1fr)]">
             <div className="border-b border-border/50 md:border-b-0 md:border-r">
-              <div className="p-3">
+              <div className="space-y-2 p-3">
                 <div className="relative">
                   <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                   <Input
@@ -918,6 +1031,16 @@ export function CommunityMessenger({
                     className="h-8 pl-7 text-[10px]"
                   />
                 </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-8 w-full justify-center text-[10px]"
+                  onClick={() => openGroupCreator()}
+                >
+                  <Plus className="mr-1.5 h-3.5 w-3.5" />
+                  New Group
+                </Button>
               </div>
               <ScrollArea className="h-[calc(70vh-4.5rem)]">
                 <div className="space-y-1 px-2 pb-3">
