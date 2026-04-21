@@ -79,6 +79,13 @@ type RealtimeNotificationChange = {
 type RealtimeBroadcastMessage = {
   thread_id: string;
   sent_at?: string;
+  message?: CommunityMessengerMessage;
+  thread?: {
+    id: string;
+    name: string;
+    last_message_at: string;
+    last_message_preview: string;
+  };
 };
 
 type RealtimeTypingPresence = {
@@ -729,6 +736,12 @@ export function CommunityMessenger({
       return;
     }
 
+    if (row.message && row.thread && row.message.sender_id !== currentUser.id) {
+      applyOptimisticMessage(row.message, row.thread);
+      void markCommunityThreadRead(row.thread_id);
+      return;
+    }
+
     queueActiveThreadSync(row.thread_id, 5);
   });
 
@@ -1215,6 +1228,8 @@ export function CommunityMessenger({
           payload: {
             thread_id: result.thread.id,
             sent_at: result.thread.last_message_at,
+            message: result.message,
+            thread: result.thread,
           } satisfies RealtimeBroadcastMessage,
         });
       }
