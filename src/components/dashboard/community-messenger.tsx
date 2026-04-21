@@ -51,6 +51,28 @@ type AttachmentInput = {
   size?: number;
 };
 
+type ThreadSummaryUpdate = Pick<
+  CommunityMessengerThread,
+  "id" | "last_message_at" | "last_message_preview"
+> &
+  Partial<Pick<CommunityMessengerThread, "name" | "unread_count">>;
+
+type RealtimeThreadChange = {
+  id: string;
+};
+
+type RealtimeMemberChange = {
+  thread_id: string;
+  user_id: string;
+  last_read_at: string | null;
+};
+
+type RealtimeMessageChange = {
+  id: string;
+  thread_id: string;
+  sender_id: string;
+};
+
 function formatName(user: Pick<CommunityMessengerUser, "display_name">) {
   return user.display_name;
 }
@@ -93,6 +115,52 @@ function threadSubtitle(thread: CommunityMessengerThread) {
   }
 
   return `${thread.members.length} member${thread.members.length === 1 ? "" : "s"}`;
+}
+
+function sortThreadsByActivity(threads: CommunityMessengerThread[]) {
+  return [...threads].sort(
+    (left, right) =>
+      new Date(right.last_message_at).getTime() - new Date(left.last_message_at).getTime()
+  );
+}
+
+function upsertThreadSummary(
+  threads: CommunityMessengerThread[],
+  patch: ThreadSummaryUpdate,
+  fallbackThread?: CommunityMessengerThread | null
+) {
+  let found = false;
+  const nextThreads = threads.map((thread) => {
+    if (thread.id !== patch.id) return thread;
+    found = true;
+    return {
+      ...thread,
+      ...(patch.name ? { name: patch.name } : {}),
+      ...(typeof patch.unread_count === "number" ? { unread_count: patch.unread_count } : {}),
+      last_message_at: patch.last_message_at,
+      last_message_preview: patch.last_message_preview,
+    };
+  });
+
+  if (!found && fallbackThread) {
+    nextThreads.push({
+      ...fallbackThread,
+      ...(patch.name ? { name: patch.name } : {}),
+      ...(typeof patch.unread_count === "number" ? { unread_count: patch.unread_count } : {}),
+      last_message_at: patch.last_message_at,
+      last_message_preview: patch.last_message_preview,
+    });
+  }
+
+  return sortThreadsByActivity(nextThreads);
+}
+
+function getRealtimeRow<T extends Record<string, unknown>>(value: unknown) {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  return value as T;
 }
 
 function AccountHoverCard({
@@ -172,66 +240,316 @@ export function CommunityMessenger({
   const [groupMemberIds, setGroupMemberIds] = React.useState<string[]>([]);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const messagesEndRef = React.useRef<HTMLDivElement | null>(null);
+  const selectedThreadIdRef = React.useRef<string | null>(null);
+  const bootstrapRequestRef = React.useRef(0);
+  const threadRequestRef = React.useRef(0);
+  const bootstrapRefreshTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const threadRefreshTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const loadBootstrap = React.useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const nextBootstrap = await getCommunityMessengerBootstrap();
-      setBootstrap(nextBootstrap);
-      setSelectedThreadId((current) => {
-        if (current && nextBootstrap.threads.some((thread) => thread.id === current)) {
-          return current;
+  const loadBootstrap = React.useCallback(
+    async ({ showLoading = false }: { showLoading?: boolean } = {}) => {
+      const requestId = ++bootstrapRequestRef.current;
+      if (showLoading) {
+        setIsLoading(true);
+      }
+
+      try {
+        const nextBootstrap = await getCommunityMessengerBootstrap();
+        if (bootstrapRequestRef.current !== requestId) {
+          return;
         }
 
-        const chatFromQuery = searchParams.get("chat");
-        if (chatFromQuery && nextBootstrap.threads.some((thread) => thread.id === chatFromQuery)) {
-          return chatFromQuery;
-        }
+        setBootstrap(nextBootstrap);
+        setSelectedThreadId((current) => {
+          if (current && nextBootstrap.threads.some((thread) => thread.id === current)) {
+            return current;
+          }
 
-        return nextBootstrap.threads[0]?.id || null;
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [searchParams]);
+          const chatFromQuery = searchParams.get("chat");
+          if (chatFromQuery && nextBootstrap.threads.some((thread) => thread.id === chatFromQuery)) {
+            return chatFromQuery;
+          }
+
+          return nextBootstrap.threads[0]?.id || null;
+        });
+      } finally {
+        if (showLoading && bootstrapRequestRef.current === requestId) {
+          setIsLoading(false);
+        }
+      }
+    },
+    [searchParams]
+  );
 
   const loadThreadDetail = React.useCallback(
-    async (threadId: string) => {
-      setIsThreadLoading(true);
+    async (threadId: string, { showLoading = false }: { showLoading?: boolean } = {}) => {
+      const requestId = ++threadRequestRef.current;
+      if (showLoading) {
+        setIsThreadLoading(true);
+      }
+
       try {
         const detail = await getCommunityThreadDetail(threadId);
+        if (threadRequestRef.current !== requestId || selectedThreadIdRef.current !== threadId) {
+          return;
+        }
+
         setThreadDetail(detail);
-        setSelectedThreadId(threadId);
-        await markCommunityThreadRead(threadId);
         setBootstrap((current) => ({
-          threads: current.threads.map((thread) =>
-            thread.id === threadId ? { ...thread, unread_count: 0 } : thread
+          threads: upsertThreadSummary(
+            current.threads,
+            {
+              id: detail.thread.id,
+              name: detail.thread.name,
+              unread_count: detail.thread.unread_count,
+              last_message_at: detail.thread.last_message_at,
+              last_message_preview: detail.thread.last_message_preview,
+            },
+            detail.thread
           ),
         }));
       } finally {
-        setIsThreadLoading(false);
+        if (showLoading && threadRequestRef.current === requestId && selectedThreadIdRef.current === threadId) {
+          setIsThreadLoading(false);
+        }
       }
     },
     []
   );
 
-  React.useEffect(() => {
-    void loadBootstrap();
-  }, [loadBootstrap]);
+  const queueBootstrapRefresh = React.useCallback(
+    (delay = 120) => {
+      if (bootstrapRefreshTimeoutRef.current) {
+        clearTimeout(bootstrapRefreshTimeoutRef.current);
+      }
 
-  React.useEffect(() => {
-    if (!selectedThreadId) {
-      setThreadDetail(null);
+      bootstrapRefreshTimeoutRef.current = setTimeout(() => {
+        bootstrapRefreshTimeoutRef.current = null;
+        void loadBootstrap();
+      }, delay);
+    },
+    [loadBootstrap]
+  );
+
+  const queueThreadRefresh = React.useCallback(
+    (threadId: string, delay = 90) => {
+      if (threadRefreshTimeoutRef.current) {
+        clearTimeout(threadRefreshTimeoutRef.current);
+      }
+
+      threadRefreshTimeoutRef.current = setTimeout(() => {
+        threadRefreshTimeoutRef.current = null;
+        if (selectedThreadIdRef.current === threadId) {
+          void loadThreadDetail(threadId);
+        }
+      }, delay);
+    },
+    [loadThreadDetail]
+  );
+
+  const clearUnreadState = React.useEffectEvent((threadId: string) => {
+    setThreadDetail((current) =>
+      current && current.thread.id === threadId
+        ? {
+            ...current,
+            thread: {
+              ...current.thread,
+              unread_count: 0,
+            },
+          }
+        : current
+    );
+    setBootstrap((current) => ({
+      threads: current.threads.map((thread) =>
+        thread.id === threadId ? { ...thread, unread_count: 0 } : thread
+      ),
+    }));
+  });
+
+  const applyOptimisticMessage = React.useEffectEvent(
+    (
+      message: CommunityMessengerThreadDetail["messages"][number],
+      thread: {
+        id: string;
+        name: string;
+        last_message_at: string;
+        last_message_preview: string;
+      }
+    ) => {
+      setThreadDetail((current) => {
+        if (!current || current.thread.id !== message.thread_id) {
+          return current;
+        }
+
+        const nextMessages = current.messages.some((item) => item.id === message.id)
+          ? current.messages
+          : [...current.messages, message];
+
+        return {
+          ...current,
+          thread: {
+            ...current.thread,
+            name: current.thread.thread_type === "group" ? thread.name : current.thread.name,
+            unread_count: 0,
+            last_message_at: thread.last_message_at,
+            last_message_preview: thread.last_message_preview,
+          },
+          messages: nextMessages,
+        };
+      });
+
+      setBootstrap((current) => ({
+        threads: upsertThreadSummary(
+          current.threads,
+          {
+            id: thread.id,
+            name: thread.name,
+            unread_count: 0,
+            last_message_at: thread.last_message_at,
+            last_message_preview: thread.last_message_preview,
+          },
+          threadDetail?.thread && threadDetail.thread.id === thread.id
+            ? {
+                ...threadDetail.thread,
+                unread_count: 0,
+                last_message_at: thread.last_message_at,
+                last_message_preview: thread.last_message_preview,
+              }
+            : null
+        ),
+      }));
+    }
+  );
+
+  const handleThreadRealtime = React.useEffectEvent((payload: { eventType: string; new: unknown; old: unknown }) => {
+    const row =
+      getRealtimeRow<RealtimeThreadChange>(payload.new) || getRealtimeRow<RealtimeThreadChange>(payload.old);
+
+    queueBootstrapRefresh();
+    if (row?.id && selectedThreadIdRef.current === row.id) {
+      queueThreadRefresh(row.id);
+    }
+  });
+
+  const handleMemberRealtime = React.useEffectEvent((payload: { eventType: string; new: unknown; old: unknown }) => {
+    const row =
+      getRealtimeRow<RealtimeMemberChange>(payload.new) || getRealtimeRow<RealtimeMemberChange>(payload.old);
+
+    if (!row?.thread_id || !row.user_id) {
+      queueBootstrapRefresh();
       return;
     }
 
-    void loadThreadDetail(selectedThreadId);
+    if (row.user_id === currentUser.id) {
+      if (payload.eventType !== "UPDATE") {
+        queueBootstrapRefresh();
+        if (selectedThreadIdRef.current === row.thread_id) {
+          queueThreadRefresh(row.thread_id);
+        }
+      }
+      return;
+    }
+
+    if (
+      threadDetail?.thread.thread_type === "direct" &&
+      threadDetail.thread.id === row.thread_id &&
+      threadDetail.receipt.other_user_id === row.user_id
+    ) {
+      setThreadDetail((current) =>
+        current && current.thread.id === row.thread_id
+          ? {
+              ...current,
+              receipt: {
+                ...current.receipt,
+                last_read_at: row.last_read_at,
+              },
+            }
+          : current
+      );
+      return;
+    }
+
+    queueBootstrapRefresh();
+    if (selectedThreadIdRef.current === row.thread_id) {
+      queueThreadRefresh(row.thread_id);
+    }
+  });
+
+  const handleMessageRealtime = React.useEffectEvent((payload: { eventType: string; new: unknown; old: unknown }) => {
+    const row =
+      getRealtimeRow<RealtimeMessageChange>(payload.new) || getRealtimeRow<RealtimeMessageChange>(payload.old);
+
+    if (!row?.thread_id) {
+      queueBootstrapRefresh();
+      return;
+    }
+
+    const isOwnInsert = payload.eventType === "INSERT" && row.sender_id === currentUser.id;
+    if (!isOwnInsert) {
+      queueBootstrapRefresh();
+    }
+
+    if (selectedThreadIdRef.current === row.thread_id && !isOwnInsert) {
+      queueThreadRefresh(row.thread_id, payload.eventType === "INSERT" ? 60 : 120);
+    }
+  });
+
+  React.useEffect(() => {
+    void loadBootstrap({ showLoading: true });
+  }, [loadBootstrap]);
+
+  React.useEffect(() => {
+    selectedThreadIdRef.current = selectedThreadId;
+    if (!selectedThreadId) {
+      threadRequestRef.current += 1;
+      setThreadDetail(null);
+      setIsThreadLoading(false);
+      return;
+    }
+
+    void loadThreadDetail(selectedThreadId, { showLoading: true });
   }, [loadThreadDetail, selectedThreadId]);
+
+  React.useEffect(() => {
+    return () => {
+      if (bootstrapRefreshTimeoutRef.current) {
+        clearTimeout(bootstrapRefreshTimeoutRef.current);
+      }
+      if (threadRefreshTimeoutRef.current) {
+        clearTimeout(threadRefreshTimeoutRef.current);
+      }
+    };
+  }, []);
 
   React.useEffect(() => {
     if (!threadDetail) return;
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [threadDetail]);
+
+  React.useEffect(() => {
+    if (!selectedThreadId || !threadDetail || threadDetail.thread.id !== selectedThreadId) {
+      return;
+    }
+
+    if (threadDetail.thread.unread_count === 0) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    void (async () => {
+      const result = await markCommunityThreadRead(selectedThreadId);
+      if (isCancelled || (result && "error" in result)) {
+        return;
+      }
+
+      clearUnreadState(selectedThreadId);
+    })();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [selectedThreadId, threadDetail]);
 
   React.useEffect(() => {
     const tracked = supabase.channel("community-messenger-presence", {
@@ -274,39 +592,24 @@ export function CommunityMessenger({
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "community_chat_threads" },
-        () => {
-          void loadBootstrap();
-          if (selectedThreadId) {
-            void loadThreadDetail(selectedThreadId);
-          }
-        }
+        handleThreadRealtime
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "community_chat_members" },
-        () => {
-          void loadBootstrap();
-          if (selectedThreadId) {
-            void loadThreadDetail(selectedThreadId);
-          }
-        }
+        handleMemberRealtime
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "community_chat_messages" },
-        () => {
-          void loadBootstrap();
-          if (selectedThreadId) {
-            void loadThreadDetail(selectedThreadId);
-          }
-        }
+        handleMessageRealtime
       )
       .subscribe();
 
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [currentUser.id, loadBootstrap, loadThreadDetail, selectedThreadId, supabase]);
+  }, [currentUser.id, supabase]);
 
   React.useEffect(() => {
     const chatFromQuery = searchParams.get("chat");
@@ -481,8 +784,9 @@ export function CommunityMessenger({
 
       setComposer("");
       setComposerAttachments([]);
-      await loadBootstrap();
-      await loadThreadDetail(selectedThreadId);
+      if (result?.message && result.thread) {
+        applyOptimisticMessage(result.message, result.thread);
+      }
     });
   };
 

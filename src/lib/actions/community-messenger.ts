@@ -103,6 +103,16 @@ export type CommunityMessengerBootstrap = {
   threads: CommunityMessengerThread[];
 };
 
+function previewFromContent(body: string, attachments: MessengerMessageAttachment[]) {
+  const trimmed = body.trim();
+  if (trimmed) {
+    return trimmed.length > 60 ? `${trimmed.slice(0, 57)}...` : trimmed;
+  }
+
+  const attachment = attachments[0];
+  return attachment ? `PDF: ${attachment.name}` : "No messages yet";
+}
+
 function displayName(profile: Pick<MessengerProfile, "first_name" | "last_name" | "email">) {
   const name = `${profile.first_name || ""} ${profile.last_name || ""}`.trim();
   return name || profile.email || "CQER User";
@@ -149,12 +159,7 @@ function normalizeAttachments(value: unknown) {
 function messagePreview(message: MessengerMessageRow | undefined) {
   if (!message) return "No messages yet";
   const body = decryptCommunityMessage(message.body_encrypted).trim();
-  if (body) {
-    return body.length > 60 ? `${body.slice(0, 57)}...` : body;
-  }
-
-  const attachment = normalizeAttachments(message.attachment_files)[0];
-  return attachment ? `PDF: ${attachment.name}` : "No messages yet";
+  return previewFromContent(body, normalizeAttachments(message.attachment_files));
 }
 
 function directKeyFor(firstUserId: string, secondUserId: string) {
@@ -474,45 +479,57 @@ export async function getCommunityThreadDetail(threadId: string): Promise<Commun
     ((profiles || []) as MessengerProfile[]).map((memberProfile) => [memberProfile.id, mapUser(memberProfile)])
   );
 
-  const summary = (
-    await buildThreadSummaries(adminClient, profile.id)
-  ).find((item) => item.id === threadId);
-
   const otherMember =
     thread.thread_type === "direct"
       ? memberRows.find((member) => member.user_id !== profile.id) || null
       : null;
 
-  return {
-    thread:
-      summary || {
-        id: thread.id,
-        thread_type: thread.thread_type,
-        name: thread.thread_type === "group" ? thread.name || "Group chat" : "Direct message",
-        direct_user: otherMember ? profileMap.get(otherMember.user_id) || null : null,
-        members: memberRows
-          .map((member) => profileMap.get(member.user_id))
-          .filter((item): item is CommunityMessengerUser => Boolean(item)),
-        unread_count: 0,
-        last_message_at: thread.last_message_at,
-        last_message_preview: "No messages yet",
-      },
-    messages: ((messages || []) as MessengerMessageRow[])
-      .map((message) => {
-        const sender = profileMap.get(message.sender_id);
-        if (!sender) return null;
+  const normalizedMessages = ((messages || []) as MessengerMessageRow[])
+    .map((message) => {
+      const sender = profileMap.get(message.sender_id);
+      if (!sender) return null;
 
-        return {
-          id: message.id,
-          thread_id: message.thread_id,
-          sender_id: message.sender_id,
-          body: decryptCommunityMessage(message.body_encrypted),
-          attachments: normalizeAttachments(message.attachment_files),
-          created_at: message.created_at,
-          sender,
-        } satisfies CommunityMessengerMessage;
-      })
-      .filter((item): item is CommunityMessengerMessage => Boolean(item)),
+      return {
+        id: message.id,
+        thread_id: message.thread_id,
+        sender_id: message.sender_id,
+        body: decryptCommunityMessage(message.body_encrypted),
+        attachments: normalizeAttachments(message.attachment_files),
+        created_at: message.created_at,
+        sender,
+      } satisfies CommunityMessengerMessage;
+    })
+    .filter((item): item is CommunityMessengerMessage => Boolean(item));
+
+  const lastMessage = normalizedMessages[normalizedMessages.length - 1] || null;
+  const actorMembership = memberRows.find((member) => member.user_id === profile.id);
+  const unreadCount = normalizedMessages.filter((message) => {
+    if (message.sender_id === profile.id) return false;
+    if (!actorMembership?.last_read_at) return true;
+    return new Date(message.created_at).getTime() > new Date(actorMembership.last_read_at).getTime();
+  }).length;
+
+  const memberProfiles = memberRows
+    .map((member) => profileMap.get(member.user_id))
+    .filter((item): item is CommunityMessengerUser => Boolean(item));
+
+  return {
+    thread: {
+      id: thread.id,
+      thread_type: thread.thread_type,
+      name:
+        thread.thread_type === "direct"
+          ? profileMap.get(otherMember?.user_id || "")?.display_name || "Direct message"
+          : thread.name || "Group chat",
+      direct_user: otherMember ? profileMap.get(otherMember.user_id) || null : null,
+      members: memberProfiles,
+      unread_count: unreadCount,
+      last_message_at: lastMessage?.created_at || thread.last_message_at,
+      last_message_preview: lastMessage
+        ? previewFromContent(lastMessage.body, lastMessage.attachments)
+        : "No messages yet",
+    },
+    messages: normalizedMessages,
     receipt: {
       other_user_id: otherMember?.user_id || null,
       last_read_at:
@@ -525,7 +542,7 @@ export async function getCommunityThreadDetail(threadId: string): Promise<Commun
 
 export async function markCommunityThreadRead(threadId: string) {
   const { adminClient, profile } = await getMessengerActor();
-  await getThreadMembershipOrThrow(adminClient, threadId, profile.id);
+  const membership = await getThreadMembershipOrThrow(adminClient, threadId, profile.id);
 
   const { data: latestMessage } = await adminClient
     .from("community_chat_messages")
@@ -535,8 +552,12 @@ export async function markCommunityThreadRead(threadId: string) {
     .limit(1)
     .maybeSingle();
 
+  if (!latestMessage || membership.last_read_message_id === latestMessage.id) {
+    return { success: true };
+  }
+
   const payload = {
-    last_read_at: new Date().toISOString(),
+    last_read_at: latestMessage.created_at,
     last_read_message_id: latestMessage?.id || null,
   };
 
@@ -583,16 +604,15 @@ export async function sendCommunityMessage(input: {
     return { error: error?.message || "Failed to send the message." };
   }
 
-  await adminClient
-    .from("community_chat_members")
-    .update({
-      last_read_at: message.created_at,
-      last_read_message_id: message.id,
-    })
-    .eq("thread_id", input.threadId)
-    .eq("user_id", profile.id);
-
-  const [{ data: thread }, { data: members }] = await Promise.all([
+  const [, { data: thread }, { data: members }] = await Promise.all([
+    adminClient
+      .from("community_chat_members")
+      .update({
+        last_read_at: message.created_at,
+        last_read_message_id: message.id,
+      })
+      .eq("thread_id", input.threadId)
+      .eq("user_id", profile.id),
     adminClient
       .from("community_chat_threads")
       .select("id, thread_type, name")
@@ -629,5 +649,25 @@ export async function sendCommunityMessage(input: {
     );
   }
 
-  return { success: true, messageId: message.id };
+  return {
+    success: true,
+    message: {
+      id: message.id,
+      thread_id: input.threadId,
+      sender_id: profile.id,
+      body,
+      attachments,
+      created_at: message.created_at,
+      sender: mapUser(profile),
+    } satisfies CommunityMessengerMessage,
+    thread: {
+      id: input.threadId,
+      last_message_at: message.created_at,
+      last_message_preview: previewFromContent(body, attachments),
+      name:
+        thread?.thread_type === "group"
+          ? thread.name || "Group chat"
+          : "Direct message",
+    },
+  };
 }
