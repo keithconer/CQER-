@@ -278,7 +278,7 @@ function AccountHoverCard({
   onCreateGroup: () => void;
 }) {
   return (
-    <div className="w-56 rounded-xl border border-border/50 bg-background p-3 shadow-md">
+    <div className="w-64 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-border/50 bg-background p-3 shadow-md">
       <div className="flex items-start gap-2">
         <Avatar className="h-9 w-9 border border-border/50">
           <AvatarImage src={user.avatar_url || undefined} alt={user.display_name} />
@@ -308,14 +308,20 @@ function AccountHoverCard({
           </div>
         </div>
       </div>
-      <div className="mt-3 flex gap-2">
-        <Button type="button" size="sm" className="h-6 flex-1 text-[9px]" onClick={onMessage}>
-          <MessageSquareMore className="mr-1 h-3 w-3" />
-          Send Message
+      <div className="mt-3 flex min-w-0 gap-2">
+        <Button type="button" size="sm" className="h-6 min-w-0 flex-1 px-2 text-[9px]" onClick={onMessage}>
+          <MessageSquareMore className="mr-1 h-3 w-3 shrink-0" />
+          <span className="truncate">Send Message</span>
         </Button>
-        <Button type="button" size="sm" variant="outline" className="h-6 flex-1 text-[9px]" onClick={onCreateGroup}>
-          <Users className="mr-1 h-3 w-3" />
-          Create Group
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-6 min-w-0 flex-1 px-2 text-[9px]"
+          onClick={onCreateGroup}
+        >
+          <Users className="mr-1 h-3 w-3 shrink-0" />
+          <span className="truncate">Create Group</span>
         </Button>
       </div>
     </div>
