@@ -140,6 +140,19 @@ function threadSubtitle(thread: CommunityMessengerThread) {
   return `${thread.members.length} member${thread.members.length === 1 ? "" : "s"}`;
 }
 
+function registeredAccountGroupLabel(user: CommunityMessengerUser) {
+  const department = user.department?.trim();
+  if (department) {
+    return department;
+  }
+
+  if (user.user_type === "super_admin") {
+    return "Overseer";
+  }
+
+  return "No Department";
+}
+
 function sortThreadsByActivity(threads: CommunityMessengerThread[]) {
   return [...threads].sort(
     (left, right) =>
@@ -1110,6 +1123,32 @@ export function CommunityMessenger({
     });
   }, [accountFilter, currentUser.id, users]);
 
+  const groupedFilteredUsers = React.useMemo(() => {
+    const groups = new Map<string, CommunityMessengerUser[]>();
+
+    [...filteredUsers]
+      .sort((left, right) => left.display_name.localeCompare(right.display_name))
+      .forEach((user) => {
+        const label = registeredAccountGroupLabel(user);
+        const bucket = groups.get(label) || [];
+        bucket.push(user);
+        groups.set(label, bucket);
+      });
+
+    return Array.from(groups.entries())
+      .sort(([left], [right]) => {
+        if (left === "Overseer") return 1;
+        if (right === "Overseer") return -1;
+        if (left === "No Department") return 1;
+        if (right === "No Department") return -1;
+        return left.localeCompare(right);
+      })
+      .map(([label, usersInGroup]) => ({
+        label,
+        users: usersInGroup,
+      }));
+  }, [filteredUsers]);
+
   const filteredThreads = React.useMemo(() => {
     const query = threadFilter.trim().toLowerCase();
     if (!query) return bootstrap.threads;
@@ -1312,76 +1351,84 @@ export function CommunityMessenger({
         </CardHeader>
         <CardContent className="pt-0">
           <ScrollArea className="h-[320px] pr-3">
-            <div className="space-y-1.5">
-              {filteredUsers.map((user) => {
-                const isOnline = onlineIds.has(user.id);
-                return (
-                  <Popover
-                    key={user.id}
-                    open={hoveredUserId === user.id}
-                    onOpenChange={(open) => setHoveredUserId(open ? user.id : null)}
-                  >
-                    <PopoverTrigger asChild>
-                      <button
-                        type="button"
-                        onClick={() => openDirectMessage(user.id)}
-                        onMouseEnter={() => setHoveredUserId(user.id)}
-                        onMouseLeave={() => setHoveredUserId((current) => (current === user.id ? null : current))}
-                        className="flex w-full items-center gap-2 rounded-xl border border-transparent px-2 py-2 text-left transition-colors hover:border-border/50 hover:bg-muted/30"
-                      >
-                        <div className="relative shrink-0">
-                          <Avatar className="h-8 w-8 border border-border/50">
-                            <AvatarImage src={user.avatar_url || undefined} alt={formatName(user)} />
-                            <AvatarFallback className="text-[9px]">{initials(user)}</AvatarFallback>
-                          </Avatar>
-                          <span
-                            className={cn(
-                              "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background",
-                              isOnline ? "bg-green-500" : "bg-muted-foreground/30"
-                            )}
-                          />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-[10px] font-semibold">{formatName(user)}</p>
-                          <div className="mt-1 space-y-1 text-[9px] text-muted-foreground">
-                            <div className="flex items-start gap-1.5">
-                              <Building2 className="mt-0.5 h-3 w-3 shrink-0" />
-                              <p className="min-w-0 whitespace-normal break-words leading-4">
-                                {user.department || "No department"}
-                              </p>
-                            </div>
-                            <div className="flex items-start gap-1.5">
-                              <IdCard className="mt-0.5 h-3 w-3 shrink-0" />
-                              <p className="min-w-0 whitespace-normal break-words leading-4">
-                                {user.position_label}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                        {isOnline ? (
-                          <Badge variant="outline" className="h-5 rounded-full px-1.5 text-[8px] text-green-600">
-                            Online
-                          </Badge>
-                        ) : null}
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent
-                      align="end"
-                      className="w-auto border-0 bg-transparent p-0 shadow-none"
-                      onMouseEnter={() => setHoveredUserId(user.id)}
-                      onMouseLeave={() => setHoveredUserId((current) => (current === user.id ? null : current))}
-                    >
-                      <AccountHoverCard
-                        user={user}
-                        isOnline={isOnline}
-                        onMessage={() => openDirectMessage(user.id)}
-                        onCreateGroup={() => openGroupCreator(user.id)}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                );
-              })}
-              {filteredUsers.length === 0 ? (
+            <div className="space-y-3">
+              {groupedFilteredUsers.map((group) => (
+                <div key={group.label} className="space-y-1.5">
+                  <div className="sticky top-0 z-10 rounded-lg border border-border/50 bg-muted/60 px-3 py-2 backdrop-blur">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                      <p className="text-[10px] font-semibold text-foreground">{group.label}</p>
+                      <Badge variant="secondary" className="h-5 rounded-full px-1.5 text-[8px]">
+                        {group.users.length}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    {group.users.map((user) => {
+                      const isOnline = onlineIds.has(user.id);
+                      return (
+                        <Popover
+                          key={user.id}
+                          open={hoveredUserId === user.id}
+                          onOpenChange={(open) => setHoveredUserId(open ? user.id : null)}
+                        >
+                          <PopoverTrigger asChild>
+                            <button
+                              type="button"
+                              onClick={() => openDirectMessage(user.id)}
+                              onMouseEnter={() => setHoveredUserId(user.id)}
+                              onMouseLeave={() => setHoveredUserId((current) => (current === user.id ? null : current))}
+                              className="flex w-full items-center gap-2 rounded-xl border border-transparent px-2 py-2 text-left transition-colors hover:border-border/50 hover:bg-muted/30"
+                            >
+                              <div className="relative shrink-0">
+                                <Avatar className="h-8 w-8 border border-border/50">
+                                  <AvatarImage src={user.avatar_url || undefined} alt={formatName(user)} />
+                                  <AvatarFallback className="text-[9px]">{initials(user)}</AvatarFallback>
+                                </Avatar>
+                                <span
+                                  className={cn(
+                                    "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background",
+                                    isOnline ? "bg-green-500" : "bg-muted-foreground/30"
+                                  )}
+                                />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-[10px] font-semibold">{formatName(user)}</p>
+                                <div className="mt-1 flex items-start gap-1.5 text-[9px] text-muted-foreground">
+                                  <IdCard className="mt-0.5 h-3 w-3 shrink-0" />
+                                  <p className="min-w-0 whitespace-normal break-words leading-4">
+                                    {user.position_label}
+                                  </p>
+                                </div>
+                              </div>
+                              {isOnline ? (
+                                <Badge variant="outline" className="h-5 rounded-full px-1.5 text-[8px] text-green-600">
+                                  Online
+                                </Badge>
+                              ) : null}
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent
+                            align="end"
+                            className="w-auto border-0 bg-transparent p-0 shadow-none"
+                            onMouseEnter={() => setHoveredUserId(user.id)}
+                            onMouseLeave={() => setHoveredUserId((current) => (current === user.id ? null : current))}
+                          >
+                            <AccountHoverCard
+                              user={user}
+                              isOnline={isOnline}
+                              onMessage={() => openDirectMessage(user.id)}
+                              onCreateGroup={() => openGroupCreator(user.id)}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+              {groupedFilteredUsers.length === 0 ? (
                 <p className="rounded-xl border border-dashed border-border/50 px-3 py-4 text-center text-[10px] text-muted-foreground">
                   No accounts matched your search.
                 </p>
