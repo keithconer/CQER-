@@ -3,6 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, FileText, MessageSquareMore, UserPlus } from "lucide-react";
+import {
+  getCommunityUnreadDirectNotifications,
+  markCommunityThreadRead,
+  type CommunityUnreadDirectNotification,
+} from "@/lib/actions/community-messenger";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -34,10 +39,20 @@ type NotificationItem = {
 type NotificationDisplayItem = NotificationItem & {
   grouped_count: number;
   notification_ids: string[];
+  source: "notifications" | "messenger_unread";
+  thread_id: string | null;
 };
 
 interface NotificationBellProps {
   userId: string;
+}
+
+function parseChatThreadId(route: string) {
+  try {
+    return new URL(route, "https://cqer.local").searchParams.get("chat");
+  } catch {
+    return null;
+  }
 }
 
 function formatTimeAgo(value: string) {
@@ -134,14 +149,16 @@ export function NotificationBell({ userId }: NotificationBellProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [messengerFallbackNotifications, setMessengerFallbackNotifications] = useState<
+    CommunityUnreadDirectNotification[]
+  >([]);
   const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     let active = true;
 
     const loadNotifications = async () => {
-      const [{ data, error: listError }, { count, error: countError }] = await Promise.all([
+      const [notificationListResult, unreadDirectMessagesResult] = await Promise.all([
         supabase
           .from("notifications")
           .select(
@@ -150,30 +167,26 @@ export function NotificationBell({ userId }: NotificationBellProps) {
           .eq("recipient_id", userId)
           .order("created_at", { ascending: false })
           .limit(50),
-        supabase
-          .from("notifications")
-          .select("id", { count: "exact", head: true })
-          .eq("recipient_id", userId)
-          .is("read_at", null),
+        getCommunityUnreadDirectNotifications().catch(() => [] as CommunityUnreadDirectNotification[]),
       ]);
 
       if (!active) return;
 
-      if (listError || countError) {
+      if (notificationListResult.error) {
         setNotifications([]);
-        setUnreadCount(0);
+        setMessengerFallbackNotifications([]);
         setLoading(false);
         return;
       }
 
-      setNotifications((data as NotificationItem[] | null) || []);
-      setUnreadCount(count || 0);
+      setNotifications((notificationListResult.data as NotificationItem[] | null) || []);
+      setMessengerFallbackNotifications(unreadDirectMessagesResult);
       setLoading(false);
     };
 
     void loadNotifications();
 
-    const channel = supabase
+    const notificationChannel = supabase
       .channel(`notifications:${userId}`)
       .on(
         "postgres_changes",
@@ -189,9 +202,37 @@ export function NotificationBell({ userId }: NotificationBellProps) {
       )
       .subscribe();
 
+    const messengerChannel = supabase
+      .channel(`notification-bell-messenger:${userId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "community_chat_threads",
+        },
+        () => {
+          void loadNotifications();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "community_chat_members",
+          filter: `user_id=eq.${userId}`,
+        },
+        () => {
+          void loadNotifications();
+        }
+      )
+      .subscribe();
+
     return () => {
       active = false;
-      void supabase.removeChannel(channel);
+      void supabase.removeChannel(notificationChannel);
+      void supabase.removeChannel(messengerChannel);
     };
   }, [supabase, userId]);
 
@@ -214,6 +255,8 @@ export function NotificationBell({ userId }: NotificationBellProps) {
           ...item,
           grouped_count: 1,
           notification_ids: [item.id],
+          source: "notifications",
+          thread_id: parseChatThreadId(item.route),
         };
         groupedMessageNotifications.set(groupKey, groupedItem);
         items.push(groupedItem);
@@ -224,11 +267,51 @@ export function NotificationBell({ userId }: NotificationBellProps) {
         ...item,
         grouped_count: 1,
         notification_ids: [item.id],
+        source: "notifications",
+        thread_id: parseChatThreadId(item.route),
       });
     });
 
-    return items;
-  }, [notifications]);
+    messengerFallbackNotifications.forEach((item) => {
+      const groupKey = `${item.route}:${item.actor_id}`;
+      if (groupedMessageNotifications.has(groupKey)) {
+        return;
+      }
+
+      items.push({
+        id: `messenger-unread:${item.thread_id}`,
+        actor_id: item.actor_id,
+        actor_name: item.actor_name,
+        actor_avatar_url: item.actor_avatar_url,
+        entity_kind: "chat",
+        entity_title: "Direct message",
+        action_type: "message_received",
+        route: item.route,
+        created_at: item.created_at,
+        read_at: null,
+        grouped_count: item.unread_count,
+        notification_ids: [],
+        source: "messenger_unread",
+        thread_id: item.thread_id,
+      });
+    });
+
+    return items.sort(
+      (left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime()
+    );
+  }, [messengerFallbackNotifications, notifications]);
+
+  const unreadCount = useMemo(
+    () =>
+      displayNotifications.reduce((count, item) => {
+        if (item.read_at) {
+          return count;
+        }
+
+        return count + (item.action_type === "message_received" ? item.grouped_count : 1);
+      }, 0),
+    [displayNotifications]
+  );
 
   const hasMore = displayNotifications.length > 5;
   const visibleNotifications = showAll ? displayNotifications : displayNotifications.slice(0, 5);
@@ -253,26 +336,51 @@ export function NotificationBell({ userId }: NotificationBellProps) {
     `;
     document.body.appendChild(overlay);
 
-    const notificationIdsToMark = notifications
-      .filter((notification) => item.notification_ids.includes(notification.id) && !notification.read_at)
-      .map((notification) => notification.id);
+    if (item.action_type === "message_received" && item.thread_id) {
+      const result = await markCommunityThreadRead(item.thread_id);
+      if (!(result && "error" in result)) {
+        const readAt = new Date().toISOString();
+        if (item.notification_ids.length > 0) {
+          setNotifications((current) =>
+            current.map((notification) =>
+              item.notification_ids.includes(notification.id)
+                ? { ...notification, read_at: readAt }
+                : notification
+            )
+          );
 
-    if (notificationIdsToMark.length > 0) {
-      const readAt = new Date().toISOString();
-      setNotifications((current) =>
-        current.map((notification) =>
-          notificationIdsToMark.includes(notification.id)
-            ? { ...notification, read_at: readAt }
-            : notification
-        )
-      );
-      setUnreadCount((current) => Math.max(current - notificationIdsToMark.length, 0));
+          await supabase
+            .from("notifications")
+            .update({ read_at: readAt })
+            .eq("recipient_id", userId)
+            .in("id", item.notification_ids);
+        }
 
-      await supabase
-        .from("notifications")
-        .update({ read_at: readAt })
-        .eq("recipient_id", userId)
-        .in("id", notificationIdsToMark);
+        setMessengerFallbackNotifications((current) =>
+          current.filter((notification) => notification.thread_id !== item.thread_id)
+        );
+      }
+    } else {
+      const notificationIdsToMark = notifications
+        .filter((notification) => item.notification_ids.includes(notification.id) && !notification.read_at)
+        .map((notification) => notification.id);
+
+      if (notificationIdsToMark.length > 0) {
+        const readAt = new Date().toISOString();
+        setNotifications((current) =>
+          current.map((notification) =>
+            notificationIdsToMark.includes(notification.id)
+              ? { ...notification, read_at: readAt }
+              : notification
+          )
+        );
+
+        await supabase
+          .from("notifications")
+          .update({ read_at: readAt })
+          .eq("recipient_id", userId)
+          .in("id", notificationIdsToMark);
+      }
     }
 
     setOpen(false);

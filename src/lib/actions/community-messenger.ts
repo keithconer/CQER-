@@ -103,6 +103,16 @@ export type CommunityMessengerBootstrap = {
   threads: CommunityMessengerThread[];
 };
 
+export type CommunityUnreadDirectNotification = {
+  thread_id: string;
+  actor_id: string;
+  actor_name: string;
+  actor_avatar_url: string | null;
+  unread_count: number;
+  route: string;
+  created_at: string;
+};
+
 export type CommunityMessengerRealtimeState = {
   thread: {
     id: string;
@@ -333,6 +343,23 @@ export async function getCommunityMessengerBootstrap(): Promise<CommunityMesseng
   const { adminClient, profile } = await getMessengerActor();
   const threads = await buildThreadSummaries(adminClient, profile.id);
   return { threads };
+}
+
+export async function getCommunityUnreadDirectNotifications(): Promise<CommunityUnreadDirectNotification[]> {
+  const { adminClient, profile } = await getMessengerActor();
+  const threads = await buildThreadSummaries(adminClient, profile.id);
+
+  return threads
+    .filter((thread) => thread.thread_type === "direct" && thread.direct_user && thread.unread_count > 0)
+    .map((thread) => ({
+      thread_id: thread.id,
+      actor_id: thread.direct_user!.id,
+      actor_name: thread.direct_user!.display_name,
+      actor_avatar_url: thread.direct_user!.avatar_url,
+      unread_count: thread.unread_count,
+      route: `/dashboard?panel=community&chat=${thread.id}`,
+      created_at: thread.last_message_at,
+    }));
 }
 
 export async function ensureCommunityDirectThread(otherUserId: string) {
