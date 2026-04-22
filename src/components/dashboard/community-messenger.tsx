@@ -4,9 +4,11 @@ import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import {
+  Building2,
   CheckCheck,
   Circle,
   FileText,
+  IdCard,
   Loader2,
   MessageSquareMore,
   Paperclip,
@@ -279,10 +281,18 @@ function AccountHoverCard({
             />
             <p className="truncate text-[11px] font-semibold">{user.display_name}</p>
           </div>
-          <p className="truncate text-[9px] text-muted-foreground">
-            {user.department || "No department"}
-          </p>
-          <p className="truncate text-[9px] text-muted-foreground">{user.position_label}</p>
+          <div className="mt-1 space-y-1 text-[9px] text-muted-foreground">
+            <div className="flex items-start gap-1.5">
+              <Building2 className="mt-0.5 h-3 w-3 shrink-0" />
+              <p className="min-w-0 whitespace-normal break-words leading-4">
+                {user.department || "No department"}
+              </p>
+            </div>
+            <div className="flex items-start gap-1.5">
+              <IdCard className="mt-0.5 h-3 w-3 shrink-0" />
+              <p className="min-w-0 whitespace-normal break-words leading-4">{user.position_label}</p>
+            </div>
+          </div>
         </div>
       </div>
       <div className="mt-3 flex gap-2">
@@ -335,8 +345,10 @@ export function CommunityMessenger({
   const threadRequestRef = React.useRef(0);
   const activeThreadSyncRequestRef = React.useRef(0);
   const activeThreadChannelRef = React.useRef<RealtimeChannel | null>(null);
+  const messageSoundRef = React.useRef<HTMLAudioElement | null>(null);
   const composerTypingTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTypingTrackAtRef = React.useRef(0);
+  const lastPlayedMessageIdRef = React.useRef<string | null>(null);
   const ownTypingStateRef = React.useRef(false);
   const bootstrapRefreshTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const threadRefreshTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -541,6 +553,10 @@ export function CommunityMessenger({
     });
 
     if (hasIncomingFromOtherUser) {
+      const newestIncomingMessage = [...incomingMessages]
+        .filter((message) => message.sender_id !== currentUser.id)
+        .at(-1);
+      playIncomingMessageSound(newestIncomingMessage?.id);
       const readResult = await markCommunityThreadRead(threadId);
       if (!(readResult && "error" in readResult)) {
         clearUnreadState(threadId);
@@ -632,6 +648,23 @@ export function CommunityMessenger({
     }));
   });
 
+  const playIncomingMessageSound = React.useEffectEvent((messageId?: string) => {
+    if (!messageId || lastPlayedMessageIdRef.current === messageId) {
+      return;
+    }
+
+    lastPlayedMessageIdRef.current = messageId;
+    const sound = messageSoundRef.current;
+    if (!sound) {
+      return;
+    }
+
+    sound.currentTime = 0;
+    void sound.play().catch(() => {
+      // Ignore autoplay failures until the browser allows audio playback.
+    });
+  });
+
   const applyOptimisticMessage = React.useEffectEvent(
     (
       message: CommunityMessengerThreadDetail["messages"][number],
@@ -715,6 +748,7 @@ export function CommunityMessenger({
       return;
     }
 
+    playIncomingMessageSound(row.id);
     queueActiveThreadSync(row.thread_id, 35);
   });
 
@@ -737,6 +771,7 @@ export function CommunityMessenger({
     }
 
     if (row.message && row.thread && row.message.sender_id !== currentUser.id) {
+      playIncomingMessageSound(row.message.id);
       applyOptimisticMessage(row.message, row.thread);
       void markCommunityThreadRead(row.thread_id);
       return;
@@ -802,6 +837,19 @@ export function CommunityMessenger({
     if (!threadDetail) return;
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [threadDetail]);
+
+  React.useEffect(() => {
+    const audio = new Audio("/sounds/message-notification.mp3");
+    audio.preload = "auto";
+    messageSoundRef.current = audio;
+
+    return () => {
+      if (messageSoundRef.current) {
+        messageSoundRef.current.pause();
+        messageSoundRef.current = null;
+      }
+    };
+  }, []);
 
   React.useEffect(() => {
     if (!isMessengerOpen || !selectedThreadId) {
@@ -1295,10 +1343,20 @@ export function CommunityMessenger({
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-[10px] font-semibold">{formatName(user)}</p>
-                          <p className="truncate text-[9px] text-muted-foreground">
-                            {user.department || "No department"}
-                          </p>
-                          <p className="truncate text-[9px] text-muted-foreground">{user.position_label}</p>
+                          <div className="mt-1 space-y-1 text-[9px] text-muted-foreground">
+                            <div className="flex items-start gap-1.5">
+                              <Building2 className="mt-0.5 h-3 w-3 shrink-0" />
+                              <p className="min-w-0 whitespace-normal break-words leading-4">
+                                {user.department || "No department"}
+                              </p>
+                            </div>
+                            <div className="flex items-start gap-1.5">
+                              <IdCard className="mt-0.5 h-3 w-3 shrink-0" />
+                              <p className="min-w-0 whitespace-normal break-words leading-4">
+                                {user.position_label}
+                              </p>
+                            </div>
+                          </div>
                         </div>
                         {isOnline ? (
                           <Badge variant="outline" className="h-5 rounded-full px-1.5 text-[8px] text-green-600">

@@ -682,6 +682,14 @@ export async function markCommunityThreadRead(threadId: string) {
     return { error: error.message };
   }
 
+  await adminClient
+    .from("notifications")
+    .update({ read_at: new Date().toISOString() })
+    .eq("recipient_id", profile.id)
+    .eq("action_type", "message_received")
+    .eq("route", `/dashboard?panel=community&chat=${threadId}`)
+    .is("read_at", null);
+
   return { success: true };
 }
 

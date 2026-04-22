@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bell } from "lucide-react";
+import { Bell, FileText, MessageSquareMore, UserPlus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 type NotificationItem = {
   id: string;
+  actor_id: string | null;
   actor_name: string;
   actor_avatar_url: string | null;
   entity_kind: "project" | "proposal" | "program" | "training" | "announcement" | "community_comment" | "chat";
@@ -28,6 +29,11 @@ type NotificationItem = {
   route: string;
   created_at: string;
   read_at: string | null;
+};
+
+type NotificationDisplayItem = NotificationItem & {
+  grouped_count: number;
+  notification_ids: string[];
 };
 
 interface NotificationBellProps {
@@ -58,7 +64,7 @@ function formatTimeAgo(value: string) {
   return `${years}yr ago`;
 }
 
-function buildMessage(item: NotificationItem) {
+function buildMessage(item: NotificationDisplayItem) {
   const actorName = item.actor_name.trim() || "A coordinator";
   const objectLabel =
     item.entity_kind === "proposal"
@@ -92,6 +98,10 @@ function buildMessage(item: NotificationItem) {
   }
 
   if (item.action_type === "message_received") {
+    if (item.grouped_count > 1) {
+      return `${actorName} sent you a message (${item.grouped_count} messages)`;
+    }
+
     return `${actorName} sent a new message in "${item.entity_title}"`;
   }
 
@@ -100,6 +110,22 @@ function buildMessage(item: NotificationItem) {
   }
 
   return `${actorName} has created a ${objectLabel} "${item.entity_title}"`;
+}
+
+function getNotificationIcon(item: NotificationDisplayItem) {
+  if (item.action_type === "message_received") {
+    return MessageSquareMore;
+  }
+
+  if (item.action_type === "document_uploaded") {
+    return FileText;
+  }
+
+  if (item.action_type === "assigned") {
+    return UserPlus;
+  }
+
+  return Bell;
 }
 
 export function NotificationBell({ userId }: NotificationBellProps) {
@@ -119,11 +145,11 @@ export function NotificationBell({ userId }: NotificationBellProps) {
         supabase
           .from("notifications")
           .select(
-            "id, actor_name, actor_avatar_url, entity_kind, entity_title, action_type, route, created_at, read_at"
+            "id, actor_id, actor_name, actor_avatar_url, entity_kind, entity_title, action_type, route, created_at, read_at"
           )
           .eq("recipient_id", userId)
           .order("created_at", { ascending: false })
-          .limit(20),
+          .limit(50),
         supabase
           .from("notifications")
           .select("id", { count: "exact", head: true })
@@ -169,13 +195,48 @@ export function NotificationBell({ userId }: NotificationBellProps) {
     };
   }, [supabase, userId]);
 
-  const hasMore = notifications.length > 5;
-  const visibleNotifications = showAll ? notifications : notifications.slice(0, 5);
+  const displayNotifications = useMemo<NotificationDisplayItem[]>(() => {
+    const groupedMessageNotifications = new Map<string, NotificationDisplayItem>();
+    const items: NotificationDisplayItem[] = [];
+
+    notifications.forEach((item) => {
+      if (item.action_type === "message_received" && !item.read_at) {
+        const groupKey = `${item.route}:${item.actor_id ?? item.actor_name}`;
+        const existing = groupedMessageNotifications.get(groupKey);
+
+        if (existing) {
+          existing.grouped_count += 1;
+          existing.notification_ids.push(item.id);
+          return;
+        }
+
+        const groupedItem: NotificationDisplayItem = {
+          ...item,
+          grouped_count: 1,
+          notification_ids: [item.id],
+        };
+        groupedMessageNotifications.set(groupKey, groupedItem);
+        items.push(groupedItem);
+        return;
+      }
+
+      items.push({
+        ...item,
+        grouped_count: 1,
+        notification_ids: [item.id],
+      });
+    });
+
+    return items;
+  }, [notifications]);
+
+  const hasMore = displayNotifications.length > 5;
+  const visibleNotifications = showAll ? displayNotifications : displayNotifications.slice(0, 5);
   const scrollMaxHeight = showAll
     ? "max-h-[70vh]"
     : (hasMore ? "max-h-80" : "max-h-80");
 
-  const handleNotificationClick = async (item: NotificationItem) => {
+  const handleNotificationClick = async (item: NotificationDisplayItem) => {
     // Show local loading state before routing
     const overlay = document.createElement("div");
     overlay.className = "fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200";
@@ -192,20 +253,26 @@ export function NotificationBell({ userId }: NotificationBellProps) {
     `;
     document.body.appendChild(overlay);
 
-    if (!item.read_at) {
+    const notificationIdsToMark = notifications
+      .filter((notification) => item.notification_ids.includes(notification.id) && !notification.read_at)
+      .map((notification) => notification.id);
+
+    if (notificationIdsToMark.length > 0) {
+      const readAt = new Date().toISOString();
       setNotifications((current) =>
         current.map((notification) =>
-          notification.id === item.id
-            ? { ...notification, read_at: new Date().toISOString() }
+          notificationIdsToMark.includes(notification.id)
+            ? { ...notification, read_at: readAt }
             : notification
         )
       );
-      setUnreadCount((current) => Math.max(current - 1, 0));
+      setUnreadCount((current) => Math.max(current - notificationIdsToMark.length, 0));
 
       await supabase
         .from("notifications")
-        .update({ read_at: new Date().toISOString() })
-        .eq("id", item.id);
+        .update({ read_at: readAt })
+        .eq("recipient_id", userId)
+        .in("id", notificationIdsToMark);
     }
 
     setOpen(false);
@@ -256,10 +323,11 @@ export function NotificationBell({ userId }: NotificationBellProps) {
           <div className="p-1.5 pr-2">
             {loading ? (
               <p className="px-2 py-3 text-[9px] text-muted-foreground">Loading notifications...</p>
-            ) : notifications.length === 0 ? (
+            ) : displayNotifications.length === 0 ? (
               <p className="px-2 py-3 text-[9px] text-muted-foreground">No notifications yet.</p>
             ) : (
               visibleNotifications.map((item) => {
+                const ItemIcon = getNotificationIcon(item);
                 const initials = item.actor_name
                   .split(" ")
                   .map((part) => part[0] || "")
@@ -282,10 +350,15 @@ export function NotificationBell({ userId }: NotificationBellProps) {
                     </Avatar>
 
                     <div className="min-w-0 flex-1">
-                      <p className="line-clamp-2 text-[9px] leading-4 text-foreground/90">
-                        {buildMessage(item)}
-                      </p>
-                      <p className="mt-1 text-[8px] text-muted-foreground">
+                      <div className="flex items-start gap-1.5">
+                        <span className="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                          <ItemIcon className="h-2.5 w-2.5" />
+                        </span>
+                        <p className="line-clamp-2 text-[9px] leading-4 text-foreground/90">
+                          {buildMessage(item)}
+                        </p>
+                      </div>
+                      <p className="mt-1 pl-5 text-[8px] text-muted-foreground">
                         {formatTimeAgo(item.created_at)}
                       </p>
                     </div>

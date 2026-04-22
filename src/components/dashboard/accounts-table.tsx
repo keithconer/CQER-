@@ -89,42 +89,42 @@ export function AccountsTable({ accounts, title, description }: AccountsTablePro
 
       <CardContent className="px-4 pb-4 space-y-3">
         <div className="rounded-md border border-border/50 overflow-hidden">
-          <Table>
+          <Table className="min-w-[760px] table-fixed">
             <TableHeader className="bg-muted/30">
               <TableRow className="hover:bg-transparent border-border/50">
-                <TableHead className="text-[10px] font-semibold h-9">First Name</TableHead>
-                <TableHead className="text-[10px] font-semibold h-9">Last Name</TableHead>
-                <TableHead className="text-[10px] font-semibold h-9">Email</TableHead>
-                <TableHead className="text-[10px] font-semibold h-9">User Type</TableHead>
-                <TableHead className="text-[10px] font-semibold h-9">Department</TableHead>
-                <TableHead className="text-[10px] font-semibold h-9">Unit</TableHead>
+                <TableHead className="h-9 min-w-[110px] text-[10px] font-semibold">First Name</TableHead>
+                <TableHead className="h-9 min-w-[110px] text-[10px] font-semibold">Last Name</TableHead>
+                <TableHead className="h-9 min-w-[220px] text-[10px] font-semibold">Email</TableHead>
+                <TableHead className="h-9 min-w-[150px] text-[10px] font-semibold">User Type</TableHead>
+                <TableHead className="h-9 min-w-[180px] whitespace-normal text-[10px] font-semibold">Department</TableHead>
+                <TableHead className="h-9 min-w-[160px] whitespace-normal text-[10px] font-semibold">Unit</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {paginatedAccounts.length > 0 ? (
                 paginatedAccounts.map((account) => (
                   <TableRow key={account.id} className="hover:bg-muted/10 border-border/30">
-                    <TableCell className="text-[10px] py-2.5 px-3 font-medium">
+                    <TableCell className="min-w-[110px] text-[10px] py-2.5 px-3 font-medium">
                       {account.first_name || "-"}
                     </TableCell>
-                    <TableCell className="text-[10px] py-2.5 px-3">
+                    <TableCell className="min-w-[110px] text-[10px] py-2.5 px-3">
                       {account.last_name || "-"}
                     </TableCell>
                     <TableCell
-                      className="text-[10px] py-2.5 px-3 max-w-[220px] truncate"
+                      className="min-w-[220px] max-w-[220px] truncate text-[10px] py-2.5 px-3"
                       title={account.email || "-"}
                     >
                       {account.email || "-"}
                     </TableCell>
-                    <TableCell className="py-2.5 px-3">
+                    <TableCell className="min-w-[150px] py-2.5 px-3">
                       <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 border-border/50">
                         {formatRole(account.user_type || "unit_coordinator")}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-[10px] py-2.5 px-3">
+                    <TableCell className="min-w-[180px] whitespace-normal break-words py-2.5 px-3 text-[10px] leading-4">
                       {account.department || "-"}
                     </TableCell>
-                    <TableCell className="text-[10px] py-2.5 px-3">
+                    <TableCell className="min-w-[160px] whitespace-normal break-words py-2.5 px-3 text-[10px] leading-4">
                       {account.unit || "-"}
                     </TableCell>
                   </TableRow>
