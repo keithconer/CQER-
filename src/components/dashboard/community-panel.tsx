@@ -38,6 +38,7 @@ import {
   updateCommunityPost,
 } from "@/lib/actions/community";
 import { CommunityMessenger } from "./community-messenger";
+import { CommunityNotificationPanel } from "./community-notification-panel";
 import type { CommunityMessengerUser } from "@/lib/actions/community-messenger";
 import { CommunityAttachmentUpload, type CommunityAttachmentInput } from "./community-attachment-upload";
 import { DEPARTMENTS } from "@/lib/departments";
@@ -507,6 +508,8 @@ export function CommunityPanel({
           }}
           users={messengerUsers}
         />
+
+        <CommunityNotificationPanel userId={currentUser.id} />
       </div>
 
       <div className="space-y-4">

@@ -94,15 +94,15 @@ function buildMessage(item: NotificationDisplayItem) {
   }
 
   if (item.action_type === "community_post") {
-    return `${actorName} shared a new public post from CQER Community: "${item.entity_title}"`;
+    return `${actorName} shared a new CQER Community post: "${item.entity_title}"`;
   }
 
   if (item.action_type === "message_received") {
     if (item.grouped_count > 1) {
-      return `${actorName} sent you a message (${item.grouped_count} messages)`;
+      return `${actorName} has messaged you (${item.grouped_count}+) new messages`;
     }
 
-    return `${actorName} sent a new message in "${item.entity_title}"`;
+    return `${actorName} has messaged you`;
   }
 
   if (item.action_type === "updated") {

@@ -234,23 +234,20 @@ async function sendPostNotifications(params: {
   const { data: recipients } = await recipientQuery;
   const recipientIds = (recipients || []).map((entry) => entry.id as string);
 
-  const rows =
-    visibility === "public"
-      ? recipientIds
-          .filter((recipientId) => !mentionedSet.has(recipientId))
-          .map((recipientId) => ({
-            recipient_id: recipientId,
-            actor_id: actor.id,
-            actor_name: actorName,
-            actor_avatar_url: actor.avatar_url,
-            entity_table: "community_posts",
-            entity_id: postId,
-            entity_kind: "announcement",
-            entity_title: title,
-            action_type: "community_post",
-            route,
-          }))
-      : [];
+  const rows = recipientIds
+    .filter((recipientId) => !mentionedSet.has(recipientId))
+    .map((recipientId) => ({
+      recipient_id: recipientId,
+      actor_id: actor.id,
+      actor_name: actorName,
+      actor_avatar_url: actor.avatar_url,
+      entity_table: "community_posts",
+      entity_id: postId,
+      entity_kind: "announcement",
+      entity_title: title,
+      action_type: "community_post",
+      route,
+    }));
 
   const mentionRows = Array.from(mentionedSet).map((recipientId) => ({
     recipient_id: recipientId,

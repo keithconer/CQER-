@@ -153,6 +153,14 @@ function registeredAccountGroupLabel(user: CommunityMessengerUser) {
   return "No Department";
 }
 
+function formatUnreadIndicator(value: number) {
+  if (value > 99) {
+    return "99+";
+  }
+
+  return `${value}+`;
+}
+
 function sortThreadsByActivity(threads: CommunityMessengerThread[]) {
   return [...threads].sort(
     (left, right) =>
@@ -1169,6 +1177,20 @@ export function CommunityMessenger({
       }));
   }, [filteredUsers]);
 
+  const unreadDirectCounts = React.useMemo(() => {
+    const unreadByUserId = new Map<string, number>();
+
+    bootstrap.threads.forEach((thread) => {
+      if (thread.thread_type !== "direct" || !thread.direct_user || thread.unread_count <= 0) {
+        return;
+      }
+
+      unreadByUserId.set(thread.direct_user.id, thread.unread_count);
+    });
+
+    return unreadByUserId;
+  }, [bootstrap.threads]);
+
   const filteredThreads = React.useMemo(() => {
     const query = threadFilter.trim().toLowerCase();
     if (!query) return bootstrap.threads;
@@ -1388,6 +1410,7 @@ export function CommunityMessenger({
                   <div className="space-y-1">
                     {group.users.map((user) => {
                       const isOnline = onlineIds.has(user.id);
+                      const unreadCount = unreadDirectCounts.get(user.id) || 0;
                       return (
                         <Popover
                           key={user.id}
@@ -1403,6 +1426,11 @@ export function CommunityMessenger({
                               className="flex w-full items-center gap-2 rounded-xl border border-transparent px-2 py-1.5 text-left transition-colors hover:border-border/50 hover:bg-muted/30"
                             >
                               <div className="relative shrink-0">
+                                {unreadCount > 0 ? (
+                                  <span className="absolute -left-2 top-1/2 z-10 min-w-4 -translate-y-1/2 rounded-full bg-green-600 px-1 py-0.5 text-center text-[7px] font-semibold leading-none text-white shadow-sm">
+                                    {formatUnreadIndicator(unreadCount)}
+                                  </span>
+                                ) : null}
                                 <Avatar className="h-7 w-7 border border-border/50">
                                   <AvatarImage src={user.avatar_url || undefined} alt={formatName(user)} />
                                   <AvatarFallback className="text-[8px]">{initials(user)}</AvatarFallback>
