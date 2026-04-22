@@ -351,6 +351,7 @@ export function CommunityMessenger({
   const [isGroupDialogOpen, setIsGroupDialogOpen] = React.useState(false);
   const [groupName, setGroupName] = React.useState("");
   const [groupMemberIds, setGroupMemberIds] = React.useState<string[]>([]);
+  const registeredAccountsBoundaryRef = React.useRef<HTMLDivElement | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const messagesEndRef = React.useRef<HTMLDivElement | null>(null);
   const selectedThreadIdRef = React.useRef<string | null>(null);
@@ -1338,8 +1339,9 @@ export function CommunityMessenger({
 
   return (
     <>
-      <Card className="border-border/50 shadow-sm">
-        <CardHeader className="space-y-2 pb-3">
+      <div ref={registeredAccountsBoundaryRef} className="relative">
+        <Card className="border-border/50 shadow-sm">
+          <CardHeader className="space-y-2 pb-3">
           <div className="flex items-center justify-between gap-2">
             <div>
               <CardTitle className="text-xs font-semibold">Registered Accounts</CardTitle>
@@ -1361,10 +1363,10 @@ export function CommunityMessenger({
               className="h-8 pl-7 text-[10px]"
             />
           </div>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <ScrollArea className="h-[320px] pr-3">
-            <div className="space-y-3">
+          </CardHeader>
+          <CardContent className="pt-0">
+            <ScrollArea className="h-[320px] pr-3">
+              <div className="space-y-3">
               {groupedFilteredUsers.map((group) => (
                 <div key={group.label} className="space-y-1.5">
                   <div className="sticky top-0 z-10 rounded-lg border border-border/50 bg-muted/60 px-3 py-2 backdrop-blur">
@@ -1426,6 +1428,12 @@ export function CommunityMessenger({
                             side="right"
                             sideOffset={8}
                             align="start"
+                            collisionPadding={12}
+                            collisionBoundary={
+                              registeredAccountsBoundaryRef.current
+                                ? [registeredAccountsBoundaryRef.current]
+                                : undefined
+                            }
                             className="w-auto border-0 bg-transparent p-0 shadow-none"
                             onMouseEnter={() => setHoveredUserId(user.id)}
                             onMouseLeave={() => setHoveredUserId((current) => (current === user.id ? null : current))}
@@ -1448,10 +1456,11 @@ export function CommunityMessenger({
                   No accounts matched your search.
                 </p>
               ) : null}
-            </div>
-          </ScrollArea>
-        </CardContent>
-      </Card>
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      </div>
 
       <Dialog open={isMessengerOpen} onOpenChange={setIsMessengerOpen}>
         <DialogContent className="flex h-[85vh] max-h-[760px] max-w-5xl flex-col gap-0 overflow-hidden p-0 sm:max-w-5xl">
