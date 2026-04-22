@@ -749,7 +749,7 @@ export async function sendCommunityMessage(input: {
 
   if (thread && recipientIds.length > 0) {
     const actorName = displayName(profile);
-    await adminClient.from("notifications").insert(
+    const { error: notificationError } = await adminClient.from("notifications").insert(
       recipientIds.map((recipientId) => ({
         recipient_id: recipientId,
         actor_id: profile.id,
@@ -766,6 +766,10 @@ export async function sendCommunityMessage(input: {
         route: `/dashboard?panel=community&chat=${input.threadId}`,
       }))
     );
+
+    if (notificationError) {
+      console.error("Failed to insert CQER messenger notification:", notificationError);
+    }
   }
 
   return {

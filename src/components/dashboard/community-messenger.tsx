@@ -278,11 +278,11 @@ function AccountHoverCard({
   onCreateGroup: () => void;
 }) {
   return (
-    <div className="w-64 rounded-xl border border-border/50 bg-background p-3 shadow-md">
+    <div className="w-56 rounded-xl border border-border/50 bg-background p-3 shadow-md">
       <div className="flex items-start gap-2">
-        <Avatar className="h-10 w-10 border border-border/50">
+        <Avatar className="h-9 w-9 border border-border/50">
           <AvatarImage src={user.avatar_url || undefined} alt={user.display_name} />
-          <AvatarFallback className="text-[10px]">{initials(user)}</AvatarFallback>
+          <AvatarFallback className="text-[9px]">{initials(user)}</AvatarFallback>
         </Avatar>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
@@ -292,9 +292,9 @@ function AccountHoverCard({
                 isOnline ? "bg-green-500" : "bg-muted-foreground/40"
               )}
             />
-            <p className="truncate text-[11px] font-semibold">{user.display_name}</p>
+            <p className="truncate text-[10px] font-semibold">{user.display_name}</p>
           </div>
-          <div className="mt-1 space-y-1 text-[9px] text-muted-foreground">
+          <div className="mt-1 space-y-1 text-[8px] text-muted-foreground">
             <div className="flex items-start gap-1.5">
               <Building2 className="mt-0.5 h-3 w-3 shrink-0" />
               <p className="min-w-0 whitespace-normal break-words leading-4">
@@ -309,12 +309,12 @@ function AccountHoverCard({
         </div>
       </div>
       <div className="mt-3 flex gap-2">
-        <Button type="button" size="sm" className="h-7 flex-1 text-[10px]" onClick={onMessage}>
-          <MessageSquareMore className="mr-1.5 h-3.5 w-3.5" />
+        <Button type="button" size="sm" className="h-6 flex-1 text-[9px]" onClick={onMessage}>
+          <MessageSquareMore className="mr-1 h-3 w-3" />
           Send Message
         </Button>
-        <Button type="button" size="sm" variant="outline" className="h-7 flex-1 text-[10px]" onClick={onCreateGroup}>
-          <Users className="mr-1.5 h-3.5 w-3.5" />
+        <Button type="button" size="sm" variant="outline" className="h-6 flex-1 text-[9px]" onClick={onCreateGroup}>
+          <Users className="mr-1 h-3 w-3" />
           Create Group
         </Button>
       </div>
@@ -391,7 +391,7 @@ export function CommunityMessenger({
             return chatFromQuery;
           }
 
-          return nextBootstrap.threads[0]?.id || null;
+          return null;
         });
       } finally {
         if (showLoading && bootstrapRequestRef.current === requestId) {
@@ -852,6 +852,19 @@ export function CommunityMessenger({
   }, [threadDetail]);
 
   React.useEffect(() => {
+    if (!isMessengerOpen || selectedThreadId || bootstrap.threads.length === 0) {
+      return;
+    }
+
+    const chatFromQuery = searchParams.get("chat");
+    if (chatFromQuery) {
+      return;
+    }
+
+    setSelectedThreadId(bootstrap.threads[0].id);
+  }, [bootstrap.threads, isMessengerOpen, searchParams, selectedThreadId]);
+
+  React.useEffect(() => {
     const audio = new Audio("/sounds/message-notification.mp3");
     audio.preload = "auto";
     messageSoundRef.current = audio;
@@ -898,7 +911,7 @@ export function CommunityMessenger({
   }, [composer, isComposerFocused, isMessengerOpen, selectedThreadId]);
 
   React.useEffect(() => {
-    if (!selectedThreadId || !threadDetail || threadDetail.thread.id !== selectedThreadId) {
+    if (!isMessengerOpen || !selectedThreadId || !threadDetail || threadDetail.thread.id !== selectedThreadId) {
       return;
     }
 
@@ -920,7 +933,7 @@ export function CommunityMessenger({
     return () => {
       isCancelled = true;
     };
-  }, [selectedThreadId, threadDetail]);
+  }, [isMessengerOpen, selectedThreadId, threadDetail]);
 
   React.useEffect(() => {
     const tracked = supabase.channel("community-messenger-presence", {
@@ -1356,7 +1369,7 @@ export function CommunityMessenger({
                 <div key={group.label} className="space-y-1.5">
                   <div className="sticky top-0 z-10 rounded-lg border border-border/50 bg-muted/60 px-3 py-2 backdrop-blur">
                     <div className="flex items-center gap-2">
-                      <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                      <Building2 className="h-3 w-3 text-muted-foreground" />
                       <p className="text-[10px] font-semibold text-foreground">{group.label}</p>
                       <Badge variant="secondary" className="h-5 rounded-full px-1.5 text-[8px]">
                         {group.users.length}
@@ -1379,38 +1392,40 @@ export function CommunityMessenger({
                               onClick={() => openDirectMessage(user.id)}
                               onMouseEnter={() => setHoveredUserId(user.id)}
                               onMouseLeave={() => setHoveredUserId((current) => (current === user.id ? null : current))}
-                              className="flex w-full items-center gap-2 rounded-xl border border-transparent px-2 py-2 text-left transition-colors hover:border-border/50 hover:bg-muted/30"
+                              className="flex w-full items-center gap-2 rounded-xl border border-transparent px-2 py-1.5 text-left transition-colors hover:border-border/50 hover:bg-muted/30"
                             >
                               <div className="relative shrink-0">
-                                <Avatar className="h-8 w-8 border border-border/50">
+                                <Avatar className="h-7 w-7 border border-border/50">
                                   <AvatarImage src={user.avatar_url || undefined} alt={formatName(user)} />
-                                  <AvatarFallback className="text-[9px]">{initials(user)}</AvatarFallback>
+                                  <AvatarFallback className="text-[8px]">{initials(user)}</AvatarFallback>
                                 </Avatar>
                                 <span
                                   className={cn(
-                                    "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background",
+                                    "absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-background",
                                     isOnline ? "bg-green-500" : "bg-muted-foreground/30"
                                   )}
                                 />
                               </div>
                               <div className="min-w-0 flex-1">
-                                <p className="truncate text-[10px] font-semibold">{formatName(user)}</p>
-                                <div className="mt-1 flex items-start gap-1.5 text-[9px] text-muted-foreground">
-                                  <IdCard className="mt-0.5 h-3 w-3 shrink-0" />
+                                <p className="truncate text-[9px] font-semibold">{formatName(user)}</p>
+                                <div className="mt-0.5 flex items-start gap-1 text-[8px] text-muted-foreground">
+                                  <IdCard className="mt-0.5 h-2.5 w-2.5 shrink-0" />
                                   <p className="min-w-0 whitespace-normal break-words leading-4">
                                     {user.position_label}
                                   </p>
                                 </div>
                               </div>
                               {isOnline ? (
-                                <Badge variant="outline" className="h-5 rounded-full px-1.5 text-[8px] text-green-600">
+                                <Badge variant="outline" className="h-4 rounded-full px-1.5 text-[7px] text-green-600">
                                   Online
                                 </Badge>
                               ) : null}
                             </button>
                           </PopoverTrigger>
                           <PopoverContent
-                            align="end"
+                            side="right"
+                            sideOffset={8}
+                            align="start"
                             className="w-auto border-0 bg-transparent p-0 shadow-none"
                             onMouseEnter={() => setHoveredUserId(user.id)}
                             onMouseLeave={() => setHoveredUserId((current) => (current === user.id ? null : current))}
