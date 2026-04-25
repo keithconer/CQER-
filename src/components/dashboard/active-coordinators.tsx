@@ -59,7 +59,10 @@ type Bucket = {
   end: Date;
 };
 
-type DerivedCoordinator = CoordinatorActivity & {
+type DerivedCoordinator = Omit<
+  CoordinatorActivity,
+  "projects" | "trainings" | "projectCount" | "projectDates" | "trainingDates"
+> & {
   projects: number;
   trainings: number;
   projectCount: number;
