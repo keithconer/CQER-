@@ -118,12 +118,19 @@ function getCreatorLabel(project: Project) {
 }
 
 function getTrainingDate(record: TrainingRecord) {
+  if (record.conducted_sessions?.length) {
+    return (record as TrainingRecord & { created_at?: string | null }).created_at || null;
+  }
   const sortedDates = [...(record.inclusive_dates || [])].sort();
   if (sortedDates.length > 0) return sortedDates[0];
   return null;
 }
 
 function getTrainingSchedule(record: TrainingRecord) {
+  if (record.conducted_sessions?.length) {
+    const totalHours = record.conducted_sessions.reduce((sum, session) => sum + Number(session.hours || 0), 0);
+    return `${record.conducted_sessions.length} date(s) / ${totalHours} hour/s`;
+  }
   if (record.date_mode === "hours") {
     return `${record.manual_hours || 0} hour/s`;
   }

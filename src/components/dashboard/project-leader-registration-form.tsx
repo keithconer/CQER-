@@ -4,7 +4,7 @@ import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useFieldArray, useForm, useWatch, type Control } from "react-hook-form";
 import * as z from "zod";
-import { differenceInCalendarDays, format, isValid, parse } from "date-fns";
+import { addYears, differenceInCalendarDays, differenceInYears, endOfToday, format, isAfter, isValid, parse } from "date-fns";
 import {
   CalendarIcon,
   ChevronLeft,
@@ -46,6 +46,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
+import { SDG_OPTIONS, normalizeSdgArray } from "@/lib/sdg";
 import { cn } from "@/lib/utils";
 import { createProject, updateProject } from "@/lib/actions/projects";
 import { type Project } from "@/components/dashboard/projects-table";
@@ -66,29 +67,11 @@ const agendaOptions = [
   "M - Biodiversity and Environmental Conservation, Climate Action, and Inclusive Disaster Resilience, and Preparedness",
 ] as const;
 
-const sdgOptions = [
-  "1 - No Poverty",
-  "2 - Zero Hunger",
-  "3 - Good Health and Well-being",
-  "4 - Quality Education",
-  "5 - Gender Equality",
-  "6 - Clean Water and Sanitation",
-  "7 - Affordable and Clean Energy",
-  "8 - Decent Work and Economic Growth",
-  "9 - Industry, Innovation and Infrastructure",
-  "10 - Reduced Inequalities",
-  "11 - Sustainable Cities and Communities",
-  "12 - Responsible Consumption and Production",
-  "13 - Climate Action",
-  "14 - Life Below Water",
-  "15 - Life on Land",
-  "16 - Peace, Justice and Strong Institutions",
-  "17 - Partnerships for the Goals"
-] as const;
+const sdgOptions = SDG_OPTIONS;
 const agencyCategoryOptions = ["government", "ngo", "private", "msme"] as const;
 const natureOptions = ["Internal", "External"] as const;
 const partnershipTypeOptions = ["MOA", "MOU", "LOA"] as const;
-const levelOfPartnershipOptions = ["local", "regional", "national", "international"] as const;
+const levelOfPartnershipOptions = ["Local", "Regional", "National", "International"] as const;
 const employmentOptions = ["Permanent", "Contract of Service"] as const;
 
 const textValue = z.string().trim().min(1, "This field is required.");
@@ -96,6 +79,7 @@ const optionalTextValue = z.string().trim().optional().or(z.literal(""));
 const nonNegativeNumber = z.coerce.number().min(0, "Value must be 0 or greater.");
 
 const signatorySchema = z.object({
+  designation: textValue,
   name: textValue,
 });
 
@@ -146,6 +130,22 @@ const partnerAgencySchema = z
         code: z.ZodIssueCode.custom,
         path: ["funding_agency_name"],
         message: "Funding agency name is required for external partnerships.",
+      });
+    }
+
+    if (value.bor_approval_date && isAfter(value.bor_approval_date, endOfToday())) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["bor_approval_date"],
+        message: "Future dates are not allowed.",
+      });
+    }
+
+    if (value.date_notarized && isAfter(value.date_notarized, endOfToday())) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["date_notarized"],
+        message: "Future dates are not allowed.",
       });
     }
   });
@@ -331,14 +331,13 @@ function getDurationLabel(values: Date[]) {
   if (sorted.length === 0) return "0 days";
   const start = sorted[0];
   const end = sorted[sorted.length - 1];
-  const days = differenceInCalendarDays(end, start) + 1;
-  const reportingYearDays = 270;
-  if (days < reportingYearDays) {
+  const years = differenceInYears(end, start);
+  if (years <= 0) {
+    const days = differenceInCalendarDays(end, start) + 1;
     return `${days} day${days === 1 ? "" : "s"}`;
   }
-
-  const years = Math.floor(days / reportingYearDays);
-  const remainingDays = days % reportingYearDays;
+  const anchor = addYears(start, years);
+  const remainingDays = differenceInCalendarDays(end, anchor);
   if (remainingDays === 0) {
     return `${years} year${years === 1 ? "" : "s"}`;
   }
@@ -429,8 +428,8 @@ function buildDefaultValues(
       : Array.isArray(project?.classification)
         ? project.classification
         : [],
-    sdg_main: Array.isArray(registration?.sdg_main) ? registration.sdg_main.map((item) => String(item)) : [],
-    sdg_sub: Array.isArray(registration?.sdg_sub) ? registration.sdg_sub.map((item) => String(item)) : [],
+    sdg_main: normalizeSdgArray(registration?.sdg_main),
+    sdg_sub: normalizeSdgArray(registration?.sdg_sub),
     target_beneficiaries: String(
       registration?.target_beneficiaries ||
         (Array.isArray(project?.target_beneficiaries) ? project.target_beneficiaries.join(", ") : "")
@@ -449,17 +448,22 @@ function buildDefaultValues(
               nature_of_partnership: String(record.nature_of_partnership || "Internal") as (typeof natureOptions)[number],
               funding_agency_name: String(record.funding_agency_name || ""),
               level_of_partnership: (
-                levelOfPartnershipOptions.includes(String(record.level_of_partnership || "").toLowerCase() as never)
-                  ? String(record.level_of_partnership || "").toLowerCase()
-                  : "local"
+                levelOfPartnershipOptions.includes(
+                  `${String(record.level_of_partnership || "").trim().charAt(0).toUpperCase()}${String(record.level_of_partnership || "").trim().slice(1).toLowerCase()}` as never
+                )
+                  ? `${String(record.level_of_partnership || "").trim().charAt(0).toUpperCase()}${String(record.level_of_partnership || "").trim().slice(1).toLowerCase()}`
+                  : "Local"
               ) as (typeof levelOfPartnershipOptions)[number],
               type_of_partnership: String(record.type_of_partnership || "MOA") as (typeof partnershipTypeOptions)[number],
               bor_approval_date: typeof record.bor_approval_date === "string" ? new Date(record.bor_approval_date) : null,
               date_notarized: typeof record.date_notarized === "string" ? new Date(record.date_notarized) : null,
               signatories:
                 Array.isArray(record.signatories) && record.signatories.length > 0
-                  ? record.signatories.map((entry) => ({ name: String((entry as Record<string, unknown>).name || "") }))
-                  : [{ name: "" }],
+                  ? record.signatories.map((entry) => ({
+                      designation: String((entry as Record<string, unknown>).designation || ""),
+                      name: String((entry as Record<string, unknown>).name || ""),
+                    }))
+                  : [{ designation: "", name: "" }],
             };
           })
         : [
@@ -471,11 +475,11 @@ function buildDefaultValues(
               contact_details: "",
               nature_of_partnership: "Internal",
               funding_agency_name: "",
-              level_of_partnership: "local",
+              level_of_partnership: "Local",
               type_of_partnership: "MOA",
               bor_approval_date: null,
               date_notarized: null,
-              signatories: [{ name: "" }],
+              signatories: [{ designation: "", name: "" }],
             },
           ],
     rationale: String(registration?.rationale || ""),
@@ -570,11 +574,13 @@ function MultiDatePicker({
   onChange,
   disabled,
   placeholder,
+  disabledDate,
 }: {
   value: Date[];
   onChange: (value: Date[]) => void;
   disabled?: boolean;
   placeholder?: string;
+  disabledDate?: (date: Date) => boolean;
 }) {
   return (
     <Popover>
@@ -597,6 +603,7 @@ function MultiDatePicker({
           mode="multiple"
           selected={value}
           onSelect={(dates) => onChange(sortDates(dates || []))}
+          disabled={disabledDate}
           className="rounded-md border-0"
         />
       </PopoverContent>
@@ -675,6 +682,53 @@ function CheckboxGrid({
   );
 }
 
+function DropdownMultiSelect({
+  values,
+  options,
+  onToggle,
+  disabled,
+  placeholder,
+}: {
+  values: string[];
+  options: readonly string[];
+  onToggle: (value: string) => void;
+  disabled?: boolean;
+  placeholder?: string;
+}) {
+  return (
+    <div className="space-y-3">
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={disabled}
+            className="h-10 w-full justify-between rounded-xl border-border/60 px-3 text-xs font-normal"
+          >
+            <span className="truncate text-left">
+              {values.length > 0 ? values.join(", ") : placeholder || "Select option/s"}
+            </span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="w-[min(26rem,calc(100vw-2rem))] rounded-2xl p-3">
+          <div className="grid gap-2 sm:grid-cols-2">
+            {options.map((option) => {
+              const checked = values.includes(option);
+              return (
+                <label key={option} className="flex items-center gap-3 rounded-xl border border-border/40 px-3 py-2">
+                  <Checkbox checked={checked} onCheckedChange={() => onToggle(option)} disabled={disabled} />
+                  <span className="text-xs">{option}</span>
+                </label>
+              );
+            })}
+          </div>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
 function SdgGrid({
   values,
   onToggle,
@@ -685,23 +739,13 @@ function SdgGrid({
   disabled?: boolean;
 }) {
   return (
-    <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 xl:grid-cols-9">
-      {sdgOptions.map((option) => {
-        const checked = values.includes(option);
-        return (
-          <label
-            key={option}
-            className={cn(
-              "flex items-center justify-center gap-2 rounded-xl border border-border/40 px-2 py-2.5 text-xs font-medium",
-              checked && "border-primary/50 bg-primary/5 text-primary"
-            )}
-          >
-            <Checkbox checked={checked} onCheckedChange={() => onToggle(option)} disabled={disabled} />
-            <span>{option}</span>
-          </label>
-        );
-      })}
-    </div>
+    <DropdownMultiSelect
+      values={values}
+      options={sdgOptions}
+      onToggle={onToggle}
+      disabled={disabled}
+      placeholder="Select SDG/s"
+    />
   );
 }
 
@@ -723,7 +767,11 @@ function StaffListFields({
       <div className="flex items-center justify-between gap-3">
         <div>
           <Label className="text-sm font-semibold">{label}</Label>
-          <p className="text-xs text-muted-foreground">Add one or more team members for this role.</p>
+          <p className="text-xs text-muted-foreground">
+            {name === "project_assistants"
+              ? "Optional. Add team members only when applicable."
+              : "Add one or more team members for this role."}
+          </p>
         </div>
         {!disabled && (
           <Button type="button" variant="outline" className="rounded-xl" onClick={() => append({ name: "", employment: "Permanent" })}>
@@ -862,7 +910,7 @@ function PartnerAgencyFields({
                   </FormControl>
                   <SelectContent>
                     {levelOfPartnershipOptions.map((option) => (
-                      <SelectItem key={option} value={option} className="text-xs capitalize">
+                      <SelectItem key={option} value={option} className="text-xs">
                         {option}
                       </SelectItem>
                     ))}
@@ -955,7 +1003,13 @@ function PartnerAgencyFields({
               <FormItem>
                 <FormLabel className="text-xs">Date of BOR&apos;S Approval</FormLabel>
                 <FormControl>
-                  <MultiDatePicker value={field.value ? [field.value] : []} onChange={(value) => field.onChange(value[0] || null)} disabled={disabled} placeholder="Pick approval date" />
+                  <MultiDatePicker
+                    value={field.value ? [field.value] : []}
+                    onChange={(value) => field.onChange(value[0] || null)}
+                    disabled={disabled}
+                    disabledDate={(date) => isAfter(date, endOfToday())}
+                    placeholder="Pick approval date"
+                  />
                 </FormControl>
                 <FormMessage className="text-xs" />
               </FormItem>
@@ -969,7 +1023,13 @@ function PartnerAgencyFields({
               <FormItem>
                 <FormLabel className="text-xs">Date Notarized</FormLabel>
                 <FormControl>
-                  <MultiDatePicker value={field.value ? [field.value] : []} onChange={(value) => field.onChange(value[0] || null)} disabled={disabled} placeholder="Pick notarized date" />
+                  <MultiDatePicker
+                    value={field.value ? [field.value] : []}
+                    onChange={(value) => field.onChange(value[0] || null)}
+                    disabled={disabled}
+                    disabledDate={(date) => isAfter(date, endOfToday())}
+                    placeholder="Pick notarized date"
+                  />
                 </FormControl>
                 <FormMessage className="text-xs" />
               </FormItem>
@@ -1000,7 +1060,7 @@ function PartnerAgencyFields({
               <p className="text-xs text-muted-foreground">Add one or more agency signatories.</p>
             </div>
             {!disabled && (
-              <Button type="button" variant="outline" className="rounded-xl" onClick={() => append({ name: "" })}>
+              <Button type="button" variant="outline" className="rounded-xl" onClick={() => append({ designation: "", name: "" })}>
                 <Plus className="mr-2 h-4 w-4" />
                 Add Signatory
               </Button>
@@ -1008,7 +1068,20 @@ function PartnerAgencyFields({
           </div>
           <div className="space-y-3">
             {fields.map((field, signatoryIndex) => (
-              <div key={field.id} className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_44px]">
+              <div key={field.id} className="grid gap-3 lg:grid-cols-[minmax(0,220px)_minmax(0,1fr)_44px]">
+                <FormField
+                  control={control}
+                  name={`partner_agencies.${index}.signatories.${signatoryIndex}.designation`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs">Designation</FormLabel>
+                      <FormControl>
+                        <Input {...field} disabled={disabled} className="h-9 rounded-xl text-xs" />
+                      </FormControl>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={control}
                   name={`partner_agencies.${index}.signatories.${signatoryIndex}.name`}
@@ -1347,7 +1420,7 @@ export function ProjectLeaderRegistrationForm({
                 {!isViewOnly && (
                   <Button
                     type="button"
-                    className="rounded-xl bg-[#159E44] text-white hover:bg-[#128A3B]"
+                    className="rounded-xl"
                     onClick={() => partnerAgenciesArray.append({
                       name: "",
                       location: "",
@@ -1356,11 +1429,11 @@ export function ProjectLeaderRegistrationForm({
                       contact_details: "",
                       nature_of_partnership: "Internal",
                       funding_agency_name: "",
-                      level_of_partnership: "local",
+                      level_of_partnership: "Local",
                       type_of_partnership: "MOA",
                       bor_approval_date: null,
                       date_notarized: null,
-                      signatories: [{ name: "" }],
+                      signatories: [{ designation: "", name: "" }],
                     })}
                   >
                     <Plus className="mr-2 h-4 w-4" />

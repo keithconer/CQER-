@@ -47,31 +47,14 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { DEPARTMENTS, getAllUnits } from "@/lib/departments";
+import { SDG_OPTIONS, normalizeSdgArray } from "@/lib/sdg";
 import { createTraining, updateTraining } from "@/lib/actions/trainings";
 import { THEMATIC_AREA_OPTIONS } from "@/lib/thematic-area";
 import { cn } from "@/lib/utils";
 
 const stepLabels = ["Training Details", "Committee", "Participants", "Saving"];
 
-const sdgOptions = [
-  "1 - No Poverty",
-  "2 - Zero Hunger",
-  "3 - Good Health and Well-being",
-  "4 - Quality Education",
-  "5 - Gender Equality",
-  "6 - Clean Water and Sanitation",
-  "7 - Affordable and Clean Energy",
-  "8 - Decent Work and Economic Growth",
-  "9 - Industry, Innovation and Infrastructure",
-  "10 - Reduced Inequalities",
-  "11 - Sustainable Cities and Communities",
-  "12 - Responsible Consumption and Production",
-  "13 - Climate Action",
-  "14 - Life Below Water",
-  "15 - Life on Land",
-  "16 - Peace, Justice and Strong Institutions",
-  "17 - Partnerships for the Goals",
-] as const;
+const sdgOptions = SDG_OPTIONS;
 
 const categoryOptions = [
   { value: "TVL", label: "TVL - Technical, Vocational, Livelihood" },
@@ -111,7 +94,7 @@ const programOptions = Array.from(new Set([...DEPARTMENTS, ...getAllUnits()])).s
 const textValue = z.string().trim().min(1, "This field is required.");
 const optionalTextValue = z.string().trim().optional().or(z.literal(""));
 const nonNegativeNumber = z.coerce.number().min(0, "Value must be 0 or greater.");
-const dateInputSchema = z.string().trim().regex(/^\d{2}\/\d{2}\/\d{4}$/, "Use MM/dd/yyyy format.");
+const facultyEmploymentOptions = ["Permanent", "Contract of Service"] as const;
 
 const ratingBreakdownSchema = z.object({
   "5": nonNegativeNumber.default(0),
@@ -128,6 +111,17 @@ const studentSchema = z.object({
 
 const disabilitySchema = z.object({
   disability_type: textValue,
+});
+
+const conductedSessionSchema = z.object({
+  hours: z.coerce.number().min(0.5, "Enter at least 0.5 hour.").max(24, "Enter 24 hours or less."),
+});
+
+const facultyMemberSchema = z.object({
+  user_id: optionalTextValue,
+  name: textValue,
+  designation: textValue,
+  employment: z.enum(facultyEmploymentOptions),
 });
 
 const participantBucketSchema = z.object({
@@ -165,15 +159,17 @@ const formSchema = z
     related_project_title: optionalTextValue,
     number_of_days: z.coerce.number().int().min(0).default(0),
     date_mode: z.enum(["days", "hours"]).default("days"),
-    inclusive_dates: z.array(dateInputSchema).default([]),
-    manual_hours: z.coerce.number().min(0).max(8).nullable().default(null),
+    inclusive_dates: z.array(z.string()).default([]),
+    manual_hours: z.coerce.number().min(0).nullable().default(null),
+    conducted_sessions: z.array(conductedSessionSchema).default([]),
     venue_platform: textValue,
-    sdg_main: z.array(z.string()).min(1, "Select at least one main SDG."),
-    sdg_sub: z.array(z.string()).min(1, "Select at least one sub SDG."),
+    sdg_main: z.array(z.string()).default([]),
+    sdg_sub: z.array(z.string()).default([]),
     thematic_area: z.array(z.string()).min(1, "Select at least one thematic area."),
     training_categories: z.array(z.enum(trainingCategoryValues)).min(1, "Select at least one category."),
     training_category_other: optionalTextValue,
     training_mode: z.enum(["FTF", "O", "H"]),
+    faculty_members: z.array(facultyMemberSchema).default([]),
     faculty_male: nonNegativeNumber.default(0),
     faculty_female: nonNegativeNumber.default(0),
     faculty_permanent: nonNegativeNumber.default(0),
@@ -219,7 +215,7 @@ const formSchema = z
       .default([]),
   })
   .superRefine((values, ctx) => {
-    if (values.date_mode === "days" && values.number_of_days <= 0) {
+    if (values.number_of_days <= 0) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["number_of_days"],
@@ -227,40 +223,43 @@ const formSchema = z
       });
     }
 
-    if (values.date_mode === "days" && values.inclusive_dates.length !== values.number_of_days) {
+    if (values.conducted_sessions.length !== values.number_of_days) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ["inclusive_dates"],
-        message: "Provide one date for each declared day.",
+        path: ["conducted_sessions"],
+        message: "Provide one hour entry for each declared date conducted.",
       });
     }
 
-    if (values.date_mode === "days" && values.inclusive_dates.length === 0) {
+    if (values.conducted_sessions.length === 0) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ["inclusive_dates"],
-        message: "Select at least one date.",
+        path: ["conducted_sessions"],
+        message: "Add at least one hours entry.",
       });
     }
 
-    if (values.date_mode === "days") {
-      values.inclusive_dates.forEach((rawDate, index) => {
-        const parsedDate = parse(rawDate, "MM/dd/yyyy", new Date());
-        if (!isValid(parsedDate) || format(parsedDate, "MM/dd/yyyy") !== rawDate) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ["inclusive_dates", index],
-            message: "Enter a valid date in MM/dd/yyyy format.",
-          });
-        }
+    if (values.conducted_sessions.some((session) => Number(session.hours || 0) <= 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["conducted_sessions"],
+        message: "Each conducted date must have a valid number of hours.",
       });
     }
 
-    if (values.date_mode === "hours" && (!values.manual_hours || values.manual_hours <= 0 || values.manual_hours > 8)) {
+    if (!values.related_project_id && values.sdg_main.length === 0) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ["manual_hours"],
-        message: "Enter a value from 1 to 8 hours.",
+        path: ["sdg_main"],
+        message: "Select at least one main SDG.",
+      });
+    }
+
+    if (!values.related_project_id && values.sdg_sub.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["sdg_sub"],
+        message: "Select at least one sub SDG.",
       });
     }
 
@@ -311,6 +310,9 @@ type InputValues = z.input<typeof formSchema>;
 type OutputValues = z.output<typeof formSchema>;
 type TrainingsControl = Control<InputValues, unknown, OutputValues>;
 
+type ConductedSession = OutputValues["conducted_sessions"][number];
+type FacultyMemberEntry = OutputValues["faculty_members"][number];
+
 export interface TrainingRecord {
   id: string;
   college: string;
@@ -328,6 +330,7 @@ export interface TrainingRecord {
   date_mode: "days" | "hours";
   inclusive_dates: string[] | null;
   manual_hours: number | null;
+  conducted_sessions?: ConductedSession[] | null;
   venue_platform: string;
   sdg_goals: string[] | null;
   sdg_main?: string[] | null;
@@ -336,6 +339,7 @@ export interface TrainingRecord {
   training_categories?: ("TVL" | "CE" | "GAD" | "AE" | "BE" | "OTHERS")[] | null;
   training_category_other: string | null;
   training_mode: "FTF" | "O" | "H";
+  faculty_members?: Array<FacultyMemberEntry & { hours?: number }> | null;
   faculty_male: number;
   faculty_female: number;
   faculty_permanent?: number | null;
@@ -396,6 +400,14 @@ export interface TrainingRecord {
 export interface TrainingProjectOption {
   id: string;
   title: string;
+  sdg_main?: string[];
+  sdg_sub?: string[];
+}
+
+export interface TrainingFacultyOption {
+  id: string;
+  name: string;
+  designation: string;
 }
 
 interface TrainingsFormProps {
@@ -406,6 +418,7 @@ interface TrainingsFormProps {
   unitOptions?: string[];
   existingPartnerAgencies?: string[];
   projectOptions?: TrainingProjectOption[];
+  facultyOptions?: TrainingFacultyOption[];
   hideProjectField?: boolean;
   record?: TrainingRecord | null;
   isViewOnly?: boolean;
@@ -437,6 +450,34 @@ function normalizeDisabilityArray(value: unknown): { disability_type: string }[]
     .filter((item) => item.disability_type);
 }
 
+function normalizeConductedSessions(value: unknown): ConductedSession[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => ({
+      hours: Number((item as { hours?: unknown })?.hours || 0),
+    }))
+    .filter((item) => item.hours > 0);
+}
+
+function normalizeFacultyMembers(value: unknown): FacultyMemberEntry[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => {
+      const record = item as Record<string, unknown>;
+      const employment = String(record.employment || "").trim().toLowerCase();
+      return {
+        user_id: String(record.user_id || ""),
+        name: String(record.name || "").trim(),
+        designation: String(record.designation || "").trim(),
+        employment:
+          employment === "contract of service" || employment === "cos"
+            ? "Contract of Service"
+            : "Permanent",
+      } as FacultyMemberEntry;
+    })
+    .filter((item) => item.name && item.designation);
+}
+
 function normalizeRatingBreakdown(value: unknown): RatingBreakdown {
   const source = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
   return {
@@ -464,72 +505,10 @@ function normalizeDateInputArray(value: unknown): string[] {
     .filter((item) => item.length > 0);
 }
 
-function parseDateInput(value: string) {
-  const parsed = parse(value, "MM/dd/yyyy", new Date());
-  if (!isValid(parsed) || format(parsed, "MM/dd/yyyy") !== value) return null;
-  return parsed;
-}
-
-function daysInMonth(month: number, year?: number | null) {
-  if (!month || month < 1 || month > 12) return 31;
-  const safeYear = year && year >= 1 ? year : 2024;
-  return new Date(safeYear, month, 0).getDate();
-}
-
-function maskDateInput(rawValue: string) {
-  const digits = rawValue.replace(/\D/g, "").slice(0, 8);
-  if (!digits) return "";
-  const monthRaw = digits.slice(0, 2);
-  const dayRaw = digits.slice(2, 4);
-  const yearRaw = digits.slice(4, 8);
-
-  let masked = "";
-
-  if (monthRaw.length > 0) {
-    if (monthRaw.length === 1) {
-      masked += monthRaw;
-    } else {
-      const month = Math.min(Math.max(Number(monthRaw), 1), 12);
-      masked += String(month).padStart(2, "0");
-    }
-  }
-
-  if (digits.length >= 2) {
-    masked += "/";
-  }
-
-  if (dayRaw.length > 0) {
-    if (dayRaw.length === 1) {
-      masked += dayRaw;
-    } else {
-      const month = monthRaw.length === 2 ? Math.min(Math.max(Number(monthRaw), 1), 12) : 1;
-      const year = yearRaw.length === 4 ? Number(yearRaw) : 2024;
-      const day = Math.min(Math.max(Number(dayRaw), 1), daysInMonth(month, year));
-      masked += String(day).padStart(2, "0");
-    }
-  }
-
-  if (digits.length >= 4) {
-    masked += "/";
-  }
-
-  if (yearRaw.length > 0) {
-    masked += yearRaw;
-  }
-
-  return masked;
-}
-
-function sortDateInputs(values: string[]) {
-  return [...values]
-    .map((value) => ({ raw: value, parsed: parseDateInput(value) }))
-    .sort((left, right) => {
-      if (!left.parsed && !right.parsed) return left.raw.localeCompare(right.raw);
-      if (!left.parsed) return 1;
-      if (!right.parsed) return -1;
-      return left.parsed.getTime() - right.parsed.getTime();
-    })
-    .map((item) => item.raw);
+function getConductedHoursTotal(sessions: ConductedSession[]) {
+  return Number(
+    sessions.reduce((sum, session) => sum + Number(session.hours || 0), 0).toFixed(2)
+  );
 }
 
 function normalizeParticipantBreakdown(value: unknown): ParticipantBreakdown {
@@ -569,12 +548,11 @@ function getRatingsTotal(breakdown: RatingBreakdown) {
   return Number(breakdown["5"] || 0) + Number(breakdown["4"] || 0) + Number(breakdown["3"] || 0) + Number(breakdown["2"] || 0) + Number(breakdown["1"] || 0);
 }
 
-function getDayMultiplier(mode: "days" | "hours", dayCount: number) {
-  if (mode === "hours") return 0.5;
+function getDayMultiplier(dayCount: number, totalHours: number) {
   if (dayCount >= 5) return 2;
   if (dayCount >= 3) return 1.5;
   if (dayCount === 2) return 1.25;
-  if (dayCount === 1) return 1;
+  if (dayCount === 1) return totalHours >= 8 ? 1 : 0.5;
   return 0;
 }
 
@@ -636,37 +614,6 @@ function NumberField({
           <FormMessage className="text-xs" />
         </FormItem>
       )}
-    />
-  );
-}
-
-function MaskedDateField({
-  value,
-  onChange,
-  disabled,
-  placeholder = "MM/DD/YYYY",
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  disabled?: boolean;
-  placeholder?: string;
-}) {
-  return (
-    <Input
-      value={value}
-      onChange={(event) => onChange(maskDateInput(event.target.value))}
-      onKeyDown={(event) => {
-        const allowedKeys = ["Backspace", "Delete", "Tab", "ArrowLeft", "ArrowRight", "Home", "End"];
-        if (allowedKeys.includes(event.key) || event.ctrlKey || event.metaKey) return;
-        if (!/^\d$/.test(event.key)) {
-          event.preventDefault();
-        }
-      }}
-      disabled={disabled}
-      placeholder={placeholder}
-      inputMode="numeric"
-      maxLength={10}
-      className="h-9 rounded-xl text-xs"
     />
   );
 }
@@ -777,7 +724,7 @@ function RatingBreakdownFields({
           <BookOpenCheck className="h-4 w-4 shrink-0 text-muted-foreground" />
         </div>
       </div>
-      <div className="grid gap-3 grid-cols-2 md:grid-cols-6">
+      <div className="grid gap-3 grid-cols-2 md:grid-cols-5">
         {(["5", "4", "3", "2", "1"] as const).map((score) => (
           <FormField
             key={score}
@@ -802,10 +749,6 @@ function RatingBreakdownFields({
             )}
           />
         ))}
-        <div className="space-y-2">
-          <p className="text-xs font-medium">Total</p>
-          <Input value={total} readOnly disabled className="h-9 rounded-xl bg-muted/20 text-xs" />
-        </div>
       </div>
       {error ? <p className="mt-3 text-xs text-destructive">{error}</p> : null}
     </div>
@@ -877,6 +820,129 @@ function StudentFields({
   );
 }
 
+function FacultyMemberFields({
+  control,
+  index,
+  options,
+  hours,
+  onSelectOption,
+  disabled,
+  onRemove,
+}: {
+  control: TrainingsControl;
+  index: number;
+  options: TrainingFacultyOption[];
+  hours: number;
+  onSelectOption: (index: number, optionId: string) => void;
+  disabled?: boolean;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-border/40 bg-background p-4">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <p className="text-sm font-semibold">Faculty {index + 1}</p>
+        {!disabled && (
+          <Button type="button" variant="outline" className="rounded-xl text-destructive" onClick={onRemove}>
+            <Trash2 className="mr-2 h-4 w-4" />
+            Remove
+          </Button>
+        )}
+      </div>
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_220px]">
+        <FormField
+          control={control}
+          name={`faculty_members.${index}.user_id`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-xs">Faculty User</FormLabel>
+              <Select
+                value={field.value || "none"}
+                onValueChange={(value) => {
+                  const nextValue = value === "none" ? "" : value;
+                  field.onChange(nextValue);
+                  onSelectOption(index, nextValue);
+                }}
+                disabled={disabled}
+              >
+                <FormControl>
+                  <SelectTrigger className="h-10 rounded-xl text-sm">
+                    <SelectValue placeholder="Select faculty member" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="none" className="text-sm">Select user</SelectItem>
+                  {options.map((option) => (
+                    <SelectItem key={option.id} value={option.id} className="text-sm">
+                      {option.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage className="text-xs" />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={control}
+          name={`faculty_members.${index}.employment`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-xs">Employment</FormLabel>
+              <Select value={field.value} onValueChange={field.onChange} disabled={disabled}>
+                <FormControl>
+                  <SelectTrigger className="h-10 rounded-xl text-sm">
+                    <SelectValue placeholder="Select appointment" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {facultyEmploymentOptions.map((option) => (
+                    <SelectItem key={option} value={option} className="text-sm">
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage className="text-xs" />
+            </FormItem>
+          )}
+        />
+        <div className="rounded-2xl border border-border/40 bg-muted/10 px-4 py-3">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Hours</p>
+          <p className="mt-1 text-sm font-semibold text-foreground">{hours || 0}</p>
+        </div>
+      </div>
+      <div className="mt-4 grid gap-4 xl:grid-cols-2">
+        <FormField
+          control={control}
+          name={`faculty_members.${index}.name`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-xs">Name</FormLabel>
+              <FormControl>
+                <Input {...field} readOnly className="h-9 rounded-xl bg-muted/20 text-xs" />
+              </FormControl>
+              <FormMessage className="text-xs" />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={control}
+          name={`faculty_members.${index}.designation`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-xs">Designation</FormLabel>
+              <FormControl>
+                <Input {...field} readOnly className="h-9 rounded-xl bg-muted/20 text-xs" />
+              </FormControl>
+              <FormMessage className="text-xs" />
+            </FormItem>
+          )}
+        />
+      </div>
+    </div>
+  );
+}
+
 function buildDefaultValues(
   record: TrainingRecord | null | undefined,
   department: string,
@@ -894,6 +960,19 @@ function buildDefaultValues(
           "2": "",
           "1": "",
         };
+  const normalizedSessions = normalizeConductedSessions(record?.conducted_sessions);
+  const legacySessionCount = Number(record?.number_of_days || record?.inclusive_dates?.length || 0);
+  const fallbackLegacySessions =
+    normalizedSessions.length > 0
+      ? normalizedSessions
+      : legacySessionCount > 0
+        ? Array.from({ length: legacySessionCount }, (_, index) => ({
+            hours:
+              record?.date_mode === "hours" && index === 0
+                ? Number(record?.manual_hours || 0)
+                : 8,
+          }))
+        : [];
 
   return {
     college: record?.college || "CEIT",
@@ -912,13 +991,14 @@ function buildDefaultValues(
     training_title: record?.training_title || "",
     related_project_id: String(record?.related_project_id || ""),
     related_project_title: String(record?.related_project_title || ""),
-    number_of_days: record ? Number(record?.number_of_days || record?.inclusive_dates?.length || 0) : "",
-    date_mode: record?.date_mode || "days",
+    number_of_days: record ? Number(record?.number_of_days || fallbackLegacySessions.length || 0) : "",
+    date_mode: "days",
     inclusive_dates: normalizeDateInputArray(record?.inclusive_dates),
-    manual_hours: record?.manual_hours ?? null,
+    manual_hours: Number(record?.manual_hours || getConductedHoursTotal(fallbackLegacySessions) || 0),
+    conducted_sessions: fallbackLegacySessions,
     venue_platform: record?.venue_platform || "",
-    sdg_main: normalizeStringArray(record?.sdg_main),
-    sdg_sub: normalizeStringArray(record?.sdg_sub),
+    sdg_main: normalizeSdgArray(record?.sdg_main),
+    sdg_sub: normalizeSdgArray(record?.sdg_sub),
     thematic_area: normalizeStringArray(record?.thematic_area),
     training_categories:
       normalizeStringArray(record?.training_categories).length > 0
@@ -926,6 +1006,7 @@ function buildDefaultValues(
         : ([record?.training_category || "TVL"] as InputValues["training_categories"]),
     training_category_other: record?.training_category_other || "",
     training_mode: record?.training_mode || "FTF",
+    faculty_members: normalizeFacultyMembers(record?.faculty_members),
     faculty_male: editableNumber(record?.faculty_male),
     faculty_female: editableNumber(record?.faculty_female),
     faculty_permanent: editableNumber(record?.faculty_permanent),
@@ -969,15 +1050,16 @@ function buildDefaultValues(
 export function TrainingsForm({
   department,
   currentUserName,
-    unit,
-    existingPartnerAgencies = [],
-    projectOptions = [],
-    hideProjectField = false,
-    record,
-    isViewOnly = false,
-    onSuccess,
-    onClose,
-  }: TrainingsFormProps) {
+  unit,
+  existingPartnerAgencies = [],
+  projectOptions = [],
+  facultyOptions = [],
+  hideProjectField = false,
+  record,
+  isViewOnly = false,
+  onSuccess,
+  onClose,
+}: TrainingsFormProps) {
   const [currentStep, setCurrentStep] = React.useState(1);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const autoSubmitStartedRef = React.useRef(false);
@@ -997,12 +1079,25 @@ export function TrainingsForm({
     name: "tvl_disability_breakdown",
   });
 
+  const facultyArray = useFieldArray({
+    control: form.control,
+    name: "faculty_members",
+  });
+
   const numberOfDays = Number(useWatch({ control: form.control, name: "number_of_days" }) || 0);
-  const dateMode = useWatch({ control: form.control, name: "date_mode" }) ?? "days";
-  const selectedDates = useWatch({ control: form.control, name: "inclusive_dates" }) || [];
-  const manualHours = Number(useWatch({ control: form.control, name: "manual_hours" }) || 0);
+  const relatedProjectId = useWatch({ control: form.control, name: "related_project_id" }) || "";
+  const watchedConductedSessions = useWatch({ control: form.control, name: "conducted_sessions" });
   const trainingCategories = useWatch({ control: form.control, name: "training_categories" }) || [];
   const disabilityCount = Number(useWatch({ control: form.control, name: "tvl_disabilities_count" }) || 0);
+  const watchedFacultyMembers = useWatch({ control: form.control, name: "faculty_members" });
+  const conductedSessions = React.useMemo(
+    () => (watchedConductedSessions || []) as ConductedSession[],
+    [watchedConductedSessions]
+  );
+  const facultyMembers = React.useMemo(
+    () => (watchedFacultyMembers || []) as FacultyMemberEntry[],
+    [watchedFacultyMembers]
+  );
 
   const participantBreakdown = useWatch({ control: form.control, name: "participant_breakdown" }) ?? normalizeParticipantBreakdown(null);
   const ratingRelevanceBreakdown = useWatch({ control: form.control, name: "rating_relevance_breakdown" });
@@ -1015,18 +1110,28 @@ export function TrainingsForm({
   const relevanceTotal = getRatingsTotal(normalizeRatingBreakdown(ratingRelevanceBreakdown));
   const qualityTotal = getRatingsTotal(normalizeRatingBreakdown(ratingQualityBreakdown));
   const timelinessTotal = getRatingsTotal(normalizeRatingBreakdown(ratingTimelinessBreakdown));
-  const conductedDays = dateMode === "days" ? numberOfDays : 0;
-  const dayMultiplier = getDayMultiplier(dateMode, conductedDays);
-  const daysTrainedPerWeight = dateMode === "hours" ? 0.5 : Number((conductedDays * dayMultiplier).toFixed(2));
+  const conductedDays = conductedSessions.length;
+  const totalConductedHours = getConductedHoursTotal(conductedSessions);
+  const dayMultiplier = getDayMultiplier(conductedDays, totalConductedHours);
+  const daysTrainedPerWeight = Number((conductedDays * dayMultiplier).toFixed(2));
   const weightedDaysTrained = Number((grandTotal * daysTrainedPerWeight).toFixed(2));
+  const selectedProject = hideProjectField ? null : projectOptions.find((item) => item.id === relatedProjectId) || null;
+  const sdgSourceMain = selectedProject?.sdg_main || [];
+  const sdgSourceSub = selectedProject?.sdg_sub || [];
 
   React.useEffect(() => {
-    const currentDates = form.getValues("inclusive_dates") || [];
+    const currentSessions = form.getValues("conducted_sessions") || [];
     const nextLength = Math.max(0, numberOfDays);
-    if (currentDates.length === nextLength) return;
-    const nextDates = Array.from({ length: nextLength }, (_, index) => currentDates[index] || "");
-    form.setValue("inclusive_dates", nextDates, { shouldDirty: true });
+    if (currentSessions.length === nextLength) return;
+    const nextSessions = Array.from({ length: nextLength }, (_, index) => currentSessions[index] || { hours: 8 });
+    form.setValue("conducted_sessions", nextSessions, { shouldDirty: true });
   }, [form, numberOfDays]);
+
+  React.useEffect(() => {
+    form.setValue("date_mode", "days", { shouldDirty: false });
+    form.setValue("inclusive_dates", [], { shouldDirty: true });
+    form.setValue("manual_hours", totalConductedHours, { shouldDirty: true });
+  }, [form, totalConductedHours]);
 
   React.useEffect(() => {
     form.setValue("participants_male_total", maleTotal, { shouldDirty: true });
@@ -1038,7 +1143,26 @@ export function TrainingsForm({
     form.setValue("days_multiplier", dayMultiplier, { shouldDirty: true });
     form.setValue("days_trained_per_weight", daysTrainedPerWeight, { shouldDirty: true });
     form.setValue("weighted_days_trained", weightedDaysTrained, { shouldDirty: true });
-  }, [conductedDays, dayMultiplier, daysTrainedPerWeight, femaleTotal, form, grandTotal, maleTotal, weightedDaysTrained]);
+    form.setValue("faculty_male", 0, { shouldDirty: true });
+    form.setValue("faculty_female", 0, { shouldDirty: true });
+    form.setValue(
+      "faculty_permanent",
+      facultyMembers.filter((member) => member.employment === "Permanent").length,
+      { shouldDirty: true }
+    );
+    form.setValue(
+      "faculty_cos",
+      facultyMembers.filter((member) => member.employment === "Contract of Service").length,
+      { shouldDirty: true }
+    );
+  }, [conductedDays, dayMultiplier, daysTrainedPerWeight, facultyMembers, femaleTotal, form, grandTotal, maleTotal, weightedDaysTrained]);
+
+  React.useEffect(() => {
+    if (!selectedProject) return;
+    form.setValue("related_project_title", selectedProject.title, { shouldDirty: true });
+    form.setValue("sdg_main", selectedProject.sdg_main || [], { shouldDirty: true, shouldValidate: true });
+    form.setValue("sdg_sub", selectedProject.sdg_sub || [], { shouldDirty: true, shouldValidate: true });
+  }, [form, selectedProject]);
 
   React.useEffect(() => {
     const currentLength = disabilityArray.fields.length;
@@ -1061,19 +1185,18 @@ export function TrainingsForm({
 
   const stepOneFields: FieldPath<FormValues>[] = [
     "training_title",
+    "related_project_id",
     "venue_platform",
     "sdg_main",
     "sdg_sub",
     "thematic_area",
     "number_of_days",
+    "conducted_sessions",
     "training_categories",
     "training_mode",
   ];
   const stepTwoFields: FieldPath<FormValues>[] = [
-    "faculty_male",
-    "faculty_female",
-    "faculty_permanent",
-    "faculty_cos",
+    "faculty_members",
     "non_academic_male",
     "non_academic_female",
     "cvsu_students_male",
@@ -1092,7 +1215,7 @@ export function TrainingsForm({
 
   async function validateStep(step: number) {
     if (step === 1) {
-      const targetFields: FieldPath<FormValues>[] = [...stepOneFields, dateMode === "days" ? "inclusive_dates" : "manual_hours"];
+      const targetFields: FieldPath<FormValues>[] = selectedProject ? stepOneFields.filter((field) => field !== "sdg_main" && field !== "sdg_sub") : stepOneFields;
       return form.trigger(targetFields, { shouldFocus: true });
     }
     if (step === 2) {
@@ -1116,14 +1239,12 @@ export function TrainingsForm({
     document.getElementById("trainings-scroll-area")?.scrollTo(0, 0);
   }
 
-  const handleSubmit = React.useCallback(async (values: FormValues) => {
-      setIsSubmitting(true);
+  const submitTraining = React.useEffectEvent(async (values: FormValues) => {
+    setIsSubmitting(true);
     const selectedProject = hideProjectField ? null : projectOptions.find((item) => item.id === values.related_project_id);
-    const sortedInclusiveDates = sortDateInputs(values.inclusive_dates)
-      .map((value) => parseDateInput(value))
-      .filter((value): value is Date => value instanceof Date)
-      .map((date) => format(date, "yyyy-MM-dd"));
     const hasTVL = values.training_categories.includes("TVL");
+    const normalizedSdgMain = selectedProject ? normalizeSdgArray(selectedProject.sdg_main) : normalizeSdgArray(values.sdg_main);
+    const normalizedSdgSub = selectedProject ? normalizeSdgArray(selectedProject.sdg_sub) : normalizeSdgArray(values.sdg_sub);
     const payload = {
       college: values.college,
       department: values.department,
@@ -1134,24 +1255,29 @@ export function TrainingsForm({
       contact_details: values.contact_details,
       related_curricular_offerings: values.related_curricular_offerings,
       training_title: values.training_title,
-        related_project_id: hideProjectField ? null : values.related_project_id || null,
-        related_project_title: hideProjectField ? "" : selectedProject?.title || values.related_project_title || "",
+      related_project_id: hideProjectField ? null : values.related_project_id || null,
+      related_project_title: hideProjectField ? "" : selectedProject?.title || values.related_project_title || "",
       number_of_days: values.number_of_days,
-      date_mode: values.date_mode,
-      inclusive_dates: sortedInclusiveDates,
-      manual_hours: values.date_mode === "hours" ? values.manual_hours : null,
+      date_mode: "days" as const,
+      inclusive_dates: [],
+      manual_hours: totalConductedHours,
+      conducted_sessions: values.conducted_sessions,
       venue_platform: values.venue_platform,
-      sdg_goals: Array.from(new Set([...values.sdg_main, ...values.sdg_sub])),
-      sdg_main: values.sdg_main,
-      sdg_sub: values.sdg_sub,
+      sdg_goals: Array.from(new Set([...normalizedSdgMain, ...normalizedSdgSub])),
+      sdg_main: normalizedSdgMain,
+      sdg_sub: normalizedSdgSub,
       training_category: values.training_categories[0],
       training_categories: values.training_categories,
       training_category_other: values.training_category_other || "",
       training_mode: values.training_mode,
-      faculty_male: values.faculty_male,
-      faculty_female: values.faculty_female,
-      faculty_permanent: values.faculty_permanent,
-      faculty_cos: values.faculty_cos,
+      faculty_members: values.faculty_members.map((member) => ({
+        ...member,
+        hours: totalConductedHours,
+      })),
+      faculty_male: 0,
+      faculty_female: 0,
+      faculty_permanent: values.faculty_members.filter((member) => member.employment === "Permanent").length,
+      faculty_cos: values.faculty_members.filter((member) => member.employment === "Contract of Service").length,
       non_academic_male: values.non_academic_male,
       non_academic_female: values.non_academic_female,
       cvsu_students: values.cvsu_students,
@@ -1211,16 +1337,16 @@ export function TrainingsForm({
     }
 
     onSuccess(record?.id ? "updated" : "created");
-    }, [hideProjectField, onSuccess, projectOptions, record]);
+  });
 
   React.useEffect(() => {
     if (currentStep !== 4 || isViewOnly || autoSubmitStartedRef.current) return;
     autoSubmitStartedRef.current = true;
     const timeout = window.setTimeout(() => {
-      void form.handleSubmit(handleSubmit)();
+      void form.handleSubmit((values) => submitTraining(values))();
     }, 1200);
     return () => window.clearTimeout(timeout);
-  }, [currentStep, form, handleSubmit, isViewOnly]);
+  }, [currentStep, form, isViewOnly]);
 
   return (
     <Form {...form}>
@@ -1239,15 +1365,15 @@ export function TrainingsForm({
               </Button>
             )}
           </div>
-          <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_200px_200px]">
-             <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-2.5">
+          <div className="mt-3 grid gap-2 lg:grid-cols-[minmax(0,1.2fr)_180px_180px]">
+             <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-2">
                <p className="truncate text-xs font-semibold text-foreground">{form.getValues("department") || "Unassigned"}</p>
              </div>
-             <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-2.5">
+             <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-2">
                <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80">Training Category</p>
                <p className="truncate text-xs font-medium text-foreground">{trainingCategories.join(", ") || "N/A"}</p>
              </div>
-             <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-2.5">
+             <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-2">
                <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80">Participants</p>
                <p className="truncate text-xs font-medium text-foreground">{grandTotal === 0 ? "None" : grandTotal}</p>
              </div>
@@ -1267,7 +1393,7 @@ export function TrainingsForm({
                     Training Details
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    Capture the title, schedule, SDGs, thematic area, category, method, and project link.
+                    Capture the title, project link, conducted hours, SDGs, thematic area, category, and method.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -1285,6 +1411,54 @@ export function TrainingsForm({
                         </FormItem>
                       )}
                     />
+                    {!hideProjectField ? (
+                      <FormField
+                        control={form.control}
+                        name="related_project_id"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Name if Part of a Project</FormLabel>
+                            <Select
+                              value={field.value || "none"}
+                              onValueChange={(value) => {
+                                const normalizedValue = value === "none" ? "" : value;
+                                field.onChange(normalizedValue);
+                                const selected = projectOptions.find((project) => project.id === normalizedValue);
+                                form.setValue("related_project_title", selected?.title || "", { shouldDirty: true });
+                                if (!selected) {
+                                  form.setValue("sdg_main", [], { shouldDirty: true, shouldValidate: true });
+                                  form.setValue("sdg_sub", [], { shouldDirty: true, shouldValidate: true });
+                                }
+                              }}
+                              disabled={isViewOnly}
+                            >
+                              <FormControl>
+                                <SelectTrigger className="h-10 rounded-xl text-sm">
+                                  <SelectValue placeholder="Select project" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="none" className="text-sm">Not linked to a project</SelectItem>
+                                {projectOptions.map((project) => (
+                                  <SelectItem key={project.id} value={project.id} className="text-sm">
+                                    {project.title}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage className="text-xs" />
+                          </FormItem>
+                        )}
+                      />
+                    ) : (
+                      <div className="rounded-2xl border border-border/40 bg-muted/10 px-4 py-3">
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Project Link</p>
+                        <p className="mt-1 text-xs font-medium text-foreground">Handled within your unit view</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
                     <FormField
                       control={form.control}
                       name="venue_platform"
@@ -1301,16 +1475,20 @@ export function TrainingsForm({
                         </FormItem>
                       )}
                     />
+                    <div className="rounded-2xl border border-border/40 bg-muted/10 px-4 py-3">
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Conducted Summary</p>
+                      <p className="mt-1 text-xs font-medium text-foreground">{conductedDays || 0} date(s) • {totalConductedHours || 0} hours</p>
+                    </div>
                   </div>
 
                   <div className="rounded-2xl border border-border/40 bg-muted/10 p-4">
-                    <div className="grid gap-5 xl:grid-cols-[220px_220px_minmax(0,1fr)]">
+                    <div className="grid gap-5 xl:grid-cols-[220px_minmax(0,1fr)]">
                       <FormField
                         control={form.control}
                         name="number_of_days"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-xs">Number of Days</FormLabel>
+                            <FormLabel className="text-xs">Dates Conducted</FormLabel>
                             <FormControl>
                               <Input
                                 type="text"
@@ -1329,185 +1507,126 @@ export function TrainingsForm({
                           </FormItem>
                         )}
                       />
-                      <FormField
-                        control={form.control}
-                        name="date_mode"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-xs">Dates Conducted</FormLabel>
-                            <Select value={field.value} onValueChange={field.onChange} disabled={isViewOnly}>
-                              <FormControl>
-                                <SelectTrigger className="h-9 rounded-xl text-xs">
-                                  <SelectValue placeholder="Select mode" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="days" className="text-sm">Inclusive dates</SelectItem>
-                                <SelectItem value="hours" className="text-sm">Hours only</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage className="text-xs" />
-                          </FormItem>
-                        )}
-                      />
                       <div className="rounded-2xl border border-border/40 bg-background px-4 py-3">
-                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Schedule Preview</p>
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Multiplier Logic</p>
                         <p className="mt-1 text-xs font-medium text-foreground">
-                          {dateMode === "days"
-                            ? `${numberOfDays || 0} day/s with ${selectedDates.filter(Boolean).length} date field/s ready`
-                            : `${manualHours || 0} hour/s training`}
+                          {conductedDays >= 5
+                            ? "5 or more days x 2.00"
+                            : conductedDays >= 3
+                              ? "3 to 4 days x 1.50"
+                              : conductedDays === 2
+                                ? "2 days x 1.25"
+                                : conductedDays === 1 && totalConductedHours >= 8
+                                  ? "1 day x 1.00"
+                                  : conductedDays === 1
+                                    ? "Less than 1 day x 0.50"
+                                    : "Waiting for entries"}
                         </p>
                       </div>
                     </div>
 
-                    {dateMode === "days" ? (
-                      <div className="mt-5 space-y-4">
-                        <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
-                          <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                          Inclusive Dates
-                        </div>
-                        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                          {selectedDates.length > 0 ? (
-                            selectedDates.map((_, index) => (
-                              <FormField
-                                key={`inclusive-date-${index}`}
-                                control={form.control}
-                                name={`inclusive_dates.${index}`}
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel className="text-xs">Date {index + 1}</FormLabel>
-                                    <FormControl>
-                                      <MaskedDateField value={field.value || ""} onChange={field.onChange} disabled={isViewOnly} placeholder="MM/DD/YYYY" />
-                                    </FormControl>
-                                    <FormMessage className="text-xs" />
-                                  </FormItem>
-                                )}
-                              />
-                            ))
-                          ) : (
-                            <div className="rounded-2xl border border-dashed border-border/50 px-4 py-6 text-center text-xs text-muted-foreground md:col-span-2 xl:col-span-3">
-                              Enter the number of days to generate the date fields.
-                            </div>
-                          )}
-                        </div>
+                    <div className="mt-5 space-y-4">
+                      <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                        <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                        Hours Per Conducted Date
                       </div>
-                    ) : (
-                      <div className="mt-5 max-w-xs">
-                        <FormField
-                          control={form.control}
-                          name="manual_hours"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-xs">Number of Hours</FormLabel>
-                              <FormControl>
-                                <div className="relative">
-                                  <Clock3 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                  <Input
-                                    type="number"
-                                    min="1"
-                                    max="8"
-                                    value={typeof field.value === "number" ? field.value : ""}
-                                    onChange={(event) => field.onChange(event.target.value === "" ? null : Number(event.target.value))}
-                                    disabled={isViewOnly}
-                                    className="h-9 rounded-xl pl-10 text-xs"
-                                    placeholder="e.g. 6"
-                                  />
-                                </div>
-                              </FormControl>
-                              <FormMessage className="text-xs" />
-                            </FormItem>
-                          )}
-                        />
+                      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        {conductedSessions.length > 0 ? (
+                          conductedSessions.map((_, index) => (
+                            <FormField
+                              key={`conducted-session-${index}`}
+                              control={form.control}
+                              name={`conducted_sessions.${index}.hours`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-xs">Date {index + 1} Hours</FormLabel>
+                                  <FormControl>
+                                    <div className="relative">
+                                      <Clock3 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                      <Input
+                                        type="number"
+                                        min="0.5"
+                                        max="24"
+                                        step="0.5"
+                                        value={typeof field.value === "number" ? field.value : ""}
+                                        onChange={(event) => field.onChange(event.target.value === "" ? 0 : Number(event.target.value))}
+                                        disabled={isViewOnly}
+                                        className="h-9 rounded-xl pl-10 text-xs"
+                                        placeholder="e.g. 8"
+                                      />
+                                    </div>
+                                  </FormControl>
+                                  <FormMessage className="text-xs" />
+                                </FormItem>
+                              )}
+                            />
+                          ))
+                        ) : (
+                          <div className="rounded-2xl border border-dashed border-border/50 px-4 py-6 text-center text-xs text-muted-foreground md:col-span-2 xl:col-span-3">
+                            Enter the number of dates conducted to generate the hour fields.
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </div>
 
-                  <div className="grid gap-6 xl:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="sdg_main"
-                      render={({ field }) => (
-                        <FormItem className="rounded-2xl border border-border/40 bg-background p-4">
-                          <FormLabel className="text-xs font-semibold">SDG Main</FormLabel>
-                          <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                            {sdgOptions.map((option) => (
-                              <label key={option} className="flex items-start gap-3 rounded-xl border border-border/40 px-3 py-2">
-                                <Checkbox
-                                  checked={field.value.includes(option)}
-                                  disabled={isViewOnly}
-                                  onCheckedChange={() =>
-                                    field.onChange(
-                                      field.value.includes(option)
-                                        ? field.value.filter((item) => item !== option)
-                                        : [...field.value, option]
-                                    )
-                                  }
-                                />
-                                <span className="text-xs leading-5">{option}</span>
-                              </label>
-                            ))}
-                          </div>
-                          <FormMessage className="text-xs" />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="sdg_sub"
-                      render={({ field }) => (
-                        <FormItem className="rounded-2xl border border-border/40 bg-background p-4">
-                          <FormLabel className="text-xs font-semibold">SDG Sub</FormLabel>
-                          <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                            {sdgOptions.map((option) => (
-                              <label key={option} className="flex items-start gap-3 rounded-xl border border-border/40 px-3 py-2">
-                                <Checkbox
-                                  checked={field.value.includes(option)}
-                                  disabled={isViewOnly}
-                                  onCheckedChange={() =>
-                                    field.onChange(
-                                      field.value.includes(option)
-                                        ? field.value.filter((item) => item !== option)
-                                        : [...field.value, option]
-                                    )
-                                  }
-                                />
-                                <span className="text-xs leading-5">{option}</span>
-                              </label>
-                            ))}
-                          </div>
-                          <FormMessage className="text-xs" />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                  {selectedProject ? (
+                    <div className="grid gap-4 xl:grid-cols-2">
+                      <Card className="rounded-2xl border-border/40 shadow-none">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-sm">Project SDG Main</CardTitle>
+                          <CardDescription className="text-xs">Fetched from the selected project.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex flex-wrap gap-2">
+                          {(sdgSourceMain.length > 0 ? sdgSourceMain : ["No SDG main linked"]).map((item) => (
+                            <span key={item} className="rounded-full border border-border/50 bg-muted/20 px-3 py-1 text-xs">
+                              {item}
+                            </span>
+                          ))}
+                        </CardContent>
+                      </Card>
+                      <Card className="rounded-2xl border-border/40 shadow-none">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-sm">Project SDG Sub</CardTitle>
+                          <CardDescription className="text-xs">Fetched from the selected project.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex flex-wrap gap-2">
+                          {(sdgSourceSub.length > 0 ? sdgSourceSub : ["No SDG sub linked"]).map((item) => (
+                            <span key={item} className="rounded-full border border-border/50 bg-muted/20 px-3 py-1 text-xs">
+                              {item}
+                            </span>
+                          ))}
+                        </CardContent>
+                      </Card>
+                    </div>
+                  ) : (
+                    <div className="grid gap-4 xl:grid-cols-2">
+                      <MultiSelectField
+                        control={form.control}
+                        name="sdg_main"
+                        label="SDG Main"
+                        options={sdgOptions.map((option) => ({ value: option, label: option }))}
+                        disabled={isViewOnly}
+                        placeholder="Select SDG main"
+                      />
+                      <MultiSelectField
+                        control={form.control}
+                        name="sdg_sub"
+                        label="SDG Sub"
+                        options={sdgOptions.map((option) => ({ value: option, label: option }))}
+                        disabled={isViewOnly}
+                        placeholder="Select SDG sub"
+                      />
+                    </div>
+                  )}
 
-                  <FormField
+                  <MultiSelectField
                     control={form.control}
                     name="thematic_area"
-                    render={({ field }) => (
-                      <FormItem className="rounded-2xl border border-border/40 bg-background p-4">
-                        <FormLabel className="text-xs font-semibold">Thematic Area</FormLabel>
-                        <div className="mt-4 grid gap-2 lg:grid-cols-2">
-                          {THEMATIC_AREA_OPTIONS.map((option) => (
-                            <label key={option.value} className="flex items-start gap-3 rounded-xl border border-border/40 px-3 py-2">
-                              <Checkbox
-                                checked={field.value.includes(option.value)}
-                                disabled={isViewOnly}
-                                onCheckedChange={() =>
-                                  field.onChange(
-                                    field.value.includes(option.value)
-                                      ? field.value.filter((item) => item !== option.value)
-                                      : [...field.value, option.value]
-                                  )
-                                }
-                              />
-                              <span className="text-xs leading-5">{option.value}</span>
-                            </label>
-                          ))}
-                        </div>
-                        <FormMessage className="text-xs" />
-                      </FormItem>
-                    )}
+                    label="Thematic Area"
+                    options={THEMATIC_AREA_OPTIONS.map((option) => ({ value: option.value, label: option.value }))}
+                    disabled={isViewOnly}
+                    placeholder="Select thematic area/s"
                   />
 
                   <div className="grid gap-4 xl:grid-cols-2">
@@ -1561,42 +1680,6 @@ export function TrainingsForm({
                     />
                   )}
 
-                  {!hideProjectField && (
-                    <FormField
-                      control={form.control}
-                      name="related_project_id"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">Name of the Project if Part of the Project</FormLabel>
-                          <Select
-                            value={field.value || "none"}
-                            onValueChange={(value) => {
-                              const normalizedValue = value === "none" ? "" : value;
-                              field.onChange(normalizedValue);
-                              const selected = projectOptions.find((project) => project.id === normalizedValue);
-                              form.setValue("related_project_title", selected?.title || "", { shouldDirty: true });
-                            }}
-                            disabled={isViewOnly}
-                          >
-                            <FormControl>
-                              <SelectTrigger className="h-10 rounded-xl text-sm">
-                                <SelectValue placeholder="Select project" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="none" className="text-sm">Not linked to a project</SelectItem>
-                              {projectOptions.map((project) => (
-                                <SelectItem key={project.id} value={project.id} className="text-sm">
-                                  {project.title}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage className="text-xs" />
-                        </FormItem>
-                      )}
-                    />
-                  )}
                 </CardContent>
               </Card>
             </div>
@@ -1611,18 +1694,61 @@ export function TrainingsForm({
                     Organizing Committee
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    Record the organizing committee separately, then encode the participant counts that should be included in the total.
+                    Record faculty members, support organizers, and the participant counts that should be included in the total.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="grid gap-6 xl:grid-cols-2">
                     <Card className="rounded-2xl border-border/40 shadow-none">
-                      <CardHeader><CardTitle className="text-sm">Faculty Member</CardTitle></CardHeader>
-                      <CardContent className="grid gap-4 md:grid-cols-2">
-                        <NumberField control={form.control} name="faculty_male" label="Male" disabled={isViewOnly} />
-                        <NumberField control={form.control} name="faculty_female" label="Female" disabled={isViewOnly} />
-                        <NumberField control={form.control} name="faculty_permanent" label="Permanent" disabled={isViewOnly} />
-                        <NumberField control={form.control} name="faculty_cos" label="Contract of Service" disabled={isViewOnly} />
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                        <div>
+                          <CardTitle className="text-sm">Faculty Members</CardTitle>
+                          <CardDescription className="text-xs">
+                            Select from users in the visible unit or department, then assign employment type.
+                          </CardDescription>
+                        </div>
+                        {!isViewOnly && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="rounded-xl"
+                            onClick={() => facultyArray.append({ user_id: "", name: "", designation: "", employment: "Permanent" })}
+                          >
+                            <Plus className="mr-2 h-4 w-4" />
+                            Add Faculty
+                          </Button>
+                        )}
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="rounded-2xl border border-border/40 bg-muted/10 px-4 py-3 text-xs text-muted-foreground">
+                          Total faculty selected: <span className="font-semibold text-foreground">{facultyMembers.length}</span>
+                          {" • "}
+                          Training hours each: <span className="font-semibold text-foreground">{totalConductedHours || 0}</span>
+                        </div>
+                        {facultyArray.fields.length > 0 ? (
+                          <div className="space-y-4">
+                            {facultyArray.fields.map((field, index) => (
+                              <FacultyMemberFields
+                                key={field.id}
+                                control={form.control}
+                                index={index}
+                                options={facultyOptions}
+                                disabled={isViewOnly}
+                                hours={totalConductedHours}
+                                onSelectOption={(targetIndex, optionId) => {
+                                  const selected = facultyOptions.find((option) => option.id === optionId);
+                                  form.setValue(`faculty_members.${targetIndex}.name`, selected?.name || "", { shouldDirty: true, shouldValidate: true });
+                                  form.setValue(`faculty_members.${targetIndex}.designation`, selected?.designation || "", { shouldDirty: true, shouldValidate: true });
+                                }}
+                                onRemove={() => facultyArray.remove(index)}
+                              />
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="rounded-2xl border border-dashed border-border/50 px-4 py-8 text-center text-sm text-muted-foreground">
+                            No faculty members added yet.
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                     <Card className="rounded-2xl border-border/40 shadow-none">
@@ -1643,7 +1769,8 @@ export function TrainingsForm({
                       {!isViewOnly && (
                         <Button
                           type="button"
-                          className="rounded-xl bg-[#159E44] text-white hover:bg-[#128A3B]"
+                          variant="outline"
+                          className="rounded-xl"
                           onClick={() => studentArray.append({ name: "", program: "" })}
                         >
                           <Plus className="mr-2 h-4 w-4" />
@@ -1697,44 +1824,44 @@ export function TrainingsForm({
                     Participants and Expenses
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    Review all participant totals, training weight calculations, satisfaction ratings, and expenses.
+                    Review participant counts, satisfaction ratings, and expenses.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className={cn("grid gap-4", trainingCategories.includes("TVL") ? "xl:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.8fr)]" : "")}>
                     <Card className="rounded-2xl border-border/40 shadow-none">
                       <CardHeader>
-                        <CardTitle className="text-sm">Participant Summary</CardTitle>
+                        <CardTitle className="text-sm">Participant Breakdown</CardTitle>
                         <CardDescription className="text-xs">
-                          Faculty member, non-acad, and CvSU student organizers are still recorded, but they are not included in this total.
+                          Compact summary of the counted participant groups.
                         </CardDescription>
                       </CardHeader>
-                      <CardContent>
-                        <div className="overflow-x-auto rounded-2xl border border-border/40">
-                          <div className="min-w-[900px]">
-                            <div className="grid grid-cols-9 bg-muted/30 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                              {participantCategoryConfig.map((item) => (
-                                <div key={`header-${item.key}`} className="border-r border-border/40 px-3 py-3 text-center last:border-r-0">
-                                  {item.label}
-                                </div>
-                              ))}
-                              <div className="px-3 py-3 text-center">Total</div>
+                      <CardContent className="space-y-3">
+                        {participantCategoryConfig.map((item) => {
+                          const maleCount = Number(participantBreakdown[item.key]?.male || 0);
+                          const femaleCount = Number(participantBreakdown[item.key]?.female || 0);
+                          const total = maleCount + femaleCount;
+                          return (
+                            <div key={item.key} className="grid grid-cols-[minmax(0,1.4fr)_80px_80px_80px] items-center gap-3 rounded-xl border border-border/40 px-3 py-2.5 text-xs">
+                              <span className="font-medium text-foreground">{item.label}</span>
+                              <span className="text-center text-muted-foreground">{maleCount}</span>
+                              <span className="text-center text-muted-foreground">{femaleCount}</span>
+                              <span className="text-center font-semibold text-foreground">{total}</span>
                             </div>
-                            <div className="grid grid-cols-9 text-sm">
-                              {participantCategoryConfig.map((item) => {
-                                const total =
-                                  Number(participantBreakdown[item.key]?.male || 0) +
-                                  Number(participantBreakdown[item.key]?.female || 0);
-                                return (
-                                  <div key={`value-${item.key}`} className="border-r border-t border-border/40 px-3 py-4 text-center font-semibold last:border-r-0">
-                                    {total}
-                                  </div>
-                                );
-                              })}
-                              <div className="border-t border-border/40 bg-muted/20 px-3 py-4 text-center font-semibold">
-                                {grandTotal}
-                              </div>
-                            </div>
+                          );
+                        })}
+                        <div className="grid grid-cols-3 gap-3 rounded-xl border border-border/40 bg-muted/10 px-4 py-3 text-xs">
+                          <div>
+                            <p className="text-muted-foreground">Male</p>
+                            <p className="font-semibold text-foreground">{maleTotal}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Female</p>
+                            <p className="font-semibold text-foreground">{femaleTotal}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Total</p>
+                            <p className="font-semibold text-foreground">{grandTotal}</p>
                           </div>
                         </div>
                       </CardContent>
@@ -1788,12 +1915,6 @@ export function TrainingsForm({
                     )}
                   </div>
 
-                  <div className="grid gap-4 md:grid-cols-3">
-                    <NumberField control={form.control} name="participants_male_total" label="Total Male" disabled readOnly />
-                    <NumberField control={form.control} name="participants_female_total" label="Total Female" disabled readOnly />
-                    <NumberField control={form.control} name="participants_overall_total" label="Grand Total of Participants" disabled readOnly />
-                  </div>
-
                   <Card className="rounded-2xl border-border/40 shadow-none">
                     <CardHeader>
                       <CardTitle className="text-sm">Counted Participants</CardTitle>
@@ -1809,18 +1930,8 @@ export function TrainingsForm({
                             <p className="text-sm font-semibold">{item.label}</p>
                           </div>
                           <div className="grid gap-4 md:grid-cols-2">
-                            <NumberField
-                              control={form.control}
-                              name={`participant_breakdown.${item.key}.male`}
-                              label="Male"
-                              disabled={isViewOnly}
-                            />
-                            <NumberField
-                              control={form.control}
-                              name={`participant_breakdown.${item.key}.female`}
-                              label="Female"
-                              disabled={isViewOnly}
-                            />
+                            <NumberField control={form.control} name={`participant_breakdown.${item.key}.male`} label="Male" disabled={isViewOnly} />
+                            <NumberField control={form.control} name={`participant_breakdown.${item.key}.female`} label="Female" disabled={isViewOnly} />
                           </div>
                         </div>
                       ))}
@@ -1830,13 +1941,13 @@ export function TrainingsForm({
                   <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                     <NumberField control={form.control} name="total_persons_trained" label="Total Persons Trained" disabled readOnly />
                     <NumberField control={form.control} name="conducted_days_count" label="Number of Days" disabled readOnly />
-                    <NumberField control={form.control} name="days_multiplier" label="Weight Multiplier" disabled readOnly />
-                    <NumberField control={form.control} name="days_trained_per_weight" label="Days Trained per Weight" disabled readOnly />
+                    <NumberField control={form.control} name="participants_overall_total" label="Grand Total of Participants" disabled readOnly />
+                    <NumberField control={form.control} name="weighted_days_trained" label="Weighted Days Trained" disabled readOnly />
                   </div>
 
                   <div className="grid gap-4 md:grid-cols-2">
-                    <NumberField control={form.control} name="weighted_days_trained" label="Weighted Days Trained" disabled readOnly />
                     <NumberField control={form.control} name="total_trainees_surveyed" label="Total Number of Trainees Surveyed" disabled readOnly />
+                    <NumberField control={form.control} name="manual_hours" label="Total Conducted Hours" disabled readOnly />
                   </div>
 
                   <RatingBreakdownFields
@@ -1866,7 +1977,7 @@ export function TrainingsForm({
 
                   <div className="grid gap-4 md:grid-cols-2">
                     <NumberField control={form.control} name="total_clients_requesting_trainings" label="Total Number of Clients Requesting Trainings" disabled={isViewOnly} />
-                    <NumberField control={form.control} name="total_requests_responded_next_3_days" label="Requests Responded in the Next 3 Days" disabled={isViewOnly} />
+                    <NumberField control={form.control} name="total_requests_responded_next_3_days" label="Requests Responded in the Next 30 Days" disabled={isViewOnly} />
                   </div>
 
                   <Separator />

@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 
 import {
+  type TrainingFacultyOption,
   type TrainingProjectOption,
   type TrainingRecord,
   TrainingsForm,
@@ -42,6 +43,7 @@ interface TrainingsManagementProps {
   unitOptions?: string[];
   partnerAgencyOptions?: string[];
   projectOptions?: TrainingProjectOption[];
+  facultyOptions?: TrainingFacultyOption[];
   currentUserId: string;
   currentUserName: string;
   isViewOnly?: boolean;
@@ -50,6 +52,10 @@ interface TrainingsManagementProps {
 type FilterMode = "all" | "with_documents" | "this_year" | "created_by_me";
 
 function getDateRange(record: TrainingRecord) {
+  if (record.conducted_sessions?.length) {
+    const totalHours = record.conducted_sessions.reduce((sum, session) => sum + Number(session.hours || 0), 0);
+    return `${record.conducted_sessions.length} date(s) • ${totalHours} hour/s`;
+  }
   if (record.date_mode === "hours") {
     return `${record.manual_hours || 0} hour/s`;
   }
@@ -63,6 +69,9 @@ function getDateRange(record: TrainingRecord) {
 }
 
 function getDuration(record: TrainingRecord) {
+  if (record.conducted_sessions?.length) {
+    return `${record.conducted_sessions.length} day/s`;
+  }
   if (record.date_mode === "hours") {
     return `${record.manual_hours || 0} hour/s`;
   }
@@ -168,6 +177,7 @@ export function TrainingsManagement({
   unitOptions = [],
   partnerAgencyOptions = [],
   projectOptions = [],
+  facultyOptions = [],
   currentUserId,
   currentUserName,
   isViewOnly = false,
@@ -199,13 +209,15 @@ export function TrainingsManagement({
       if (filterMode === "with_documents" && (!record.documents || record.documents.length === 0)) return false;
       if (filterMode === "created_by_me" && record.created_by !== currentUserId) return false;
       if (filterMode === "this_year") {
-        const startDate = record.inclusive_dates?.[0];
+        const startDate =
+          record.inclusive_dates?.[0] ||
+          ((record as TrainingRecord & { created_at?: string | null }).created_at ?? null);
         const startYear = startDate ? new Date(startDate).getFullYear() : null;
         if (startYear !== year) return false;
       }
       return true;
     });
-  }, [filterMode, initialRecords, searchTerm]);
+  }, [currentUserId, filterMode, initialRecords, searchTerm]);
 
   const handleSaved = () => {
     setCreateOpen(false);
@@ -256,7 +268,7 @@ export function TrainingsManagement({
                 </DropdownMenuContent>
               </DropdownMenu>
               {!isViewOnly && (
-                <Button className="rounded-xl bg-[#159E44] text-white hover:bg-[#128A3B]" onClick={() => setCreateOpen(true)}>
+                <Button className="rounded-xl" onClick={() => setCreateOpen(true)}>
                   <Plus className="mr-2 h-4 w-4" />
                   Create Training
                 </Button>
@@ -401,6 +413,7 @@ export function TrainingsManagement({
             unitOptions={unitOptions}
             existingPartnerAgencies={partnerAgencyOptions}
             projectOptions={projectOptions}
+            facultyOptions={facultyOptions}
             hideProjectField={hideProjectField}
             onSuccess={handleSaved}
             onClose={() => setCreateOpen(false)}
@@ -419,6 +432,7 @@ export function TrainingsManagement({
               unitOptions={unitOptions}
               existingPartnerAgencies={partnerAgencyOptions}
               projectOptions={projectOptions}
+              facultyOptions={facultyOptions}
               hideProjectField={hideProjectField}
               record={selectedRecord}
               isViewOnly
@@ -440,6 +454,7 @@ export function TrainingsManagement({
               unitOptions={unitOptions}
               existingPartnerAgencies={partnerAgencyOptions}
               projectOptions={projectOptions}
+              facultyOptions={facultyOptions}
               hideProjectField={hideProjectField}
               record={editingRecord}
               onSuccess={handleSaved}

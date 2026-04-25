@@ -12,7 +12,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { UnitCoordinatorsPanel } from "@/components/dashboard/unit-coordinators-panel";
 import { type Project } from "@/components/dashboard/projects-table";
 import { TrainingsManagement } from "@/components/dashboard/trainings-management";
-import { type TrainingRecord } from "@/components/dashboard/trainings-form";
+import { type TrainingFacultyOption, type TrainingProjectOption, type TrainingRecord } from "@/components/dashboard/trainings-form";
 import { AccountsTable } from "@/components/dashboard/accounts-table";
 import { DashboardAnalytics } from "@/components/dashboard/dashboard-analytics";
 import { format, startOfMonth, subMonths } from "date-fns";
@@ -53,6 +53,7 @@ import {
   type UnitDashboardTraining,
   type UnitDashboardUser,
 } from "@/components/dashboard/unit-coordinator-dashboard";
+import { normalizeSdgArray } from "@/lib/sdg";
 
 
 function extractPartnerAgencyNames(projects: Project[]) {
@@ -81,10 +82,48 @@ function extractPartnerAgencyNames(projects: Project[]) {
 function extractProjectOptions(projects: Project[]) {
   return projects
     .filter((project) => Boolean(project.id && project.title))
-    .map((project) => ({
-      id: project.id,
-      title: project.title,
-    }));
+    .map((project) => {
+      const registrationData =
+        project.funding_data && typeof project.funding_data === "object"
+          ? (project.funding_data as { registration_data?: { sdg_main?: unknown; sdg_sub?: unknown } }).registration_data
+          : undefined;
+      return {
+        id: project.id,
+        title: project.title,
+        sdg_main: normalizeSdgArray(registrationData?.sdg_main),
+        sdg_sub: normalizeSdgArray(registrationData?.sdg_sub),
+      };
+    });
+}
+
+function formatTrainingFacultyDesignation(profile: Record<string, unknown>) {
+  const explicitDesignation = String(profile.designation || "").trim();
+  if (explicitDesignation) return explicitDesignation;
+  const unit = String(profile.unit || "").trim();
+  if (unit) return unit;
+  const userType = String(profile.user_type || "").trim();
+  if (!userType) return "User";
+  return userType
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function extractTrainingFacultyOptions(profiles: Array<Record<string, unknown>>) {
+  return profiles
+    .map((profile) => {
+      const firstName = String(profile.first_name || "").trim();
+      const lastName = String(profile.last_name || "").trim();
+      const fullName = `${firstName} ${lastName}`.trim();
+      return {
+        id: String(profile.id || ""),
+        name: fullName || String(profile.email || "").trim() || "Unnamed User",
+        designation: formatTrainingFacultyDesignation(profile),
+      };
+    })
+    .filter((profile) => profile.id)
+    .sort((left, right) => left.name.localeCompare(right.name));
 }
 
 export type LeaderboardData = CoordinatorActivity & {
@@ -392,7 +431,8 @@ export default async function DashboardPage({
   let awardsRecognitionRecords: AwardsRecognitionRecord[] = [];
   let otherActivityRecords: OtherActivityRecord[] = [];
   let trainingPartnerAgencyOptions: string[] = [];
-  let trainingProjectOptions: { id: string; title: string }[] = [];
+  let trainingProjectOptions: TrainingProjectOption[] = [];
+  let trainingFacultyOptions: TrainingFacultyOption[] = [];
   let publicCommunityPosts: CommunityPost[] = [];
   let departmentCommunityPosts: CommunityPost[] = [];
   let communityUsers = [] as Awaited<ReturnType<typeof getCommunityBootstrap>>["mentionableUsers"];
@@ -408,6 +448,28 @@ export default async function DashboardPage({
     created_at: string | null;
   }[] = [];
 
+  async function loadTrainingFacultyOptions() {
+    const adminClient = createAdminClient();
+    let query = adminClient
+      .from("profiles")
+      .select("*")
+      .in("user_type", ["college_coordinator", "unit_coordinator", "project_leader", "extension_office"]);
+
+    if (profile.user_type === "college_coordinator" && profile.department) {
+      query = query.eq("department", profile.department);
+    } else if ((profile.user_type === "unit_coordinator" || profile.user_type === "project_leader") && profile.department && profile.unit) {
+      query = query.eq("department", profile.department).eq("unit", profile.unit);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.error("Error fetching training faculty options:", error);
+      return [];
+    }
+
+    return extractTrainingFacultyOptions((data || []) as Array<Record<string, unknown>>);
+  }
+
   if (profile.user_type === "unit_coordinator" || profile.user_type === "extension_office") {
     if (activePanel === "backup" && profile.user_type === "unit_coordinator") {
       backupDatasets = (await getBackupSummary()).datasets;
@@ -418,6 +480,7 @@ export default async function DashboardPage({
       communityUsers = communityData.mentionableUsers;
     } else if (activePanel === "trainings" && profile.user_type === "unit_coordinator") {
       trainingRecords = (await getTrainings()).data || [];
+      trainingFacultyOptions = await loadTrainingFacultyOptions();
     }
   } else if (profile.user_type === "college_coordinator") {
     if (activePanel === "backup") {
@@ -433,6 +496,7 @@ export default async function DashboardPage({
       const collegeProjects = (collegeProjectsResult.data || []) as Project[];
       trainingPartnerAgencyOptions = extractPartnerAgencyNames(collegeProjects);
       trainingProjectOptions = extractProjectOptions(collegeProjects);
+      trainingFacultyOptions = await loadTrainingFacultyOptions();
     } else if (activePanel === "consultancy") {
       consultancyRecords = (await getConsultancyExtensions()).data || [];
       const collegeProjectsResult = await getCollegeProjects();
@@ -536,6 +600,7 @@ export default async function DashboardPage({
       const leaderProjects = (leaderProjectsResult.data || []) as Project[];
       trainingPartnerAgencyOptions = extractPartnerAgencyNames(leaderProjects);
       trainingProjectOptions = extractProjectOptions(leaderProjects);
+      trainingFacultyOptions = await loadTrainingFacultyOptions();
     } else if (activePanel === "consultancy") {
       consultancyRecords = (await getConsultancyExtensions()).data || [];
       const leaderProjectsResult = await getProjectLeaderProjects();
@@ -1165,12 +1230,15 @@ export default async function DashboardPage({
       })
       .sort((left, right) => right.totalBudget - left.totalBudget);
     const facultyHoursMap = new Map<string, number>();
-    technicalAdvisoryRecords.forEach((record) => {
-      const hours = Number(record.number_of_hours || 0);
-      record.faculty_members.forEach((member) => {
+    trainingRecords.forEach((record) => {
+      const sessionHours = Array.isArray(record.conducted_sessions)
+        ? record.conducted_sessions.reduce((sum, session) => sum + Number(session.hours || 0), 0)
+        : Number(record.manual_hours || 0);
+      const facultyEntries = Array.isArray(record.faculty_members) ? record.faculty_members : [];
+      facultyEntries.forEach((member) => {
         const name = String(member.name || "").trim();
         if (!name) return;
-        facultyHoursMap.set(name, (facultyHoursMap.get(name) || 0) + hours);
+        facultyHoursMap.set(name, (facultyHoursMap.get(name) || 0) + sessionHours);
       });
     });
     projectLeaderFacultyInvolvement = Array.from(facultyHoursMap.entries())
@@ -1610,6 +1678,7 @@ export default async function DashboardPage({
               unitOptions={[]}
               partnerAgencyOptions={trainingPartnerAgencyOptions}
               projectOptions={trainingProjectOptions}
+              facultyOptions={trainingFacultyOptions}
               currentUserName={`${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "College Coordinator"}
               currentUserId={user.id}
             />
@@ -1665,6 +1734,7 @@ export default async function DashboardPage({
             unitOptions={[]}
             partnerAgencyOptions={trainingPartnerAgencyOptions}
             projectOptions={trainingProjectOptions}
+            facultyOptions={trainingFacultyOptions}
             currentUserName={`${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "Unit Coordinator"}
             currentUserId={user.id}
           />
@@ -1683,6 +1753,7 @@ export default async function DashboardPage({
             unitOptions={[]}
             partnerAgencyOptions={trainingPartnerAgencyOptions}
             projectOptions={trainingProjectOptions}
+            facultyOptions={trainingFacultyOptions}
             currentUserName={`${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "Project Leader"}
             currentUserId={user.id}
           />

@@ -4385,4 +4385,11 @@ set training_categories = case
 end
 where training_category is not null;
 
+-- ============================================================
+-- Trainings Form Update: conducted session hours + faculty members
+-- ============================================================
+alter table public.trainings
+  add column if not exists conducted_sessions jsonb not null default '[]'::jsonb,
+  add column if not exists faculty_members jsonb not null default '[]'::jsonb;
+
 notify pgrst, 'reload schema';

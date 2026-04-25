@@ -21,6 +21,7 @@ export interface TrainingPayload {
   date_mode: "days" | "hours";
   inclusive_dates: string[];
   manual_hours: number | null;
+  conducted_sessions?: { hours: number }[];
   venue_platform: string;
   sdg_goals: string[];
   sdg_main?: string[];
@@ -29,6 +30,7 @@ export interface TrainingPayload {
   training_categories?: ("TVL" | "CE" | "GAD" | "AE" | "BE" | "OTHERS")[];
   training_category_other: string;
   training_mode: "FTF" | "O" | "H";
+  faculty_members?: { user_id?: string; name: string; designation: string; employment: string; hours?: number }[];
   faculty_male: number;
   faculty_female: number;
   faculty_permanent?: number;
@@ -126,6 +128,18 @@ function trainingVisibleToDepartment(
     return visibleDepartments.includes(department);
   }
   return training.department === department;
+}
+
+function stripMissingSchemaCacheColumn(payload: Record<string, unknown>, message?: string) {
+  if (!message) return false;
+  const match = message.match(/could not find the '([^']+)' column of 'trainings' in the schema cache/i);
+  if (!match?.[1]) return false;
+  const missingColumn = match[1];
+  if (missingColumn in payload) {
+    delete payload[missingColumn];
+    return true;
+  }
+  return false;
 }
 
 function attachCreatorDetails<T extends { created_by?: string | null }>(
@@ -311,21 +325,29 @@ export async function createTraining(formData: TrainingPayload) {
         ? [department]
         : [];
 
+  const payload = {
+    ...formData,
+    college: "CEIT",
+    department: userType === "super_admin" ? formData.department || "" : department || formData.department || "",
+    visibility_scope: visibilityScope,
+    visible_departments: visibleDepartments,
+    created_by: user.id,
+  };
+
   const { data, error } = await supabase
     .from("trainings")
-    .insert([
-      {
-        ...formData,
-        college: "CEIT",
-        department: userType === "super_admin" ? formData.department || "" : department || formData.department || "",
-        visibility_scope: visibilityScope,
-        visible_departments: visibleDepartments,
-        created_by: user.id,
-      },
-    ])
+    .insert([payload])
     .select();
 
   if (error) {
+    const fallbackPayload = { ...payload };
+    const stripped = stripMissingSchemaCacheColumn(fallbackPayload, error.message);
+    if (stripped) {
+      return {
+        error:
+          "The database is missing the latest trainings columns. Please run the Trainings form update SQL block in supabase-schema.sql, then save again.",
+      };
+    }
     console.error("Error creating training record:", error);
     return { error: error.message };
   }
@@ -351,16 +373,18 @@ export async function updateTraining(id: string, formData: TrainingPayload) {
         ? [department]
         : [];
 
+  const payload = {
+    ...formData,
+    college: "CEIT",
+    department: userType === "super_admin" ? formData.department || "" : department || formData.department || "",
+    visibility_scope: visibilityScope,
+    visible_departments: visibleDepartments,
+    updated_at: new Date().toISOString(),
+  };
+
   let query = client
     .from("trainings")
-    .update({
-      ...formData,
-      college: "CEIT",
-      department: userType === "super_admin" ? formData.department || "" : department || formData.department || "",
-      visibility_scope: visibilityScope,
-      visible_departments: visibleDepartments,
-      updated_at: new Date().toISOString(),
-    })
+    .update(payload)
     .eq("id", id);
 
   if (userType !== "super_admin") {
@@ -370,6 +394,14 @@ export async function updateTraining(id: string, formData: TrainingPayload) {
   const { data, error } = await query.select();
 
   if (error) {
+    const fallbackPayload = { ...payload };
+    const stripped = stripMissingSchemaCacheColumn(fallbackPayload, error.message);
+    if (stripped) {
+      return {
+        error:
+          "The database is missing the latest trainings columns. Please run the Trainings form update SQL block in supabase-schema.sql, then save again.",
+      };
+    }
     console.error("Error updating training record:", error);
     return { error: error.message };
   }
