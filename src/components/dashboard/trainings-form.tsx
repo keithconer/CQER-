@@ -96,6 +96,26 @@ const optionalTextValue = z.string().trim().optional().or(z.literal(""));
 const nonNegativeNumber = z.coerce.number().min(0, "Value must be 0 or greater.");
 const facultyEmploymentOptions = ["Permanent", "Contract of Service"] as const;
 
+const trainingCategoryLabelMap = Object.fromEntries(
+  categoryOptions.map((option) => [option.value, option.label])
+) as Record<(typeof categoryOptions)[number]["value"], string>;
+
+function getTrainingCategoryDisplay(
+  value: (typeof categoryOptions)[number]["value"],
+  otherValue?: string | null
+) {
+  if (value === "OTHERS") {
+    return otherValue?.trim() ? `Others: ${otherValue.trim()}` : "Others";
+  }
+  return trainingCategoryLabelMap[value] || value;
+}
+
+function uniqueStringList(values: string[]) {
+  return Array.from(new Set(values.filter((value) => value.trim()))).sort((left, right) =>
+    left.localeCompare(right)
+  );
+}
+
 const ratingBreakdownSchema = z.object({
   "5": nonNegativeNumber.default(0),
   "4": nonNegativeNumber.default(0),
@@ -402,6 +422,7 @@ export interface TrainingProjectOption {
   title: string;
   sdg_main?: string[];
   sdg_sub?: string[];
+  partner_agencies?: string[];
 }
 
 export interface TrainingFacultyOption {
@@ -1118,12 +1139,19 @@ export function TrainingsForm({
   const selectedProject = hideProjectField ? null : projectOptions.find((item) => item.id === relatedProjectId) || null;
   const sdgSourceMain = selectedProject?.sdg_main || [];
   const sdgSourceSub = selectedProject?.sdg_sub || [];
+  const selectedProjectPartnerAgencies = uniqueStringList([
+    ...(selectedProject?.partner_agencies || []),
+    ...existingPartnerAgencies,
+  ]);
 
   React.useEffect(() => {
     const currentSessions = form.getValues("conducted_sessions") || [];
     const nextLength = Math.max(0, numberOfDays);
     if (currentSessions.length === nextLength) return;
-    const nextSessions = Array.from({ length: nextLength }, (_, index) => currentSessions[index] || { hours: 8 });
+    const nextSessions = Array.from(
+      { length: nextLength },
+      (_, index) => currentSessions[index] || ({ hours: "" } as unknown as ConductedSession)
+    );
     form.setValue("conducted_sessions", nextSessions, { shouldDirty: true });
   }, [form, numberOfDays]);
 
@@ -1162,6 +1190,11 @@ export function TrainingsForm({
     form.setValue("related_project_title", selectedProject.title, { shouldDirty: true });
     form.setValue("sdg_main", selectedProject.sdg_main || [], { shouldDirty: true, shouldValidate: true });
     form.setValue("sdg_sub", selectedProject.sdg_sub || [], { shouldDirty: true, shouldValidate: true });
+    if ((selectedProject.partner_agencies || []).length > 0) {
+      const primaryPartnerAgency = uniqueStringList(selectedProject.partner_agencies || [])[0] || "";
+      form.setValue("expense_partner_agency_name", primaryPartnerAgency, { shouldDirty: true, shouldValidate: true });
+      form.setValue("partner_agencies", primaryPartnerAgency ? [primaryPartnerAgency] : [], { shouldDirty: true });
+    }
   }, [form, selectedProject]);
 
   React.useEffect(() => {
@@ -1371,7 +1404,11 @@ export function TrainingsForm({
              </div>
              <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-2">
                <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80">Training Category</p>
-               <p className="truncate text-xs font-medium text-foreground">{trainingCategories.join(", ") || "N/A"}</p>
+               <p className="truncate text-xs font-medium text-foreground">
+                 {trainingCategories.length > 0
+                   ? trainingCategories.map((value) => getTrainingCategoryDisplay(value)).join(", ")
+                   : "N/A"}
+               </p>
              </div>
              <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-2">
                <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80">Participants</p>
@@ -1544,12 +1581,15 @@ export function TrainingsForm({
                                     <div className="relative">
                                       <Clock3 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                                       <Input
-                                        type="number"
-                                        min="0.5"
-                                        max="24"
-                                        step="0.5"
-                                        value={typeof field.value === "number" ? field.value : ""}
-                                        onChange={(event) => field.onChange(event.target.value === "" ? 0 : Number(event.target.value))}
+                                        type="text"
+                                        inputMode="decimal"
+                                        value={field.value === "" || field.value == null ? "" : String(field.value)}
+                                        onChange={(event) => {
+                                          const sanitized = event.target.value
+                                            .replace(/[^0-9.]/g, "")
+                                            .replace(/^(\d*\.?\d*).*$/, "$1");
+                                          field.onChange(sanitized);
+                                        }}
                                         disabled={isViewOnly}
                                         className="h-9 rounded-xl pl-10 text-xs"
                                         placeholder="e.g. 8"
@@ -2014,7 +2054,7 @@ export function TrainingsForm({
                               </FormControl>
                               <SelectContent>
                                 <SelectItem value="none" className="text-sm">None selected</SelectItem>
-                                {existingPartnerAgencies.map((agency) => (
+                                {selectedProjectPartnerAgencies.map((agency) => (
                                   <SelectItem key={agency} value={agency} className="text-sm">
                                     {agency}
                                   </SelectItem>
@@ -2025,6 +2065,11 @@ export function TrainingsForm({
                           </FormItem>
                         )}
                       />
+                      {selectedProject && (selectedProject.partner_agencies || []).length > 0 ? (
+                        <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 px-4 py-3 text-xs text-emerald-800">
+                          Partner agency was auto-filled from the selected project.
+                        </div>
+                      ) : null}
                     </div>
                   </div>
 

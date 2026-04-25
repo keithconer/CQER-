@@ -47,7 +47,7 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { SDG_OPTIONS, normalizeSdgArray } from "@/lib/sdg";
-import { cn } from "@/lib/utils";
+import { cn, toTitleCase } from "@/lib/utils";
 import { createProject, updateProject } from "@/lib/actions/projects";
 import { type Project } from "@/components/dashboard/projects-table";
 
@@ -77,6 +77,13 @@ const employmentOptions = ["Permanent", "Contract of Service"] as const;
 const textValue = z.string().trim().min(1, "This field is required.");
 const optionalTextValue = z.string().trim().optional().or(z.literal(""));
 const nonNegativeNumber = z.coerce.number().min(0, "Value must be 0 or greater.");
+
+function normalizeAgencyCategory(value: unknown): (typeof agencyCategoryOptions)[number] {
+  const normalized = String(value || "").trim().toLowerCase();
+  return agencyCategoryOptions.includes(normalized as (typeof agencyCategoryOptions)[number])
+    ? (normalized as (typeof agencyCategoryOptions)[number])
+    : "government";
+}
 
 const signatorySchema = z.object({
   designation: textValue,
@@ -442,7 +449,7 @@ function buildDefaultValues(
             return {
               name: String(record.name || ""),
               location: String(record.location || ""),
-              category: String(record.category || "government") as (typeof agencyCategoryOptions)[number],
+              category: normalizeAgencyCategory(record.category),
               head_designation: String(record.head_designation || ""),
               contact_details: String(record.contact_details || ""),
               nature_of_partnership: String(record.nature_of_partnership || "Internal") as (typeof natureOptions)[number],
@@ -929,14 +936,14 @@ function PartnerAgencyFields({
                 <FormLabel className="text-xs">Category of Agency</FormLabel>
                 <Select value={field.value} onValueChange={field.onChange} disabled={disabled}>
                   <FormControl>
-                    <SelectTrigger className="h-9 rounded-xl text-xs">
+                    <SelectTrigger className="h-9 rounded-xl text-xs capitalize">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
                     {agencyCategoryOptions.map((option) => (
-                      <SelectItem key={option} value={option} className="text-xs capitalize">
-                        {option}
+                      <SelectItem key={option} value={option} className="text-xs">
+                        {toTitleCase(option)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1394,7 +1401,7 @@ export function ProjectLeaderRegistrationForm({
                       <p className="text-xs font-medium text-destructive">{form.formState.errors.extension_agenda.message}</p>
                     )}
                   </div>
-                  <div className="grid gap-6 2xl:grid-cols-2">
+                  <div className="grid gap-6 xl:grid-cols-2">
                     <div className="min-w-0 space-y-3"><div><Label className="text-xs">SDG Main</Label><p className="text-xs text-muted-foreground">Choose the primary SDGs linked to this project.</p></div><SdgGrid values={sdgMain} onToggle={(value) => handleToggleValue("sdg_main", value)} disabled={isViewOnly} />{form.formState.errors.sdg_main?.message && <p className="text-xs font-medium text-destructive">{form.formState.errors.sdg_main.message}</p>}</div>
                     <div className="min-w-0 space-y-3"><div><Label className="text-xs">SDG Sub</Label><p className="text-xs text-muted-foreground">Choose the supporting SDGs linked to this project.</p></div><SdgGrid values={sdgSub} onToggle={(value) => handleToggleValue("sdg_sub", value)} disabled={isViewOnly} />{form.formState.errors.sdg_sub?.message && <p className="text-xs font-medium text-destructive">{form.formState.errors.sdg_sub.message}</p>}</div>
                   </div>

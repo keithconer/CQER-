@@ -34,6 +34,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { deleteTraining } from "@/lib/actions/trainings";
 import { DocumentPreview } from "@/components/dashboard/document-preview";
+import { toTitleCase } from "@/lib/utils";
 
 interface TrainingsManagementProps {
   initialRecords: TrainingRecord[];
@@ -84,7 +85,12 @@ function getCategoryLabel(record: TrainingRecord) {
     if (value === "OTHERS") {
       return record.training_category_other ? `Others: ${record.training_category_other}` : "Others";
     }
-    return value;
+    if (value === "TVL") return "TVL - Technical, Vocational, Livelihood";
+    if (value === "CE") return "CE - Continuing Education for Professional";
+    if (value === "GAD") return "GAD - Gender and Development";
+    if (value === "AE") return "AE - Agricultural and Environmental Training";
+    if (value === "BE") return "BE - Basic Education";
+    return toTitleCase(value);
   });
   return labels.join(", ");
 }
@@ -268,7 +274,10 @@ export function TrainingsManagement({
                 </DropdownMenuContent>
               </DropdownMenu>
               {!isViewOnly && (
-                <Button className="rounded-xl" onClick={() => setCreateOpen(true)}>
+                <Button
+                  className="rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-200"
+                  onClick={() => setCreateOpen(true)}
+                >
                   <Plus className="mr-2 h-4 w-4" />
                   Create Training
                 </Button>

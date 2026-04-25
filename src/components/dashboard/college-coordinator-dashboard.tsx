@@ -369,7 +369,7 @@ export function CollegeCoordinatorDashboard({
   budgetUtilizations,
   employees,
 }: CollegeCoordinatorDashboardProps) {
-  const [activeDialog, setActiveDialog] = React.useState<"projects" | "trainings" | "budget" | "utilized" | "staffing" | null>(null);
+  const [activeDialog, setActiveDialog] = React.useState<"projects" | "trainings" | "budget" | "utilized" | "faculty_involvement" | null>(null);
   const [projectSearch, setProjectSearch] = React.useState("");
   const [projectRoleFilter, setProjectRoleFilter] = React.useState<ProjectCreatorRole>("all");
   const [projectDepartmentFilter, setProjectDepartmentFilter] = React.useState("all");
@@ -597,11 +597,11 @@ export function CollegeCoordinatorDashboard({
             onClick={() => setActiveDialog("utilized")}
           />
           <OverviewCard
-            title="Staffing"
+            title="Faculty Involvement"
             value={String(employees.length)}
             description="Department employees plus project or training assignments."
             icon={Users2}
-            onClick={() => setActiveDialog("staffing")}
+            onClick={() => setActiveDialog("faculty_involvement")}
           />
         </CardContent>
       </Card>
@@ -926,10 +926,10 @@ export function CollegeCoordinatorDashboard({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={activeDialog === "staffing"} onOpenChange={(open) => !open && setActiveDialog(null)}>
+      <Dialog open={activeDialog === "faculty_involvement"} onOpenChange={(open) => !open && setActiveDialog(null)}>
         <DialogContent className="sm:max-w-5xl">
           <DialogHeader>
-            <DialogTitle>Department Staffing</DialogTitle>
+            <DialogTitle>Faculty Involvement</DialogTitle>
             <DialogDescription>
               Available employees in {department} and who is already assigned to projects or trainings.
             </DialogDescription>

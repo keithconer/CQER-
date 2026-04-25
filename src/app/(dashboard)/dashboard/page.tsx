@@ -92,6 +92,7 @@ function extractProjectOptions(projects: Project[]) {
         title: project.title,
         sdg_main: normalizeSdgArray(registrationData?.sdg_main),
         sdg_sub: normalizeSdgArray(registrationData?.sdg_sub),
+        partner_agencies: extractPartnerAgencyNames([project]),
       };
     });
 }
@@ -129,6 +130,8 @@ function extractTrainingFacultyOptions(profiles: Array<Record<string, unknown>>)
 export type LeaderboardData = CoordinatorActivity & {
   projects: number;
   trainings: number;
+  projectDates: string[];
+  trainingDates: string[];
 };
 
 type AnalyticsProject = Project & {
@@ -1415,26 +1418,34 @@ export default async function DashboardPage({
     // 1. Get project counts per creator
     const { data: projectCounts } = await adminClient
       .from("projects")
-      .select("created_by")
+      .select("created_by, created_at")
       .not("created_by", "is", null);
       
     // 2. Get training counts per creator
     const { data: trainingCounts } = await adminClient
       .from("trainings")
-      .select("created_by")
+      .select("created_by, created_at")
       .not("created_by", "is", null);
 
     const projectsMap = {} as Record<string, number>;
     const trainingsMap = {} as Record<string, number>;
+    const projectDatesMap = {} as Record<string, string[]>;
+    const trainingDatesMap = {} as Record<string, string[]>;
     
     (projectCounts || []).forEach(p => {
       const cid = p.created_by as string;
       projectsMap[cid] = (projectsMap[cid] || 0) + 1;
+      if (typeof p.created_at === "string" && p.created_at) {
+        projectDatesMap[cid] = [...(projectDatesMap[cid] || []), p.created_at];
+      }
     });
 
     (trainingCounts || []).forEach(t => {
       const cid = t.created_by as string;
       trainingsMap[cid] = (trainingsMap[cid] || 0) + 1;
+      if (typeof t.created_at === "string" && t.created_at) {
+        trainingDatesMap[cid] = [...(trainingDatesMap[cid] || []), t.created_at];
+      }
     });
     
     const allCids = new Set([...Object.keys(projectsMap), ...Object.keys(trainingsMap)]);
@@ -1458,6 +1469,8 @@ export default async function DashboardPage({
           projectCount: pCount + tCount,
           projects: pCount,
           trainings: tCount,
+          projectDates: projectDatesMap[p.id] || [],
+          trainingDates: trainingDatesMap[p.id] || [],
           avatar_url: p.avatar_url
         };
       }).sort((a, b) => b.projectCount - a.projectCount);
