@@ -1144,6 +1144,7 @@ export function ProjectLeaderRegistrationForm({
 
   const startDateInput = useWatch({ control: typedControl, name: "start_date" }) || "";
   const endDateInput = useWatch({ control: typedControl, name: "end_date" }) || "";
+  const budgetInput = Number(useWatch({ control: typedControl, name: "budget" }) || 0);
   const inclusiveDates = React.useMemo(
     () => buildInclusiveDatesFromRange(parseDateInput(startDateInput), parseDateInput(endDateInput)),
     [startDateInput, endDateInput]
@@ -1193,6 +1194,7 @@ export function ProjectLeaderRegistrationForm({
   }, [inclusiveDates, form, budgetYearsArray]);
 
   const budgetGrandTotal = budgetSummary.reduce((sum, item) => sum + getBudgetRowTotal(item), 0);
+  const displayedBudgetTotal = currentStep >= 4 && budgetGrandTotal > 0 ? budgetGrandTotal : budgetInput;
 
   const handleToggleValue = (fieldName: "extension_agenda" | "sdg_main" | "sdg_sub", value: string) => {
     const current = form.getValues(fieldName);
@@ -1334,11 +1336,11 @@ export function ProjectLeaderRegistrationForm({
                <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80">Duration</p>
                <p className="truncate text-xs font-medium text-foreground">{getDurationLabel(inclusiveDates)}</p>
              </div>
-             <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-2.5">
-               <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80">Total Budget</p>
-               <p className="truncate text-xs font-medium text-foreground">PHP {budgetGrandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-             </div>
-          </div>
+              <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-2.5">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80">Total Budget</p>
+                <p className="truncate text-xs font-medium text-foreground">PHP {displayedBudgetTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              </div>
+           </div>
           <div className="mt-4 w-full">
             <StepIndicator currentStep={currentStep} totalSteps={5} labels={stepLabels} />
           </div>

@@ -6,6 +6,7 @@ import { useFieldArray, useForm, useWatch, type Control, type FieldPath } from "
 import * as z from "zod";
 import { format, isValid, parse } from "date-fns";
 import {
+  Building2,
   BookOpenCheck,
   Briefcase,
   CalendarIcon,
@@ -13,6 +14,7 @@ import {
   ChevronRight,
   Clock3,
   GraduationCap,
+  Layers3,
   MapPin,
   Plus,
   Save,
@@ -1106,14 +1108,19 @@ export function TrainingsForm({
   });
 
   const numberOfDays = Number(useWatch({ control: form.control, name: "number_of_days" }) || 0);
+  const watchedDepartment = useWatch({ control: form.control, name: "department" }) || department || "";
   const relatedProjectId = useWatch({ control: form.control, name: "related_project_id" }) || "";
   const watchedConductedSessions = useWatch({ control: form.control, name: "conducted_sessions" });
-  const trainingCategories = useWatch({ control: form.control, name: "training_categories" }) || [];
+  const watchedTrainingCategories = useWatch({ control: form.control, name: "training_categories" });
   const disabilityCount = Number(useWatch({ control: form.control, name: "tvl_disabilities_count" }) || 0);
   const watchedFacultyMembers = useWatch({ control: form.control, name: "faculty_members" });
   const conductedSessions = React.useMemo(
     () => (watchedConductedSessions || []) as ConductedSession[],
     [watchedConductedSessions]
+  );
+  const trainingCategories = React.useMemo(
+    () => (watchedTrainingCategories || []) as FormValues["training_categories"],
+    [watchedTrainingCategories]
   );
   const facultyMembers = React.useMemo(
     () => (watchedFacultyMembers || []) as FacultyMemberEntry[],
@@ -1121,16 +1128,17 @@ export function TrainingsForm({
   );
 
   const participantBreakdown = useWatch({ control: form.control, name: "participant_breakdown" }) ?? normalizeParticipantBreakdown(null);
-  const ratingRelevanceBreakdown = useWatch({ control: form.control, name: "rating_relevance_breakdown" });
-  const ratingQualityBreakdown = useWatch({ control: form.control, name: "rating_quality_breakdown" });
-  const ratingTimelinessBreakdown = useWatch({ control: form.control, name: "rating_timeliness_breakdown" });
+  const trainingCategorySummary = React.useMemo(
+    () =>
+      trainingCategories.length > 0
+        ? trainingCategories.map((value) => getTrainingCategoryDisplay(value)).join(", ")
+        : "N/A",
+    [trainingCategories]
+  );
 
   const maleTotal = participantCategoryConfig.reduce((sum, item) => sum + Number(participantBreakdown[item.key]?.male || 0), 0);
   const femaleTotal = participantCategoryConfig.reduce((sum, item) => sum + Number(participantBreakdown[item.key]?.female || 0), 0);
   const grandTotal = maleTotal + femaleTotal;
-  const relevanceTotal = getRatingsTotal(normalizeRatingBreakdown(ratingRelevanceBreakdown));
-  const qualityTotal = getRatingsTotal(normalizeRatingBreakdown(ratingQualityBreakdown));
-  const timelinessTotal = getRatingsTotal(normalizeRatingBreakdown(ratingTimelinessBreakdown));
   const conductedDays = conductedSessions.length;
   const totalConductedHours = getConductedHoursTotal(conductedSessions);
   const dayMultiplier = getDayMultiplier(conductedDays, totalConductedHours);
@@ -1388,39 +1396,53 @@ export function TrainingsForm({
         className="flex h-full min-h-0 flex-col bg-background"
       >
         <div className="border-b border-border/40 bg-background px-4 py-3 sm:px-6 lg:px-8">
-          <div className="flex w-full items-start justify-between gap-4">
-            <h1 className="text-xl font-bold text-foreground">
-              {record?.id ? (isViewOnly ? "Training Record Details" : "Update Training Record") : "Register a New Training"}
-            </h1>
+          <div className="flex w-full flex-col gap-3 xl:flex-row xl:items-start">
+            <div className="flex min-w-0 flex-1 flex-col gap-3 xl:flex-row xl:items-center">
+              <h1 className="shrink-0 text-xl font-bold text-foreground">
+                {record?.id ? (isViewOnly ? "Training Record Details" : "Update Training Record") : "Register a New Training"}
+              </h1>
+              <div className="flex min-w-0 flex-1 flex-wrap gap-2">
+                <div className="min-w-[180px] flex-1 rounded-xl border border-border/40 bg-muted/10 px-3 py-2">
+                  <div className="flex items-start gap-2">
+                    <Building2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <div className="min-w-0">
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80">Department</p>
+                      <p className="truncate text-[11px] font-medium text-foreground">{watchedDepartment || "Unassigned"}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="min-w-[170px] flex-1 rounded-xl border border-border/40 bg-muted/10 px-3 py-2">
+                  <div className="flex items-start gap-2">
+                    <Layers3 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <div className="min-w-0">
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80">Training Category</p>
+                      <p className="truncate text-[11px] font-medium text-foreground">{trainingCategorySummary}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="min-w-[124px] rounded-xl border border-border/40 bg-muted/10 px-3 py-2">
+                  <div className="flex items-start gap-2">
+                    <Users className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <div className="min-w-0">
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80">Participants</p>
+                      <p className="truncate text-[11px] font-medium text-foreground">{grandTotal === 0 ? "None" : grandTotal}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
             {onClose && (
               <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0 rounded-full" onClick={onClose}>
                 <X className="h-4 w-4" />
               </Button>
             )}
           </div>
-          <div className="mt-3 grid gap-2 lg:grid-cols-[minmax(0,1.2fr)_180px_180px]">
-             <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-2">
-               <p className="truncate text-xs font-semibold text-foreground">{form.getValues("department") || "Unassigned"}</p>
-             </div>
-             <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-2">
-               <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80">Training Category</p>
-               <p className="truncate text-xs font-medium text-foreground">
-                 {trainingCategories.length > 0
-                   ? trainingCategories.map((value) => getTrainingCategoryDisplay(value)).join(", ")
-                   : "N/A"}
-               </p>
-             </div>
-             <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-2">
-               <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80">Participants</p>
-               <p className="truncate text-xs font-medium text-foreground">{grandTotal === 0 ? "None" : grandTotal}</p>
-             </div>
-          </div>
-          <div className="mt-4 w-full">
+          <div className="mt-3 w-full">
             <StepIndicator currentStep={currentStep} totalSteps={stepLabels.length} labels={stepLabels} />
           </div>
         </div>
 
-        <div id="trainings-scroll-area" className="flex-1 overflow-y-auto bg-background px-4 py-5 sm:px-6 lg:px-8">
+        <div id="trainings-scroll-area" className="flex-1 overflow-y-auto bg-background px-4 py-4 sm:px-6 lg:px-8">
           {currentStep === 1 && (
             <div className="space-y-6">
               <Card className="rounded-3xl border-border/40 shadow-none">
@@ -1495,31 +1517,25 @@ export function TrainingsForm({
                     )}
                   </div>
 
-                  <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
-                    <FormField
-                      control={form.control}
-                      name="venue_platform"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">Venue / Platform</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                              <Input {...field} disabled={isViewOnly} className="h-9 rounded-xl pl-10 text-xs" />
-                            </div>
-                          </FormControl>
-                          <FormMessage className="text-xs" />
-                        </FormItem>
-                      )}
-                    />
-                    <div className="rounded-2xl border border-border/40 bg-muted/10 px-4 py-3">
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Conducted Summary</p>
-                      <p className="mt-1 text-xs font-medium text-foreground">{conductedDays || 0} date(s) • {totalConductedHours || 0} hours</p>
-                    </div>
-                  </div>
+                  <FormField
+                    control={form.control}
+                    name="venue_platform"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">Venue / Platform</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <Input {...field} disabled={isViewOnly} className="h-9 rounded-xl pl-10 text-xs" />
+                          </div>
+                        </FormControl>
+                        <FormMessage className="text-xs" />
+                      </FormItem>
+                    )}
+                  />
 
                   <div className="rounded-2xl border border-border/40 bg-muted/10 p-4">
-                    <div className="grid gap-5 xl:grid-cols-[220px_minmax(0,1fr)]">
+                    <div className="grid gap-5 xl:grid-cols-[220px_minmax(0,1fr)] xl:items-start">
                       <FormField
                         control={form.control}
                         name="number_of_days"
@@ -1544,68 +1560,51 @@ export function TrainingsForm({
                           </FormItem>
                         )}
                       />
-                      <div className="rounded-2xl border border-border/40 bg-background px-4 py-3">
-                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Multiplier Logic</p>
-                        <p className="mt-1 text-xs font-medium text-foreground">
-                          {conductedDays >= 5
-                            ? "5 or more days x 2.00"
-                            : conductedDays >= 3
-                              ? "3 to 4 days x 1.50"
-                              : conductedDays === 2
-                                ? "2 days x 1.25"
-                                : conductedDays === 1 && totalConductedHours >= 8
-                                  ? "1 day x 1.00"
-                                  : conductedDays === 1
-                                    ? "Less than 1 day x 0.50"
-                                    : "Waiting for entries"}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-5 space-y-4">
-                      <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
-                        <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                        Hours Per Conducted Date
-                      </div>
-                      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                        {conductedSessions.length > 0 ? (
-                          conductedSessions.map((_, index) => (
-                            <FormField
-                              key={`conducted-session-${index}`}
-                              control={form.control}
-                              name={`conducted_sessions.${index}.hours`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel className="text-xs">Date {index + 1} Hours</FormLabel>
-                                  <FormControl>
-                                    <div className="relative">
-                                      <Clock3 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                      <Input
-                                        type="text"
-                                        inputMode="decimal"
-                                        value={field.value === "" || field.value == null ? "" : String(field.value)}
-                                        onChange={(event) => {
-                                          const sanitized = event.target.value
-                                            .replace(/[^0-9.]/g, "")
-                                            .replace(/^(\d*\.?\d*).*$/, "$1");
-                                          field.onChange(sanitized);
-                                        }}
-                                        disabled={isViewOnly}
-                                        className="h-9 rounded-xl pl-10 text-xs"
-                                        placeholder="e.g. 8"
-                                      />
-                                    </div>
-                                  </FormControl>
-                                  <FormMessage className="text-xs" />
-                                </FormItem>
-                              )}
-                            />
-                          ))
-                        ) : (
-                          <div className="rounded-2xl border border-dashed border-border/50 px-4 py-6 text-center text-xs text-muted-foreground md:col-span-2 xl:col-span-3">
-                            Enter the number of dates conducted to generate the hour fields.
-                          </div>
-                        )}
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                          <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                          Hours Per Conducted Date
+                        </div>
+                        <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+                          {conductedSessions.length > 0 ? (
+                            conductedSessions.map((_, index) => (
+                              <FormField
+                                key={`conducted-session-${index}`}
+                                control={form.control}
+                                name={`conducted_sessions.${index}.hours`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel className="text-xs">Date {index + 1} Hours</FormLabel>
+                                    <FormControl>
+                                      <div className="relative">
+                                        <Clock3 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                          type="text"
+                                          inputMode="decimal"
+                                          value={field.value === "" || field.value == null ? "" : String(field.value)}
+                                          onChange={(event) => {
+                                            const sanitized = event.target.value
+                                              .replace(/[^0-9.]/g, "")
+                                              .replace(/^(\d*\.?\d*).*$/, "$1");
+                                            field.onChange(sanitized);
+                                          }}
+                                          disabled={isViewOnly}
+                                          className="h-9 rounded-xl pl-10 text-xs"
+                                          placeholder="e.g. 8"
+                                        />
+                                      </div>
+                                    </FormControl>
+                                    <FormMessage className="text-xs" />
+                                  </FormItem>
+                                )}
+                              />
+                            ))
+                          ) : (
+                            <div className="rounded-2xl border border-dashed border-border/50 px-4 py-6 text-center text-xs text-muted-foreground md:col-span-2 2xl:col-span-3">
+                              Enter the number of dates conducted to generate the hour fields.
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1993,7 +1992,7 @@ export function TrainingsForm({
                   <RatingBreakdownFields
                     control={form.control}
                     name="rating_relevance_breakdown"
-                    title={`Clients Ratings Based on Relevance of the Training (${relevanceTotal}/${grandTotal})`}
+                    title="Clients Ratings Based on Relevance of the Training"
                     expectedTotal={grandTotal}
                     error={form.formState.errors.rating_relevance_breakdown?.message as string | undefined}
                     disabled={isViewOnly}
@@ -2001,7 +2000,7 @@ export function TrainingsForm({
                   <RatingBreakdownFields
                     control={form.control}
                     name="rating_quality_breakdown"
-                    title={`Clients Ratings Based on Quality of the Training (${qualityTotal}/${grandTotal})`}
+                    title="Clients Ratings Based on Quality of the Training"
                     expectedTotal={grandTotal}
                     error={form.formState.errors.rating_quality_breakdown?.message as string | undefined}
                     disabled={isViewOnly}
@@ -2009,7 +2008,7 @@ export function TrainingsForm({
                   <RatingBreakdownFields
                     control={form.control}
                     name="rating_timeliness_breakdown"
-                    title={`Clients Ratings Based on Timeliness of the Training (${timelinessTotal}/${grandTotal})`}
+                    title="Clients Ratings Based on Timeliness of the Training"
                     expectedTotal={grandTotal}
                     error={form.formState.errors.rating_timeliness_breakdown?.message as string | undefined}
                     disabled={isViewOnly}

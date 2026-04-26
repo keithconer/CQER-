@@ -275,7 +275,7 @@ export function TrainingsManagement({
               </DropdownMenu>
               {!isViewOnly && (
                 <Button
-                  className="rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-200"
+                  className="rounded-xl bg-[#159E44] text-white hover:bg-[#12843a] focus-visible:ring-[#159E44]/30"
                   onClick={() => setCreateOpen(true)}
                 >
                   <Plus className="mr-2 h-4 w-4" />
