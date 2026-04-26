@@ -1046,139 +1046,143 @@ export function FacultyInvolvementManagement({
 
         <CardContent className="px-4 pb-4">
           {activeTab === "faculty" ? (
-            <div className="rounded-md border border-border/50 overflow-hidden">
-              <Table>
-                <TableHeader className="bg-muted/30">
-                  <TableRow className="hover:bg-transparent border-border/50">
-                    <TableHead className="text-[10px] h-9 font-semibold">Name</TableHead>
-                    <TableHead className="text-[10px] h-9 font-semibold">Sex</TableHead>
-                    <TableHead className="text-[10px] h-9 font-semibold">Rank</TableHead>
-                    <TableHead className="text-[10px] h-9 font-semibold">Employment</TableHead>
-                    <TableHead className="text-[10px] h-9 font-semibold">Avg Hrs/Week</TableHead>
-                    <TableHead className="text-[10px] h-9 font-semibold">Total Hrs/Period</TableHead>
-                    <TableHead className="text-[10px] h-9 font-semibold">Remarks</TableHead>
-                    <TableHead className="text-[10px] h-9 font-semibold">Documents</TableHead>
-                    <TableHead className="text-[10px] h-9 font-semibold text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredFaculty.length > 0 ? (
-                    paginatedFaculty.map((item) => (
-                      <TableRow key={item.id} className="hover:bg-muted/10 border-border/30">
-                        <TableCell className="text-[10px] py-2.5 px-3">{item.faculty_name}</TableCell>
-                        <TableCell className="text-[10px] py-2.5 px-3 capitalize">{item.sex}</TableCell>
-                        <TableCell className="text-[10px] py-2.5 px-3">{item.rank}</TableCell>
-                        <TableCell className="text-[10px] py-2.5 px-3">{item.employment_status}</TableCell>
-                        <TableCell className="text-[10px] py-2.5 px-3">{item.avg_hours_per_week}</TableCell>
-                        <TableCell className="text-[10px] py-2.5 px-3">{item.total_hours_period}</TableCell>
-                        <TableCell className="text-[10px] py-2.5 px-3">{item.remarks || "-"}</TableCell>
-                        <TableCell className="text-[10px] py-2.5 px-3">
-                          <DocumentPreview documents={item.documents} />
-                        </TableCell>
-                        <TableCell className="text-[10px] py-2.5 px-3">
-                          <div className="flex items-center justify-end gap-1">
-                            <Button type="button" variant="outline" size="icon" className="h-7 w-7 border-border/50" title="View" aria-label="View" onClick={() => setViewFaculty(item)}>
-                              <Eye className="h-3 w-3" />
-                            </Button>
-                            {!isViewOnly && (
-                              <>
-                                <Button type="button" variant="outline" size="icon" className="h-7 w-7 border-border/50" title="Update" aria-label="Update" onClick={() => setEditFaculty(item)}>
-                                  <Pencil className="h-3 w-3" />
-                                </Button>
-                                <Button type="button" variant="outline" size="icon" className="h-7 w-7 border-border/50 text-destructive" title="Delete" aria-label="Delete" disabled={deletingFacultyId === item.id} onClick={() => handleDeleteFaculty(item.id)}>
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </>
-                            )}
-                          </div>
+            <>
+              <div className="rounded-md border border-border/50 overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-muted/30">
+                    <TableRow className="hover:bg-transparent border-border/50">
+                      <TableHead className="text-[10px] h-9 font-semibold">Name</TableHead>
+                      <TableHead className="text-[10px] h-9 font-semibold">Sex</TableHead>
+                      <TableHead className="text-[10px] h-9 font-semibold">Rank</TableHead>
+                      <TableHead className="text-[10px] h-9 font-semibold">Employment</TableHead>
+                      <TableHead className="text-[10px] h-9 font-semibold">Avg Hrs/Week</TableHead>
+                      <TableHead className="text-[10px] h-9 font-semibold">Total Hrs/Period</TableHead>
+                      <TableHead className="text-[10px] h-9 font-semibold">Remarks</TableHead>
+                      <TableHead className="text-[10px] h-9 font-semibold">Documents</TableHead>
+                      <TableHead className="text-[10px] h-9 font-semibold text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredFaculty.length > 0 ? (
+                      paginatedFaculty.map((item) => (
+                        <TableRow key={item.id} className="hover:bg-muted/10 border-border/30">
+                          <TableCell className="text-[10px] py-2.5 px-3">{item.faculty_name}</TableCell>
+                          <TableCell className="text-[10px] py-2.5 px-3 capitalize">{item.sex}</TableCell>
+                          <TableCell className="text-[10px] py-2.5 px-3">{item.rank}</TableCell>
+                          <TableCell className="text-[10px] py-2.5 px-3">{item.employment_status}</TableCell>
+                          <TableCell className="text-[10px] py-2.5 px-3">{item.avg_hours_per_week}</TableCell>
+                          <TableCell className="text-[10px] py-2.5 px-3">{item.total_hours_period}</TableCell>
+                          <TableCell className="text-[10px] py-2.5 px-3">{item.remarks || "-"}</TableCell>
+                          <TableCell className="text-[10px] py-2.5 px-3">
+                            <DocumentPreview documents={item.documents} />
+                          </TableCell>
+                          <TableCell className="text-[10px] py-2.5 px-3">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button type="button" variant="outline" size="icon" className="h-7 w-7 border-border/50" title="View" aria-label="View" onClick={() => setViewFaculty(item)}>
+                                <Eye className="h-3 w-3" />
+                              </Button>
+                              {!isViewOnly && (
+                                <>
+                                  <Button type="button" variant="outline" size="icon" className="h-7 w-7 border-border/50" title="Update" aria-label="Update" onClick={() => setEditFaculty(item)}>
+                                    <Pencil className="h-3 w-3" />
+                                  </Button>
+                                  <Button type="button" variant="outline" size="icon" className="h-7 w-7 border-border/50 text-destructive" title="Delete" aria-label="Delete" disabled={deletingFacultyId === item.id} onClick={() => handleDeleteFaculty(item.id)}>
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={9} className="h-24 text-center text-xs text-muted-foreground">
+                          No records found.
                         </TableCell>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={9} className="h-24 text-center text-xs text-muted-foreground">
-                        No records found.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-            <RecordPagination
-              currentPage={facultyPage}
-              totalPages={facultyTotalPages}
-              startIndex={facultyStartIndex}
-              totalItems={filteredFaculty.length}
-              itemLabel="faculty records"
-              onPageChange={setFacultyPage}
-            />
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+              <RecordPagination
+                currentPage={facultyPage}
+                totalPages={facultyTotalPages}
+                startIndex={facultyStartIndex}
+                totalItems={filteredFaculty.length}
+                itemLabel="faculty records"
+                onPageChange={setFacultyPage}
+              />
+            </>
           ) : (
-            <div className="rounded-md border border-border/50 overflow-hidden">
-              <Table>
-                <TableHeader className="bg-muted/30">
-                  <TableRow className="hover:bg-transparent border-border/50">
-                    <TableHead className="text-[10px] h-9 font-semibold">Name</TableHead>
-                    <TableHead className="text-[10px] h-9 font-semibold">Sex</TableHead>
-                    <TableHead className="text-[10px] h-9 font-semibold">Rank</TableHead>
-                    <TableHead className="text-[10px] h-9 font-semibold">Employment</TableHead>
-                    <TableHead className="text-[10px] h-9 font-semibold">Educational Qualifications</TableHead>
-                    <TableHead className="text-[10px] h-9 font-semibold">Specialization</TableHead>
-                    <TableHead className="text-[10px] h-9 font-semibold">Other Expertise</TableHead>
-                    <TableHead className="text-[10px] h-9 font-semibold">Documents</TableHead>
-                    <TableHead className="text-[10px] h-9 font-semibold text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredPool.length > 0 ? (
-                    paginatedPool.map((item) => (
-                      <TableRow key={item.id} className="hover:bg-muted/10 border-border/30">
-                        <TableCell className="text-[10px] py-2.5 px-3">{item.faculty_name}</TableCell>
-                        <TableCell className="text-[10px] py-2.5 px-3 capitalize">{item.sex}</TableCell>
-                        <TableCell className="text-[10px] py-2.5 px-3">{item.rank}</TableCell>
-                        <TableCell className="text-[10px] py-2.5 px-3">{item.employment_status}</TableCell>
-                        <TableCell className="text-[10px] py-2.5 px-3">{(item.educational_qualifications || []).join(", ") || "-"}</TableCell>
-                        <TableCell className="text-[10px] py-2.5 px-3">{(item.specialization || []).join(", ") || "-"}</TableCell>
-                        <TableCell className="text-[10px] py-2.5 px-3">{item.other_expertise || "-"}</TableCell>
-                        <TableCell className="text-[10px] py-2.5 px-3">
-                          <DocumentPreview documents={item.documents} />
-                        </TableCell>
-                        <TableCell className="text-[10px] py-2.5 px-3">
-                          <div className="flex items-center justify-end gap-1">
-                            <Button type="button" variant="outline" size="icon" className="h-7 w-7 border-border/50" title="View" aria-label="View" onClick={() => setViewPool(item)}>
-                              <Eye className="h-3 w-3" />
-                            </Button>
-                            {!isViewOnly && (
-                              <>
-                                <Button type="button" variant="outline" size="icon" className="h-7 w-7 border-border/50" title="Update" aria-label="Update" onClick={() => setEditPool(item)}>
-                                  <Pencil className="h-3 w-3" />
-                                </Button>
-                                <Button type="button" variant="outline" size="icon" className="h-7 w-7 border-border/50 text-destructive" title="Delete" aria-label="Delete" disabled={deletingPoolId === item.id} onClick={() => handleDeletePool(item.id)}>
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </>
-                            )}
-                          </div>
+            <>
+              <div className="rounded-md border border-border/50 overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-muted/30">
+                    <TableRow className="hover:bg-transparent border-border/50">
+                      <TableHead className="text-[10px] h-9 font-semibold">Name</TableHead>
+                      <TableHead className="text-[10px] h-9 font-semibold">Sex</TableHead>
+                      <TableHead className="text-[10px] h-9 font-semibold">Rank</TableHead>
+                      <TableHead className="text-[10px] h-9 font-semibold">Employment</TableHead>
+                      <TableHead className="text-[10px] h-9 font-semibold">Educational Qualifications</TableHead>
+                      <TableHead className="text-[10px] h-9 font-semibold">Specialization</TableHead>
+                      <TableHead className="text-[10px] h-9 font-semibold">Other Expertise</TableHead>
+                      <TableHead className="text-[10px] h-9 font-semibold">Documents</TableHead>
+                      <TableHead className="text-[10px] h-9 font-semibold text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredPool.length > 0 ? (
+                      paginatedPool.map((item) => (
+                        <TableRow key={item.id} className="hover:bg-muted/10 border-border/30">
+                          <TableCell className="text-[10px] py-2.5 px-3">{item.faculty_name}</TableCell>
+                          <TableCell className="text-[10px] py-2.5 px-3 capitalize">{item.sex}</TableCell>
+                          <TableCell className="text-[10px] py-2.5 px-3">{item.rank}</TableCell>
+                          <TableCell className="text-[10px] py-2.5 px-3">{item.employment_status}</TableCell>
+                          <TableCell className="text-[10px] py-2.5 px-3">{(item.educational_qualifications || []).join(", ") || "-"}</TableCell>
+                          <TableCell className="text-[10px] py-2.5 px-3">{(item.specialization || []).join(", ") || "-"}</TableCell>
+                          <TableCell className="text-[10px] py-2.5 px-3">{item.other_expertise || "-"}</TableCell>
+                          <TableCell className="text-[10px] py-2.5 px-3">
+                            <DocumentPreview documents={item.documents} />
+                          </TableCell>
+                          <TableCell className="text-[10px] py-2.5 px-3">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button type="button" variant="outline" size="icon" className="h-7 w-7 border-border/50" title="View" aria-label="View" onClick={() => setViewPool(item)}>
+                                <Eye className="h-3 w-3" />
+                              </Button>
+                              {!isViewOnly && (
+                                <>
+                                  <Button type="button" variant="outline" size="icon" className="h-7 w-7 border-border/50" title="Update" aria-label="Update" onClick={() => setEditPool(item)}>
+                                    <Pencil className="h-3 w-3" />
+                                  </Button>
+                                  <Button type="button" variant="outline" size="icon" className="h-7 w-7 border-border/50 text-destructive" title="Delete" aria-label="Delete" disabled={deletingPoolId === item.id} onClick={() => handleDeletePool(item.id)}>
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={9} className="h-24 text-center text-xs text-muted-foreground">
+                          No records found.
                         </TableCell>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={9} className="h-24 text-center text-xs text-muted-foreground">
-                        No records found.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-            <RecordPagination
-              currentPage={poolPage}
-              totalPages={poolTotalPages}
-              startIndex={poolStartIndex}
-              totalItems={filteredPool.length}
-              itemLabel="pool records"
-              onPageChange={setPoolPage}
-            />
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+              <RecordPagination
+                currentPage={poolPage}
+                totalPages={poolTotalPages}
+                startIndex={poolStartIndex}
+                totalItems={filteredPool.length}
+                itemLabel="pool records"
+                onPageChange={setPoolPage}
+              />
+            </>
           )}
         </CardContent>
       </Card>

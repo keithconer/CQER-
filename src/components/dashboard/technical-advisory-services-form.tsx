@@ -19,6 +19,7 @@ import {
   Save,
   UserRound,
   UsersRound,
+  X,
 } from "lucide-react";
 
 import { FullscreenFormHeader } from "@/components/dashboard/fullscreen-form-header";
