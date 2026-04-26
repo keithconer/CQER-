@@ -13,10 +13,9 @@ import {
   Megaphone,
   Save,
   ShieldCheck,
-  X,
 } from "lucide-react";
 
-import { StepIndicator } from "@/components/step-indicator";
+import { FullscreenFormHeader } from "@/components/dashboard/fullscreen-form-header";
 import { FileUpload } from "@/components/dashboard/file-upload";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -243,26 +242,21 @@ export function ExtensionProgramForm({
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-background">
-      <div className="flex items-center justify-between border-b px-6 py-4">
-        <div>
-          <h2 className="text-xl font-semibold">
-            {isViewOnly ? "Extension Program Details" : record ? "Edit Extension Program" : "Manage Extension"}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Record where extension activities were featured using the same fullscreen workflow as the other project leader forms.
-          </p>
-        </div>
-        <Button type="button" variant="ghost" size="icon" className="rounded-full" onClick={onClose}>
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
-
-      <div className="border-b px-6 py-4">
-        <StepIndicator currentStep={currentStep} totalSteps={2} labels={stepLabels} />
-      </div>
+      <FullscreenFormHeader
+        title={isViewOnly ? "Extension Program Details" : record ? "Edit Extension Program" : "Manage Extension"}
+        currentStep={currentStep}
+        totalSteps={2}
+        labels={stepLabels}
+        onClose={onClose}
+        items={[
+          { icon: Megaphone, label: "Activity", value: watchedValues.activity_title || "Unassigned", minWidthClassName: "min-w-[210px]" },
+          { icon: FileText, label: "Linked Project", value: selectedProject?.title || watchedValues.project_title || "N/A", minWidthClassName: "min-w-[210px]" },
+          { icon: CalendarIcon, label: "Date Featured", value: watchedValues.date_featured ? format(watchedValues.date_featured, "MMM d, yyyy") : "Not set", minWidthClassName: "min-w-[150px]" },
+        ]}
+      />
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSave)} className="flex-1 overflow-y-auto px-6 py-5">
+        <form onSubmit={form.handleSubmit(handleSave)} className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 lg:px-8">
           {currentStep === 1 ? (
             <Card className="border-border/60 shadow-sm">
               <CardHeader className="pb-4">

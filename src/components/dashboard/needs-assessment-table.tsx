@@ -46,7 +46,7 @@ export function NeedsAssessmentTable({
   const searchTerm = controlledSearchTerm !== undefined ? controlledSearchTerm : internalSearchTerm;
 
   const [currentPage, setCurrentPage] = React.useState(1);
-  const itemsPerPage = 5;
+  const itemsPerPage = 10;
 
   const [viewDialogOpen, setViewDialogOpen] = React.useState(false);
   const [editDialogOpen, setEditDialogOpen] = React.useState(false);

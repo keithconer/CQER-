@@ -14,6 +14,7 @@ import {
 
 import { type Project } from "@/components/dashboard/projects-table";
 import { type TrainingRecord } from "@/components/dashboard/trainings-form";
+import { RecordPagination, useRecordPagination } from "@/components/dashboard/record-pagination";
 import { type BudgetUtilizationRecord } from "@/lib/actions/budget-utilization";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -483,6 +484,38 @@ export function CollegeCoordinatorDashboard({
     trainingWeightedDaysFilter,
     projectLinkedTrainings,
   ]);
+  const {
+    currentPage: projectPage,
+    paginatedItems: paginatedProjects,
+    resetPagination: resetProjectPagination,
+    setCurrentPage: setProjectPage,
+    startIndex: projectStartIndex,
+    totalPages: projectTotalPages,
+  } = useRecordPagination(filteredProjects);
+  const {
+    currentPage: trainingPage,
+    paginatedItems: paginatedTrainings,
+    resetPagination: resetTrainingPagination,
+    setCurrentPage: setTrainingPage,
+    startIndex: trainingStartIndex,
+    totalPages: trainingTotalPages,
+  } = useRecordPagination(filteredTrainings);
+
+  React.useEffect(() => {
+    resetProjectPagination();
+  }, [projectDepartmentFilter, projectRoleFilter, projectSearch, projectUnitFilter, resetProjectPagination]);
+
+  React.useEffect(() => {
+    resetTrainingPagination();
+  }, [
+    resetTrainingPagination,
+    trainingParticipantsFilter,
+    trainingPeriodFrom,
+    trainingPeriodTo,
+    trainingSearch,
+    trainingTimeFilter,
+    trainingWeightedDaysFilter,
+  ]);
 
   const projectBudgetRows = React.useMemo<ProjectBudgetRow[]>(
     () =>
@@ -689,7 +722,7 @@ export function CollegeCoordinatorDashboard({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredProjects.map((project) => {
+                  {paginatedProjects.map((project) => {
                     const creator = getCreatorLabel(project);
                     return (
                       <TableRow key={project.id} className="border-border/30">
@@ -717,6 +750,14 @@ export function CollegeCoordinatorDashboard({
                 </TableBody>
               </Table>
             </ScrollArea>
+            <RecordPagination
+              currentPage={projectPage}
+              totalPages={projectTotalPages}
+              startIndex={projectStartIndex}
+              totalItems={filteredProjects.length}
+              itemLabel="projects"
+              onPageChange={setProjectPage}
+            />
           </div>
         </DialogContent>
       </Dialog>
@@ -802,7 +843,7 @@ export function CollegeCoordinatorDashboard({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredTrainings.map((record) => (
+                  {paginatedTrainings.map((record) => (
                     <TableRow key={record.id} className="border-border/30">
                       <TableCell className="text-[11px] font-medium">{record.training_title}</TableCell>
                       <TableCell className="text-[11px]">{record.related_project_title || "-"}</TableCell>
@@ -822,6 +863,14 @@ export function CollegeCoordinatorDashboard({
                 </TableBody>
               </Table>
             </ScrollArea>
+            <RecordPagination
+              currentPage={trainingPage}
+              totalPages={trainingTotalPages}
+              startIndex={trainingStartIndex}
+              totalItems={filteredTrainings.length}
+              itemLabel="trainings"
+              onPageChange={setTrainingPage}
+            />
           </div>
         </DialogContent>
       </Dialog>

@@ -12,6 +12,7 @@ import {
   type TechnologyCommercializationRecord,
 } from "@/lib/actions/technologies-innovations-commercialized";
 import { DocumentPreview } from "@/components/dashboard/document-preview";
+import { RecordPagination, useRecordPagination } from "@/components/dashboard/record-pagination";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -126,6 +127,18 @@ export function TechnologiesInnovationsCommercializedManagement({
       return true;
     });
   }, [filterMode, initialRecords, searchTerm]);
+  const {
+    currentPage,
+    paginatedItems: paginatedRecords,
+    resetPagination,
+    setCurrentPage,
+    startIndex,
+    totalPages,
+  } = useRecordPagination(filteredRecords);
+
+  React.useEffect(() => {
+    resetPagination();
+  }, [filterMode, resetPagination, searchTerm]);
 
   const handleSaved = () => {
     setCreateOpen(false);
@@ -230,7 +243,7 @@ export function TechnologiesInnovationsCommercializedManagement({
               </TableHeader>
               <TableBody>
                 {filteredRecords.length > 0 ? (
-                  filteredRecords.map((record) => (
+                  paginatedRecords.map((record) => (
                     <TableRow key={record.id}>
                       <TableCell className="py-4 text-base font-medium">{record.technology_name}</TableCell>
                       <TableCell className="py-4 text-base">{record.year_developed ? format(new Date(record.year_developed), "MMM d, yyyy") : "-"}</TableCell>
@@ -265,6 +278,14 @@ export function TechnologiesInnovationsCommercializedManagement({
               </TableBody>
             </Table>
           </div>
+          <RecordPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            startIndex={startIndex}
+            totalItems={filteredRecords.length}
+            itemLabel="technology records"
+            onPageChange={setCurrentPage}
+          />
         </CardContent>
       </Card>
 

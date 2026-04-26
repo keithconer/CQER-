@@ -8,6 +8,7 @@ import { type Project } from "./projects-table";
 import { IecMaterialsForm } from "./iec-materials-form";
 import { deleteIecMaterial, type IecMaterialRecord } from "@/lib/actions/iec-materials";
 import { DocumentPreview } from "@/components/dashboard/document-preview";
+import { RecordPagination, useRecordPagination } from "@/components/dashboard/record-pagination";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -148,6 +149,18 @@ export function IecMaterialsManagement({
       return true;
     });
   }, [filterMode, initialRecords, searchTerm]);
+  const {
+    currentPage,
+    paginatedItems: paginatedRecords,
+    resetPagination,
+    setCurrentPage,
+    startIndex,
+    totalPages,
+  } = useRecordPagination(filteredRecords);
+
+  React.useEffect(() => {
+    resetPagination();
+  }, [filterMode, resetPagination, searchTerm]);
 
   const handleSaved = () => {
     setCreateOpen(false);
@@ -255,7 +268,7 @@ export function IecMaterialsManagement({
               </TableHeader>
               <TableBody>
                 {filteredRecords.length > 0 ? (
-                  filteredRecords.map((record) => (
+                  paginatedRecords.map((record) => (
                     <TableRow key={record.id}>
                       <TableCell className="py-4 text-base font-medium">{record.title}</TableCell>
                       <TableCell className="py-4 text-base capitalize">{record.format}</TableCell>
@@ -290,6 +303,14 @@ export function IecMaterialsManagement({
               </TableBody>
             </Table>
           </div>
+          <RecordPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            startIndex={startIndex}
+            totalItems={filteredRecords.length}
+            itemLabel="IEC records"
+            onPageChange={setCurrentPage}
+          />
         </CardContent>
       </Card>
 

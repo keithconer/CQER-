@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { type Project } from "@/components/dashboard/projects-table";
 import { ImpactAssessmentForm } from "@/components/dashboard/impact-assessment-form";
 import { DocumentPreview } from "@/components/dashboard/document-preview";
+import { RecordPagination, useRecordPagination } from "@/components/dashboard/record-pagination";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -149,6 +150,18 @@ export function ImpactAssessmentManagement({
       return true;
     });
   }, [records, searchTerm, filterMode]);
+  const {
+    currentPage,
+    paginatedItems: paginatedRecords,
+    resetPagination,
+    setCurrentPage,
+    startIndex,
+    totalPages,
+  } = useRecordPagination(filteredRecords);
+
+  React.useEffect(() => {
+    resetPagination();
+  }, [filterMode, resetPagination, searchTerm]);
 
   const handleSaved = () => {
     setCreateOpen(false);
@@ -252,7 +265,7 @@ export function ImpactAssessmentManagement({
               </TableHeader>
               <TableBody>
                 {filteredRecords.length > 0 ? (
-                  filteredRecords.map((record) => (
+                  paginatedRecords.map((record) => (
                     <TableRow key={record.id}>
                       <TableCell className="py-4 text-base font-medium">
                         <div className="flex items-start gap-2">
@@ -296,6 +309,14 @@ export function ImpactAssessmentManagement({
               </TableBody>
             </Table>
           </div>
+          <RecordPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            startIndex={startIndex}
+            totalItems={filteredRecords.length}
+            itemLabel="impact records"
+            onPageChange={setCurrentPage}
+          />
         </CardContent>
       </Card>
 

@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { RecordPagination, useRecordPagination } from "@/components/dashboard/record-pagination";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -167,6 +168,18 @@ export function TechnicalAdvisoryServicesManagement({
       return true;
     });
   }, [filterMode, initialRecords, searchTerm]);
+  const {
+    currentPage,
+    paginatedItems: paginatedRecords,
+    resetPagination,
+    setCurrentPage,
+    startIndex,
+    totalPages,
+  } = useRecordPagination(filteredRecords);
+
+  React.useEffect(() => {
+    resetPagination();
+  }, [filterMode, resetPagination, searchTerm]);
 
   const handleSaved = () => {
     setCreateOpen(false);
@@ -272,7 +285,7 @@ export function TechnicalAdvisoryServicesManagement({
               </TableHeader>
               <TableBody>
                 {filteredRecords.length > 0 ? (
-                  filteredRecords.map((record) => (
+                  paginatedRecords.map((record) => (
                     <TableRow key={record.id}>
                       <TableCell className="py-4 text-base font-medium">{record.agency_name}</TableCell>
                       <TableCell className="py-4 text-base capitalize">{record.category}</TableCell>
@@ -312,6 +325,14 @@ export function TechnicalAdvisoryServicesManagement({
               </TableBody>
             </Table>
           </div>
+          <RecordPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            startIndex={startIndex}
+            totalItems={filteredRecords.length}
+            itemLabel="technical advisory records"
+            onPageChange={setCurrentPage}
+          />
         </CardContent>
       </Card>
 

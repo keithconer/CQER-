@@ -19,10 +19,9 @@ import {
   Save,
   UserRound,
   UsersRound,
-  X,
 } from "lucide-react";
 
-import { StepIndicator } from "@/components/step-indicator";
+import { FullscreenFormHeader } from "@/components/dashboard/fullscreen-form-header";
 import { FileUpload } from "@/components/dashboard/file-upload";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -293,37 +292,20 @@ export function TechnicalAdvisoryServicesForm({
   return (
     <Form {...form}>
       <form onSubmit={(event) => event.preventDefault()} className="flex h-full min-h-0 flex-col bg-background">
-        <div className="border-b border-border/40 bg-background px-4 py-3 sm:px-6 lg:px-8">
-          <div className="flex w-full items-start justify-between gap-4">
-            <h1 className="text-xl font-bold text-foreground">
-              {initialData?.id ? (isViewOnly ? "Technical Advisory Details" : "Update Technical Advisory") : "Create Technical Advisory"}
-            </h1>
-            {onClose && (
-              <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0 rounded-full" onClick={onClose}>
-                <X className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-          <div className="mt-3 grid gap-3 lg:grid-cols-3">
-            <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-2.5">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80">Agency</p>
-              <p className="truncate text-xs font-medium text-foreground">{form.watch("agency_name") || "Unassigned"}</p>
-            </div>
-            <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-2.5">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80">Category</p>
-              <p className="truncate text-xs font-medium text-foreground">{form.watch("category")}</p>
-            </div>
-            <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-2.5">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80">Grand Total Ratings</p>
-              <p className="truncate text-xs font-medium text-foreground">{grandTotal}</p>
-            </div>
-          </div>
-          <div className="mt-4 w-full">
-            <StepIndicator currentStep={currentStep} totalSteps={stepLabels.length} labels={stepLabels} />
-          </div>
-        </div>
+        <FullscreenFormHeader
+          title={initialData?.id ? (isViewOnly ? "Technical Advisory Details" : "Update Technical Advisory") : "Create Technical Advisory"}
+          currentStep={currentStep}
+          totalSteps={stepLabels.length}
+          labels={stepLabels}
+          onClose={onClose}
+          items={[
+            { icon: Building2, label: "Agency", value: form.watch("agency_name") || "Unassigned", minWidthClassName: "min-w-[200px]" },
+            { icon: ClipboardCheck, label: "Category", value: form.watch("category") || "N/A", minWidthClassName: "min-w-[140px]" },
+            { icon: UsersRound, label: "Grand Total Ratings", value: grandTotal, minWidthClassName: "min-w-[160px]" },
+          ]}
+        />
 
-        <div className="flex-1 overflow-y-auto bg-background px-4 py-5 sm:px-6 lg:px-8">
+        <div className="flex-1 overflow-y-auto bg-background px-4 py-4 sm:px-6 lg:px-8">
           {currentStep === 1 && (
             <div className="space-y-6">
               <Card className="rounded-3xl border-border/40 shadow-none">

@@ -91,7 +91,7 @@ interface SuperAdminOverviewProps {
   currentUserId: string;
 }
 
-const ITEMS_PER_PAGE = 6;
+const ITEMS_PER_PAGE = 10;
 
 function formatRole(role: RoleType) {
   if (role === "super_admin") return "Super Admin";

@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DocumentPreview } from "./document-preview";
+import { RecordPagination, useRecordPagination } from "@/components/dashboard/record-pagination";
 
 export interface AwardRecord {
   id: string;
@@ -103,6 +104,18 @@ export function AwardsManagement({ initialAwards, department, userType, currentU
       );
     });
   }, [currentUserId, initialAwards, searchTerm, selectedScopes]);
+  const {
+    currentPage,
+    paginatedItems: paginatedAwards,
+    resetPagination,
+    setCurrentPage,
+    startIndex,
+    totalPages,
+  } = useRecordPagination(filteredAwards);
+
+  React.useEffect(() => {
+    resetPagination();
+  }, [resetPagination, searchTerm, selectedScopes]);
 
   const toggleScopeFilter = (value: string) => {
     setSelectedScopes((prev) =>
@@ -216,7 +229,7 @@ export function AwardsManagement({ initialAwards, department, userType, currentU
               </TableHeader>
               <TableBody>
                 {filteredAwards.length > 0 ? (
-                  filteredAwards.map((award) => (
+                  paginatedAwards.map((award) => (
                     <TableRow key={award.id} className="hover:bg-muted/10 border-border/30">
                       <TableCell className="text-[10px] py-2.5 px-3">{award.department || "-"}</TableCell>
                       <TableCell className="text-[10px] py-2.5 px-3">
@@ -288,6 +301,14 @@ export function AwardsManagement({ initialAwards, department, userType, currentU
               </TableBody>
             </Table>
           </div>
+          <RecordPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            startIndex={startIndex}
+            totalItems={filteredAwards.length}
+            itemLabel="awards"
+            onPageChange={setCurrentPage}
+          />
         </CardContent>
       </Card>
 

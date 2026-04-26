@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 
 import { ProjectLeaderRegistrationForm } from "@/components/dashboard/project-leader-registration-form";
+import { RecordPagination, useRecordPagination } from "@/components/dashboard/record-pagination";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -206,6 +207,18 @@ export function ProjectLeaderRegistrationManagement({
       return true;
     });
   }, [projects, searchTerm, filterMode]);
+  const {
+    currentPage,
+    paginatedItems: paginatedProjects,
+    resetPagination,
+    setCurrentPage,
+    startIndex,
+    totalPages,
+  } = useRecordPagination(filteredProjects);
+
+  React.useEffect(() => {
+    resetPagination();
+  }, [filterMode, resetPagination, searchTerm]);
 
   const handleSaved = () => {
     setCreateOpen(false);
@@ -308,7 +321,7 @@ export function ProjectLeaderRegistrationManagement({
               </TableHeader>
               <TableBody>
                 {filteredProjects.length > 0 ? (
-                  filteredProjects.map((project) => (
+                  paginatedProjects.map((project) => (
                     <TableRow key={project.id}>
                       <TableCell className="py-4 text-base font-medium">{project.title}</TableCell>
                       <TableCell className="py-4 text-base">{getDepartmentUnit(project)}</TableCell>
@@ -344,6 +357,14 @@ export function ProjectLeaderRegistrationManagement({
               </TableBody>
             </Table>
           </div>
+          <RecordPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            startIndex={startIndex}
+            totalItems={filteredProjects.length}
+            itemLabel="project registrations"
+            onPageChange={setCurrentPage}
+          />
         </CardContent>
       </Card>
 

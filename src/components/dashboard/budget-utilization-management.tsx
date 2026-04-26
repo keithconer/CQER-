@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { type Project } from "@/components/dashboard/projects-table";
 import { BudgetUtilizationForm } from "@/components/dashboard/budget-utilization-form";
 import { DocumentPreview } from "@/components/dashboard/document-preview";
+import { RecordPagination, useRecordPagination } from "@/components/dashboard/record-pagination";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -167,6 +168,18 @@ export function BudgetUtilizationManagement({
       return true;
     });
   }, [records, searchTerm, filterMode]);
+  const {
+    currentPage,
+    paginatedItems: paginatedRecords,
+    resetPagination,
+    setCurrentPage,
+    startIndex,
+    totalPages,
+  } = useRecordPagination(filteredRecords);
+
+  React.useEffect(() => {
+    resetPagination();
+  }, [filterMode, resetPagination, searchTerm]);
 
   const handleSaved = () => {
     setCreateOpen(false);
@@ -271,7 +284,7 @@ export function BudgetUtilizationManagement({
               </TableHeader>
               <TableBody>
                 {filteredRecords.length > 0 ? (
-                  filteredRecords.map((record) => {
+                  paginatedRecords.map((record) => {
                     const remaining = Number(record.total_budget || 0) - Number(record.utilized_total || 0);
                     return (
                       <TableRow key={record.id}>
@@ -319,6 +332,14 @@ export function BudgetUtilizationManagement({
               </TableBody>
             </Table>
           </div>
+          <RecordPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            startIndex={startIndex}
+            totalItems={filteredRecords.length}
+            itemLabel="budget records"
+            onPageChange={setCurrentPage}
+          />
         </CardContent>
       </Card>
 

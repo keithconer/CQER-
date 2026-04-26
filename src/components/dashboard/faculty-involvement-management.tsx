@@ -67,6 +67,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { RecordPagination, useRecordPagination } from "@/components/dashboard/record-pagination";
 
 const rankOptions = [
   "Associate Professor II",
@@ -902,6 +903,27 @@ export function FacultyInvolvementManagement({
         .includes(term)
     );
   }, [currentUserId, poolRecords, searchTerm, selectedScopes]);
+  const {
+    currentPage: facultyPage,
+    paginatedItems: paginatedFaculty,
+    resetPagination: resetFacultyPagination,
+    setCurrentPage: setFacultyPage,
+    startIndex: facultyStartIndex,
+    totalPages: facultyTotalPages,
+  } = useRecordPagination(filteredFaculty);
+  const {
+    currentPage: poolPage,
+    paginatedItems: paginatedPool,
+    resetPagination: resetPoolPagination,
+    setCurrentPage: setPoolPage,
+    startIndex: poolStartIndex,
+    totalPages: poolTotalPages,
+  } = useRecordPagination(filteredPool);
+
+  React.useEffect(() => {
+    resetFacultyPagination();
+    resetPoolPagination();
+  }, [activeTab, resetFacultyPagination, resetPoolPagination, searchTerm, selectedScopes]);
 
   const toggleScopeFilter = (value: string) => {
     setSelectedScopes((prev) =>
@@ -1041,7 +1063,7 @@ export function FacultyInvolvementManagement({
                 </TableHeader>
                 <TableBody>
                   {filteredFaculty.length > 0 ? (
-                    filteredFaculty.map((item) => (
+                    paginatedFaculty.map((item) => (
                       <TableRow key={item.id} className="hover:bg-muted/10 border-border/30">
                         <TableCell className="text-[10px] py-2.5 px-3">{item.faculty_name}</TableCell>
                         <TableCell className="text-[10px] py-2.5 px-3 capitalize">{item.sex}</TableCell>
@@ -1082,6 +1104,14 @@ export function FacultyInvolvementManagement({
                 </TableBody>
               </Table>
             </div>
+            <RecordPagination
+              currentPage={facultyPage}
+              totalPages={facultyTotalPages}
+              startIndex={facultyStartIndex}
+              totalItems={filteredFaculty.length}
+              itemLabel="faculty records"
+              onPageChange={setFacultyPage}
+            />
           ) : (
             <div className="rounded-md border border-border/50 overflow-hidden">
               <Table>
@@ -1100,7 +1130,7 @@ export function FacultyInvolvementManagement({
                 </TableHeader>
                 <TableBody>
                   {filteredPool.length > 0 ? (
-                    filteredPool.map((item) => (
+                    paginatedPool.map((item) => (
                       <TableRow key={item.id} className="hover:bg-muted/10 border-border/30">
                         <TableCell className="text-[10px] py-2.5 px-3">{item.faculty_name}</TableCell>
                         <TableCell className="text-[10px] py-2.5 px-3 capitalize">{item.sex}</TableCell>
@@ -1141,6 +1171,14 @@ export function FacultyInvolvementManagement({
                 </TableBody>
               </Table>
             </div>
+            <RecordPagination
+              currentPage={poolPage}
+              totalPages={poolTotalPages}
+              startIndex={poolStartIndex}
+              totalItems={filteredPool.length}
+              itemLabel="pool records"
+              onPageChange={setPoolPage}
+            />
           )}
         </CardContent>
       </Card>

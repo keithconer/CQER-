@@ -71,6 +71,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { type Project } from "@/components/dashboard/projects-table";
 import { type TrainingRecord } from "@/components/dashboard/trainings-form";
+import { RecordPagination, useRecordPagination } from "@/components/dashboard/record-pagination";
 
 type ModuleCount = {
   label: string;
@@ -651,7 +652,7 @@ export function ProjectLeaderDashboard({
   const [trainingPeriodTo, setTrainingPeriodTo] = React.useState("");
   const populatedModules = moduleCounts.filter((item) => item.value > 0);
   const maxRadar = Math.max(1, ...radarSeries.map((item) => item.fullMark));
-  const facultyPageSize = 5;
+  const facultyPageSize = 10;
   const facultyTotalPages = Math.max(1, Math.ceil(facultyInvolvement.length / facultyPageSize));
   const facultyPageItems = facultyInvolvement.slice(
     (facultyPage - 1) * facultyPageSize,
@@ -721,6 +722,38 @@ export function ProjectLeaderDashboard({
     });
   }, [
     projectLinkedTrainings,
+    trainingParticipantsFilter,
+    trainingPeriodFrom,
+    trainingPeriodTo,
+    trainingSearch,
+    trainingTimeFilter,
+    trainingWeightedDaysFilter,
+  ]);
+  const {
+    currentPage: projectPage,
+    paginatedItems: paginatedProjects,
+    resetPagination: resetProjectPagination,
+    setCurrentPage: setProjectPage,
+    startIndex: projectStartIndex,
+    totalPages: projectTotalPages,
+  } = useRecordPagination(filteredProjects);
+  const {
+    currentPage: trainingPage,
+    paginatedItems: paginatedTrainings,
+    resetPagination: resetTrainingPagination,
+    setCurrentPage: setTrainingPage,
+    startIndex: trainingStartIndex,
+    totalPages: trainingTotalPages,
+  } = useRecordPagination(filteredTrainings);
+
+  React.useEffect(() => {
+    resetProjectPagination();
+  }, [projectCategoryFilter, projectSearch, resetProjectPagination]);
+
+  React.useEffect(() => {
+    resetTrainingPagination();
+  }, [
+    resetTrainingPagination,
     trainingParticipantsFilter,
     trainingPeriodFrom,
     trainingPeriodTo,
@@ -1069,7 +1102,7 @@ export function ProjectLeaderDashboard({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredProjects.map((project) => (
+                  {paginatedProjects.map((project) => (
                     <TableRow key={project.id} className="border-border/30">
                       <TableCell className="text-[11px] font-medium">{project.title || "Untitled project"}</TableCell>
                       <TableCell className="text-[11px]">{formatProjectDuration(project)}</TableCell>
@@ -1088,6 +1121,14 @@ export function ProjectLeaderDashboard({
                 </TableBody>
               </Table>
             </ScrollArea>
+            <RecordPagination
+              currentPage={projectPage}
+              totalPages={projectTotalPages}
+              startIndex={projectStartIndex}
+              totalItems={filteredProjects.length}
+              itemLabel="projects"
+              onPageChange={setProjectPage}
+            />
           </div>
         </DialogContent>
       </Dialog>
@@ -1177,7 +1218,7 @@ export function ProjectLeaderDashboard({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredTrainings.map((record) => (
+                  {paginatedTrainings.map((record) => (
                     <TableRow key={record.id} className="border-border/30">
                       <TableCell className="text-[11px] font-medium">{record.training_title}</TableCell>
                       <TableCell className="text-[11px]">{record.related_project_title || "-"}</TableCell>
@@ -1196,6 +1237,14 @@ export function ProjectLeaderDashboard({
                 </TableBody>
               </Table>
             </ScrollArea>
+            <RecordPagination
+              currentPage={trainingPage}
+              totalPages={trainingTotalPages}
+              startIndex={trainingStartIndex}
+              totalItems={filteredTrainings.length}
+              itemLabel="trainings"
+              onPageChange={setTrainingPage}
+            />
           </div>
         </DialogContent>
       </Dialog>

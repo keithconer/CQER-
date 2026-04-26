@@ -14,10 +14,9 @@ import {
   Save,
   ShieldCheck,
   UserRoundSearch,
-  X,
 } from "lucide-react";
 
-import { StepIndicator } from "@/components/step-indicator";
+import { FullscreenFormHeader } from "@/components/dashboard/fullscreen-form-header";
 import { FileUpload } from "@/components/dashboard/file-upload";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -241,26 +240,21 @@ export function ImpactAssessmentForm({
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-background">
-      <div className="flex items-center justify-between border-b px-6 py-4">
-        <div>
-          <h2 className="text-xl font-semibold">
-            {isViewOnly ? "Impact / Assessment Details" : record ? "Edit Impact / Assessment" : "Create Assessment"}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Record project or training impact assessments using the same workflow as the other project leader forms.
-          </p>
-        </div>
-        <Button type="button" variant="ghost" size="icon" className="rounded-full" onClick={onClose}>
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
-
-      <div className="border-b px-6 py-4">
-        <StepIndicator currentStep={currentStep} totalSteps={2} labels={stepLabels} />
-      </div>
+      <FullscreenFormHeader
+        title={isViewOnly ? "Impact / Assessment Details" : record ? "Edit Impact / Assessment" : "Create Assessment"}
+        currentStep={currentStep}
+        totalSteps={2}
+        labels={stepLabels}
+        onClose={onClose}
+        items={[
+          { icon: Activity, label: "Activity", value: selectedProject?.title || watchedValues.activity_name || "Manual entry", minWidthClassName: "min-w-[220px]" },
+          { icon: FileText, label: "Proponent", value: watchedValues.proponent || "N/A", minWidthClassName: "min-w-[170px]" },
+          { icon: UserRoundSearch, label: "Lead Evaluator", value: watchedValues.lead_evaluator || "N/A", minWidthClassName: "min-w-[180px]" },
+        ]}
+      />
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSave)} className="flex-1 overflow-y-auto px-6 py-5">
+        <form onSubmit={form.handleSubmit(handleSave)} className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 lg:px-8">
           {currentStep === 1 ? (
             <Card className="border-border/60 shadow-sm">
               <CardHeader className="pb-4">

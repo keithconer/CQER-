@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DocumentPreview } from "./document-preview";
+import { RecordPagination, useRecordPagination } from "@/components/dashboard/record-pagination";
 
 export interface StudentInvolvementRecord {
   id: string;
@@ -113,6 +114,18 @@ export function StudentInvolvementManagement({
         .includes(term)
     );
   }, [currentUserId, initialRecords, searchTerm, selectedScopes]);
+  const {
+    currentPage,
+    paginatedItems: paginatedRecords,
+    resetPagination,
+    setCurrentPage,
+    startIndex,
+    totalPages,
+  } = useRecordPagination(filteredRecords);
+
+  React.useEffect(() => {
+    resetPagination();
+  }, [resetPagination, searchTerm, selectedScopes]);
 
   const toggleScopeFilter = (value: string) => {
     setSelectedScopes((prev) =>
@@ -226,7 +239,7 @@ export function StudentInvolvementManagement({
               </TableHeader>
               <TableBody>
                 {filteredRecords.length > 0 ? (
-                  filteredRecords.map((record) => (
+                  paginatedRecords.map((record) => (
                     <TableRow key={record.id} className="hover:bg-muted/10 border-border/30">
                       <TableCell className="text-[10px] py-2.5 px-3">{record.college || "-"}</TableCell>
                       <TableCell className="text-[10px] py-2.5 px-3">{record.department || "-"}</TableCell>
@@ -292,6 +305,14 @@ export function StudentInvolvementManagement({
               </TableBody>
             </Table>
           </div>
+          <RecordPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            startIndex={startIndex}
+            totalItems={filteredRecords.length}
+            itemLabel="student involvement records"
+            onPageChange={setCurrentPage}
+          />
         </CardContent>
       </Card>
 

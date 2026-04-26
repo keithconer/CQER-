@@ -108,7 +108,7 @@ export function ProjectsTable({
   const searchTerm = controlledSearchTerm ?? internalSearchTerm;
   const setSearchTerm = onSearchTermChange ?? setInternalSearchTerm;
   const [currentPage, setCurrentPage] = React.useState(1);
-  const itemsPerPage = 5;
+  const itemsPerPage = 10;
   const showActionsColumn = !readOnly || allowViewOnlyAction;
 
   const filteredProjects = React.useMemo(() => {

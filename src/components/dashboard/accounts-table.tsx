@@ -33,7 +33,7 @@ interface AccountsTableProps {
   description: string;
 }
 
-const ITEMS_PER_PAGE = 8;
+const ITEMS_PER_PAGE = 10;
 
 function formatRole(role?: RoleType | null) {
   if (role === "super_admin") return "Super Admin";

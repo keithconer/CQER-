@@ -163,7 +163,7 @@ export function ProjectProposalsTable({
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const router = useRouter();
-  const itemsPerPage = 5;
+  const itemsPerPage = 10;
   const showActionsColumn = !readOnly || allowViewOnlyAction;
 
   const filtered = React.useMemo(() => {

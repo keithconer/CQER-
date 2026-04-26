@@ -31,6 +31,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { type Project } from "./projects-table";
+import { RecordPagination, useRecordPagination } from "@/components/dashboard/record-pagination";
 import { formatThematicAreaLetters } from "@/lib/thematic-area";
 
 interface FundingManagementProps {
@@ -340,6 +341,18 @@ export function FundingManagement({
           .includes(term);
       });
   }, [filter, projects, searchTerm]);
+  const {
+    currentPage,
+    paginatedItems: paginatedRecords,
+    resetPagination,
+    setCurrentPage,
+    startIndex,
+    totalPages,
+  } = useRecordPagination(records);
+
+  React.useEffect(() => {
+    resetPagination();
+  }, [filter, resetPagination, searchTerm]);
 
   const handleOpenExportDialog = () => {
     setExportInternal(filter !== "external");
@@ -521,7 +534,7 @@ export function FundingManagement({
               </TableHeader>
               <TableBody>
                 {records.length > 0 ? (
-                  records.map((project) => {
+                  paginatedRecords.map((project) => {
                     const details = getFundingDetails(project);
                     return (
                       <TableRow key={project.id} className="hover:bg-muted/10 border-border/30">
@@ -568,6 +581,14 @@ export function FundingManagement({
               </TableBody>
             </Table>
           </div>
+          <RecordPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            startIndex={startIndex}
+            totalItems={records.length}
+            itemLabel="funding records"
+            onPageChange={setCurrentPage}
+          />
         </CardContent>
       </Card>
 

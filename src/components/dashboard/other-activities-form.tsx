@@ -13,10 +13,9 @@ import {
   FileText,
   Save,
   ShieldCheck,
-  X,
 } from "lucide-react";
 
-import { StepIndicator } from "@/components/step-indicator";
+import { FullscreenFormHeader } from "@/components/dashboard/fullscreen-form-header";
 import { FileUpload } from "@/components/dashboard/file-upload";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -298,26 +297,21 @@ export function OtherActivitiesForm({
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-background">
-      <div className="flex items-center justify-between border-b px-6 py-4">
-        <div>
-          <h2 className="text-xl font-semibold">
-            {isViewOnly ? "Other Activities Details" : record ? "Edit Other Activities" : "Manage Other Activities"}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Record project leader activities using the same fullscreen workflow as the other forms.
-          </p>
-        </div>
-        <Button type="button" variant="ghost" size="icon" className="rounded-full" onClick={onClose}>
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
-
-      <div className="border-b px-6 py-4">
-        <StepIndicator currentStep={currentStep} totalSteps={2} labels={stepLabels} />
-      </div>
+      <FullscreenFormHeader
+        title={isViewOnly ? "Other Activities Details" : record ? "Edit Other Activities" : "Manage Other Activities"}
+        currentStep={currentStep}
+        totalSteps={2}
+        labels={stepLabels}
+        onClose={onClose}
+        items={[
+          { icon: ClipboardList, label: "Activity", value: watchedValues.activity_title || "Unassigned", minWidthClassName: "min-w-[210px]" },
+          { icon: ShieldCheck, label: "Category", value: watchedValues.category || "N/A", minWidthClassName: "min-w-[140px]" },
+          { icon: FileText, label: "Participants", value: watchedValues.participants || "N/A", minWidthClassName: "min-w-[170px]" },
+        ]}
+      />
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSave)} className="flex-1 overflow-y-auto px-6 py-5">
+        <form onSubmit={form.handleSubmit(handleSave)} className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 lg:px-8">
           {currentStep === 1 ? (
             <Card className="border-border/60 shadow-sm">
               <CardHeader className="pb-4">

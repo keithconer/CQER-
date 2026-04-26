@@ -13,10 +13,9 @@ import {
   Landmark,
   Save,
   ShieldCheck,
-  X,
 } from "lucide-react";
 
-import { StepIndicator } from "@/components/step-indicator";
+import { FullscreenFormHeader } from "@/components/dashboard/fullscreen-form-header";
 import { FileUpload } from "@/components/dashboard/file-upload";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -266,26 +265,21 @@ export function OrdinanceResolutionForm({
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-background">
-      <div className="flex items-center justify-between border-b px-6 py-4">
-        <div>
-          <h2 className="text-xl font-semibold">
-            {isViewOnly ? "Ordinance / Resolution Details" : record ? "Edit Ordinance / Resolution" : "Create Ordinance"}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Keep ordinance and resolution records aligned with the rest of the project leader modules.
-          </p>
-        </div>
-        <Button type="button" variant="ghost" size="icon" className="rounded-full" onClick={onClose}>
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
-
-      <div className="border-b px-6 py-4">
-        <StepIndicator currentStep={currentStep} totalSteps={2} labels={stepLabels} />
-      </div>
+      <FullscreenFormHeader
+        title={isViewOnly ? "Ordinance / Resolution Details" : record ? "Edit Ordinance / Resolution" : "Create Ordinance"}
+        currentStep={currentStep}
+        totalSteps={2}
+        labels={stepLabels}
+        onClose={onClose}
+        items={[
+          { icon: Landmark, label: "Ordinance", value: watchedValues.name || "Unassigned", minWidthClassName: "min-w-[220px]" },
+          { icon: ShieldCheck, label: "Status", value: getStatusLabel(watchedValues.status || "submitted"), minWidthClassName: "min-w-[140px]" },
+          { icon: FileText, label: "Agency", value: watchedValues.implementing_agency || "N/A", minWidthClassName: "min-w-[180px]" },
+        ]}
+      />
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSave)} className="flex-1 overflow-y-auto px-6 py-5">
+        <form onSubmit={form.handleSubmit(handleSave)} className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 lg:px-8">
           {currentStep === 1 ? (
             <Card className="border-border/60 shadow-sm">
               <CardHeader className="pb-4">

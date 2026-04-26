@@ -11,6 +11,7 @@ import {
   type TrainingRecord,
   TrainingsForm,
 } from "@/components/dashboard/trainings-form";
+import { RecordPagination, useRecordPagination } from "@/components/dashboard/record-pagination";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -224,6 +225,18 @@ export function TrainingsManagement({
       return true;
     });
   }, [currentUserId, filterMode, initialRecords, searchTerm]);
+  const {
+    currentPage,
+    paginatedItems: paginatedRecords,
+    resetPagination,
+    setCurrentPage,
+    startIndex,
+    totalPages,
+  } = useRecordPagination(filteredRecords);
+
+  React.useEffect(() => {
+    resetPagination();
+  }, [filterMode, resetPagination, searchTerm]);
 
   const handleSaved = () => {
     setCreateOpen(false);
@@ -339,7 +352,7 @@ export function TrainingsManagement({
               </TableHeader>
               <TableBody>
                 {filteredRecords.length > 0 ? (
-                  filteredRecords.map((record) => (
+                  paginatedRecords.map((record) => (
                     <TableRow
                       key={record.id}
                       title={
@@ -409,6 +422,14 @@ export function TrainingsManagement({
               </TableBody>
             </Table>
           </div>
+          <RecordPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            startIndex={startIndex}
+            totalItems={filteredRecords.length}
+            itemLabel="trainings"
+            onPageChange={setCurrentPage}
+          />
         </CardContent>
       </Card>
 

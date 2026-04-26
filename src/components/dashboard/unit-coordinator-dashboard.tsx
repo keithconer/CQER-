@@ -96,7 +96,7 @@ export function UnitCoordinatorDashboard({
   const [usersPage, setUsersPage] = React.useState(1);
   const [recordsPage, setRecordsPage] = React.useState(1);
   const timeoutRef = React.useRef<number | null>(null);
-  const pageSize = 5;
+  const pageSize = 10;
 
   React.useEffect(() => {
     return () => {
