@@ -6,6 +6,8 @@ import { useFieldArray, useForm, useWatch, type Control } from "react-hook-form"
 import * as z from "zod";
 import { addYears, differenceInCalendarDays, differenceInYears, endOfToday, format, isAfter, isValid, parse } from "date-fns";
 import {
+  AlertTriangle,
+  Building2,
   CalendarIcon,
   ChevronLeft,
   ChevronRight,
@@ -16,7 +18,8 @@ import {
   FolderOpen,
   Users,
   Target,
-  Briefcase
+  Briefcase,
+  Wallet,
 } from "lucide-react";
 
 import { StepIndicator } from "@/components/step-indicator";
@@ -203,6 +206,7 @@ const formSchema = z.object({
 }).superRefine((value, ctx) => {
   const start = parseDateInput(value.start_date);
   const end = parseDateInput(value.end_date);
+  const budgetSummaryTotal = value.budget_summary.reduce((sum, row) => sum + getBudgetRowTotal(row), 0);
 
   if (!start) {
     ctx.addIssue({
@@ -225,6 +229,18 @@ const formSchema = z.object({
       code: z.ZodIssueCode.custom,
       path: ["end_date"],
       message: "End date must be on or after the start date.",
+    });
+  }
+
+  if (budgetSummaryTotal > Number(value.budget || 0)) {
+    const overage = budgetSummaryTotal - Number(value.budget || 0);
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["budget_summary"],
+      message: `Budget summary exceeds the available budget by PHP ${overage.toLocaleString("en-PH", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}.`,
     });
   }
 });
@@ -368,6 +384,13 @@ function getBudgetRowTotal(row?: FormValues["budget_summary"][number]) {
     Number(row.communication || 0) +
     Number(row.other_mooe || 0)
   );
+}
+
+function formatPhpCurrency(value: number) {
+  return `PHP ${value.toLocaleString("en-PH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 }
 
 function getUniqueYears(values: Date[]) {
@@ -1150,6 +1173,9 @@ export function ProjectLeaderRegistrationForm({
     [startDateInput, endDateInput]
   );
   const budgetSummary = useWatch({ control: typedControl, name: "budget_summary" }) || [];
+  const watchedDepartmentUnit =
+    useWatch({ control: typedControl, name: "department_unit" }) ||
+    getDepartmentUnitLabel(currentDepartment, currentUnit);
   const partnerAgenciesArray = useFieldArray({ control: typedControl, name: "partner_agencies" });
   const strategiesArray = useFieldArray({ control: typedControl, name: "strategies" });
   const budgetYearsArray = useFieldArray({ control: typedControl, name: "budget_summary" });
@@ -1194,7 +1220,10 @@ export function ProjectLeaderRegistrationForm({
   }, [inclusiveDates, form, budgetYearsArray]);
 
   const budgetGrandTotal = budgetSummary.reduce((sum, item) => sum + getBudgetRowTotal(item), 0);
-  const displayedBudgetTotal = currentStep >= 4 && budgetGrandTotal > 0 ? budgetGrandTotal : budgetInput;
+  const remainingBudget = Number((budgetInput - budgetGrandTotal).toFixed(2));
+  const budgetExceededAmount = remainingBudget < 0 ? Math.abs(remainingBudget) : 0;
+  const isBudgetExceeded = budgetExceededAmount > 0;
+  const displayedBudgetTotal = remainingBudget;
 
   const handleToggleValue = (fieldName: "extension_agenda" | "sdg_main" | "sdg_sub", value: string) => {
     const current = form.getValues(fieldName);
@@ -1241,6 +1270,8 @@ export function ProjectLeaderRegistrationForm({
 
     const startDate = parseDateInput(values.start_date);
     const endDate = parseDateInput(values.end_date);
+    const utilizedBudgetTotal = values.budget_summary.reduce((sum, row) => sum + getBudgetRowTotal(row), 0);
+    const remainingBudgetTotal = Number((Number(values.budget || 0) - utilizedBudgetTotal).toFixed(2));
     const generatedInclusiveDates = buildInclusiveDatesFromRange(startDate, endDate);
     if (!startDate || !endDate || generatedInclusiveDates.length === 0) {
       setIsSubmitting(false);
@@ -1257,7 +1288,8 @@ export function ProjectLeaderRegistrationForm({
       })),
       needs_assessment_dates: values.needs_assessment_dates.map((item) => item.toISOString()),
       duration: getDurationLabel(generatedInclusiveDates),
-      budget_summary_total: budgetGrandTotal,
+      budget_summary_total: utilizedBudgetTotal,
+      budget_remaining: remainingBudgetTotal,
     };
     const budgetRequirements = values.budget_summary.map((yearRow) => ({
       name: `Year ${yearRow.year}`,
@@ -1288,7 +1320,7 @@ export function ProjectLeaderRegistrationForm({
       start_date: startDate.toISOString(),
       end_date: endDate.toISOString(),
       budget_requirements: budgetRequirements,
-      budget_total: budgetGrandTotal > 0 ? budgetGrandTotal : values.budget,
+      budget_total: remainingBudgetTotal,
       gad_score: 0,
       contact_person: values.project_leader_name,
       contact_details: values.partner_agencies[0]?.contact_details || "",
@@ -1329,18 +1361,39 @@ export function ProjectLeaderRegistrationForm({
             )}
           </div>
           <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_200px_200px]">
-             <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-2.5">
-               <p className="truncate text-xs font-semibold text-foreground">{form.getValues("department_unit")}</p>
-             </div>
-             <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-2.5">
-               <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80">Duration</p>
-               <p className="truncate text-xs font-medium text-foreground">{getDurationLabel(inclusiveDates)}</p>
-             </div>
-              <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-2.5">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80">Total Budget</p>
-                <p className="truncate text-xs font-medium text-foreground">PHP {displayedBudgetTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-2.5">
+              <div className="flex items-start gap-2">
+                <Building2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80">Department / Unit</p>
+                  <p className="truncate text-xs font-medium text-foreground">{watchedDepartmentUnit}</p>
+                </div>
               </div>
-           </div>
+            </div>
+            <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-2.5">
+              <div className="flex items-start gap-2">
+                <CalendarIcon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80">Duration</p>
+                  <p className="truncate text-xs font-medium text-foreground">{getDurationLabel(inclusiveDates)}</p>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-2.5">
+              <div className="flex items-start gap-2">
+                <Wallet className={cn("mt-0.5 h-3.5 w-3.5 shrink-0", isBudgetExceeded ? "text-destructive" : "text-muted-foreground")} />
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80">Available Budget</p>
+                  <p className={cn("truncate text-xs font-medium", isBudgetExceeded ? "text-destructive" : "text-foreground")}>
+                    {formatPhpCurrency(displayedBudgetTotal)}
+                  </p>
+                  <p className="truncate text-[10px] text-muted-foreground/80">
+                    Used {formatPhpCurrency(budgetGrandTotal)} of {formatPhpCurrency(budgetInput)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
           <div className="mt-4 w-full">
             <StepIndicator currentStep={currentStep} totalSteps={5} labels={stepLabels} />
           </div>
@@ -1591,7 +1644,7 @@ export function ProjectLeaderRegistrationForm({
                         <div key={field.id} className="rounded-2xl border border-border/40 bg-background p-4">
                           <div className="mb-4 flex items-center justify-between">
                             <p className="text-sm font-semibold">Year {form.getValues(`budget_summary.${index}.year`)}</p>
-                            <p className="text-xs font-medium text-primary">Total: PHP {getBudgetRowTotal(budgetSummary[index]).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                            <p className="text-xs font-medium text-primary">Total: {formatPhpCurrency(getBudgetRowTotal(budgetSummary[index]))}</p>
                           </div>
                           <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-5">
                             {[
@@ -1608,7 +1661,26 @@ export function ProjectLeaderRegistrationForm({
                           </div>
                         </div>
                       ))}
-                      <div className="rounded-2xl border border-border/40 bg-muted/10 px-4 py-3 text-xs"><span className="font-semibold text-foreground">Grand Total:</span> PHP {budgetGrandTotal.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                      <div className="grid gap-3 md:grid-cols-3">
+                        <div className="rounded-2xl border border-border/40 bg-muted/10 px-4 py-3 text-xs">
+                          <span className="font-semibold text-foreground">Original Budget:</span> {` ${formatPhpCurrency(budgetInput)}`}
+                        </div>
+                        <div className="rounded-2xl border border-border/40 bg-muted/10 px-4 py-3 text-xs">
+                          <span className="font-semibold text-foreground">Budget Summary Total:</span> {` ${formatPhpCurrency(budgetGrandTotal)}`}
+                        </div>
+                        <div className={cn("rounded-2xl border px-4 py-3 text-xs", isBudgetExceeded ? "border-destructive/40 bg-destructive/5 text-destructive" : "border-border/40 bg-muted/10")}>
+                          <span className="font-semibold">Remaining Budget:</span> {` ${formatPhpCurrency(remainingBudget)}`}
+                        </div>
+                      </div>
+                      {isBudgetExceeded ? (
+                        <div className="flex items-start gap-2 rounded-2xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-xs text-destructive">
+                          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                          <p>Budget summary exceeds the available budget by {formatPhpCurrency(budgetExceededAmount)}. Reduce the breakdown amounts before saving.</p>
+                        </div>
+                      ) : null}
+                      {form.formState.errors.budget_summary?.message ? (
+                        <p className="text-xs font-medium text-destructive">{form.formState.errors.budget_summary.message}</p>
+                      ) : null}
                     </CardContent>
                   </Card>
 
