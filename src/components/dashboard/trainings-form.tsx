@@ -21,11 +21,10 @@ import {
   Trash2,
   Users,
   Wallet,
-  X,
 } from "lucide-react";
 
-import { StepIndicator } from "@/components/step-indicator";
 import { FileUpload } from "@/components/dashboard/file-upload";
+import { FullscreenFormHeader } from "@/components/dashboard/fullscreen-form-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -1395,52 +1394,18 @@ export function TrainingsForm({
         onSubmit={(event) => event.preventDefault()}
         className="flex h-full min-h-0 flex-col bg-background"
       >
-        <div className="border-b border-border/40 bg-background px-4 py-3 sm:px-6 lg:px-8">
-          <div className="flex w-full items-start justify-between gap-3">
-            <div className="flex min-w-0 flex-1 flex-wrap items-start gap-2.5">
-              <h1 className="shrink-0 pt-1 text-xl font-bold text-foreground">
-                {record?.id ? (isViewOnly ? "Training Record Details" : "Update Training Record") : "Register a New Training"}
-              </h1>
-              <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-3">
-                <div className="min-w-0 rounded-xl border border-border/40 bg-muted/10 px-2.5 py-2">
-                  <div className="flex items-start gap-2">
-                    <Building2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    <div className="min-w-0">
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80">Department</p>
-                      <p className="truncate text-[11px] font-medium text-foreground">{watchedDepartment || "Unassigned"}</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="min-w-0 rounded-xl border border-border/40 bg-muted/10 px-2.5 py-2">
-                  <div className="flex items-start gap-2">
-                    <Layers3 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    <div className="min-w-0">
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80">Training Category</p>
-                      <p className="truncate text-[11px] font-medium text-foreground">{trainingCategorySummary}</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="min-w-0 rounded-xl border border-border/40 bg-muted/10 px-2.5 py-2">
-                  <div className="flex items-start gap-2">
-                    <Users className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    <div className="min-w-0">
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80">Participants</p>
-                      <p className="truncate text-[11px] font-medium text-foreground">{grandTotal === 0 ? "None" : grandTotal}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            {onClose && (
-              <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0 rounded-full" onClick={onClose}>
-                <X className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-          <div className="mt-2 w-full">
-            <StepIndicator currentStep={currentStep} totalSteps={stepLabels.length} labels={stepLabels} />
-          </div>
-        </div>
+        <FullscreenFormHeader
+          title={record?.id ? (isViewOnly ? "Training Record Details" : "Update Training Record") : "Register a New Training"}
+          currentStep={currentStep}
+          totalSteps={stepLabels.length}
+          labels={stepLabels}
+          onClose={onClose}
+          items={[
+            { icon: Building2, label: "Department", value: watchedDepartment || "Unassigned" },
+            { icon: Layers3, label: "Training Category", value: trainingCategorySummary },
+            { icon: Users, label: "Participants", value: grandTotal === 0 ? "None" : grandTotal },
+          ]}
+        />
 
         <div id="trainings-scroll-area" className="flex-1 overflow-y-auto bg-background px-4 py-4 sm:px-6 lg:px-8">
           {currentStep === 1 && (

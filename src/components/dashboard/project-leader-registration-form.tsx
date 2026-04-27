@@ -11,7 +11,6 @@ import {
   CalendarIcon,
   ChevronLeft,
   ChevronRight,
-  X,
   Plus,
   Save,
   Trash2,
@@ -22,7 +21,7 @@ import {
   Wallet,
 } from "lucide-react";
 
-import { StepIndicator } from "@/components/step-indicator";
+import { FullscreenFormHeader } from "@/components/dashboard/fullscreen-form-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -1349,55 +1348,18 @@ export function ProjectLeaderRegistrationForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit as never)} onKeyDown={(e) => { if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA") e.preventDefault(); }} className="flex h-full flex-col bg-background">
-        <div className="border-b border-border/40 bg-background px-4 py-3 sm:px-6 lg:px-8">
-          <div className="flex w-full items-start justify-between gap-4">
-            <h1 className="text-xl font-bold text-foreground">
-              {project?.id ? (isViewOnly ? "Project Registration Details" : "Update Project Registration") : "Register a New Project"}
-            </h1>
-            {onClose && (
-              <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0 rounded-full" onClick={onClose}>
-                <X className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-          <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_200px_200px]">
-            <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-2.5">
-              <div className="flex items-start gap-2">
-                <Building2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                <div className="min-w-0">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80">Department / Unit</p>
-                  <p className="truncate text-xs font-medium text-foreground">{watchedDepartmentUnit}</p>
-                </div>
-              </div>
-            </div>
-            <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-2.5">
-              <div className="flex items-start gap-2">
-                <CalendarIcon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                <div className="min-w-0">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80">Duration</p>
-                  <p className="truncate text-xs font-medium text-foreground">{getDurationLabel(inclusiveDates)}</p>
-                </div>
-              </div>
-            </div>
-            <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-2.5">
-              <div className="flex items-start gap-2">
-                <Wallet className={cn("mt-0.5 h-3.5 w-3.5 shrink-0", isBudgetExceeded ? "text-destructive" : "text-muted-foreground")} />
-                <div className="min-w-0">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80">Available Budget</p>
-                  <p className={cn("truncate text-xs font-medium", isBudgetExceeded ? "text-destructive" : "text-foreground")}>
-                    {formatPhpCurrency(displayedBudgetTotal)}
-                  </p>
-                  <p className="truncate text-[10px] text-muted-foreground/80">
-                    Used {formatPhpCurrency(budgetGrandTotal)} of {formatPhpCurrency(budgetInput)}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="mt-4 w-full">
-            <StepIndicator currentStep={currentStep} totalSteps={5} labels={stepLabels} />
-          </div>
-        </div>
+        <FullscreenFormHeader
+          title={project?.id ? (isViewOnly ? "Project Registration Details" : "Update Project Registration") : "Register a New Project"}
+          currentStep={currentStep}
+          totalSteps={5}
+          labels={stepLabels}
+          onClose={onClose}
+          items={[
+            { icon: Building2, label: "Department / Unit", value: watchedDepartmentUnit },
+            { icon: CalendarIcon, label: "Duration", value: getDurationLabel(inclusiveDates) },
+            { icon: Wallet, label: "Available Budget", value: formatPhpCurrency(displayedBudgetTotal) },
+          ]}
+        />
 
         <div id="registration-scroll-area" className="flex-1 overflow-y-auto bg-background px-4 py-5 sm:px-6 lg:px-8">
           <div className="w-full">
