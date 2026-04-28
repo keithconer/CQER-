@@ -55,13 +55,17 @@ function canManageFacultyRegistry(userType: string | null) {
   return userType === "super_admin" || userType === "college_coordinator" || userType === "unit_coordinator";
 }
 
+function canReadFacultyRegistry(userType: string | null) {
+  return canManageFacultyRegistry(userType) || userType === "project_leader";
+}
+
 export async function getFacultyRegistryRecords() {
   const { profile, error } = await getScopedProfile();
   if (!profile || error) {
     return { data: [] as FacultyRegistryRecord[], error };
   }
 
-  if (!canManageFacultyRegistry(profile.user_type)) {
+  if (!canReadFacultyRegistry(profile.user_type)) {
     return { data: [] as FacultyRegistryRecord[], error: "Insufficient permissions" };
   }
 
@@ -78,6 +82,9 @@ export async function getFacultyRegistryRecords() {
     query = query
       .eq("department", profile.department || "")
       .eq("unit", profile.unit || "");
+  } else if (profile.user_type === "project_leader" && profile.department) {
+    // Project leaders can see all faculty from their department
+    query = query.eq("department", profile.department);
   }
 
   const { data, error: fetchError } = await query;
