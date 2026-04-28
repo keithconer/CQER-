@@ -973,7 +973,6 @@ export default async function DashboardPage({
       const { data: departmentProfiles } = await adminClient
         .from("profiles")
         .select("id, email, first_name, last_name, user_type, unit, department, avatar_url, designation")
-        .in("user_type", ["college_coordinator", "unit_coordinator", "project_leader", "extension_office"])
         .eq("department", profile.department);
 
       const scopedUsers = (departmentProfiles || []).filter((item) => {
