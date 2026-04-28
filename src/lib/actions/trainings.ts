@@ -212,25 +212,29 @@ export async function getTrainings() {
   }
 
   if (userType === "unit_coordinator") {
-    if (!department || !unit) {
+    if (!department) {
       return { data: [] };
     }
 
-    const { data: unitProfiles, error: unitProfilesError } = await adminClient
-      .from("profiles")
-      .select("id")
-      .eq("department", department)
-      .eq("unit", unit);
+    // Always include the current coordinator's own ID
+    const creatorIdSet = new Set<string>([user.id]);
 
-    if (unitProfilesError) {
-      console.error("Error fetching unit profiles:", unitProfilesError);
-      return { error: unitProfilesError.message };
+    // Also include all co-workers from the same unit (if unit is assigned)
+    if (unit) {
+      const { data: unitProfiles, error: unitProfilesError } = await adminClient
+        .from("profiles")
+        .select("id")
+        .eq("department", department)
+        .eq("unit", unit);
+
+      if (unitProfilesError) {
+        console.error("Error fetching unit profiles:", unitProfilesError);
+      } else {
+        (unitProfiles || []).forEach((item) => creatorIdSet.add(item.id));
+      }
     }
 
-    const creatorIds = Array.from(new Set((unitProfiles || []).map((item) => item.id)));
-    if (creatorIds.length === 0) {
-      return { data: [] };
-    }
+    const creatorIds = Array.from(creatorIdSet);
 
     const { data, error } = await adminClient
       .from("trainings")

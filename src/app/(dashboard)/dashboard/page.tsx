@@ -975,9 +975,7 @@ export default async function DashboardPage({
         .select("id, email, first_name, last_name, user_type, unit, department, avatar_url, designation")
         .eq("department", profile.department);
 
-      const scopedUsers = (departmentProfiles || []).filter((item) => {
-        return item.unit === profile.unit;
-      });
+      const scopedUsers = (departmentProfiles || []).filter((item) => item.unit === profile.unit);
 
       const sameUnitProfiles = (departmentProfiles || []).filter((item) => {
         if (item.unit !== profile.unit) return false;
@@ -1039,13 +1037,13 @@ export default async function DashboardPage({
         })),
       ].sort((left, right) => left.name.localeCompare(right.name));
 
-      const scopedCreatorIds = Array.from(new Set(scopedUsers.map((item) => item.id)));
+      // Build a creator name map from all same-unit users
       const creatorNameMap = new Map(
         scopedUsers.map((item) => [item.id, `${item.first_name || ""} ${item.last_name || ""}`.trim() || "Unnamed user"])
       );
 
+      // Show all trainings returned by getTrainings() (already scoped to same unit on server)
       unitDashboardTrainings = trainings
-        .filter((training) => training.created_by && scopedCreatorIds.includes(training.created_by))
         .map((training) => ({
           id: training.id,
           title: training.training_title,
