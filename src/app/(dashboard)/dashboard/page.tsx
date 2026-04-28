@@ -158,6 +158,7 @@ function extractTrainingFacultyOptions(records: FacultyRegistryRecord[]) {
       id: record.id,
       name: `${record.first_name || ""} ${record.last_name || ""}`.trim() || "Unnamed User",
       designation: record.designation || "Faculty Member",
+      unit: record.unit || null,
       employment: record.employment,
     }))
     .sort((left, right) => left.name.localeCompare(right.name));
@@ -980,7 +981,19 @@ export default async function DashboardPage({
         return item.unit === profile.unit;
       });
 
-      const sameUnitProfiles = (departmentProfiles || []).filter((item) => item.unit === profile.unit);
+      const sameUnitProfiles = (departmentProfiles || []).filter((item) => {
+        if (item.unit !== profile.unit) return false;
+        // Exclude project leaders with emails
+        return item.user_type !== "project_leader";
+      });
+
+      const { data: facultyRegistryData } = await adminClient
+        .from("faculty_registry_records")
+        .select("*")
+        .eq("department", profile.department)
+        .eq("unit", profile.unit);
+      const unitFacultyRegistry = (facultyRegistryData || []) as FacultyRegistryRecord[];
+
       const { data: projectLeaderCommitteeRecords } = await adminClient
         .from("project_leader_records")
         .select("*")
@@ -1010,6 +1023,18 @@ export default async function DashboardPage({
           designation: item.designation || "Project Leader",
           employment: null,
           userType: "project_leader_record",
+          unit: item.unit || null,
+          department: item.department || null,
+          avatarUrl: null,
+        })),
+        ...unitFacultyRegistry.map((item) => ({
+          id: `faculty-registry-${item.id}`,
+          name: `${item.first_name || ""} ${item.last_name || ""}`.trim() || "Unnamed faculty member",
+          source: "unit_account" as const,
+          email: null,
+          designation: item.designation || "Faculty Member",
+          employment: item.employment || null,
+          userType: "faculty_member",
           unit: item.unit || null,
           department: item.department || null,
           avatarUrl: null,

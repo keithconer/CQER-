@@ -142,6 +142,7 @@ const facultyMemberSchema = z.object({
   user_id: optionalTextValue,
   name: textValue,
   designation: textValue,
+  unit: optionalTextValue,
   employment: z.enum(facultyEmploymentOptions),
 });
 
@@ -430,6 +431,7 @@ export interface TrainingFacultyOption {
   id: string;
   name: string;
   designation: string;
+  unit: string | null;
   employment?: "Permanent" | "Contract of Service";
 }
 
@@ -492,6 +494,7 @@ function normalizeFacultyMembers(value: unknown): FacultyMemberEntry[] {
         user_id: String(record.user_id || ""),
         name: String(record.name || "").trim(),
         designation: String(record.designation || "").trim(),
+        unit: String(record.unit || "").trim(),
         employment:
           employment === "contract of service" || employment === "cos"
             ? "Contract of Service"
@@ -896,7 +899,10 @@ function FacultyMemberFields({
                   <SelectItem value="none" className="text-sm">Select faculty member</SelectItem>
                   {options.map((option) => (
                     <SelectItem key={option.id} value={option.id} className="text-sm">
-                      {option.name}
+                      <div className="flex flex-col">
+                        <span>{option.name}</span>
+                        <span className="text-[10px] text-muted-foreground">{option.unit || "No unit"}</span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -954,6 +960,19 @@ function FacultyMemberFields({
           render={({ field }) => (
             <FormItem>
               <FormLabel className="text-xs">Designation</FormLabel>
+              <FormControl>
+                <Input {...field} readOnly className="h-9 rounded-xl bg-muted/20 text-xs" />
+              </FormControl>
+              <FormMessage className="text-xs" />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={control}
+          name={`faculty_members.${index}.unit`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-xs">Unit</FormLabel>
               <FormControl>
                 <Input {...field} readOnly className="h-9 rounded-xl bg-muted/20 text-xs" />
               </FormControl>
@@ -1717,7 +1736,7 @@ export function TrainingsForm({
                             type="button"
                             variant="outline"
                             className="rounded-xl"
-                            onClick={() => facultyArray.append({ user_id: "", name: "", designation: "", employment: "Permanent" })}
+                            onClick={() => facultyArray.append({ user_id: "", name: "", designation: "", unit: "", employment: "Permanent" })}
                           >
                             <Plus className="mr-2 h-4 w-4" />
                             Add Faculty
@@ -1744,6 +1763,7 @@ export function TrainingsForm({
                                   const selected = facultyOptions.find((option) => option.id === optionId);
                                   form.setValue(`faculty_members.${targetIndex}.name`, selected?.name || "", { shouldDirty: true, shouldValidate: true });
                                   form.setValue(`faculty_members.${targetIndex}.designation`, selected?.designation || "", { shouldDirty: true, shouldValidate: true });
+                                  form.setValue(`faculty_members.${targetIndex}.unit`, selected?.unit || "", { shouldDirty: true, shouldValidate: true });
                                   form.setValue(`faculty_members.${targetIndex}.employment`, selected?.employment || "Permanent", { shouldDirty: true, shouldValidate: true });
                                 }}
                                 onRemove={() => facultyArray.remove(index)}
