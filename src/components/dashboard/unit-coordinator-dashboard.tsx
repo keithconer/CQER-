@@ -54,8 +54,6 @@ export type UnitDashboardTraining = {
   createdAt: string | null;
   venue: string | null;
   participants: number;
-  relatedProjectTitle: string | null;
-  linkedToProject: boolean;
   categorySummary: string;
   modeLabel: string;
 };
@@ -99,23 +97,23 @@ function getCommitteeSourceLabel(source: UnitDashboardCommitteeMember["source"])
   return source === "registered_project_leader" ? "Registered project leader" : "Unit account";
 }
 
-async function exportTrainingsExcel(records: UnitDashboardTraining[]) {
+async function exportTrainingsExcel(trainings: UnitDashboardTraining[]) {
   const ExcelJSImport = await import("exceljs/dist/exceljs.min.js");
   const ExcelJS = ExcelJSImport?.default ?? ExcelJSImport;
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet("Unit Trainings");
   const columns = [
-    { header: "Training", key: "title", width: 34 },
-    { header: "Related Project", key: "project", width: 28 },
-    { header: "Linked to Project", key: "linked", width: 18 },
-    { header: "Category", key: "category", width: 28 },
-    { header: "Mode", key: "mode", width: 18 },
-    { header: "Venue", key: "venue", width: 24 },
-    { header: "Created By", key: "creator", width: 24 },
+    { header: "Training Title", key: "title", width: 45 },
+    { header: "Category", key: "category", width: 35 },
+    { header: "Mode", key: "mode", width: 20 },
+    { header: "Participants", key: "participants", width: 15 },
+    { header: "Venue/Platform", key: "venue", width: 30 },
+    { header: "Created By", key: "createdBy", width: 25 },
+    { header: "Created At", key: "createdAt", width: 20 },
   ];
   sheet.columns = columns.map((column) => ({ key: column.key, width: column.width }));
   sheet.mergeCells("A1:G1");
-  sheet.getCell("A1").value = "Unit Training Container";
+  sheet.getCell("A1").value = "Unit Training Records";
   sheet.getCell("A1").font = { bold: true, size: 14 };
   sheet.getCell("A1").alignment = { horizontal: "center" };
   sheet.getRow(2).values = columns.map((column) => column.header);
@@ -123,15 +121,15 @@ async function exportTrainingsExcel(records: UnitDashboardTraining[]) {
     cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF159E44" } };
   });
-  records.forEach((record) => {
+  trainings.forEach((training) => {
     sheet.addRow({
-      title: record.title,
-      project: record.relatedProjectTitle || "-",
-      linked: record.linkedToProject ? "Yes" : "No",
-      category: record.categorySummary,
-      mode: record.modeLabel,
-      venue: record.venue || "-",
-      creator: record.creatorName,
+      title: training.title,
+      category: training.categorySummary,
+      mode: training.modeLabel,
+      participants: training.participants,
+      venue: training.venue || "-",
+      createdBy: training.creatorName,
+      createdAt: training.createdAt ? format(new Date(training.createdAt), "yyyy-MM-dd") : "-",
     });
   });
   const buffer = await workbook.xlsx.writeBuffer();
@@ -146,7 +144,7 @@ async function exportTrainingsExcel(records: UnitDashboardTraining[]) {
   URL.revokeObjectURL(url);
 }
 
-async function exportTrainingsPdf(records: UnitDashboardTraining[]) {
+async function exportTrainingsPdf(trainings: UnitDashboardTraining[]) {
   const { jsPDF } = await import("jspdf");
   const { default: autoTable } = await import("jspdf-autotable");
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
@@ -154,15 +152,14 @@ async function exportTrainingsPdf(records: UnitDashboardTraining[]) {
   doc.text("Unit Training Container", doc.internal.pageSize.getWidth() / 2, 12, { align: "center" });
   autoTable(doc, {
     startY: 18,
-    head: [["Training", "Related Project", "Linked", "Category", "Mode", "Venue", "Created By"]],
-    body: records.map((record) => [
-      record.title,
-      record.relatedProjectTitle || "-",
-      record.linkedToProject ? "Yes" : "No",
-      record.categorySummary,
-      record.modeLabel,
-      record.venue || "-",
-      record.creatorName,
+    head: [["Training Title", "Category", "Mode", "Participants", "Venue", "Created By"]],
+    body: trainings.map((training) => [
+      training.title,
+      training.categorySummary,
+      training.modeLabel,
+      training.participants,
+      training.venue || "-",
+      training.creatorName,
     ]),
     theme: "grid",
     headStyles: { fillColor: [21, 158, 68], textColor: [255, 255, 255], fontSize: 8 },
@@ -286,7 +283,6 @@ export function UnitCoordinatorDashboard({
   const [activeDialog, setActiveDialog] = React.useState<ActiveDialog>(null);
   const [trainingSearch, setTrainingSearch] = React.useState("");
   const [committeeSearch, setCommitteeSearch] = React.useState("");
-  const [trainingFilter, setTrainingFilter] = React.useState<TrainingFilter>("all");
   const [committeeFilter, setCommitteeFilter] = React.useState<CommitteeFilter>("all");
   const [recordsPage, setRecordsPage] = React.useState(1);
 
@@ -295,7 +291,6 @@ export function UnitCoordinatorDashboard({
     return trainings.filter((training) => {
       const haystack = [
         training.title,
-        training.relatedProjectTitle || "",
         training.categorySummary,
         training.modeLabel,
         training.venue || "",
@@ -304,12 +299,9 @@ export function UnitCoordinatorDashboard({
         .join(" ")
         .toLowerCase();
       if (query && !haystack.includes(query)) return false;
-      if (trainingFilter === "linked_only" && !training.linkedToProject) return false;
-      if (trainingFilter === "standalone_only" && training.linkedToProject) return false;
-      if (trainingFilter === "created_by_me" && training.createdBy !== currentUserId) return false;
       return true;
     });
-  }, [currentUserId, trainingFilter, trainingSearch, trainings]);
+  }, [trainingSearch, trainings]);
 
   const filteredCommitteeMembers = React.useMemo(() => {
     const query = committeeSearch.trim().toLowerCase();
@@ -359,7 +351,7 @@ export function UnitCoordinatorDashboard({
 
   React.useEffect(() => {
     resetTrainingPagination();
-  }, [resetTrainingPagination, trainingFilter, trainingSearch]);
+  }, [resetTrainingPagination, trainingSearch]);
 
   React.useEffect(() => {
     resetCommitteePagination();
@@ -386,8 +378,8 @@ export function UnitCoordinatorDashboard({
           </CardHeader>
           <CardContent className="grid gap-3 lg:grid-cols-2">
             <OverviewCard
-              title="Training Container"
-              description="View all unit training records with project link, category, and mode details."
+              title="Unit Training Hub"
+              description="Review and manage all training records conducted by your unit team members."
               value={String(trainings.length)}
               icon={BookOpenCheck}
               onClick={() => setActiveDialog("trainings")}
@@ -462,33 +454,19 @@ export function UnitCoordinatorDashboard({
       <Dialog open={activeDialog === "trainings"} onOpenChange={(open) => !open && setActiveDialog(null)}>
         <DialogContent className="sm:max-w-6xl">
           <DialogHeader>
-            <DialogTitle>Training Container</DialogTitle>
+            <DialogTitle>Unit Training Records</DialogTitle>
             <DialogDescription>
-              All trainings from your scoped unit view, including project link, category, and mode.
+              All trainings from your scoped unit view, including participant count, category, and mode.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="grid gap-2 md:grid-cols-[minmax(0,1.5fr)_180px_auto]">
+            <div className="grid gap-2 md:grid-cols-[1fr_auto]">
               <Input
                 value={trainingSearch}
                 onChange={(event) => setTrainingSearch(event.target.value)}
-                placeholder="Search training, project, category, mode, or creator..."
+                placeholder="Search training, category, mode, venue, or creator..."
                 className="h-9 text-xs"
               />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="h-9 text-xs">
-                    <Filter className="mr-2 h-3.5 w-3.5" />
-                    Results Filter
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setTrainingFilter("all")}>All trainings</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setTrainingFilter("linked_only")}>Linked to project</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setTrainingFilter("standalone_only")}>No linked project</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setTrainingFilter("created_by_me")}>Created by me</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="h-9 text-xs">
@@ -507,30 +485,35 @@ export function UnitCoordinatorDashboard({
               <Table>
                 <TableHeader className="bg-muted/30">
                   <TableRow className="border-border/40">
-                    <TableHead className="text-[10px]">Training</TableHead>
-                    <TableHead className="text-[10px]">Related Project</TableHead>
-                    <TableHead className="text-[10px]">Linked</TableHead>
+                    <TableHead className="text-[10px]">Training Title</TableHead>
                     <TableHead className="text-[10px]">Category</TableHead>
                     <TableHead className="text-[10px]">Mode</TableHead>
-                    <TableHead className="text-[10px]">Venue</TableHead>
-                    <TableHead className="text-[10px]">Created By</TableHead>
+                    <TableHead className="text-[10px]">Participants</TableHead>
+                    <TableHead className="text-[10px]">Venue / Platform</TableHead>
+                    <TableHead className="text-[10px]">Author</TableHead>
+                    <TableHead className="text-[10px]">Date Recorded</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {paginatedTrainings.length > 0 ? (
                     paginatedTrainings.map((training) => (
                       <TableRow key={training.id} className="border-border/30">
-                        <TableCell className="py-3 text-[11px] font-medium">{training.title}</TableCell>
-                        <TableCell className="py-3 text-[11px]">{training.relatedProjectTitle || "-"}</TableCell>
-                        <TableCell className="py-3 text-[11px]">{training.linkedToProject ? "Yes" : "No"}</TableCell>
+                        <TableCell className="py-3 text-[11px] font-medium leading-relaxed max-w-[280px]">
+                          {training.title}
+                        </TableCell>
                         <TableCell className="py-3 text-[11px]">{training.categorySummary}</TableCell>
-                        <TableCell className="py-3 text-[11px]">{training.modeLabel}</TableCell>
-                        <TableCell className="py-3 text-[11px]">{training.venue || "-"}</TableCell>
                         <TableCell className="py-3 text-[11px]">
-                          <div className="space-y-1">
-                            <p>{training.creatorName}</p>
-                            <p className="text-[10px] text-muted-foreground">{formatDate(training.createdAt)}</p>
-                          </div>
+                          <Badge variant="outline" className="text-[9px] bg-muted/50 font-normal">
+                            {training.modeLabel}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="py-3 text-[11px] font-semibold text-primary">
+                          {training.participants}
+                        </TableCell>
+                        <TableCell className="py-3 text-[11px]">{training.venue || "-"}</TableCell>
+                        <TableCell className="py-3 text-[11px] text-muted-foreground">{training.creatorName}</TableCell>
+                        <TableCell className="py-3 text-[11px] text-muted-foreground whitespace-nowrap">
+                          {training.createdAt ? format(new Date(training.createdAt), "MMM d, yyyy") : "-"}
                         </TableCell>
                       </TableRow>
                     ))

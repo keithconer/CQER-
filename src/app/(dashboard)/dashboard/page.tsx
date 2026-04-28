@@ -977,7 +977,6 @@ export default async function DashboardPage({
         .eq("department", profile.department);
 
       const scopedUsers = (departmentProfiles || []).filter((item) => {
-        if (item.user_type === "college_coordinator") return true;
         return item.unit === profile.unit;
       });
 
@@ -1059,8 +1058,6 @@ export default async function DashboardPage({
           createdAt: (training as { created_at?: string | null }).created_at || null,
           venue: training.venue_platform || null,
           participants: training.participants_overall_total || 0,
-          relatedProjectTitle: training.related_project_title || null,
-          linkedToProject: Boolean(training.related_project_id || training.related_project_title),
           categorySummary: formatTrainingCategorySummary(training),
           modeLabel: formatTrainingModeLabel(training.training_mode),
         }));
