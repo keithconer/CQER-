@@ -14,8 +14,10 @@ import {
 
 import { type Project } from "@/components/dashboard/projects-table";
 import { type TrainingRecord } from "@/components/dashboard/trainings-form";
+import { FacultyRegistryManagement } from "@/components/dashboard/faculty-registry-management";
 import { RecordPagination, useRecordPagination } from "@/components/dashboard/record-pagination";
 import { type BudgetUtilizationRecord } from "@/lib/actions/budget-utilization";
+import { type FacultyRegistryRecord } from "@/lib/actions/faculty-registry";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,16 +39,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-type CollegeEmployee = {
-  id: string;
-  firstName: string | null;
-  lastName: string | null;
-  userType: string;
-  unit: string | null;
-  department: string | null;
-  email: string | null;
-};
-
 type ProjectBudgetRow = {
   id: string;
   title: string;
@@ -64,7 +56,7 @@ interface CollegeCoordinatorDashboardProps {
   projects: Project[];
   trainings: TrainingRecord[];
   budgetUtilizations: BudgetUtilizationRecord[];
-  employees: CollegeEmployee[];
+  facultyRecords: FacultyRegistryRecord[];
 }
 
 function currency(value: number) {
@@ -368,7 +360,7 @@ export function CollegeCoordinatorDashboard({
   projects,
   trainings,
   budgetUtilizations,
-  employees,
+  facultyRecords,
 }: CollegeCoordinatorDashboardProps) {
   const [activeDialog, setActiveDialog] = React.useState<"projects" | "trainings" | "budget" | "utilized" | "faculty_involvement" | null>(null);
   const [projectSearch, setProjectSearch] = React.useState("");
@@ -544,53 +536,6 @@ export function CollegeCoordinatorDashboard({
     [projectBudgetRows]
   );
 
-  const staffingRows = React.useMemo(() => {
-    const projectAssignments = new Map<string, number>();
-    const trainingAssignments = new Map<string, number>();
-    const fullNameById = new Map(
-      employees.map((employee) => [
-        employee.id,
-        `${employee.firstName || ""} ${employee.lastName || ""}`.trim().toLowerCase(),
-      ])
-    );
-
-    projects.forEach((project) => {
-      const projectNames = [
-        ...(project.proponents || []).map((item) => String(item?.name || "").trim().toLowerCase()),
-        ...(project.co_project_leaders || []).map((item) => String(item?.name || "").trim().toLowerCase()),
-      ].filter(Boolean);
-      employees.forEach((employee) => {
-        const fullName = fullNameById.get(employee.id) || "";
-        if (fullName && projectNames.includes(fullName)) {
-          projectAssignments.set(employee.id, (projectAssignments.get(employee.id) || 0) + 1);
-        }
-      });
-    });
-
-    trainings.forEach((record) => {
-      if (record.created_by) {
-        trainingAssignments.set(record.created_by, (trainingAssignments.get(record.created_by) || 0) + 1);
-      }
-    });
-
-    return employees
-      .map((employee) => {
-        const projectCount = projectAssignments.get(employee.id) || 0;
-        const trainingCount = trainingAssignments.get(employee.id) || 0;
-        return {
-          id: employee.id,
-          name: `${employee.firstName || ""} ${employee.lastName || ""}`.trim() || "Unnamed employee",
-          email: employee.email || "-",
-          userType: employee.userType,
-          unit: employee.unit || "-",
-          projectCount,
-          trainingCount,
-          assigned: projectCount > 0 || trainingCount > 0,
-        };
-      })
-      .sort((left, right) => Number(right.assigned) - Number(left.assigned) || left.name.localeCompare(right.name));
-  }, [employees, projects, trainings]);
-
   return (
     <>
       <Card className="border-border/50 bg-card/40 shadow-sm">
@@ -631,8 +576,8 @@ export function CollegeCoordinatorDashboard({
           />
           <OverviewCard
             title="Faculty Involvement"
-            value={String(employees.length)}
-            description="Department employees plus project or training assignments."
+            value={String(facultyRecords.length)}
+            description="Register faculty records by unit and reuse them in training committee selection."
             icon={Users2}
             onClick={() => setActiveDialog("faculty_involvement")}
           />
@@ -976,47 +921,15 @@ export function CollegeCoordinatorDashboard({
       </Dialog>
 
       <Dialog open={activeDialog === "faculty_involvement"} onOpenChange={(open) => !open && setActiveDialog(null)}>
-        <DialogContent className="sm:max-w-5xl">
+        <DialogContent className="sm:max-w-6xl">
           <DialogHeader>
             <DialogTitle>Faculty Involvement</DialogTitle>
             <DialogDescription>
-              Available employees in {department} and who is already assigned to projects or trainings.
+              Create and manage faculty records from {department} for committee selection and staffing reference.
             </DialogDescription>
           </DialogHeader>
-          <ScrollArea className="max-h-[65vh] rounded-xl border border-border/50">
-            <Table>
-              <TableHeader className="bg-muted/30">
-                <TableRow className="border-border/40">
-                  <TableHead className="text-[10px]">Employee</TableHead>
-                  <TableHead className="text-[10px]">Role</TableHead>
-                  <TableHead className="text-[10px]">Unit</TableHead>
-                  <TableHead className="text-[10px]">Projects</TableHead>
-                  <TableHead className="text-[10px]">Trainings</TableHead>
-                  <TableHead className="text-[10px]">Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {staffingRows.map((employee) => (
-                  <TableRow key={employee.id} className="border-border/30">
-                    <TableCell className="text-[11px]">
-                      <div className="space-y-1">
-                        <p className="font-medium">{employee.name}</p>
-                        <p className="text-[10px] text-muted-foreground">{employee.email}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-[11px]">{employee.userType.replace(/_/g, " ")}</TableCell>
-                    <TableCell className="text-[11px]">{employee.unit}</TableCell>
-                    <TableCell className="text-[11px]">{employee.projectCount}</TableCell>
-                    <TableCell className="text-[11px]">{employee.trainingCount}</TableCell>
-                    <TableCell className="text-[11px]">
-                      <Badge variant={employee.assigned ? "default" : "outline"} className="text-[9px]">
-                        {employee.assigned ? "Assigned" : "Available"}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+          <ScrollArea className="max-h-[70vh] pr-2">
+            <FacultyRegistryManagement department={department} records={facultyRecords} />
           </ScrollArea>
         </DialogContent>
       </Dialog>

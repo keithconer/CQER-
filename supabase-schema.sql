@@ -4393,6 +4393,135 @@ alter table public.trainings
   add column if not exists faculty_members jsonb not null default '[]'::jsonb;
 
 -- ============================================================
+-- START COPY: Faculty Registry Records
+-- ============================================================
+create table if not exists public.faculty_registry_records (
+  id uuid primary key default gen_random_uuid(),
+  created_by uuid not null references auth.users(id) on delete cascade,
+  department text,
+  unit text,
+  first_name text not null,
+  last_name text not null,
+  designation text not null,
+  employment text not null check (employment in ('Permanent', 'Contract of Service')),
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+create index if not exists idx_faculty_registry_records_created_by
+on public.faculty_registry_records (created_by);
+
+create index if not exists idx_faculty_registry_records_department_unit
+on public.faculty_registry_records (department, unit);
+
+create index if not exists idx_faculty_registry_records_designation
+on public.faculty_registry_records (designation);
+
+alter table public.faculty_registry_records enable row level security;
+
+drop policy if exists "Coordinators can view own faculty registry records" on public.faculty_registry_records;
+create policy "Coordinators can view own faculty registry records"
+on public.faculty_registry_records for select
+to authenticated
+using (
+  created_by = auth.uid()
+  and exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.user_type in ('college_coordinator', 'unit_coordinator')
+  )
+);
+
+drop policy if exists "Coordinators can create own faculty registry records" on public.faculty_registry_records;
+create policy "Coordinators can create own faculty registry records"
+on public.faculty_registry_records for insert
+to authenticated
+with check (
+  created_by = auth.uid()
+  and exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.user_type in ('college_coordinator', 'unit_coordinator')
+  )
+);
+
+drop policy if exists "Coordinators can update own faculty registry records" on public.faculty_registry_records;
+create policy "Coordinators can update own faculty registry records"
+on public.faculty_registry_records for update
+to authenticated
+using (
+  created_by = auth.uid()
+  and exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.user_type in ('college_coordinator', 'unit_coordinator')
+  )
+)
+with check (
+  created_by = auth.uid()
+  and exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.user_type in ('college_coordinator', 'unit_coordinator')
+  )
+);
+
+drop policy if exists "Coordinators can delete own faculty registry records" on public.faculty_registry_records;
+create policy "Coordinators can delete own faculty registry records"
+on public.faculty_registry_records for delete
+to authenticated
+using (
+  created_by = auth.uid()
+  and exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.user_type in ('college_coordinator', 'unit_coordinator')
+  )
+);
+
+drop policy if exists "Super admins can view all faculty registry records" on public.faculty_registry_records;
+create policy "Super admins can view all faculty registry records"
+on public.faculty_registry_records for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.user_type = 'super_admin'
+  )
+);
+
+drop policy if exists "Super admins can manage all faculty registry records" on public.faculty_registry_records;
+create policy "Super admins can manage all faculty registry records"
+on public.faculty_registry_records for all
+to authenticated
+using (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.user_type = 'super_admin'
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.user_type = 'super_admin'
+  )
+);
+-- ============================================================
+-- END COPY: Faculty Registry Records
+-- ============================================================
+
+-- ============================================================
 -- START COPY: Unit Coordinator Project Leader Records
 -- ============================================================
 create table if not exists public.project_leader_records (

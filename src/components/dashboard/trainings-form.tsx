@@ -430,6 +430,7 @@ export interface TrainingFacultyOption {
   id: string;
   name: string;
   designation: string;
+  employment?: "Permanent" | "Contract of Service";
 }
 
 interface TrainingsFormProps {
@@ -876,7 +877,7 @@ function FacultyMemberFields({
           name={`faculty_members.${index}.user_id`}
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-xs">Faculty User</FormLabel>
+              <FormLabel className="text-xs">Faculty Member</FormLabel>
               <Select
                 value={field.value || "none"}
                 onValueChange={(value) => {
@@ -892,7 +893,7 @@ function FacultyMemberFields({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="none" className="text-sm">Select user</SelectItem>
+                  <SelectItem value="none" className="text-sm">Select faculty member</SelectItem>
                   {options.map((option) => (
                     <SelectItem key={option.id} value={option.id} className="text-sm">
                       {option.name}
@@ -1707,8 +1708,8 @@ export function TrainingsForm({
                       <CardHeader className="flex flex-row items-center justify-between space-y-0">
                         <div>
                           <CardTitle className="text-sm">Faculty Members</CardTitle>
-                          <CardDescription className="text-xs">
-                            Select from users in the visible unit or department, then assign employment type.
+                      <CardDescription className="text-xs">
+                            Select from the saved faculty records available in your scope, then confirm the employment type.
                           </CardDescription>
                         </div>
                         {!isViewOnly && (
@@ -1743,6 +1744,7 @@ export function TrainingsForm({
                                   const selected = facultyOptions.find((option) => option.id === optionId);
                                   form.setValue(`faculty_members.${targetIndex}.name`, selected?.name || "", { shouldDirty: true, shouldValidate: true });
                                   form.setValue(`faculty_members.${targetIndex}.designation`, selected?.designation || "", { shouldDirty: true, shouldValidate: true });
+                                  form.setValue(`faculty_members.${targetIndex}.employment`, selected?.employment || "Permanent", { shouldDirty: true, shouldValidate: true });
                                 }}
                                 onRemove={() => facultyArray.remove(index)}
                               />

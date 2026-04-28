@@ -50,12 +50,13 @@ import { ProjectLeaderDashboard } from "@/components/dashboard/project-leader-da
 import { CollegeCoordinatorDashboard } from "@/components/dashboard/college-coordinator-dashboard";
 import {
   UnitCoordinatorDashboard,
+  type UnitDashboardCommitteeMember,
   type UnitDashboardRecord,
   type UnitDashboardTraining,
-  type UnitDashboardUser,
 } from "@/components/dashboard/unit-coordinator-dashboard";
 import { normalizeSdgArray } from "@/lib/sdg";
 import { getProjectLeaderRecords, type ProjectLeaderRecord } from "@/lib/actions/project-leader-records";
+import { getFacultyRegistryRecords, type FacultyRegistryRecord } from "@/lib/actions/faculty-registry";
 
 
 function extractPartnerAgencyNames(projects: Project[]) {
@@ -113,19 +114,52 @@ function formatTrainingFacultyDesignation(profile: Record<string, unknown>) {
     .join(" ");
 }
 
-function extractTrainingFacultyOptions(profiles: Array<Record<string, unknown>>) {
-  return profiles
-    .map((profile) => {
-      const firstName = String(profile.first_name || "").trim();
-      const lastName = String(profile.last_name || "").trim();
-      const fullName = `${firstName} ${lastName}`.trim();
-      return {
-        id: String(profile.id || ""),
-        name: fullName || String(profile.email || "").trim() || "Unnamed User",
-        designation: formatTrainingFacultyDesignation(profile),
-      };
+const TRAINING_CATEGORY_LABELS: Record<string, string> = {
+  TVL: "TVL - Technical, Vocational, Livelihood",
+  CE: "CE - Continuing Education for Professional",
+  GAD: "GAD - Gender and Development",
+  AE: "AE - Agricultural and Environmental Training",
+  BE: "BE - Basic Education",
+  OTHERS: "Others",
+};
+
+function formatTrainingCategorySummary(record: TrainingRecord) {
+  const categories =
+    Array.isArray(record.training_categories) && record.training_categories.length > 0
+      ? record.training_categories
+      : record.training_category
+        ? [record.training_category]
+        : [];
+
+  if (categories.length === 0) return "N/A";
+
+  return categories
+    .map((value) => {
+      if (value === "OTHERS") {
+        return record.training_category_other?.trim()
+          ? `Others: ${record.training_category_other.trim()}`
+          : "Others";
+      }
+      return TRAINING_CATEGORY_LABELS[value] || value;
     })
-    .filter((profile) => profile.id)
+    .join(", ");
+}
+
+function formatTrainingModeLabel(value: TrainingRecord["training_mode"]) {
+  if (value === "FTF") return "F2F - Face-to-face";
+  if (value === "O") return "O - Online / Videoconferencing";
+  if (value === "H") return "H - Hybrid";
+  return "N/A";
+}
+
+function extractTrainingFacultyOptions(records: FacultyRegistryRecord[]) {
+  return records
+    .map((record) => ({
+      id: record.id,
+      name: `${record.first_name || ""} ${record.last_name || ""}`.trim() || "Unnamed User",
+      designation: record.designation || "Faculty Member",
+      employment: record.employment,
+    }))
     .sort((left, right) => left.name.localeCompare(right.name));
 }
 
@@ -437,6 +471,7 @@ export default async function DashboardPage({
   let awardsRecognitionRecords: AwardsRecognitionRecord[] = [];
   let otherActivityRecords: OtherActivityRecord[] = [];
   let projectLeaderRecords: ProjectLeaderRecord[] = [];
+  let facultyRegistryRecords: FacultyRegistryRecord[] = [];
   let trainingPartnerAgencyOptions: string[] = [];
   let trainingProjectOptions: TrainingProjectOption[] = [];
   let trainingFacultyOptions: TrainingFacultyOption[] = [];
@@ -456,25 +491,13 @@ export default async function DashboardPage({
   }[] = [];
 
   async function loadTrainingFacultyOptions() {
-    const adminClient = createAdminClient();
-    let query = adminClient
-      .from("profiles")
-      .select("*")
-      .in("user_type", ["college_coordinator", "unit_coordinator", "project_leader", "extension_office"]);
-
-    if (profile.user_type === "college_coordinator" && profile.department) {
-      query = query.eq("department", profile.department);
-    } else if ((profile.user_type === "unit_coordinator" || profile.user_type === "project_leader") && profile.department && profile.unit) {
-      query = query.eq("department", profile.department).eq("unit", profile.unit);
-    }
-
-    const { data, error } = await query;
-    if (error) {
-      console.error("Error fetching training faculty options:", error);
+    const result = await getFacultyRegistryRecords();
+    if (result.error) {
+      console.error("Error fetching training faculty options:", result.error);
       return [];
     }
 
-    return extractTrainingFacultyOptions((data || []) as Array<Record<string, unknown>>);
+    return extractTrainingFacultyOptions(result.data || []);
   }
 
   if (profile.user_type === "unit_coordinator" || profile.user_type === "extension_office") {
@@ -690,20 +713,11 @@ export default async function DashboardPage({
   let projectLeaderUtilizationRate = 0;
   let projectLeaderBudgetDetails: ProjectBudgetDetail[] = [];
   let projectLeaderFacultyInvolvement: FacultyInvolvementSummary[] = [];
-  let unitDashboardUsers: UnitDashboardUser[] = [];
+  let unitDashboardCommitteeMembers: UnitDashboardCommitteeMember[] = [];
   let unitDashboardTrainings: UnitDashboardTraining[] = [];
   let unitDashboardRecords: UnitDashboardRecord[] = [];
   let collegeOverviewTrainings: TrainingRecord[] = [];
   let collegeOverviewBudgetUtilizations: BudgetUtilizationRecord[] = [];
-  let collegeOverviewEmployees: {
-    id: string;
-    email: string | null;
-    firstName: string | null;
-    lastName: string | null;
-    userType: string;
-    unit: string | null;
-    department: string | null;
-  }[] = [];
 
   if (profile.user_type === "super_admin") {
     const adminClient = createAdminClient();
@@ -876,23 +890,7 @@ export default async function DashboardPage({
       const overviewTrainings =
         trainingRecords.length > 0 ? trainingRecords : (((await getTrainings()).data || []) as TrainingRecord[]);
       collegeOverviewTrainings = overviewTrainings;
-
-      const { data: departmentProfiles } = await adminClient
-        .from("profiles")
-        .select("id, email, first_name, last_name, user_type, unit, department")
-        .in("user_type", ["college_coordinator", "unit_coordinator", "project_leader", "extension_office"])
-        .eq("department", profile.department);
-
-      collegeOverviewEmployees =
-        (departmentProfiles || []).map((entry) => ({
-          id: entry.id,
-          email: entry.email || null,
-          firstName: entry.first_name || null,
-          lastName: entry.last_name || null,
-          userType: entry.user_type,
-          unit: entry.unit || null,
-          department: entry.department || null,
-        })) || [];
+      facultyRegistryRecords = (await getFacultyRegistryRecords()).data || [];
 
       const projectIds = resolvedProjects.map((project) => project.id).filter(Boolean);
       if (projectIds.length > 0) {
@@ -973,8 +971,8 @@ export default async function DashboardPage({
     if (profile.user_type === "unit_coordinator" && profile.department && profile.unit) {
       const { data: departmentProfiles } = await adminClient
         .from("profiles")
-        .select("id, first_name, last_name, user_type, unit, department, avatar_url")
-        .in("user_type", ["college_coordinator", "unit_coordinator", "project_leader"])
+        .select("id, email, first_name, last_name, user_type, unit, department, avatar_url, designation")
+        .in("user_type", ["college_coordinator", "unit_coordinator", "project_leader", "extension_office"])
         .eq("department", profile.department);
 
       const scopedUsers = (departmentProfiles || []).filter((item) => {
@@ -982,18 +980,45 @@ export default async function DashboardPage({
         return item.unit === profile.unit;
       });
 
-      unitDashboardUsers = scopedUsers.map((item) => ({
-        id: item.id,
-        name: `${item.first_name || ""} ${item.last_name || ""}`.trim() || "Unnamed user",
-        userType: item.user_type,
-        unit: item.unit || null,
-        department: item.department || null,
-        avatarUrl: item.avatar_url || null,
-      }));
+      const sameUnitProfiles = (departmentProfiles || []).filter((item) => item.unit === profile.unit);
+      const { data: projectLeaderCommitteeRecords } = await adminClient
+        .from("project_leader_records")
+        .select("*")
+        .eq("department", profile.department)
+        .eq("unit", profile.unit)
+        .order("last_name", { ascending: true })
+        .order("first_name", { ascending: true });
+
+      unitDashboardCommitteeMembers = [
+        ...sameUnitProfiles.map((item) => ({
+          id: `account-${item.id}`,
+          name: `${item.first_name || ""} ${item.last_name || ""}`.trim() || "Unnamed user",
+          source: "unit_account" as const,
+          email: item.email || null,
+          designation: formatTrainingFacultyDesignation(item as Record<string, unknown>),
+          employment: null,
+          userType: item.user_type || null,
+          unit: item.unit || null,
+          department: item.department || null,
+          avatarUrl: item.avatar_url || null,
+        })),
+        ...((projectLeaderCommitteeRecords || []) as ProjectLeaderRecord[]).map((item) => ({
+          id: `registered-project-leader-${item.id}`,
+          name: `${item.first_name || ""} ${item.last_name || ""}`.trim() || "Unnamed project leader",
+          source: "registered_project_leader" as const,
+          email: null,
+          designation: item.designation || "Project Leader",
+          employment: null,
+          userType: "project_leader_record",
+          unit: item.unit || null,
+          department: item.department || null,
+          avatarUrl: null,
+        })),
+      ].sort((left, right) => left.name.localeCompare(right.name));
 
       const scopedCreatorIds = Array.from(new Set(scopedUsers.map((item) => item.id)));
       const creatorNameMap = new Map(
-        unitDashboardUsers.map((item) => [item.id, item.name])
+        scopedUsers.map((item) => [item.id, `${item.first_name || ""} ${item.last_name || ""}`.trim() || "Unnamed user"])
       );
 
       unitDashboardTrainings = trainings
@@ -1009,6 +1034,10 @@ export default async function DashboardPage({
           createdAt: (training as { created_at?: string | null }).created_at || null,
           venue: training.venue_platform || null,
           participants: training.participants_overall_total || 0,
+          relatedProjectTitle: training.related_project_title || null,
+          linkedToProject: Boolean(training.related_project_id || training.related_project_title),
+          categorySummary: formatTrainingCategorySummary(training),
+          modeLabel: formatTrainingModeLabel(training.training_mode),
         }));
 
       const [
@@ -1566,7 +1595,7 @@ export default async function DashboardPage({
               <UnitCoordinatorDashboard
                 currentUserId={user.id}
                 scopeLabel={analyticsScopeLabel}
-                users={unitDashboardUsers}
+                committeeMembers={unitDashboardCommitteeMembers}
                 trainings={unitDashboardTrainings}
                 records={unitDashboardRecords}
               />
@@ -1587,7 +1616,7 @@ export default async function DashboardPage({
                 projects={analyticsProjects}
                 trainings={collegeOverviewTrainings}
                 budgetUtilizations={collegeOverviewBudgetUtilizations}
-                employees={collegeOverviewEmployees}
+                facultyRecords={facultyRegistryRecords}
               />
 
               <div className="grid gap-4 lg:grid-cols-12">

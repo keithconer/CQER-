@@ -1,21 +1,18 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
 import { format } from "date-fns";
 import {
-  ChevronLeft,
   BookOpenCheck,
-  Briefcase,
-  Building2,
   ChevronRight,
-  FileText,
+  FileDown,
   Filter,
   Layers3,
+  Mail,
   Users,
 } from "lucide-react";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { RecordPagination, useRecordPagination } from "@/components/dashboard/record-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,19 +23,24 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-export type UnitDashboardUser = {
+export type UnitDashboardCommitteeMember = {
   id: string;
   name: string;
-  userType: string;
+  source: "registered_project_leader" | "unit_account";
+  email: string | null;
+  designation: string | null;
+  employment: string | null;
+  userType: string | null;
   unit: string | null;
   department: string | null;
   avatarUrl: string | null;
@@ -52,6 +54,10 @@ export type UnitDashboardTraining = {
   createdAt: string | null;
   venue: string | null;
   participants: number;
+  relatedProjectTitle: string | null;
+  linkedToProject: boolean;
+  categorySummary: string;
+  modeLabel: string;
 };
 
 export type UnitDashboardRecord = {
@@ -65,17 +71,14 @@ export type UnitDashboardRecord = {
 interface UnitCoordinatorDashboardProps {
   currentUserId: string;
   scopeLabel: string;
-  users: UnitDashboardUser[];
+  committeeMembers: UnitDashboardCommitteeMember[];
   trainings: UnitDashboardTraining[];
   records: UnitDashboardRecord[];
 }
 
-function formatRole(value: string) {
-  return value
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
+type ActiveDialog = "committee" | "trainings" | null;
+type TrainingFilter = "all" | "linked_only" | "standalone_only" | "created_by_me";
+type CommitteeFilter = "all" | "registered_project_leaders" | "unit_accounts";
 
 function formatDate(value: string | null) {
   if (!value) return "No date";
@@ -83,83 +86,295 @@ function formatDate(value: string | null) {
   return Number.isNaN(parsed.getTime()) ? "No date" : format(parsed, "MMM d, yyyy");
 }
 
+function formatRole(value: string | null) {
+  if (!value) return "Member";
+  return value
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function getCommitteeSourceLabel(source: UnitDashboardCommitteeMember["source"]) {
+  return source === "registered_project_leader" ? "Registered project leader" : "Unit account";
+}
+
+async function exportTrainingsExcel(records: UnitDashboardTraining[]) {
+  const ExcelJSImport = await import("exceljs/dist/exceljs.min.js");
+  const ExcelJS = ExcelJSImport?.default ?? ExcelJSImport;
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet("Unit Trainings");
+  const columns = [
+    { header: "Training", key: "title", width: 34 },
+    { header: "Related Project", key: "project", width: 28 },
+    { header: "Linked to Project", key: "linked", width: 18 },
+    { header: "Category", key: "category", width: 28 },
+    { header: "Mode", key: "mode", width: 18 },
+    { header: "Venue", key: "venue", width: 24 },
+    { header: "Created By", key: "creator", width: 24 },
+  ];
+  sheet.columns = columns.map((column) => ({ key: column.key, width: column.width }));
+  sheet.mergeCells("A1:G1");
+  sheet.getCell("A1").value = "Unit Training Container";
+  sheet.getCell("A1").font = { bold: true, size: 14 };
+  sheet.getCell("A1").alignment = { horizontal: "center" };
+  sheet.getRow(2).values = columns.map((column) => column.header);
+  sheet.getRow(2).eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF159E44" } };
+  });
+  records.forEach((record) => {
+    sheet.addRow({
+      title: record.title,
+      project: record.relatedProjectTitle || "-",
+      linked: record.linkedToProject ? "Yes" : "No",
+      category: record.categorySummary,
+      mode: record.modeLabel,
+      venue: record.venue || "-",
+      creator: record.creatorName,
+    });
+  });
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `unit-trainings-${new Date().toISOString().slice(0, 10)}.xlsx`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+async function exportTrainingsPdf(records: UnitDashboardTraining[]) {
+  const { jsPDF } = await import("jspdf");
+  const { default: autoTable } = await import("jspdf-autotable");
+  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+  doc.setFontSize(12);
+  doc.text("Unit Training Container", doc.internal.pageSize.getWidth() / 2, 12, { align: "center" });
+  autoTable(doc, {
+    startY: 18,
+    head: [["Training", "Related Project", "Linked", "Category", "Mode", "Venue", "Created By"]],
+    body: records.map((record) => [
+      record.title,
+      record.relatedProjectTitle || "-",
+      record.linkedToProject ? "Yes" : "No",
+      record.categorySummary,
+      record.modeLabel,
+      record.venue || "-",
+      record.creatorName,
+    ]),
+    theme: "grid",
+    headStyles: { fillColor: [21, 158, 68], textColor: [255, 255, 255], fontSize: 8 },
+    styles: { fontSize: 7, cellPadding: 2, overflow: "linebreak" },
+  });
+  doc.save(`unit-trainings-${new Date().toISOString().slice(0, 10)}.pdf`);
+}
+
+async function exportCommitteeExcel(records: UnitDashboardCommitteeMember[]) {
+  const ExcelJSImport = await import("exceljs/dist/exceljs.min.js");
+  const ExcelJS = ExcelJSImport?.default ?? ExcelJSImport;
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet("Committee");
+  const columns = [
+    { header: "Name", key: "name", width: 28 },
+    { header: "Source", key: "source", width: 24 },
+    { header: "Designation", key: "designation", width: 28 },
+    { header: "Email", key: "email", width: 32 },
+    { header: "Role", key: "role", width: 22 },
+    { header: "Unit", key: "unit", width: 24 },
+  ];
+  sheet.columns = columns.map((column) => ({ key: column.key, width: column.width }));
+  sheet.mergeCells("A1:F1");
+  sheet.getCell("A1").value = "Unit Committee";
+  sheet.getCell("A1").font = { bold: true, size: 14 };
+  sheet.getCell("A1").alignment = { horizontal: "center" };
+  sheet.getRow(2).values = columns.map((column) => column.header);
+  sheet.getRow(2).eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF159E44" } };
+  });
+  records.forEach((record) => {
+    sheet.addRow({
+      name: record.name,
+      source: getCommitteeSourceLabel(record.source),
+      designation: record.designation || "-",
+      email: record.email || "-",
+      role: formatRole(record.userType),
+      unit: record.unit || "-",
+    });
+  });
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `unit-committee-${new Date().toISOString().slice(0, 10)}.xlsx`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+async function exportCommitteePdf(records: UnitDashboardCommitteeMember[]) {
+  const { jsPDF } = await import("jspdf");
+  const { default: autoTable } = await import("jspdf-autotable");
+  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+  doc.setFontSize(12);
+  doc.text("Unit Committee", doc.internal.pageSize.getWidth() / 2, 12, { align: "center" });
+  autoTable(doc, {
+    startY: 18,
+    head: [["Name", "Source", "Designation", "Email", "Role", "Unit"]],
+    body: records.map((record) => [
+      record.name,
+      getCommitteeSourceLabel(record.source),
+      record.designation || "-",
+      record.email || "-",
+      formatRole(record.userType),
+      record.unit || "-",
+    ]),
+    theme: "grid",
+    headStyles: { fillColor: [21, 158, 68], textColor: [255, 255, 255], fontSize: 8 },
+    styles: { fontSize: 7, cellPadding: 2, overflow: "linebreak" },
+  });
+  doc.save(`unit-committee-${new Date().toISOString().slice(0, 10)}.pdf`);
+}
+
+function OverviewCard({
+  title,
+  description,
+  value,
+  icon: Icon,
+  onClick,
+}: {
+  title: string;
+  description: string;
+  value: string;
+  icon: React.ComponentType<{ className?: string }>;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-2xl border border-border/50 bg-card/70 text-left shadow-sm transition hover:border-primary/30 hover:bg-muted/20"
+    >
+      <div className="flex items-start justify-between gap-3 p-4">
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-muted text-foreground">
+              <Icon className="h-4 w-4" />
+            </div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{title}</p>
+          </div>
+          <p className="text-lg font-semibold leading-none text-foreground">{value}</p>
+          <p className="text-[11px] leading-4 text-muted-foreground">{description}</p>
+        </div>
+        <ChevronRight className="mt-1 h-4 w-4 text-muted-foreground" />
+      </div>
+    </button>
+  );
+}
+
 export function UnitCoordinatorDashboard({
   currentUserId,
   scopeLabel,
-  users,
+  committeeMembers,
   trainings,
   records,
 }: UnitCoordinatorDashboardProps) {
-  const [activeDialog, setActiveDialog] = React.useState<"users" | "trainings" | null>(null);
-  const [loadingDialog, setLoadingDialog] = React.useState<"users" | "trainings" | null>(null);
-  const [trainingFilter, setTrainingFilter] = React.useState<"all" | "created_by_me">("all");
-  const [usersPage, setUsersPage] = React.useState(1);
+  const [activeDialog, setActiveDialog] = React.useState<ActiveDialog>(null);
+  const [trainingSearch, setTrainingSearch] = React.useState("");
+  const [committeeSearch, setCommitteeSearch] = React.useState("");
+  const [trainingFilter, setTrainingFilter] = React.useState<TrainingFilter>("all");
+  const [committeeFilter, setCommitteeFilter] = React.useState<CommitteeFilter>("all");
   const [recordsPage, setRecordsPage] = React.useState(1);
-  const timeoutRef = React.useRef<number | null>(null);
-  const pageSize = 10;
-
-  React.useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        window.clearTimeout(timeoutRef.current);
-      }
-    };
-  }, []);
-
-  const openDialogWithLoader = React.useCallback((target: "users" | "trainings") => {
-    if (timeoutRef.current) {
-      window.clearTimeout(timeoutRef.current);
-    }
-    setActiveDialog(null);
-    setLoadingDialog(target);
-    timeoutRef.current = window.setTimeout(() => {
-      setLoadingDialog(null);
-      setActiveDialog(target);
-    }, 650);
-  }, []);
 
   const filteredTrainings = React.useMemo(() => {
-    if (trainingFilter === "created_by_me") {
-      return trainings.filter((training) => training.createdBy === currentUserId);
-    }
-    return trainings;
-  }, [currentUserId, trainingFilter, trainings]);
+    const query = trainingSearch.trim().toLowerCase();
+    return trainings.filter((training) => {
+      const haystack = [
+        training.title,
+        training.relatedProjectTitle || "",
+        training.categorySummary,
+        training.modeLabel,
+        training.venue || "",
+        training.creatorName,
+      ]
+        .join(" ")
+        .toLowerCase();
+      if (query && !haystack.includes(query)) return false;
+      if (trainingFilter === "linked_only" && !training.linkedToProject) return false;
+      if (trainingFilter === "standalone_only" && training.linkedToProject) return false;
+      if (trainingFilter === "created_by_me" && training.createdBy !== currentUserId) return false;
+      return true;
+    });
+  }, [currentUserId, trainingFilter, trainingSearch, trainings]);
 
-  const totalUsersPages = Math.max(1, Math.ceil(users.length / pageSize));
-  const paginatedUsers = React.useMemo(() => {
-    const start = (usersPage - 1) * pageSize;
-    return users.slice(start, start + pageSize);
-  }, [users, usersPage]);
+  const filteredCommitteeMembers = React.useMemo(() => {
+    const query = committeeSearch.trim().toLowerCase();
+    return committeeMembers.filter((member) => {
+      const haystack = [
+        member.name,
+        member.designation || "",
+        member.email || "",
+        member.unit || "",
+        member.department || "",
+        formatRole(member.userType),
+      ]
+        .join(" ")
+        .toLowerCase();
+      if (query && !haystack.includes(query)) return false;
+      if (committeeFilter === "registered_project_leaders" && member.source !== "registered_project_leader") return false;
+      if (committeeFilter === "unit_accounts" && member.source !== "unit_account") return false;
+      return true;
+    });
+  }, [committeeFilter, committeeMembers, committeeSearch]);
 
-  const totalRecordsPages = Math.max(1, Math.ceil(records.length / pageSize));
-  const paginatedRecords = React.useMemo(() => {
-    const start = (recordsPage - 1) * pageSize;
-    return records.slice(start, start + pageSize);
-  }, [records, recordsPage]);
+  const {
+    currentPage: trainingPage,
+    paginatedItems: paginatedTrainings,
+    resetPagination: resetTrainingPagination,
+    setCurrentPage: setTrainingPage,
+    startIndex: trainingStartIndex,
+    totalPages: trainingTotalPages,
+  } = useRecordPagination(filteredTrainings);
+
+  const {
+    currentPage: committeePage,
+    paginatedItems: paginatedCommitteeMembers,
+    resetPagination: resetCommitteePagination,
+    setCurrentPage: setCommitteePage,
+    startIndex: committeeStartIndex,
+    totalPages: committeeTotalPages,
+  } = useRecordPagination(filteredCommitteeMembers);
+
+  const {
+    currentPage: recordsCurrentPage,
+    paginatedItems: paginatedRecords,
+    setCurrentPage: setRecordsCurrentPage,
+    startIndex: recordsStartIndex,
+    totalPages: recordsTotalPages,
+  } = useRecordPagination(records);
 
   React.useEffect(() => {
-    setUsersPage(1);
-  }, [users]);
+    resetTrainingPagination();
+  }, [resetTrainingPagination, trainingFilter, trainingSearch]);
+
+  React.useEffect(() => {
+    resetCommitteePagination();
+  }, [committeeFilter, committeeSearch, resetCommitteePagination]);
 
   React.useEffect(() => {
     setRecordsPage(1);
   }, [records]);
 
+  React.useEffect(() => {
+    setRecordsCurrentPage(recordsPage);
+  }, [recordsPage, setRecordsCurrentPage]);
+
   return (
     <>
-      {loadingDialog ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-          <div className="flex flex-col items-center rounded-3xl border border-border/60 bg-background px-8 py-7 shadow-lg">
-            <div className="relative h-20 w-20 preloader-logo">
-              <Image src="/CQERFINAL.png" alt="CQER Logo" fill className="object-contain" />
-            </div>
-            <p className="mt-3 text-[10px] font-medium text-muted-foreground">
-              Loading {loadingDialog === "users" ? "unit users" : "trainings"}...
-            </p>
-          </div>
-        </div>
-      ) : null}
-
       <div className="space-y-3">
         <Card className="border-border/50 bg-card/40 shadow-sm">
           <CardHeader className="pb-2">
@@ -170,241 +385,279 @@ export function UnitCoordinatorDashboard({
             <CardDescription className="text-[11px]">{scopeLabel}</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 lg:grid-cols-2">
-            <button
-              type="button"
-              onClick={() => openDialogWithLoader("users")}
-              className="rounded-xl border border-border/50 bg-background p-4 text-left transition hover:border-primary/40 hover:bg-muted/20"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2 text-[12px] font-semibold">
-                    <Users className="h-3.5 w-3.5 text-primary" />
-                    Total Unit Users
-                  </div>
-                  <p className="text-2xl font-bold leading-none">{users.length}</p>
-                  <p className="text-[11px] text-muted-foreground">
-                    View all users in your department and unit, including their role and unit.
-                  </p>
-                </div>
-                <ChevronRight className="mt-1 h-3.5 w-3.5 text-muted-foreground" />
-              </div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => openDialogWithLoader("trainings")}
-              className="rounded-xl border border-border/50 bg-background p-4 text-left transition hover:border-primary/40 hover:bg-muted/20"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2 text-[12px] font-semibold">
-                    <BookOpenCheck className="h-3.5 w-3.5 text-primary" />
-                    Total Created Trainings
-                  </div>
-                  <p className="text-2xl font-bold leading-none">{trainings.length}</p>
-                  <p className="text-[11px] text-muted-foreground">
-                    Open the unit training list and filter down to records you created.
-                  </p>
-                </div>
-                <ChevronRight className="mt-1 h-3.5 w-3.5 text-muted-foreground" />
-              </div>
-            </button>
+            <OverviewCard
+              title="Training Container"
+              description="View all unit training records with project link, category, and mode details."
+              value={String(trainings.length)}
+              icon={BookOpenCheck}
+              onClick={() => setActiveDialog("trainings")}
+            />
+            <OverviewCard
+              title="Committee"
+              description="Review registered project leaders and same-unit people in one searchable list."
+              value={String(committeeMembers.length)}
+              icon={Users}
+              onClick={() => setActiveDialog("committee")}
+            />
           </CardContent>
         </Card>
 
         <Card className="border-border/50 bg-card/40 shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-[13px] font-semibold">
-              <FileText className="h-3.5 w-3.5 text-primary" />
+              <Layers3 className="h-3.5 w-3.5 text-primary" />
               All Records from Your Unit
             </CardTitle>
             <CardDescription className="text-[11px]">
               Consolidated records created by users from your department and unit.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="space-y-2">
-              {paginatedRecords.length > 0 ? (
-                paginatedRecords.map((record) => (
-                    <div key={record.id} className="rounded-xl border border-border/50 bg-background p-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="space-y-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-[12px] font-semibold text-foreground">{record.title}</p>
-                            <Badge variant="outline" className="text-[9px]">
-                              {record.moduleLabel}
-                            </Badge>
-                          </div>
-                          <p className="text-[11px] text-muted-foreground">
-                            Created by {record.creatorName} on {formatDate(record.createdAt)}
-                          </p>
-                        </div>
-                        <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="rounded-xl border border-dashed border-border/50 px-4 py-8 text-center text-sm text-muted-foreground">
-                    No unit records found yet.
-                  </div>
-                )}
+          <CardContent>
+            <div className="rounded-2xl border border-border/50">
+              <Table>
+                <TableHeader className="bg-muted/30">
+                  <TableRow className="border-border/40">
+                    <TableHead className="text-[10px]">Record</TableHead>
+                    <TableHead className="text-[10px]">Module</TableHead>
+                    <TableHead className="text-[10px]">Created By</TableHead>
+                    <TableHead className="text-[10px]">Created</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedRecords.length > 0 ? (
+                    paginatedRecords.map((record) => (
+                      <TableRow key={record.id} className="border-border/30">
+                        <TableCell className="py-3 text-[11px] font-medium">{record.title}</TableCell>
+                        <TableCell className="py-3 text-[11px]">
+                          <Badge variant="outline" className="text-[9px]">
+                            {record.moduleLabel}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="py-3 text-[11px]">{record.creatorName}</TableCell>
+                        <TableCell className="py-3 text-[11px]">{formatDate(record.createdAt)}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4} className="h-24 text-center text-xs text-muted-foreground">
+                        No unit records found yet.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </div>
-            {records.length > pageSize ? (
-              <div className="flex items-center justify-between border-t border-border/40 pt-2">
-                <span className="text-[10px] text-muted-foreground">
-                  Page {recordsPage} of {totalRecordsPages}
-                </span>
-                <div className="flex items-center gap-1">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="h-7 w-7 rounded-lg"
-                    disabled={recordsPage === 1}
-                    onClick={() => setRecordsPage((current) => Math.max(1, current - 1))}
-                  >
-                    <ChevronLeft className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="h-7 w-7 rounded-lg"
-                    disabled={recordsPage === totalRecordsPages}
-                    onClick={() => setRecordsPage((current) => Math.min(totalRecordsPages, current + 1))}
-                  >
-                    <ChevronRight className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
-            ) : null}
+            <RecordPagination
+              currentPage={recordsCurrentPage}
+              totalPages={recordsTotalPages}
+              startIndex={recordsStartIndex}
+              totalItems={records.length}
+              itemLabel="records"
+              onPageChange={setRecordsCurrentPage}
+            />
           </CardContent>
         </Card>
       </div>
 
-      <Dialog open={activeDialog === "users"} onOpenChange={(open) => !open && setActiveDialog(null)}>
-        <DialogContent className="sm:max-w-3xl">
+      <Dialog open={activeDialog === "trainings"} onOpenChange={(open) => !open && setActiveDialog(null)}>
+        <DialogContent className="sm:max-w-6xl">
           <DialogHeader>
-            <DialogTitle>Total Unit Users</DialogTitle>
+            <DialogTitle>Training Container</DialogTitle>
             <DialogDescription>
-              Users visible from your department and unit, including their role and assigned unit.
+              All trainings from your scoped unit view, including project link, category, and mode.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-2">
-              {paginatedUsers.map((user) => (
-                <div key={user.id} className="rounded-xl border border-border/50 bg-muted/10 p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-3">
-                      <Avatar className="h-9 w-9 border border-border/40">
-                        <AvatarImage src={user.avatarUrl || ""} alt={user.name} />
-                        <AvatarFallback className="text-[10px] font-semibold">
-                          {user.name
-                            .split(" ")
-                            .filter(Boolean)
-                            .slice(0, 2)
-                            .map((part) => part[0])
-                            .join("")
-                            .toUpperCase() || "U"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="space-y-0.5">
-                        <p className="text-[12px] font-semibold">{user.name}</p>
-                        <p className="text-[11px] text-muted-foreground">
-                          {user.department || "No department"}{user.unit ? ` • ${user.unit}` : ""}
-                        </p>
-                      </div>
-                    </div>
-                    <Badge variant="outline" className="text-[9px]">
-                      {formatRole(user.userType)}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
+          <div className="space-y-4">
+            <div className="grid gap-2 md:grid-cols-[minmax(0,1.5fr)_180px_auto]">
+              <Input
+                value={trainingSearch}
+                onChange={(event) => setTrainingSearch(event.target.value)}
+                placeholder="Search training, project, category, mode, or creator..."
+                className="h-9 text-xs"
+              />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="h-9 text-xs">
+                    <Filter className="mr-2 h-3.5 w-3.5" />
+                    Results Filter
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setTrainingFilter("all")}>All trainings</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTrainingFilter("linked_only")}>Linked to project</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTrainingFilter("standalone_only")}>No linked project</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTrainingFilter("created_by_me")}>Created by me</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="h-9 text-xs">
+                    <FileDown className="mr-2 h-3.5 w-3.5" />
+                    Export
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => void exportTrainingsExcel(filteredTrainings)}>Export Excel</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => void exportTrainingsPdf(filteredTrainings)}>Export PDF</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
-            {users.length > pageSize ? (
-              <div className="flex items-center justify-between border-t border-border/40 pt-2">
-                <span className="text-[10px] text-muted-foreground">
-                  Page {usersPage} of {totalUsersPages}
-                </span>
-                <div className="flex items-center gap-1">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="h-7 w-7 rounded-lg"
-                    disabled={usersPage === 1}
-                    onClick={() => setUsersPage((current) => Math.max(1, current - 1))}
-                  >
-                    <ChevronLeft className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="h-7 w-7 rounded-lg"
-                    disabled={usersPage === totalUsersPages}
-                    onClick={() => setUsersPage((current) => Math.min(totalUsersPages, current + 1))}
-                  >
-                    <ChevronRight className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
-            ) : null}
+
+            <ScrollArea className="max-h-[60vh] rounded-xl border border-border/50">
+              <Table>
+                <TableHeader className="bg-muted/30">
+                  <TableRow className="border-border/40">
+                    <TableHead className="text-[10px]">Training</TableHead>
+                    <TableHead className="text-[10px]">Related Project</TableHead>
+                    <TableHead className="text-[10px]">Linked</TableHead>
+                    <TableHead className="text-[10px]">Category</TableHead>
+                    <TableHead className="text-[10px]">Mode</TableHead>
+                    <TableHead className="text-[10px]">Venue</TableHead>
+                    <TableHead className="text-[10px]">Created By</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedTrainings.length > 0 ? (
+                    paginatedTrainings.map((training) => (
+                      <TableRow key={training.id} className="border-border/30">
+                        <TableCell className="py-3 text-[11px] font-medium">{training.title}</TableCell>
+                        <TableCell className="py-3 text-[11px]">{training.relatedProjectTitle || "-"}</TableCell>
+                        <TableCell className="py-3 text-[11px]">{training.linkedToProject ? "Yes" : "No"}</TableCell>
+                        <TableCell className="py-3 text-[11px]">{training.categorySummary}</TableCell>
+                        <TableCell className="py-3 text-[11px]">{training.modeLabel}</TableCell>
+                        <TableCell className="py-3 text-[11px]">{training.venue || "-"}</TableCell>
+                        <TableCell className="py-3 text-[11px]">
+                          <div className="space-y-1">
+                            <p>{training.creatorName}</p>
+                            <p className="text-[10px] text-muted-foreground">{formatDate(training.createdAt)}</p>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={7} className="h-24 text-center text-xs text-muted-foreground">
+                        No trainings match the current search or filter.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+
+            <RecordPagination
+              currentPage={trainingPage}
+              totalPages={trainingTotalPages}
+              startIndex={trainingStartIndex}
+              totalItems={filteredTrainings.length}
+              itemLabel="trainings"
+              onPageChange={setTrainingPage}
+            />
           </div>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={activeDialog === "trainings"} onOpenChange={(open) => !open && setActiveDialog(null)}>
-        <DialogContent className="sm:max-w-4xl">
+      <Dialog open={activeDialog === "committee"} onOpenChange={(open) => !open && setActiveDialog(null)}>
+        <DialogContent className="sm:max-w-6xl">
           <DialogHeader>
-            <DialogTitle>Total Created Trainings</DialogTitle>
+            <DialogTitle>Committee</DialogTitle>
             <DialogDescription>
-              Trainings created by users from your department and unit.
+              Registered project leaders in your unit are listed without emails, while same-unit people show their emails.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex justify-end">
-            <Select value={trainingFilter} onValueChange={(value: "all" | "created_by_me") => setTrainingFilter(value)}>
-              <SelectTrigger className="h-9 w-[180px] rounded-xl text-xs">
-                <Filter className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all" className="text-xs">All trainings</SelectItem>
-                <SelectItem value="created_by_me" className="text-xs">Created by me</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <ScrollArea className="max-h-[60vh] pr-4">
-            <div className="space-y-3">
-              {filteredTrainings.length > 0 ? (
-                filteredTrainings.map((training) => (
-                  <div key={training.id} className="rounded-2xl border border-border/50 bg-muted/10 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="space-y-1">
-                        <p className="text-sm font-semibold">{training.title}</p>
-                        <p className="text-xs text-muted-foreground">
-                          Created by {training.creatorName} on {formatDate(training.createdAt)}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {training.venue || "No venue"} • {training.participants} participants
-                        </p>
-                      </div>
-                      <Building2 className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="rounded-2xl border border-dashed border-border/50 px-4 py-8 text-center text-sm text-muted-foreground">
-                  No trainings match the selected filter.
-                </div>
-              )}
+          <div className="space-y-4">
+            <div className="grid gap-2 md:grid-cols-[minmax(0,1.5fr)_180px_auto]">
+              <Input
+                value={committeeSearch}
+                onChange={(event) => setCommitteeSearch(event.target.value)}
+                placeholder="Search name, designation, email, unit, or role..."
+                className="h-9 text-xs"
+              />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="h-9 text-xs">
+                    <Filter className="mr-2 h-3.5 w-3.5" />
+                    Results Filter
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setCommitteeFilter("all")}>All members</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setCommitteeFilter("registered_project_leaders")}>
+                    Registered project leaders
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setCommitteeFilter("unit_accounts")}>Same-unit people</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="h-9 text-xs">
+                    <FileDown className="mr-2 h-3.5 w-3.5" />
+                    Export
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => void exportCommitteeExcel(filteredCommitteeMembers)}>Export Excel</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => void exportCommitteePdf(filteredCommitteeMembers)}>Export PDF</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
-          </ScrollArea>
-          <div className="flex justify-end">
-            <Button variant="outline" className="rounded-xl" onClick={() => setActiveDialog(null)}>
-              Close
-            </Button>
+
+            <ScrollArea className="max-h-[60vh] rounded-xl border border-border/50">
+              <Table>
+                <TableHeader className="bg-muted/30">
+                  <TableRow className="border-border/40">
+                    <TableHead className="text-[10px]">Name</TableHead>
+                    <TableHead className="text-[10px]">Source</TableHead>
+                    <TableHead className="text-[10px]">Designation</TableHead>
+                    <TableHead className="text-[10px]">Email</TableHead>
+                    <TableHead className="text-[10px]">Role</TableHead>
+                    <TableHead className="text-[10px]">Unit</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedCommitteeMembers.length > 0 ? (
+                    paginatedCommitteeMembers.map((member) => (
+                      <TableRow key={member.id} className="border-border/30">
+                        <TableCell className="py-3 text-[11px] font-medium">{member.name}</TableCell>
+                        <TableCell className="py-3 text-[11px]">
+                          <Badge variant="outline" className="text-[9px]">
+                            {getCommitteeSourceLabel(member.source)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="py-3 text-[11px]">{member.designation || "-"}</TableCell>
+                        <TableCell className="py-3 text-[11px]">
+                          {member.email ? (
+                            <span className="inline-flex items-center gap-1">
+                              <Mail className="h-3 w-3 text-muted-foreground" />
+                              {member.email}
+                            </span>
+                          ) : (
+                            "-"
+                          )}
+                        </TableCell>
+                        <TableCell className="py-3 text-[11px]">{formatRole(member.userType)}</TableCell>
+                        <TableCell className="py-3 text-[11px]">{member.unit || "-"}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="h-24 text-center text-xs text-muted-foreground">
+                        No committee members match the current search or filter.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+
+            <RecordPagination
+              currentPage={committeePage}
+              totalPages={committeeTotalPages}
+              startIndex={committeeStartIndex}
+              totalItems={filteredCommitteeMembers.length}
+              itemLabel="committee members"
+              onPageChange={setCommitteePage}
+            />
           </div>
         </DialogContent>
       </Dialog>
