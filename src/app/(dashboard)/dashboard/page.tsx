@@ -1038,6 +1038,7 @@ export default async function DashboardPage({
       ].sort((left, right) => left.name.localeCompare(right.name));
 
       // Build a creator name map from all same-unit users
+      const scopedCreatorIds = Array.from(new Set(scopedUsers.map((item) => item.id)));
       const creatorNameMap = new Map(
         scopedUsers.map((item) => [item.id, `${item.first_name || ""} ${item.last_name || ""}`.trim() || "Unnamed user"])
       );
