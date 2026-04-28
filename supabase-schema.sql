@@ -4392,4 +4392,95 @@ alter table public.trainings
   add column if not exists conducted_sessions jsonb not null default '[]'::jsonb,
   add column if not exists faculty_members jsonb not null default '[]'::jsonb;
 
+-- ============================================================
+-- START COPY: Unit Coordinator Project Leader Records
+-- ============================================================
+create table if not exists public.project_leader_records (
+  id uuid primary key default gen_random_uuid(),
+  created_by uuid not null references auth.users(id) on delete cascade,
+  department text,
+  unit text,
+  first_name text not null,
+  last_name text not null,
+  designation text not null,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+create index if not exists idx_project_leader_records_created_by
+on public.project_leader_records (created_by);
+
+create index if not exists idx_project_leader_records_designation
+on public.project_leader_records (designation);
+
+alter table public.project_leader_records enable row level security;
+
+drop policy if exists "Unit coordinators can view own project leader records" on public.project_leader_records;
+create policy "Unit coordinators can view own project leader records"
+on public.project_leader_records for select
+to authenticated
+using (
+  created_by = auth.uid()
+  and exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.user_type = 'unit_coordinator'
+  )
+);
+
+drop policy if exists "Unit coordinators can create own project leader records" on public.project_leader_records;
+create policy "Unit coordinators can create own project leader records"
+on public.project_leader_records for insert
+to authenticated
+with check (
+  created_by = auth.uid()
+  and exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.user_type = 'unit_coordinator'
+  )
+);
+
+drop policy if exists "Unit coordinators can update own project leader records" on public.project_leader_records;
+create policy "Unit coordinators can update own project leader records"
+on public.project_leader_records for update
+to authenticated
+using (
+  created_by = auth.uid()
+  and exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.user_type = 'unit_coordinator'
+  )
+)
+with check (
+  created_by = auth.uid()
+  and exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.user_type = 'unit_coordinator'
+  )
+);
+
+drop policy if exists "Unit coordinators can delete own project leader records" on public.project_leader_records;
+create policy "Unit coordinators can delete own project leader records"
+on public.project_leader_records for delete
+to authenticated
+using (
+  created_by = auth.uid()
+  and exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.user_type = 'unit_coordinator'
+  )
+);
+-- ============================================================
+-- END COPY: Unit Coordinator Project Leader Records
+-- ============================================================
+
 notify pgrst, 'reload schema';

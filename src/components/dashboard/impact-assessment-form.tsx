@@ -241,7 +241,7 @@ export function ImpactAssessmentForm({
   return (
     <div className="flex h-full flex-col overflow-hidden bg-background">
       <FullscreenFormHeader
-        title={isViewOnly ? "Impact / Assessment Details" : record ? "Edit Impact / Assessment" : "Create Assessment"}
+        title={isViewOnly ? "Impact Assessment Details" : record ? "Edit Impact Assessment" : "Create Assessment"}
         currentStep={currentStep}
         totalSteps={2}
         labels={stepLabels}

@@ -188,7 +188,7 @@ export function ImpactAssessmentManagement({
         <CardHeader className="space-y-4 pb-4">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div>
-              <CardTitle className="text-xl font-semibold">Impact / Assessment</CardTitle>
+              <CardTitle className="text-xl font-semibold">Impact Assessment</CardTitle>
               <CardDescription className="text-sm">
                 Search, filter, export, and manage project or training impact assessment records.
               </CardDescription>

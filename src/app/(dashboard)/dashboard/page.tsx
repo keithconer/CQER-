@@ -45,6 +45,7 @@ import { getAwardsRecognitions, type AwardsRecognitionRecord } from "@/lib/actio
 import { AwardsRecognitionManagement } from "@/components/dashboard/awards-recognition-management";
 import { getOtherActivities, type OtherActivityRecord } from "@/lib/actions/other-activities";
 import { OtherActivitiesManagement } from "@/components/dashboard/other-activities-management";
+import { ProjectLeaderRecordsManagement } from "@/components/dashboard/project-leader-records-management";
 import { ProjectLeaderDashboard } from "@/components/dashboard/project-leader-dashboard";
 import { CollegeCoordinatorDashboard } from "@/components/dashboard/college-coordinator-dashboard";
 import {
@@ -54,6 +55,7 @@ import {
   type UnitDashboardUser,
 } from "@/components/dashboard/unit-coordinator-dashboard";
 import { normalizeSdgArray } from "@/lib/sdg";
+import { getProjectLeaderRecords, type ProjectLeaderRecord } from "@/lib/actions/project-leader-records";
 
 
 function extractPartnerAgencyNames(projects: Project[]) {
@@ -377,6 +379,7 @@ export default async function DashboardPage({
     panelParam === "budget-utilization" ||
     panelParam === "ordinance-resolution" ||
     panelParam === "impact-assessment" ||
+    panelParam === "project-leader-records" ||
     panelParam === "extension-program" ||
     panelParam === "awards-recognition" ||
     panelParam === "other-activities" ||
@@ -408,7 +411,7 @@ export default async function DashboardPage({
   const allowedPanelsByRole: Record<string, string[]> = {
     super_admin: ["overview", "community", "backup", "account-management", "accounts"],
     college_coordinator: ["overview", "community", "backup", "account-management", "accounts", "projects", "budget-utilization", "ordinance-resolution", "impact-assessment", "extension-program", "awards-recognition", "other-activities", "trainings", "consultancy", "technical-advisory", "adopters-with-enterprise", "technologies-innovations-commercialized", "iec-materials"],
-    unit_coordinator: ["overview", "community", "backup", "trainings"],
+    unit_coordinator: ["overview", "community", "backup", "trainings", "project-leader-records"],
     project_leader: ["overview", "community", "backup", "projects", "budget-utilization", "ordinance-resolution", "impact-assessment", "extension-program", "awards-recognition", "other-activities", "trainings", "consultancy", "technical-advisory", "adopters-with-enterprise", "technologies-innovations-commercialized", "iec-materials"],
     extension_office: ["overview"],
   };
@@ -433,6 +436,7 @@ export default async function DashboardPage({
   let extensionProgramRecords: ExtensionProgramRecord[] = [];
   let awardsRecognitionRecords: AwardsRecognitionRecord[] = [];
   let otherActivityRecords: OtherActivityRecord[] = [];
+  let projectLeaderRecords: ProjectLeaderRecord[] = [];
   let trainingPartnerAgencyOptions: string[] = [];
   let trainingProjectOptions: TrainingProjectOption[] = [];
   let trainingFacultyOptions: TrainingFacultyOption[] = [];
@@ -484,6 +488,8 @@ export default async function DashboardPage({
     } else if (activePanel === "trainings" && profile.user_type === "unit_coordinator") {
       trainingRecords = (await getTrainings()).data || [];
       trainingFacultyOptions = await loadTrainingFacultyOptions();
+    } else if (activePanel === "project-leader-records" && profile.user_type === "unit_coordinator") {
+      projectLeaderRecords = (await getProjectLeaderRecords()).data || [];
     }
   } else if (profile.user_type === "college_coordinator") {
     if (activePanel === "backup") {
@@ -1066,8 +1072,8 @@ export default async function DashboardPage({
         })) as UnitDashboardRecord[]),
         ...((impactResult.data || []).map((record: { id: string; created_by: string; created_at: string | null; activity_name: string | null }) => ({
           id: `impact-${record.id}`,
-          title: buildUnitRecordTitle(record.activity_name, "Impact / assessment"),
-          moduleLabel: "Impact / Assessment",
+          title: buildUnitRecordTitle(record.activity_name, "Impact assessment"),
+          moduleLabel: "Impact Assessment",
           creatorName: creatorNameMap.get(record.created_by) || "Unknown user",
           createdAt: record.created_at || null,
         })) as UnitDashboardRecord[]),
@@ -1192,7 +1198,7 @@ export default async function DashboardPage({
       { label: "Project Registration", value: leaderProjects.length, href: "/dashboard?panel=projects&view=project-registration" },
       { label: "Budget Utilization", value: budgetUtilizationRecords.length, href: "/dashboard?panel=budget-utilization" },
       { label: "Ordinance / Resolution", value: ordinanceResolutionRecords.length, href: "/dashboard?panel=ordinance-resolution" },
-      { label: "Impact / Assessment", value: impactAssessmentRecords.length, href: "/dashboard?panel=impact-assessment" },
+      { label: "Impact Assessment", value: impactAssessmentRecords.length, href: "/dashboard?panel=impact-assessment" },
       { label: "Extension Program", value: extensionProgramRecords.length, href: "/dashboard?panel=extension-program" },
       { label: "Awards", value: awardsRecognitionRecords.length, href: "/dashboard?panel=awards-recognition" },
       { label: "Other Activities", value: otherActivityRecords.length, href: "/dashboard?panel=other-activities" },
@@ -1335,8 +1341,8 @@ export default async function DashboardPage({
       })),
       ...impactAssessmentRecords.map((record) => ({
         id: `impact-${record.id}`,
-        title: record.activity_name || "Impact / assessment",
-        meta: "Impact / Assessment",
+        title: record.activity_name || "Impact assessment",
+        meta: "Impact Assessment",
         href: "/dashboard?panel=impact-assessment",
         createdAt: record.created_at || null,
       })),
@@ -1492,7 +1498,8 @@ export default async function DashboardPage({
     "iec-materials": "IEC Materials",
     "budget-utilization": "Budget Utilization",
     "ordinance-resolution": "Ordinance / Resolution",
-    "impact-assessment": "Impact / Assessment",
+    "impact-assessment": "Impact Assessment",
+    "project-leader-records": "Project Leader Registration",
     "extension-program": "Extension Program",
     "awards-recognition": "Awards and Recognition",
     "other-activities": "Other Activities",
@@ -1751,6 +1758,8 @@ export default async function DashboardPage({
             currentUserName={`${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "Unit Coordinator"}
             currentUserId={user.id}
           />
+        ) : activePanel === "project-leader-records" ? (
+          <ProjectLeaderRecordsManagement initialRecords={projectLeaderRecords} />
         ) : null
       )}
 

@@ -146,7 +146,7 @@ const moduleIcons: Record<string, LucideIcon> = {
   "Project Registration": FolderKanban,
   "Budget Utilization": Wallet,
   "Ordinance / Resolution": Landmark,
-  "Impact / Assessment": ClipboardCheck,
+  "Impact Assessment": ClipboardCheck,
   "Extension Program": Newspaper,
   "Awards": Trophy,
   "Other Activities": NotepadText,

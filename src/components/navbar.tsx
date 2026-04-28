@@ -57,6 +57,7 @@ import {
   Newspaper,
   Trophy,
   NotepadText,
+  UserRoundPlus,
   type LucideIcon,
 } from "lucide-react";
 import Image from "next/image";
@@ -123,6 +124,7 @@ export function Navbar({ user }: NavbarProps) {
     panelParam === "budget-utilization" ||
     panelParam === "ordinance-resolution" ||
     panelParam === "impact-assessment" ||
+    panelParam === "project-leader-records" ||
     panelParam === "extension-program" ||
     panelParam === "awards-recognition" ||
     panelParam === "other-activities" ||
@@ -144,6 +146,7 @@ export function Navbar({ user }: NavbarProps) {
     router.prefetch("/dashboard?panel=budget-utilization");
     router.prefetch("/dashboard?panel=ordinance-resolution");
     router.prefetch("/dashboard?panel=impact-assessment");
+    router.prefetch("/dashboard?panel=project-leader-records");
     router.prefetch("/dashboard?panel=extension-program");
     router.prefetch("/dashboard?panel=awards-recognition");
     router.prefetch("/dashboard?panel=other-activities");
@@ -274,12 +277,21 @@ export function Navbar({ user }: NavbarProps) {
       },
       {
         id: "impact-assessment",
-        label: "Impact / Assessment",
+        label: "Impact Assessment",
         href: "/dashboard?panel=impact-assessment",
         keywords: ["impact", "assessment", "evaluation", "lead evaluator", "needs assessment"],
         description: "Open the impact and assessment page.",
         icon: ClipboardCheck,
         roles: ["project_leader", "college_coordinator"],
+      },
+      {
+        id: "project-leader-records",
+        label: "Project Leader Registration",
+        href: "/dashboard?panel=project-leader-records",
+        keywords: ["project leader registration", "project leader records", "designation records"],
+        description: "Open the unit coordinator project leader records page.",
+        icon: UserRoundPlus,
+        roles: ["unit_coordinator"],
       },
       {
         id: "extension-program",
@@ -431,11 +443,18 @@ export function Navbar({ user }: NavbarProps) {
             roles: ["project_leader", "college_coordinator"],
           },
           {
-            label: "Impact / Assessment",
+            label: "Impact Assessment",
             panel: "impact-assessment",
             href: "/dashboard?panel=impact-assessment",
             icon: ClipboardCheck,
             roles: ["project_leader", "college_coordinator"],
+          },
+          {
+            label: "Project Leader Registration",
+            panel: "project-leader-records",
+            href: "/dashboard?panel=project-leader-records",
+            icon: UserRoundPlus,
+            roles: ["unit_coordinator"],
           },
           {
             label: "Extension Program",
