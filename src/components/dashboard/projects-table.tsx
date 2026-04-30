@@ -17,22 +17,20 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
-  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { deleteProject } from "@/lib/actions/projects";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { ProjectForm } from "./project-form";
 import { useRouter } from "next/navigation";
 import { DocumentPreview } from "./document-preview";
+import { ProjectDeleteDialog } from "./project-delete-dialog";
 
 export interface Project {
   id: string;
@@ -185,27 +183,8 @@ export function ProjectsTable({
 
   const [viewProject, setViewProject] = React.useState<Project | null>(null);
   const [editProject, setEditProject] = React.useState<Project | null>(null);
-  const [deleteId, setDeleteId] = React.useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = React.useState(false);
+  const [deleteTarget, setDeleteTarget] = React.useState<Project | null>(null);
   const router = useRouter();
-
-  const handleDelete = async () => {
-    if (!deleteId) return;
-    setIsDeleting(true);
-    try {
-      const result = await deleteProject(deleteId);
-      if (result.error) {
-        alert("Error: " + result.error);
-      } else {
-        setDeleteId(null);
-        router.refresh();
-      }
-    } catch {
-      alert("Something went wrong");
-    } finally {
-      setIsDeleting(false);
-    }
-  };
 
   if (!projects || projects.length === 0) {
     return (
@@ -329,7 +308,7 @@ export function ProjectsTable({
                               className="h-7 w-7 border-border/50 text-destructive"
                               title="Delete"
                               aria-label="Delete project"
-                              onClick={() => setDeleteId(project.id)}
+                              onClick={() => setDeleteTarget(project)}
                             >
                               <Trash2 className="h-3 w-3" />
                             </Button>
@@ -424,27 +403,16 @@ export function ProjectsTable({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
-        <DialogContent className="sm:max-w-[360px]">
-          <DialogHeader className="items-center text-center">
-            <div className="rounded-full bg-destructive/10 p-2">
-              <AlertTriangle className="h-7 w-7 text-destructive" />
-            </div>
-            <DialogTitle className="text-sm">Delete {recordLabel}?</DialogTitle>
-            <DialogDescription className="text-[10px]">
-              This action cannot be undone. This will permanently delete the {recordLabel.toLowerCase()} data.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="sm:justify-center gap-2">
-            <Button variant="outline" onClick={() => setDeleteId(null)} className="h-8 text-[10px]">
-              Cancel
-            </Button>
-            <Button variant="destructive" className="h-8 text-[10px] px-6" onClick={handleDelete} disabled={isDeleting}>
-              {isDeleting ? "Deleting..." : "Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ProjectDeleteDialog
+        projectId={deleteTarget?.id || null}
+        projectTitle={deleteTarget?.title}
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        onDeleted={() => {
+          setDeleteTarget(null);
+          router.refresh();
+        }}
+      />
     </div>
   );
 }

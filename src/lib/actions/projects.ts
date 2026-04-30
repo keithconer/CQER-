@@ -701,6 +701,91 @@ export async function deleteProject(id: string) {
     return { success: true };
 }
 
+export async function getProjectDeletionImpact(id: string) {
+    const supabase = await createClient();
+    const adminClient = createAdminClient();
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+        return { error: "Unauthorized" };
+    }
+
+    const { data: profile } = await supabase
+        .from("profiles")
+        .select("user_type, department")
+        .eq("id", user.id)
+        .single();
+    if (!profile) {
+        return { error: "Profile not found" };
+    }
+
+    const { data: existingProject, error: existingProjectError } = await adminClient
+        .from("projects")
+        .select("id, created_by")
+        .eq("id", id)
+        .single();
+    if (existingProjectError || !existingProject) {
+        return { error: "Project not found" };
+    }
+
+    const isOwner = existingProject.created_by === user.id;
+    let canManage = isOwner || profile.user_type === "super_admin";
+
+    if (!canManage && profile.user_type === "college_coordinator" && profile.department) {
+        const { data: creatorProfile } = await adminClient
+            .from("profiles")
+            .select("department")
+            .eq("id", existingProject.created_by)
+            .single();
+        canManage = !!creatorProfile?.department && creatorProfile.department === profile.department;
+    }
+
+    if (!canManage && profile.user_type === "project_leader") {
+        canManage = existingProject.created_by === user.id;
+    }
+
+    if (!canManage) {
+        return { error: "Insufficient permissions to review this delete action" };
+    }
+
+    const dependencyChecks = [
+        { table: "budget_utilizations", column: "project_id", label: "budget utilization records" },
+        { table: "consultancy_extensions", column: "related_project_id", label: "consultancy records" },
+        { table: "adopters_with_enterprise", column: "related_project_id", label: "adopter records" },
+        { table: "technologies_innovations_commercialized", column: "related_project_id", label: "technology records" },
+        { table: "iec_materials", column: "related_project_id", label: "IEC material records" },
+        { table: "ordinance_resolutions", column: "project_id", label: "ordinance or resolution records" },
+        { table: "impact_assessments", column: "project_id", label: "impact assessment records" },
+        { table: "extension_programs", column: "project_id", label: "extension PPA records" },
+        { table: "awards_recognitions", column: "project_id", label: "awards records" },
+        { table: "trainings", column: "related_project_id", label: "training records" },
+    ] as const;
+
+    const results = await Promise.all(
+        dependencyChecks.map(async (item) => {
+            const { count, error } = await adminClient
+                .from(item.table)
+                .select("*", { count: "exact", head: true })
+                .eq(item.column, id);
+
+            if (error) {
+                console.error(`Error counting ${item.table} dependencies:`, error);
+                return { ...item, count: 0 };
+            }
+
+            return { ...item, count: count || 0 };
+        })
+    );
+
+    const connected = results.filter((item) => item.count > 0);
+    return {
+        data: {
+            totalConnectedRecords: connected.reduce((sum, item) => sum + item.count, 0),
+            breakdown: connected.map(({ label, count }) => ({ label, count })),
+        },
+    };
+}
+
 export async function getProjectLeaderProposals() {
     const supabase = await createClient();
     const adminClient = createAdminClient();

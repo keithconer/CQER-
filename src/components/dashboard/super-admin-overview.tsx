@@ -8,7 +8,6 @@ import {
   Eye,
   Pencil,
   Trash2,
-  AlertTriangle,
   SlidersHorizontal,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -16,8 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useRouter } from "next/navigation";
-import { deleteProject } from "@/lib/actions/projects";
 import { ProjectForm } from "./project-form";
+import { ProjectDeleteDialog } from "./project-delete-dialog";
 import {
   Table,
   TableBody,
@@ -31,7 +30,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -115,27 +113,8 @@ export function SuperAdminOverview({
   ]);
   const [viewProject, setViewProject] = React.useState<ExistingProject | null>(null);
   const [editProject, setEditProject] = React.useState<ExistingProject | null>(null);
-  const [deleteId, setDeleteId] = React.useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = React.useState(false);
+  const [deleteTarget, setDeleteTarget] = React.useState<ExistingProject | null>(null);
   const router = useRouter();
-
-  const handleDelete = async () => {
-    if (!deleteId) return;
-    setIsDeleting(true);
-    try {
-      const result = await deleteProject(deleteId);
-      if (result.error) {
-        alert("Error: " + result.error);
-      } else {
-        setDeleteId(null);
-        router.refresh();
-      }
-    } catch {
-      alert("Something went wrong");
-    } finally {
-      setIsDeleting(false);
-    }
-  };
 
   React.useEffect(() => {
     setCurrentPage(1);
@@ -431,7 +410,7 @@ export function SuperAdminOverview({
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7 text-destructive hover:text-destructive/80 hover:bg-destructive/10"
-                            onClick={() => setDeleteId(record.id)}
+                            onClick={() => setDeleteTarget(record)}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
@@ -531,32 +510,16 @@ export function SuperAdminOverview({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader className="flex flex-col items-center justify-center pt-4">
-            <div className="rounded-full bg-destructive/10 p-3 mb-4">
-              <AlertTriangle className="h-10 w-10 text-destructive" />
-            </div>
-            <DialogTitle className="text-lg font-semibold text-center">Delete record?</DialogTitle>
-            <DialogDescription className="text-xs text-center">
-              This action cannot be undone. This will permanently delete the selected record.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="sm:justify-center gap-2">
-            <Button variant="outline" onClick={() => setDeleteId(null)} className="h-9 text-xs">
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              className="h-9 text-xs px-8"
-              onClick={handleDelete}
-              disabled={isDeleting}
-            >
-              {isDeleting ? "Deleting..." : "Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ProjectDeleteDialog
+        projectId={deleteTarget?.id || null}
+        projectTitle={deleteTarget?.title}
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        onDeleted={() => {
+          setDeleteTarget(null);
+          router.refresh();
+        }}
+      />
     </Card>
   );
 }

@@ -27,9 +27,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { deleteProject } from "@/lib/actions/projects";
 import { type Project } from "@/components/dashboard/projects-table";
 import { DocumentPreview } from "@/components/dashboard/document-preview";
+import { ProjectDeleteDialog } from "@/components/dashboard/project-delete-dialog";
 
 interface ProjectLeaderRegistrationManagementProps {
   projects: Project[];
@@ -228,17 +228,6 @@ export function ProjectLeaderRegistrationManagement({
     router.refresh();
   };
 
-  const handleDelete = async () => {
-    if (!deleteTarget?.id) return;
-    const result = await deleteProject(deleteTarget.id);
-    if (result?.error) {
-      alert(result.error);
-      return;
-    }
-    setDeleteTarget(null);
-    router.refresh();
-  };
-
   return (
     <div className="space-y-5">
       <Card className="border-border/60 shadow-sm">
@@ -425,20 +414,16 @@ export function ProjectLeaderRegistrationManagement({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <DialogContent className="max-w-md rounded-3xl">
-          <DialogHeader>
-            <DialogTitle>Delete project registration</DialogTitle>
-            <DialogDescription>
-              This will permanently remove <span className="font-medium text-foreground">{deleteTarget?.title}</span>.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" className="rounded-xl" onClick={() => setDeleteTarget(null)}>Cancel</Button>
-            <Button variant="destructive" className="rounded-xl" onClick={() => void handleDelete()}>Delete</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ProjectDeleteDialog
+        projectId={deleteTarget?.id || null}
+        projectTitle={deleteTarget?.title}
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        onDeleted={() => {
+          setDeleteTarget(null);
+          router.refresh();
+        }}
+      />
     </div>
   );
 }

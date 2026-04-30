@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import {
-  AlertTriangle,
   ChevronLeft,
   ChevronRight,
   Eye,
@@ -20,17 +19,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { deleteProject } from "@/lib/actions/projects";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ProjectProposalForm } from "./project-proposal-form";
+import { ProjectDeleteDialog } from "./project-delete-dialog";
 
 export interface ProjectProposal {
   id: string;
@@ -160,8 +158,7 @@ export function ProjectProposalsTable({
   const [currentPage, setCurrentPage] = React.useState(1);
   const [viewProposal, setViewProposal] = React.useState<ProjectProposal | null>(null);
   const [editProposal, setEditProposal] = React.useState<ProjectProposal | null>(null);
-  const [deleteId, setDeleteId] = React.useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = React.useState(false);
+  const [deleteTarget, setDeleteTarget] = React.useState<ProjectProposal | null>(null);
   const router = useRouter();
   const itemsPerPage = 10;
   const showActionsColumn = !readOnly || allowViewOnlyAction;
@@ -206,24 +203,6 @@ export function ProjectProposalsTable({
     if (assistants.length > 0) parts.push(...assistants);
     
     return parts.join(", ") || "-";
-  };
-
-  const handleDelete = async () => {
-    if (!deleteId) return;
-    setIsDeleting(true);
-    try {
-      const result = await deleteProject(deleteId);
-      if (result.error) {
-        alert(`Error: ${result.error}`);
-      } else {
-        setDeleteId(null);
-        router.refresh();
-      }
-    } catch {
-      alert("Something went wrong");
-    } finally {
-      setIsDeleting(false);
-    }
   };
 
   if (!proposals || proposals.length === 0) {
@@ -322,7 +301,7 @@ export function ProjectProposalsTable({
                               className="h-7 w-7 border-border/50 text-destructive"
                               title="Delete"
                               aria-label="Delete project proposal"
-                              onClick={() => setDeleteId(proposal.id)}
+                              onClick={() => setDeleteTarget(proposal)}
                             >
                               <Trash2 className="h-3 w-3" />
                             </Button>
@@ -404,21 +383,16 @@ export function ProjectProposalsTable({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader className="flex flex-col items-center justify-center pt-4">
-            <div className="rounded-full bg-destructive/10 p-3 mb-4"><AlertTriangle className="h-10 w-10 text-destructive" /></div>
-            <DialogTitle className="text-lg font-semibold text-center">Delete proposal?</DialogTitle>
-            <DialogDescription className="text-[10px] text-center">This action cannot be undone.</DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="sm:justify-center gap-2">
-            <Button variant="outline" onClick={() => setDeleteId(null)} className="h-9 text-[10px]">Cancel</Button>
-            <Button variant="destructive" className="h-9 text-[10px] px-8" onClick={handleDelete} disabled={isDeleting}>
-              {isDeleting ? "Deleting..." : "Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ProjectDeleteDialog
+        projectId={deleteTarget?.id || null}
+        projectTitle={deleteTarget?.project_title || deleteTarget?.title}
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        onDeleted={() => {
+          setDeleteTarget(null);
+          router.refresh();
+        }}
+      />
     </div>
   );
 }
