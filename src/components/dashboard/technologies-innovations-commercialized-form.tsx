@@ -31,6 +31,7 @@ import {
   type TechnologyCommercializationRecord,
 } from "@/lib/actions/technologies-innovations-commercialized";
 import { type Project } from "./projects-table";
+import { DEFAULT_DOCUMENT_ACCEPT, DOCUMENT_UPLOAD_GUIDANCE } from "@/lib/document-uploads";
 
 const stepLabels = ["Technology Details", "Saving"];
 const noProjectValue = "__none__";
@@ -171,7 +172,7 @@ export function TechnologiesInnovationsCommercializedForm({
                     Technology Details
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    Capture the technology details, project link, status, and supporting PDF document.
+                    Capture the technology details, project link, status, and supporting PDF or Excel document.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -262,7 +263,7 @@ export function TechnologiesInnovationsCommercializedForm({
                         Uploading of Documents
                       </CardTitle>
                       <CardDescription className="text-xs">
-                        Upload PDF files to the private `cqer-technologies_pdf` bucket. Maximum 5MB per file.
+                        Upload technology support files as PDF or Excel. Supabase is the primary storage and Cloudinary is used only when backup storage is needed.
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -274,8 +275,9 @@ export function TechnologiesInnovationsCommercializedForm({
                               onChange={field.onChange}
                               disabled={isViewOnly}
                               bucket="cqer-technologies_pdf"
-                              accept=".pdf"
+                              accept={DEFAULT_DOCUMENT_ACCEPT}
                               maxSizeInMB={5}
+                              guidance={DOCUMENT_UPLOAD_GUIDANCE.technologies}
                             />
                           </FormControl>
                           <FormMessage className="text-xs" />

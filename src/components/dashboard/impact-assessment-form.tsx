@@ -46,6 +46,7 @@ import {
   type ImpactAssessmentRecord,
 } from "@/lib/actions/impact-assessment";
 import { type Project } from "@/components/dashboard/projects-table";
+import { DEFAULT_DOCUMENT_ACCEPT, DOCUMENT_UPLOAD_GUIDANCE } from "@/lib/document-uploads";
 
 const stepLabels = ["Needs Assessment Details", "Save and Review"];
 const draftStorageKey = "cqer-impact-assessment-draft";
@@ -407,8 +408,9 @@ export function ImpactAssessmentForm({
                           onChange={field.onChange}
                           disabled={isViewOnly}
                           bucket="cqer-needsass_pdf"
-                          accept=".pdf"
+                          accept={DEFAULT_DOCUMENT_ACCEPT}
                           maxSizeInMB={5}
+                          guidance={DOCUMENT_UPLOAD_GUIDANCE.impactAssessment}
                         />
                       </FormControl>
                       <FormMessage />

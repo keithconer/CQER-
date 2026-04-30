@@ -46,6 +46,7 @@ import {
   type OrdinanceResolutionStatus,
 } from "@/lib/actions/ordinance-resolution";
 import { type Project } from "@/components/dashboard/projects-table";
+import { DEFAULT_DOCUMENT_ACCEPT, DOCUMENT_UPLOAD_GUIDANCE } from "@/lib/document-uploads";
 
 const stepLabels = ["Ordinance Details", "Save and Review"];
 const statusOptions: { value: OrdinanceResolutionStatus; label: string }[] = [
@@ -435,8 +436,9 @@ export function OrdinanceResolutionForm({
                           onChange={field.onChange}
                           disabled={isViewOnly}
                           bucket="cqer-ordinance_pdf"
-                          accept=".pdf"
+                          accept={DEFAULT_DOCUMENT_ACCEPT}
                           maxSizeInMB={5}
+                          guidance={DOCUMENT_UPLOAD_GUIDANCE.ordinance}
                         />
                       </FormControl>
                       <FormMessage />

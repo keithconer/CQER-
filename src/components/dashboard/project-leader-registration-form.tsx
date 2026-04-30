@@ -52,6 +52,7 @@ import { SDG_OPTIONS, normalizeSdgArray } from "@/lib/sdg";
 import { cn, toTitleCase } from "@/lib/utils";
 import { createProject, updateProject } from "@/lib/actions/projects";
 import { type Project } from "@/components/dashboard/projects-table";
+import { createProjectRegistrationGuidance, DEFAULT_DOCUMENT_ACCEPT } from "@/lib/document-uploads";
 
 const agendaOptions = [
   "A - Agri-Fisheries and Food Security",
@@ -1181,6 +1182,14 @@ export function ProjectLeaderRegistrationForm({
   const extensionAgenda = useWatch({ control: typedControl, name: "extension_agenda" }) || [];
   const sdgMain = useWatch({ control: typedControl, name: "sdg_main" }) || [];
   const sdgSub = useWatch({ control: typedControl, name: "sdg_sub" }) || [];
+  const watchedPartnerAgencies = useWatch({ control: typedControl, name: "partner_agencies" }) || [];
+  const projectRegistrationGuidance = React.useMemo(
+    () =>
+      createProjectRegistrationGuidance(
+        watchedPartnerAgencies.some((agency) => agency?.nature_of_partnership === "External")
+      ),
+    [watchedPartnerAgencies]
+  );
 
   React.useEffect(() => {
     form.reset(defaultValues);
@@ -1667,10 +1676,10 @@ export function ProjectLeaderRegistrationForm({
                   </Card>
 
                   <Card className="rounded-3xl border-border/40 shadow-none">
-                    <CardHeader><CardTitle className="text-sm">Upload Documents</CardTitle><CardDescription className="text-xs">Optional PDF uploads. The code uses the `cqer-projects_pdfs` Supabase bucket.</CardDescription></CardHeader>
+                    <CardHeader><CardTitle className="text-sm">Upload Documents</CardTitle><CardDescription className="text-xs">Upload the project registration supporting files as PDF or Excel. Supabase remains the primary storage and Cloudinary is used only as secure backup storage when needed.</CardDescription></CardHeader>
                     <CardContent>
                       <FormField control={form.control} name="documents" render={({ field }) => (
-                        <FormItem><FormControl><FileUpload value={field.value} onChange={field.onChange} disabled={isViewOnly} bucket="cqer-projects_pdfs" accept=".pdf" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                        <FormItem><FormControl><FileUpload value={field.value} onChange={field.onChange} disabled={isViewOnly} bucket="cqer-projects_pdfs" accept={DEFAULT_DOCUMENT_ACCEPT} guidance={projectRegistrationGuidance} /></FormControl><FormMessage className="text-xs" /></FormItem>
                       )} />
                     </CardContent>
                   </Card>

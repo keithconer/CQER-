@@ -48,6 +48,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { DEPARTMENTS, getAllUnits } from "@/lib/departments";
+import { DEFAULT_DOCUMENT_ACCEPT, DOCUMENT_UPLOAD_GUIDANCE } from "@/lib/document-uploads";
 import { SDG_OPTIONS, normalizeSdgArray } from "@/lib/sdg";
 import { createTraining, updateTraining } from "@/lib/actions/trainings";
 import { THEMATIC_AREA_OPTIONS } from "@/lib/thematic-area";
@@ -2063,7 +2064,7 @@ export function TrainingsForm({
                     <CardHeader>
                       <CardTitle className="text-sm">Uploading of Documents</CardTitle>
                       <CardDescription className="text-xs">
-                        Upload PDF files to the private `cqer-trainings_pdf` bucket. Maximum 8MB per file.
+                        Upload PDF or Excel files to the training record. Supabase is used first, with secure Cloudinary fallback if primary storage is unavailable.
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -2078,8 +2079,9 @@ export function TrainingsForm({
                                 onChange={field.onChange}
                                 disabled={isViewOnly}
                                 bucket="cqer-trainings_pdf"
-                                accept=".pdf"
+                                accept={DEFAULT_DOCUMENT_ACCEPT}
                                 maxSizeInMB={8}
+                                guidance={DOCUMENT_UPLOAD_GUIDANCE.trainings}
                               />
                             </FormControl>
                             <FormMessage className="text-xs" />

@@ -36,6 +36,7 @@ import {
   type IecMaterialRecord,
 } from "@/lib/actions/iec-materials";
 import { cn } from "@/lib/utils";
+import { DEFAULT_DOCUMENT_ACCEPT, DOCUMENT_UPLOAD_GUIDANCE } from "@/lib/document-uploads";
 
 const stepLabels = ["IEC Material Details", "Receipts Details", "Saving"];
 const noProjectValue = "__none__";
@@ -393,7 +394,7 @@ export function IecMaterialsForm({
                     Receipts Details
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    Encode the recipient breakdown, totals, and supporting PDF document.
+                    Encode the recipient breakdown, totals, and supporting PDF or Excel document.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -528,7 +529,7 @@ export function IecMaterialsForm({
                         Uploading of Documents
                       </CardTitle>
                       <CardDescription className="text-xs">
-                        Upload PDF files to the private `cqer-iecmat_pdf` bucket. Maximum 5MB per file.
+                        Upload IEC supporting files as PDF or Excel. Supabase remains the main storage and Cloudinary is used as secure backup when required.
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -540,8 +541,9 @@ export function IecMaterialsForm({
                               onChange={field.onChange}
                               disabled={isViewOnly}
                               bucket="cqer-iecmat_pdf"
-                              accept=".pdf"
+                              accept={DEFAULT_DOCUMENT_ACCEPT}
                               maxSizeInMB={5}
+                              guidance={DOCUMENT_UPLOAD_GUIDANCE.iec}
                             />
                           </FormControl>
                           <FormMessage className="text-xs" />

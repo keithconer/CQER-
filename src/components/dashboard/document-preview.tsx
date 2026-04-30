@@ -3,7 +3,9 @@
 import * as React from "react";
 import { FileText, ExternalLink, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { getCloudinaryDownloadUrl } from "@/lib/actions/cloudinary";
 import { getSignedStorageUrl } from "@/lib/actions/storage";
+import { isCloudinaryPrivateReference } from "@/lib/document-uploads";
 
 interface DocumentPreviewProps {
   documents: { url: string; name: string }[] | null | undefined;
@@ -19,6 +21,17 @@ export function DocumentPreview({ documents, bucket = DEFAULT_BUCKET }: Document
     if (!url) return;
     setLoadingUrl(url);
     try {
+      if (isCloudinaryPrivateReference(url)) {
+        const downloadUrl = await getCloudinaryDownloadUrl(url);
+        if (!downloadUrl) {
+          alert("Error opening document.");
+          return;
+        }
+
+        window.open(downloadUrl, "_blank", "noopener,noreferrer");
+        return;
+      }
+
       if (url.startsWith("http")) {
         window.open(url, "_blank", "noopener,noreferrer");
         return;

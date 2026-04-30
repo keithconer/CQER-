@@ -47,6 +47,7 @@ import {
   type AwardLevel,
 } from "@/lib/actions/awards-recognition";
 import { type Project } from "@/components/dashboard/projects-table";
+import { DEFAULT_DOCUMENT_ACCEPT, DOCUMENT_UPLOAD_GUIDANCE } from "@/lib/document-uploads";
 
 const stepLabels = ["Award Details", "Save and Review"];
 const draftStorageKey = "cqer-awards-recognition-draft";
@@ -455,8 +456,9 @@ export function AwardsRecognitionForm({
                           onChange={field.onChange}
                           disabled={isViewOnly}
                           bucket="cqer-awards_pdf"
-                          accept=".pdf"
+                          accept={DEFAULT_DOCUMENT_ACCEPT}
                           maxSizeInMB={5}
+                          guidance={DOCUMENT_UPLOAD_GUIDANCE.awards}
                         />
                       </FormControl>
                       <FormMessage />

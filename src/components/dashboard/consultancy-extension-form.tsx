@@ -42,6 +42,7 @@ import {
   type ConsultancyExtension,
   type ConsultancyPayload,
 } from "@/lib/actions/consultancy-extension";
+import { DEFAULT_DOCUMENT_ACCEPT, DOCUMENT_UPLOAD_GUIDANCE } from "@/lib/document-uploads";
 import { type Project } from "./projects-table";
 
 const stepLabels = ["Consultancy Details", "Saving"];
@@ -354,7 +355,7 @@ export function ConsultancyExtensionForm({
                     <CardHeader>
                       <CardTitle className="text-sm">Uploading of Documents</CardTitle>
                       <CardDescription className="text-xs">
-                        Upload PDF files to the private `cqer-consultancy_pdf` bucket. Maximum 5MB per file.
+                        Upload consultancy supporting files as PDF or Excel. Supabase remains the primary storage and Cloudinary steps in only when backup storage is needed.
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -369,8 +370,9 @@ export function ConsultancyExtensionForm({
                                 onChange={field.onChange}
                                 disabled={isViewOnly}
                                 bucket="cqer-consultancy_pdf"
-                                accept=".pdf"
+                                accept={DEFAULT_DOCUMENT_ACCEPT}
                                 maxSizeInMB={5}
+                                guidance={DOCUMENT_UPLOAD_GUIDANCE.consultancy}
                               />
                             </FormControl>
                             <FormMessage className="text-xs" />

@@ -38,6 +38,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { createBudgetUtilization, updateBudgetUtilization, type BudgetUtilizationMonthEntry, type BudgetUtilizationRecord } from "@/lib/actions/budget-utilization";
 import { type Project } from "@/components/dashboard/projects-table";
+import { DEFAULT_DOCUMENT_ACCEPT, DOCUMENT_UPLOAD_GUIDANCE } from "@/lib/document-uploads";
 
 const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
 const categories = [
@@ -544,8 +545,9 @@ export function BudgetUtilizationForm({
                           onChange={field.onChange}
                           disabled={isViewOnly}
                           bucket="cqer-budgetutil_pdf"
-                          accept=".pdf"
+                          accept={DEFAULT_DOCUMENT_ACCEPT}
                           maxSizeInMB={5}
+                          guidance={DOCUMENT_UPLOAD_GUIDANCE.budgetUtilization}
                         />
                       </FormControl>
                       <FormMessage />

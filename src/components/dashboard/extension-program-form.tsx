@@ -46,6 +46,7 @@ import {
   type ExtensionProgramRecord,
 } from "@/lib/actions/extension-program";
 import { type Project } from "@/components/dashboard/projects-table";
+import { DEFAULT_DOCUMENT_ACCEPT, DOCUMENT_UPLOAD_GUIDANCE } from "@/lib/document-uploads";
 
 const stepLabels = ["Extension Details", "Save and Review"];
 const draftStorageKey = "cqer-extension-program-draft";
@@ -399,8 +400,9 @@ export function ExtensionProgramForm({
                           onChange={field.onChange}
                           disabled={isViewOnly}
                           bucket="cqer-extensionprog_pdf"
-                          accept=".pdf"
+                          accept={DEFAULT_DOCUMENT_ACCEPT}
                           maxSizeInMB={5}
+                          guidance={DOCUMENT_UPLOAD_GUIDANCE.extensionPpa}
                         />
                       </FormControl>
                       <FormMessage />

@@ -47,6 +47,7 @@ import {
   type OtherActivityCategory,
   type OtherActivityFundSource,
 } from "@/lib/actions/other-activities";
+import { DEFAULT_DOCUMENT_ACCEPT, DOCUMENT_UPLOAD_GUIDANCE } from "@/lib/document-uploads";
 
 const stepLabels = ["Overview and Details", "Save and Review"];
 const draftStorageKey = "cqer-other-activities-draft";
@@ -529,8 +530,9 @@ export function OtherActivitiesForm({
                           onChange={field.onChange}
                           disabled={isViewOnly}
                           bucket="cqer-otheract_pdf"
-                          accept=".pdf"
+                          accept={DEFAULT_DOCUMENT_ACCEPT}
                           maxSizeInMB={5}
+                          guidance={DOCUMENT_UPLOAD_GUIDANCE.otherActivities}
                         />
                       </FormControl>
                       <FormMessage />

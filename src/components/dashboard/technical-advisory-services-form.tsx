@@ -53,6 +53,7 @@ import {
   type RatingBreakdown,
   type TechnicalAdvisoryServiceRecord,
 } from "@/lib/actions/technical-advisory-services";
+import { DEFAULT_DOCUMENT_ACCEPT, DOCUMENT_UPLOAD_GUIDANCE } from "@/lib/document-uploads";
 
 const stepLabels = ["Agency Information", "Advisory Services Details", "Assessment", "Saving"];
 const nonNegativeNumber = z.coerce.number().min(0, "Value must be 0 or greater.");
@@ -650,7 +651,7 @@ export function TechnicalAdvisoryServicesForm({
                     Assessment
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    Capture the rating breakdowns and upload the supporting PDF document.
+                    Capture the rating breakdowns and upload the supporting PDF or Excel document.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -675,7 +676,7 @@ export function TechnicalAdvisoryServicesForm({
                     <CardHeader>
                       <CardTitle className="text-sm">Uploading of Documents</CardTitle>
                       <CardDescription className="text-xs">
-                        Upload PDF files to the private `cqer-technicaladv_pdf` bucket. Maximum 5MB per file.
+                        Upload technical advisory support files as PDF or Excel. Supabase stays primary, and Cloudinary is used only as the backup path.
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -690,8 +691,9 @@ export function TechnicalAdvisoryServicesForm({
                                 onChange={field.onChange}
                                 disabled={isViewOnly}
                                 bucket="cqer-technicaladv_pdf"
-                                accept=".pdf"
+                                accept={DEFAULT_DOCUMENT_ACCEPT}
                                 maxSizeInMB={5}
+                                guidance={DOCUMENT_UPLOAD_GUIDANCE.technicalAdvisory}
                               />
                             </FormControl>
                             <FormMessage className="text-xs" />

@@ -245,7 +245,7 @@ export function AwardsManagement({ initialAwards, department, userType, currentU
                       </TableCell>
                       <TableCell className="text-[10px] py-2.5 px-3">{award.remarks || "-"}</TableCell>
                       <TableCell className="text-[10px] py-2.5 px-3">
-                        <DocumentPreview documents={award.documents} />
+                        <DocumentPreview documents={award.documents} bucket="cqer-awards_pdf" />
                       </TableCell>
                       <TableCell className="text-[10px] py-2.5 px-3">
                         <div className="flex items-center justify-end gap-1">

@@ -30,6 +30,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { FileUpload } from "./file-upload";
+import { DEFAULT_DOCUMENT_ACCEPT, DOCUMENT_UPLOAD_GUIDANCE } from "@/lib/document-uploads";
 
 const levelOptions = ["local", "regional", "national", "international"] as const;
 
@@ -357,6 +358,9 @@ export function AwardsForm({ department, userType, award, isViewOnly = false, on
                   onChange={field.onChange}
                   disabled={isSubmitting || isViewOnly}
                   maxFiles={10}
+                  bucket="cqer-awards_pdf"
+                  accept={DEFAULT_DOCUMENT_ACCEPT}
+                  guidance={DOCUMENT_UPLOAD_GUIDANCE.awards}
                 />
               </FormControl>
               <FormMessage className="text-[10px]" />

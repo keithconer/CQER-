@@ -15,6 +15,7 @@ import {
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { DEFAULT_DOCUMENT_ACCEPT, DOCUMENT_UPLOAD_GUIDANCE } from "@/lib/document-uploads";
 import {
   Form,
   FormControl,
@@ -317,14 +318,16 @@ export function NeedsAssessmentForm({
           name="document_url"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-[10px]">Document (PDF)</FormLabel>
+              <FormLabel className="text-[10px]">Document (PDF or Excel)</FormLabel>
               <FormControl>
                 <FileUpload
                   value={field.value ? [{ url: field.value, name: "Document" }] : []}
                   onChange={(files) => field.onChange(files[0]?.url || null)}
                   bucket="cqer-needs-assessment-pdfs"
-                  accept=".pdf"
+                  accept={DEFAULT_DOCUMENT_ACCEPT}
                   disabled={isViewOnly}
+                  guidance={DOCUMENT_UPLOAD_GUIDANCE.needsAssessment}
+                  maxFiles={1}
                 />
               </FormControl>
               <FormMessage className="text-[10px]" />

@@ -53,6 +53,7 @@ import {
   type CreateAdoptersWithEnterprisePayload,
 } from "@/lib/actions/adopters-with-enterprise";
 import { type Project } from "./projects-table";
+import { DEFAULT_DOCUMENT_ACCEPT, DOCUMENT_UPLOAD_GUIDANCE } from "@/lib/document-uploads";
 
 const stepLabels = ["Technology Transferred", "Adopter's Details", "Saving"];
 const noProjectValue = "__none__";
@@ -334,7 +335,7 @@ export function AdoptersWithEnterpriseForm({
                       Adopter&apos;s Details Section
                     </CardTitle>
                     <CardDescription className="text-xs">
-                      Add adopters, contact details, category, income details, and the supporting PDF document.
+                      Add adopters, contact details, category, income details, and the supporting PDF or Excel document.
                     </CardDescription>
                   </div>
                   {!isViewOnly && (
@@ -535,7 +536,7 @@ export function AdoptersWithEnterpriseForm({
                         Uploading of Documents
                       </CardTitle>
                       <CardDescription className="text-xs">
-                        Upload PDF files to the private `cqer-adopters_pdf` bucket. Maximum 5MB per file.
+                        Upload adopter supporting files as PDF or Excel. Supabase handles the primary upload and Cloudinary acts as backup only when needed.
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -547,8 +548,9 @@ export function AdoptersWithEnterpriseForm({
                               onChange={field.onChange}
                               disabled={isViewOnly}
                               bucket="cqer-adopters_pdf"
-                              accept=".pdf"
+                              accept={DEFAULT_DOCUMENT_ACCEPT}
                               maxSizeInMB={5}
+                              guidance={DOCUMENT_UPLOAD_GUIDANCE.adopters}
                             />
                           </FormControl>
                           <FormMessage className="text-xs" />
