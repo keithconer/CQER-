@@ -1182,13 +1182,18 @@ export function ProjectLeaderRegistrationForm({
   const extensionAgenda = useWatch({ control: typedControl, name: "extension_agenda" }) || [];
   const sdgMain = useWatch({ control: typedControl, name: "sdg_main" }) || [];
   const sdgSub = useWatch({ control: typedControl, name: "sdg_sub" }) || [];
-  const watchedPartnerAgencies = useWatch({ control: typedControl, name: "partner_agencies" }) || [];
-  const projectRegistrationGuidance = React.useMemo(
-    () =>
-      createProjectRegistrationGuidance(
-        watchedPartnerAgencies.some((agency) => agency?.nature_of_partnership === "External")
-      ),
+  const watchedPartnerAgencies = useWatch({
+    control: typedControl,
+    name: "partner_agencies",
+    defaultValue: [],
+  });
+  const hasExternalPartner = React.useMemo(
+    () => watchedPartnerAgencies.some((agency) => agency?.nature_of_partnership === "External"),
     [watchedPartnerAgencies]
+  );
+  const projectRegistrationGuidance = React.useMemo(
+    () => createProjectRegistrationGuidance(hasExternalPartner),
+    [hasExternalPartner]
   );
 
   React.useEffect(() => {
@@ -1328,7 +1333,7 @@ export function ProjectLeaderRegistrationForm({
       start_date: startDate.toISOString(),
       end_date: endDate.toISOString(),
       budget_requirements: budgetRequirements,
-      budget_total: remainingBudgetTotal,
+      budget_total: Number(values.budget || 0),
       gad_score: 0,
       contact_person: values.project_leader_name,
       contact_details: values.partner_agencies[0]?.contact_details || "",

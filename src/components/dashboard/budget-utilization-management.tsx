@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Eye, FileDown, Pencil, Plus, Search, SlidersHorizontal, Trash2, Wallet } from "lucide-react";
+import { Eye, FileDown, Plus, Search, SlidersHorizontal, Trash2, Wallet } from "lucide-react";
 import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 
@@ -33,6 +33,7 @@ import {
   deleteBudgetUtilization,
   type BudgetUtilizationRecord,
 } from "@/lib/actions/budget-utilization";
+import { getProjectBudgetSummaryTotal } from "@/lib/project-budget";
 
 type FilterMode = "all" | "with_documents" | "this_year" | "over_budget";
 
@@ -63,9 +64,9 @@ async function exportExcel(records: BudgetUtilizationRecord[]) {
   const columns = [
     { header: "Project Title", key: "projectTitle", width: 36 },
     { header: "Inclusive Dates", key: "coverage", width: 32 },
-    { header: "Total Budget", key: "totalBudget", width: 18 },
-    { header: "Utilized Budget", key: "utilizedBudget", width: 18 },
-    { header: "Remaining Budget", key: "remainingBudget", width: 18 },
+    { header: "Budget Summary", key: "totalBudget", width: 18 },
+    { header: "Assigned Budget", key: "utilizedBudget", width: 18 },
+    { header: "Left to Assign", key: "remainingBudget", width: 18 },
     { header: "Months Covered", key: "monthsCovered", width: 18 },
   ];
   sheet.columns = columns.map((column) => ({ key: column.key, width: column.width }));
@@ -111,9 +112,9 @@ async function exportPdf(records: BudgetUtilizationRecord[]) {
     head: [[
       "Project Title",
       "Inclusive Dates",
-      "Total Budget",
-      "Utilized Budget",
-      "Remaining Budget",
+      "Budget Summary",
+      "Assigned Budget",
+      "Left to Assign",
       "Months Covered",
     ]],
     body: records.map((record) => ([
@@ -139,10 +140,17 @@ export function BudgetUtilizationManagement({
   const [searchTerm, setSearchTerm] = React.useState("");
   const [filterMode, setFilterMode] = React.useState<FilterMode>("all");
   const [selectedRecord, setSelectedRecord] = React.useState<BudgetUtilizationRecord | null>(null);
-  const [editingRecord, setEditingRecord] = React.useState<BudgetUtilizationRecord | null>(null);
   const [createOpen, setCreateOpen] = React.useState(false);
   const [successOpen, setSuccessOpen] = React.useState(false);
   const [deleteTarget, setDeleteTarget] = React.useState<BudgetUtilizationRecord | null>(null);
+  const availableProjects = React.useMemo(() => {
+    const usedProjectIds = new Set(records.map((record) => record.project_id));
+    return projects.filter(
+      (project) =>
+        !usedProjectIds.has(project.id) &&
+        getProjectBudgetSummaryTotal(project) > 0
+    );
+  }, [projects, records]);
 
   const filteredRecords = React.useMemo(() => {
     const year = new Date().getFullYear();
@@ -183,7 +191,6 @@ export function BudgetUtilizationManagement({
 
   const handleSaved = () => {
     setCreateOpen(false);
-    setEditingRecord(null);
     setSelectedRecord(null);
     setSuccessOpen(true);
     router.refresh();
@@ -208,7 +215,7 @@ export function BudgetUtilizationManagement({
             <div>
               <CardTitle className="text-xl font-semibold">Budget Utilization</CardTitle>
               <CardDescription className="text-sm">
-                Track actual project spending with searchable, exportable, and editable utilization records.
+                Track the final monthly breakdown of each project budget summary.
               </CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -224,7 +231,11 @@ export function BudgetUtilizationManagement({
                   <DropdownMenuItem onClick={() => void exportPdf(filteredRecords)}>Export PDF</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button className="rounded-xl bg-[#159E44] text-white hover:bg-[#128A3B]" onClick={() => setCreateOpen(true)}>
+              <Button
+                className="rounded-xl bg-[#159E44] text-white hover:bg-[#128A3B]"
+                onClick={() => setCreateOpen(true)}
+                disabled={availableProjects.length === 0}
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 Utilize Budget
               </Button>
@@ -275,9 +286,9 @@ export function BudgetUtilizationManagement({
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="h-12 text-base font-semibold">Project Title</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Inclusive Dates</TableHead>
-                  <TableHead className="h-12 text-base font-semibold">Total Budget</TableHead>
-                  <TableHead className="h-12 text-base font-semibold">Utilized</TableHead>
-                  <TableHead className="h-12 text-base font-semibold">Remaining</TableHead>
+                  <TableHead className="h-12 text-base font-semibold">Budget Summary</TableHead>
+                  <TableHead className="h-12 text-base font-semibold">Assigned</TableHead>
+                  <TableHead className="h-12 text-base font-semibold">Left to Assign</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Documents</TableHead>
                   <TableHead className="h-12 text-right text-base font-semibold">Actions</TableHead>
                 </TableRow>
@@ -311,9 +322,6 @@ export function BudgetUtilizationManagement({
                             <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl" onClick={() => setSelectedRecord(record)}>
                               <Eye className="h-4 w-4" />
                             </Button>
-                            <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl" onClick={() => setEditingRecord(record)}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
                             <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl text-destructive" onClick={() => setDeleteTarget(record)}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -346,7 +354,7 @@ export function BudgetUtilizationManagement({
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent showCloseButton={false} className="flex flex-col overflow-hidden fixed inset-0 left-0 top-0 h-[100dvh] w-screen max-w-none sm:max-w-none translate-x-0 translate-y-0 rounded-none border-0 p-0 shadow-none">
           <BudgetUtilizationForm
-            projects={projects}
+            projects={availableProjects}
             onSuccess={handleSaved}
             onClose={() => setCreateOpen(false)}
           />
@@ -367,25 +375,12 @@ export function BudgetUtilizationManagement({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!editingRecord} onOpenChange={(open) => !open && setEditingRecord(null)}>
-        <DialogContent showCloseButton={false} className="flex flex-col overflow-hidden fixed inset-0 left-0 top-0 h-[100dvh] w-screen max-w-none sm:max-w-none translate-x-0 translate-y-0 rounded-none border-0 p-0 shadow-none">
-          {editingRecord && (
-            <BudgetUtilizationForm
-              record={editingRecord}
-              projects={projects}
-              onSuccess={handleSaved}
-              onClose={() => setEditingRecord(null)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-
       <Dialog open={successOpen} onOpenChange={setSuccessOpen}>
         <DialogContent className="max-w-md rounded-3xl">
           <DialogHeader>
             <DialogTitle>Budget utilization saved</DialogTitle>
             <DialogDescription>
-              The utilization record was saved successfully and the table has been refreshed.
+              The monthly breakdown was saved successfully and is now locked for viewing only.
             </DialogDescription>
           </DialogHeader>
         </DialogContent>

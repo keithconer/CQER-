@@ -57,6 +57,7 @@ import {
 import { normalizeSdgArray } from "@/lib/sdg";
 import { getProjectLeaderRecords, type ProjectLeaderRecord } from "@/lib/actions/project-leader-records";
 import { getFacultyRegistryRecords, type FacultyRegistryRecord } from "@/lib/actions/faculty-registry";
+import { getProjectBudgetSnapshot, getProjectOverallBudget } from "@/lib/project-budget";
 
 
 function extractPartnerAgencyNames(projects: Project[]) {
@@ -238,12 +239,7 @@ function countFunding(projects: Project[]) {
 }
 
 function getProjectBudget(project: Project) {
-  if (typeof project.budget_total === "number") return project.budget_total;
-  if (!Array.isArray(project.budget_requirements)) return 0;
-  return project.budget_requirements.reduce(
-    (sum, item) => sum + (Number(item?.amount) || 0),
-    0
-  );
+  return getProjectOverallBudget(project);
 }
 
 function getMonthBuckets(months = 6) {
@@ -718,7 +714,6 @@ export default async function DashboardPage({
   let unitDashboardTrainings: UnitDashboardTraining[] = [];
   let unitDashboardRecords: UnitDashboardRecord[] = [];
   let collegeOverviewTrainings: TrainingRecord[] = [];
-  let collegeOverviewBudgetUtilizations: BudgetUtilizationRecord[] = [];
 
   if (profile.user_type === "super_admin") {
     const adminClient = createAdminClient();
@@ -887,20 +882,11 @@ export default async function DashboardPage({
     }
     analyticsProjects = resolvedProjects;
     if (showOverview) {
-      const adminClient = createAdminClient();
       const overviewTrainings =
         trainingRecords.length > 0 ? trainingRecords : (((await getTrainings()).data || []) as TrainingRecord[]);
       collegeOverviewTrainings = overviewTrainings;
       facultyRegistryRecords = (await getFacultyRegistryRecords()).data || [];
 
-      const projectIds = resolvedProjects.map((project) => project.id).filter(Boolean);
-      if (projectIds.length > 0) {
-        const { data: budgetRows } = await adminClient
-          .from("budget_utilizations")
-          .select("*")
-          .in("project_id", projectIds);
-        collegeOverviewBudgetUtilizations = (budgetRows || []) as BudgetUtilizationRecord[];
-      }
     }
     const fundingCounts = countFunding(resolvedProjects);
     analyticsInternalFunding = fundingCounts.internal;
@@ -912,15 +898,7 @@ export default async function DashboardPage({
     analyticsTrainings = trainings.length;
     const budgetTotals = resolvedProjects.reduce(
       (acc, project) => {
-        const budgetFromTotal =
-          typeof project.budget_total === "number" ? project.budget_total : 0;
-        const budgetFromItems = Array.isArray(project.budget_requirements)
-          ? project.budget_requirements.reduce(
-              (sum, item) => sum + (Number(item?.amount) || 0),
-              0
-            )
-          : 0;
-        const budget = budgetFromTotal > 0 ? budgetFromTotal : budgetFromItems;
+        const budget = getProjectBudget(project);
         acc.total += budget;
         const type = getFundingType(project);
         if (type === "internal") acc.internal += budget;
@@ -1265,25 +1243,21 @@ export default async function DashboardPage({
       (value) => value === "New" || value === "Proposal" || value === "Existing / Ongoing"
     ).length;
 
-    projectLeaderUtilizedBudget = budgetUtilizationRecords.reduce(
-      (sum, record) => sum + (Number(record.utilized_total) || 0),
+    projectLeaderUtilizedBudget = leaderProjects.reduce(
+      (sum, project) => sum + getProjectBudgetSnapshot(project).utilizedBudget,
       0
     );
     projectLeaderUtilizationRate =
       analyticsTotalBudget > 0 ? (projectLeaderUtilizedBudget / analyticsTotalBudget) * 100 : 0;
-    const utilizedByProject = new Map(
-      budgetUtilizationRecords.map((record) => [record.project_id, Number(record.utilized_total || 0)])
-    );
     projectLeaderBudgetDetails = leaderProjects
       .map((project) => {
-        const totalBudget = getProjectBudget(project);
-        const utilizedBudget = utilizedByProject.get(project.id) || 0;
+        const { totalBudget, utilizedBudget, remainingBudget } = getProjectBudgetSnapshot(project);
         return {
           id: project.id,
           title: project.title || "Untitled project",
           totalBudget,
           utilizedBudget,
-          remainingBudget: Math.max(totalBudget - utilizedBudget, 0),
+          remainingBudget,
         };
       })
       .sort((left, right) => right.totalBudget - left.totalBudget);
@@ -1635,7 +1609,6 @@ export default async function DashboardPage({
                 department={profile.department || "Department"}
                 projects={analyticsProjects}
                 trainings={collegeOverviewTrainings}
-                budgetUtilizations={collegeOverviewBudgetUtilizations}
                 facultyRecords={facultyRegistryRecords}
               />
 

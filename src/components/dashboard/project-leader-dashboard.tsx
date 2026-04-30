@@ -72,6 +72,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { type Project } from "@/components/dashboard/projects-table";
 import { type TrainingRecord } from "@/components/dashboard/trainings-form";
 import { RecordPagination, useRecordPagination } from "@/components/dashboard/record-pagination";
+import { getProjectOverallBudget } from "@/lib/project-budget";
 
 type ModuleCount = {
   label: string;
@@ -192,9 +193,7 @@ function getProjectLeaderNames(project: Project) {
 }
 
 function getProjectBudget(project: Project) {
-  if (typeof project.budget_total === "number") return project.budget_total;
-  if (!Array.isArray(project.budget_requirements)) return 0;
-  return project.budget_requirements.reduce((sum, item) => sum + (Number(item?.amount) || 0), 0);
+  return getProjectOverallBudget(project);
 }
 
 function getTrainingDate(record: TrainingRecord) {

@@ -86,10 +86,26 @@ export async function getBudgetUtilizations() {
 }
 
 export async function createBudgetUtilization(payload: BudgetUtilizationPayload) {
-  const { supabase, user, userType } = await getContext();
+  const { supabase, adminClient, user, userType } = await getContext();
 
   if (!["project_leader", "super_admin"].includes(userType || "")) {
     return { error: "Insufficient permissions to create this record." };
+  }
+
+  const { data: existingRecord, error: existingError } = await adminClient
+    .from("budget_utilizations")
+    .select("id")
+    .eq("project_id", payload.project_id)
+    .limit(1)
+    .maybeSingle();
+
+  if (existingError) {
+    console.error("Error checking existing budget utilization:", existingError);
+    return { error: existingError.message };
+  }
+
+  if (existingRecord?.id) {
+    return { error: "A budget utilization record already exists for this project." };
   }
 
   const { data, error } = await supabase

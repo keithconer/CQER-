@@ -16,8 +16,8 @@ import { type Project } from "@/components/dashboard/projects-table";
 import { type TrainingRecord } from "@/components/dashboard/trainings-form";
 import { FacultyRegistryManagement } from "@/components/dashboard/faculty-registry-management";
 import { RecordPagination, useRecordPagination } from "@/components/dashboard/record-pagination";
-import { type BudgetUtilizationRecord } from "@/lib/actions/budget-utilization";
 import { type FacultyRegistryRecord } from "@/lib/actions/faculty-registry";
+import { getProjectBudgetSnapshot, getProjectOverallBudget } from "@/lib/project-budget";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,7 +55,6 @@ interface CollegeCoordinatorDashboardProps {
   department: string;
   projects: Project[];
   trainings: TrainingRecord[];
-  budgetUtilizations: BudgetUtilizationRecord[];
   facultyRecords: FacultyRegistryRecord[];
 }
 
@@ -80,9 +79,7 @@ function formatProjectDuration(project: Project) {
 }
 
 function getProjectBudget(project: Project) {
-  if (typeof project.budget_total === "number") return project.budget_total;
-  if (!Array.isArray(project.budget_requirements)) return 0;
-  return project.budget_requirements.reduce((sum, item) => sum + (Number(item?.amount) || 0), 0);
+  return getProjectOverallBudget(project);
 }
 
 function getProjectLeaderNames(project: Project) {
@@ -359,7 +356,6 @@ export function CollegeCoordinatorDashboard({
   department,
   projects,
   trainings,
-  budgetUtilizations,
   facultyRecords,
 }: CollegeCoordinatorDashboardProps) {
   const [activeDialog, setActiveDialog] = React.useState<"projects" | "trainings" | "budget" | "utilized" | "faculty_involvement" | null>(null);
@@ -384,15 +380,6 @@ export function CollegeCoordinatorDashboard({
         )
       ),
     [trainings]
-  );
-
-  const utilizedByProject = React.useMemo(
-    () =>
-      budgetUtilizations.reduce((map, record) => {
-        map.set(record.project_id, Number(record.utilized_total || 0));
-        return map;
-      }, new Map<string, number>()),
-    [budgetUtilizations]
   );
 
   const projectDepartmentOptions = React.useMemo(() => {
@@ -513,18 +500,17 @@ export function CollegeCoordinatorDashboard({
     () =>
       projects
         .map((project) => {
-          const totalBudget = getProjectBudget(project);
-          const utilizedBudget = utilizedByProject.get(project.id) || 0;
+          const { totalBudget, utilizedBudget, remainingBudget } = getProjectBudgetSnapshot(project);
           return {
             id: project.id,
             title: project.title || "Untitled project",
             totalBudget,
             utilizedBudget,
-            remainingBudget: Math.max(totalBudget - utilizedBudget, 0),
+            remainingBudget,
           };
         })
         .sort((left, right) => right.totalBudget - left.totalBudget),
-    [projects, utilizedByProject]
+    [projects]
   );
 
   const overallBudget = React.useMemo(

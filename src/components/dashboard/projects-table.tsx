@@ -31,6 +31,7 @@ import { ProjectForm } from "./project-form";
 import { useRouter } from "next/navigation";
 import { DocumentPreview } from "./document-preview";
 import { ProjectDeleteDialog } from "./project-delete-dialog";
+import { getProjectOverallBudget } from "@/lib/project-budget";
 
 export interface Project {
   id: string;
@@ -159,11 +160,7 @@ export function ProjectsTable({
     return names.length > 0 ? names.join(", ") : "-";
   };
 
-  const getBudgetTotal = (project: Project) => {
-    if (typeof project.budget_total === "number") return project.budget_total;
-    if (!Array.isArray(project.budget_requirements)) return 0;
-    return project.budget_requirements.reduce((sum, item) => sum + (Number(item?.amount) || 0), 0);
-  };
+  const getBudgetTotal = (project: Project) => getProjectOverallBudget(project);
 
   const formatBudgetTotal = (value: number) =>
     new Intl.NumberFormat("en-PH", {
