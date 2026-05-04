@@ -8,6 +8,7 @@ import {
   getFileExtension,
   isAcceptedDocumentFile,
 } from "@/lib/document-uploads";
+import { createHttpErrorResponse } from "@/lib/http-response";
 import { createClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -25,7 +26,7 @@ export async function POST(request: Request) {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized upload request." }, { status: 401 });
+      return createHttpErrorResponse(401, "Unauthorized upload request.");
     }
 
     const formData = await request.formData();
@@ -34,24 +35,24 @@ export async function POST(request: Request) {
     const maxSizeInMB = Number(formData.get("maxSizeInMB") || 5);
 
     if (!(file instanceof File)) {
-      return NextResponse.json({ error: "No upload file was received." }, { status: 400 });
+      return createHttpErrorResponse(400, "No upload file was received.");
     }
 
     if (!isAcceptedDocumentFile(file)) {
-      return NextResponse.json({ error: "Only PDF, XLS, and XLSX files are allowed." }, { status: 400 });
+      return createHttpErrorResponse(400, "Only PDF, XLS, and XLSX files are allowed.");
     }
 
     if (!Number.isFinite(maxSizeInMB) || maxSizeInMB <= 0 || maxSizeInMB > 10) {
-      return NextResponse.json({ error: "Invalid upload size limit." }, { status: 400 });
+      return createHttpErrorResponse(400, "Invalid upload size limit.");
     }
 
     if (file.size > maxSizeInMB * 1024 * 1024) {
-      return NextResponse.json({ error: `File size must be less than ${maxSizeInMB}MB.` }, { status: 400 });
+      return createHttpErrorResponse(400, `File size must be less than ${maxSizeInMB}MB.`);
     }
 
     const extension = getFileExtension(file.name);
     if (!extension) {
-      return NextResponse.json({ error: "The file must include an extension." }, { status: 400 });
+      return createHttpErrorResponse(400, "The file must include an extension.");
     }
 
     const cloudinary = getCloudinaryConfig();
@@ -100,7 +101,7 @@ export async function POST(request: Request) {
 
     if (!response.ok || !payload.secure_url) {
       const message = payload.error?.message || "Cloudinary upload failed.";
-      return NextResponse.json({ error: message }, { status: 502 });
+      return createHttpErrorResponse(502, message);
     }
 
     return NextResponse.json({
@@ -112,6 +113,6 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Cloudinary backup upload failed.";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return createHttpErrorResponse(500, message);
   }
 }

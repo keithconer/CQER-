@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createHttpErrorResponse } from "@/lib/http-response";
 import { createClient } from "@/lib/supabase/server";
 import { decryptCommunityMessage } from "@/lib/community-messenger-crypto";
 
@@ -114,7 +115,7 @@ export async function GET(request: NextRequest) {
   const afterCreatedAt = request.nextUrl.searchParams.get("afterCreatedAt")?.trim() || null;
 
   if (!threadId) {
-    return NextResponse.json({ error: "Missing threadId." }, { status: 400 });
+    return createHttpErrorResponse(400, "Missing threadId.");
   }
 
   const supabase = await createClient();
@@ -124,7 +125,7 @@ export async function GET(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    return createHttpErrorResponse(401, "Unauthorized.");
   }
 
   const { data: profile } = await adminClient
@@ -134,7 +135,7 @@ export async function GET(request: NextRequest) {
     .single();
 
   if (!profile || !MESSENGER_USER_TYPES.includes(profile.user_type as MessengerUserType)) {
-    return NextResponse.json({ error: "Messenger is not available for this account." }, { status: 403 });
+    return createHttpErrorResponse(403, "Messenger is not available for this account.");
   }
 
   const { data: membership } = await adminClient
@@ -145,7 +146,7 @@ export async function GET(request: NextRequest) {
     .maybeSingle();
 
   if (!membership) {
-    return NextResponse.json({ error: "You do not have access to this conversation." }, { status: 403 });
+    return createHttpErrorResponse(403, "You do not have access to this conversation.");
   }
 
   let messagesQuery = adminClient
@@ -173,7 +174,7 @@ export async function GET(request: NextRequest) {
   ]);
 
   if (!thread) {
-    return NextResponse.json({ error: "Conversation not found." }, { status: 404 });
+    return createHttpErrorResponse(404, "Conversation not found.");
   }
 
   const memberRows = (members || []) as MessengerMemberRow[];
