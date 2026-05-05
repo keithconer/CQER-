@@ -15,7 +15,7 @@ import { TrainingsManagement } from "@/components/dashboard/trainings-management
 import { type TrainingFacultyOption, type TrainingProjectOption, type TrainingRecord } from "@/components/dashboard/trainings-form";
 import { AccountsTable } from "@/components/dashboard/accounts-table";
 import { DashboardAnalytics } from "@/components/dashboard/dashboard-analytics";
-import { differenceInMonths, format, startOfMonth, subMonths } from "date-fns";
+import { format, startOfMonth, subMonths } from "date-fns";
 import {
   fetchDepartmentDirectory,
   getDepartmentNames,
@@ -38,6 +38,7 @@ import { type TechnologyCommercializationRecord } from "@/lib/actions/technologi
 import { IecMaterialsManagement } from "@/components/dashboard/iec-materials-management";
 import { type IecMaterialRecord } from "@/lib/actions/iec-materials";
 import { getBudgetUtilizations, type BudgetUtilizationRecord } from "@/lib/actions/budget-utilization";
+import { getProjectLifecycleStatus, sortProjectStatuses } from "@/lib/project-status";
 import { BudgetUtilizationManagement } from "@/components/dashboard/budget-utilization-management";
 import { getOrdinanceResolutions, type OrdinanceResolutionRecord } from "@/lib/actions/ordinance-resolution";
 import { OrdinanceResolutionManagement } from "@/components/dashboard/ordinance-resolution-management";
@@ -334,38 +335,9 @@ function buildRadarSeries(projects: AnalyticsProject[]) {
   });
 }
 
-function normalizeProjectCategory(value: string | null | undefined) {
-  const normalized = (value || "").toLowerCase().trim();
-  if (normalized === "new") return "New";
-  if (normalized === "proposal") return "Proposal";
-  if (normalized === "completed") return "Completed";
-  if (normalized === "terminated") return "Terminated";
-  if (
-    normalized === "existing" ||
-    normalized === "existing/ongoing" ||
-    normalized === "on process" ||
-    normalized === "processing"
-  ) {
-    return "Existing / Ongoing";
-  }
-  return "Uncategorized";
-}
-
 function getProjectMixCategory(project: AnalyticsProject) {
-  if (!project.created_at) {
-    return normalizeProjectCategory(project.category);
-  }
-
-  const createdAt = new Date(project.created_at);
-  if (Number.isNaN(createdAt.getTime())) {
-    return normalizeProjectCategory(project.category);
-  }
-
-  const ageInMonths = Math.max(0, differenceInMonths(new Date(), createdAt));
-
-  if (ageInMonths < 2) return "New";
-  if (ageInMonths >= 6) return "Old";
-  return "Existing";
+  const computedStatus = getProjectLifecycleStatus(project);
+  return computedStatus === "Unknown" ? "Existing" : computedStatus;
 }
 
 function buildProjectLeaderActivitySeries(
@@ -1318,14 +1290,15 @@ export default async function DashboardPage({
       { label: "Technical Advisory", records: technicalAdvisoryRecords },
     ]);
 
-    projectLeaderStatusShare = Array.from(
+    projectLeaderStatusShare = sortProjectStatuses(
+      Array.from(
       normalizedCategories.reduce((map, value) => {
         map.set(value, (map.get(value) || 0) + 1);
         return map;
       }, new Map<string, number>())
     )
-      .map(([label, value]) => ({ label, value }))
-      .sort((a, b) => b.value - a.value);
+        .map(([label, value]) => ({ label, value }))
+    );
 
     const radarValues = [
       {

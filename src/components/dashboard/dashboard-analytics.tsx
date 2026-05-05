@@ -47,6 +47,7 @@ import {
   TooltipProvider, 
   TooltipTrigger 
 } from "@/components/ui/tooltip";
+import { formatPhpCurrency } from "@/lib/currency";
 
 interface DashboardAnalyticsProps {
   users: number;
@@ -77,13 +78,7 @@ const COLORS = [
   "hsl(142, 50%, 85%)", // Soft Emerald
 ];
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
+const formatCurrency = (value: number) => formatPhpCurrency(value);
 
 const CustomChartTooltip = ({ active, payload, label, prefix = "", suffix = "" }: any) => {
   if (active && payload && payload.length) {

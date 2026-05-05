@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { differenceInMonths, format } from "date-fns";
+import { format } from "date-fns";
 import {
   Activity,
   ArrowUpRight,
@@ -75,6 +75,11 @@ import { type Project } from "@/components/dashboard/projects-table";
 import { type TrainingRecord } from "@/components/dashboard/trainings-form";
 import { RecordPagination, useRecordPagination } from "@/components/dashboard/record-pagination";
 import { getProjectOverallBudget } from "@/lib/project-budget";
+import { formatPhpCurrency } from "@/lib/currency";
+import {
+  getProjectLifecycleStatus,
+  PROJECT_STATUS_ORDER,
+} from "@/lib/project-status";
 
 type MonthlyActivityPoint = {
   label: string;
@@ -154,16 +159,9 @@ const moduleIcons: Record<string, LucideIcon> = {
   "IEC Materials": Megaphone,
 };
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
+const formatCurrency = (value: number) => formatPhpCurrency(value);
 
-const formatCurrencyLabel = (value: unknown) =>
-  formatCurrency(Number(value || 0));
+const formatCurrencyLabel = (value: unknown) => formatPhpCurrency(Number(value || 0));
 
 const chartTextColor = "var(--foreground)";
 const chartGridColor = "var(--border)";
@@ -196,16 +194,7 @@ function getProjectBudget(project: Project) {
 }
 
 function getProjectAgeStatus(project: Project) {
-  const createdAtValue = (project as Project & { created_at?: string | null })
-    .created_at;
-  if (!createdAtValue) return "Unknown";
-  const createdAt = new Date(createdAtValue);
-  if (Number.isNaN(createdAt.getTime())) return "Unknown";
-
-  const ageInMonths = Math.max(0, differenceInMonths(new Date(), createdAt));
-  if (ageInMonths < 2) return "New";
-  if (ageInMonths >= 6) return "Old";
-  return "Existing";
+  return getProjectLifecycleStatus(project as Project & { created_at?: string | null });
 }
 
 function getTrainingDate(record: TrainingRecord) {
@@ -831,10 +820,18 @@ export function ProjectLeaderDashboard({
   ]);
 
   const projectStatuses = React.useMemo(
-    () =>
-      Array.from(new Set(projects.map((project) => getProjectAgeStatus(project)))).sort((a, b) =>
-        a.localeCompare(b)
-      ),
+    () => {
+      const getOrder = (value: string) => {
+        const index = PROJECT_STATUS_ORDER.indexOf(
+          value as (typeof PROJECT_STATUS_ORDER)[number]
+        );
+        return index >= 0 ? index : PROJECT_STATUS_ORDER.length;
+      };
+
+      return Array.from(
+        new Set(projects.map((project) => getProjectAgeStatus(project)))
+      ).sort((left, right) => getOrder(left) - getOrder(right));
+    },
     [projects]
   );
 
@@ -911,7 +908,7 @@ export function ProjectLeaderDashboard({
                 Project Mix
               </CardTitle>
               <CardDescription className="text-[10px]">
-                Project age mix based on record age: under 2 months is new, 2 to 5 months is existing, and 6 months onward is old.
+                Projects stay new for less than 2 months, become existing after that, and turn old only once the record age exceeds the project&apos;s own duration.
               </CardDescription>
             </CardHeader>
             <CardContent>

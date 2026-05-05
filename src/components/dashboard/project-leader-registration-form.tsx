@@ -49,11 +49,13 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { MultiSelectDropdown } from "@/components/ui/multi-select-dropdown";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { SDG_OPTIONS, normalizeSdgArray } from "@/lib/sdg";
 import { cn, toTitleCase } from "@/lib/utils";
 import { createProject, updateProject } from "@/lib/actions/projects";
 import { type Project } from "@/components/dashboard/projects-table";
 import { createProjectRegistrationGuidance, DEFAULT_DOCUMENT_ACCEPT } from "@/lib/document-uploads";
+import { formatPhpCurrency } from "@/lib/currency";
 
 const agendaOptions = [
   "A - Agri-Fisheries and Food Security",
@@ -238,10 +240,7 @@ const formSchema = z.object({
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["budget_summary"],
-      message: `Budget summary exceeds the available budget by PHP ${overage.toLocaleString("en-PH", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })}.`,
+      message: `Budget summary exceeds the available budget by ${formatPhpCurrency(overage)}.`,
     });
   }
 });
@@ -385,13 +384,6 @@ function getBudgetRowTotal(row?: FormValues["budget_summary"][number]) {
     Number(row.communication || 0) +
     Number(row.other_mooe || 0)
   );
-}
-
-function formatPhpCurrency(value: number) {
-  return `PHP ${value.toLocaleString("en-PH", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
 }
 
 function getUniqueYears(values: Date[]) {
@@ -1362,7 +1354,7 @@ export function ProjectLeaderRegistrationForm({
                       <FormItem className="min-w-0"><FormLabel className="text-xs">Project Title</FormLabel><FormControl><Input {...field} disabled={isViewOnly} className="h-9 rounded-xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
                     )} />
                     <FormField control={form.control} name="budget" render={({ field }) => (
-                      <FormItem className="min-w-0"><FormLabel className="text-xs">Budget</FormLabel><FormControl><Input value={field.value === 0 ? "" : (field.value ?? "")} onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))} onBlur={field.onBlur} name={field.name} ref={field.ref} type="number" min="0" disabled={isViewOnly} className="h-9 rounded-xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                      <FormItem className="min-w-0"><FormLabel className="text-xs">Budget</FormLabel><FormControl><CurrencyInput value={field.value} onValueChange={(value) => field.onChange(value === "" ? 0 : Number(value))} onBlur={field.onBlur} name={field.name} ref={field.ref} hideZeroWhenEmpty disabled={isViewOnly} className="h-9 rounded-xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
                     )} />
                   </div>
                   <div className="grid gap-5 xl:grid-cols-3">
@@ -1611,7 +1603,7 @@ export function ProjectLeaderRegistrationForm({
                               ["other_mooe", "Other MOOE"],
                             ].map(([name, label]) => (
                               <FormField key={name} control={form.control} name={`budget_summary.${index}.${name}` as never} render={({ field }) => (
-                                <FormItem><FormLabel className="text-xs">{label}</FormLabel><FormControl><Input value={field.value === 0 ? "" : (field.value ?? "")} onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))} onBlur={field.onBlur} name={field.name} ref={field.ref} type="number" min="0" disabled={isViewOnly} className="h-9 rounded-xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
+                                <FormItem><FormLabel className="text-xs">{label}</FormLabel><FormControl><CurrencyInput value={field.value} onValueChange={(value) => field.onChange(value === "" ? 0 : Number(value))} onBlur={field.onBlur} name={field.name} ref={field.ref} hideZeroWhenEmpty disabled={isViewOnly} className="h-9 rounded-xl text-xs" /></FormControl><FormMessage className="text-xs" /></FormItem>
                               )} />
                             ))}
                           </div>

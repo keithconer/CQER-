@@ -33,6 +33,7 @@ import {
   deleteBudgetUtilization,
   type BudgetUtilizationRecord,
 } from "@/lib/actions/budget-utilization";
+import { formatPhpCurrency } from "@/lib/currency";
 import { getProjectBudgetSummaryTotal } from "@/lib/project-budget";
 
 type FilterMode = "all" | "with_documents" | "this_year" | "over_budget";
@@ -43,12 +44,7 @@ interface BudgetUtilizationManagementProps {
 }
 
 function currency(value: number) {
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value || 0);
+  return formatPhpCurrency(value);
 }
 
 function getCoverageLabel(record: BudgetUtilizationRecord) {

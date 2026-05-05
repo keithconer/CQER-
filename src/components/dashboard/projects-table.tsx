@@ -35,6 +35,7 @@ import { getProjectOverallBudget } from "@/lib/project-budget";
 
 export interface Project {
   id: string;
+  created_at?: string | null;
   created_by?: string | null;
   created_by_department?: string | null;
   created_by_user_type?: "super_admin" | "college_coordinator" | "unit_coordinator" | "project_leader" | "extension_office" | null;

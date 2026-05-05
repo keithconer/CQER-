@@ -36,10 +36,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { createBudgetUtilization, updateBudgetUtilization, type BudgetUtilizationMonthEntry, type BudgetUtilizationRecord } from "@/lib/actions/budget-utilization";
 import { type Project } from "@/components/dashboard/projects-table";
 import { DEFAULT_DOCUMENT_ACCEPT, DOCUMENT_UPLOAD_GUIDANCE } from "@/lib/document-uploads";
 import { getProjectBudgetSummaryByYear, getProjectBudgetSummaryTotal, getProjectOverallBudget } from "@/lib/project-budget";
+import { formatPhpCurrency } from "@/lib/currency";
 
 const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
 const categories = [
@@ -133,19 +135,7 @@ function getProjectDateRange(project?: Project | null) {
 }
 
 function currency(value: number) {
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value || 0);
-}
-
-function sanitizeDecimalInput(value: string) {
-  const normalized = value.replace(/[^\d.]/g, "");
-  const [whole, ...decimals] = normalized.split(".");
-  if (decimals.length === 0) return whole;
-  return `${whole}.${decimals.join("")}`;
+  return formatPhpCurrency(value);
 }
 
 function buildMonthlyBreakdown(
@@ -581,19 +571,18 @@ export function BudgetUtilizationForm({
                                           render={({ field }) => (
                                             <FormItem>
                                               <FormControl>
-                                                <Input
-                                                  type="text"
-                                                  inputMode="decimal"
+                                                <CurrencyInput
                                                   name={field.name}
                                                   onBlur={field.onBlur}
                                                   ref={field.ref}
                                                   value={
-                                                    field.value === 0 || field.value === "0" || field.value == null
-                                                      ? ""
-                                                      : String(field.value)
+                                                    typeof field.value === "number" ||
+                                                    typeof field.value === "string"
+                                                      ? field.value
+                                                      : 0
                                                   }
-                                                  onChange={(event) =>
-                                                    field.onChange(sanitizeDecimalInput(event.target.value))
+                                                  onValueChange={(value) =>
+                                                    field.onChange(value === "" ? 0 : Number(value))
                                                   }
                                                   placeholder="Enter amount"
                                                   disabled={
@@ -608,6 +597,7 @@ export function BudgetUtilizationForm({
                                                       !field.value
                                                     )
                                                   }
+                                                  hideZeroWhenEmpty
                                                   className="h-10 rounded-xl text-right [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                                 />
                                               </FormControl>

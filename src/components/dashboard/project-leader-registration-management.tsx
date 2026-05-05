@@ -30,6 +30,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { type Project } from "@/components/dashboard/projects-table";
 import { DocumentPreview } from "@/components/dashboard/document-preview";
 import { ProjectDeleteDialog } from "@/components/dashboard/project-delete-dialog";
+import { Badge } from "@/components/ui/badge";
+import { formatPhpCurrency } from "@/lib/currency";
+import { getProjectLifecycleStatus } from "@/lib/project-status";
 
 interface ProjectLeaderRegistrationManagementProps {
   projects: Project[];
@@ -79,6 +82,10 @@ function getBudget(project: Project) {
   return project.budget_requirements.reduce((sum, item) => sum + Number(item?.amount || 0), 0);
 }
 
+function getStatus(project: Project) {
+  return getProjectLifecycleStatus(project as Project & { created_at?: string | null });
+}
+
 async function exportExcel(projects: Project[]) {
   const ExcelJSImport = await import("exceljs/dist/exceljs.min.js");
   const ExcelJS = ExcelJSImport?.default ?? ExcelJSImport;
@@ -89,12 +96,13 @@ async function exportExcel(projects: Project[]) {
     { header: "Department / Unit", key: "departmentUnit", width: 28 },
     { header: "Project Dates", key: "inclusiveDates", width: 28 },
     { header: "Duration", key: "duration", width: 16 },
+    { header: "Status", key: "status", width: 14 },
     { header: "Target Beneficiaries", key: "beneficiaries", width: 24 },
     { header: "Budget Total", key: "budget", width: 18 },
     { header: "Partner Agencies", key: "partners", width: 34 },
   ];
   sheet.columns = columns.map((column) => ({ key: column.key, width: column.width }));
-  sheet.mergeCells("A1:G1");
+  sheet.mergeCells("A1:H1");
   sheet.getCell("A1").value = "Project Registration";
   sheet.getCell("A1").font = { bold: true, size: 14 };
   sheet.getCell("A1").alignment = { horizontal: "center" };
@@ -110,6 +118,7 @@ async function exportExcel(projects: Project[]) {
       departmentUnit: getDepartmentUnit(project),
       inclusiveDates: getDateRange(project),
       duration: getDuration(project),
+      status: getStatus(project),
       beneficiaries: getBeneficiaries(project),
       budget: getBudget(project),
       partners: Array.isArray(registration?.partner_agencies)
@@ -142,6 +151,7 @@ async function exportPdf(projects: Project[]) {
       "Department / Unit",
       "Project Dates",
       "Duration",
+      "Status",
       "Beneficiaries",
       "Budget",
       "Partner Agencies",
@@ -153,8 +163,9 @@ async function exportPdf(projects: Project[]) {
         getDepartmentUnit(project),
         getDateRange(project),
         getDuration(project),
+        getStatus(project),
         getBeneficiaries(project),
-        `PHP ${getBudget(project).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        formatPhpCurrency(getBudget(project)),
         Array.isArray(registration?.partner_agencies)
           ? registration.partner_agencies.map((item) => String((item as Record<string, unknown>).name || "")).join(", ")
           : project.collaborating_agencies || "",
@@ -192,7 +203,9 @@ export function ProjectLeaderRegistrationManagement({
         getDepartmentUnit(project),
         getDateRange(project),
         getDuration(project),
+        getStatus(project),
         getBeneficiaries(project),
+        formatPhpCurrency(getBudget(project)),
         project.collaborating_agencies || "",
         Array.isArray(registration?.extension_agenda) ? registration.extension_agenda.join(" ") : "",
       ]
@@ -303,6 +316,7 @@ export function ProjectLeaderRegistrationManagement({
                   <TableHead className="h-12 text-base font-semibold">Beneficiaries</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Project Dates</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Duration</TableHead>
+                  <TableHead className="h-12 text-base font-semibold">Status</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Budget Total</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Documents</TableHead>
                   <TableHead className="h-12 text-right text-base font-semibold">Actions</TableHead>
@@ -317,8 +331,11 @@ export function ProjectLeaderRegistrationManagement({
                       <TableCell className="py-4 text-base">{getBeneficiaries(project)}</TableCell>
                       <TableCell className="py-4 text-base">{getDateRange(project)}</TableCell>
                       <TableCell className="py-4 text-base">{getDuration(project)}</TableCell>
+                      <TableCell className="py-4 text-base">
+                        <Badge variant="outline">{getStatus(project)}</Badge>
+                      </TableCell>
                       <TableCell className="py-4 text-base font-medium">
-                        PHP {getBudget(project).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {formatPhpCurrency(getBudget(project))}
                       </TableCell>
                       <TableCell className="py-4 text-sm"><DocumentPreview documents={project.documents} /></TableCell>
                       <TableCell className="py-4">
@@ -338,7 +355,7 @@ export function ProjectLeaderRegistrationManagement({
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} className="h-28 text-center text-base text-muted-foreground">
+                    <TableCell colSpan={9} className="h-28 text-center text-base text-muted-foreground">
                       No project registrations match the current search or filter.
                     </TableCell>
                   </TableRow>
