@@ -47,7 +47,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { createProject, updateProject } from "@/lib/actions/projects";
-import { DEPARTMENTS, getAllUnits, getUnitsByDepartment } from "@/lib/departments";
+import { getAllUnits, getDepartmentNames, getUnitsByDepartment } from "@/lib/departments";
 import {
   Dialog,
   DialogContent,
@@ -58,6 +58,7 @@ import {
 } from "@/components/ui/dialog";
 import { FileUpload } from "./file-upload";
 import { ProjectLeaderInput } from "./project-leader-input";
+import { useDepartmentDirectory } from "@/lib/use-department-directory";
 
 const sdgOptions = [
   { id: "Goal 1", label: "Goal 1 - No Poverty" },
@@ -392,18 +393,23 @@ export function ProjectForm({
   const recordLabel = "Project";
   const isCollegeCoordinator = currentUserType === "college_coordinator";
   const isSuperAdmin = currentUserType === "super_admin";
+  const { directory } = useDepartmentDirectory();
+  const departmentOptions = React.useMemo(
+    () => getDepartmentNames(directory),
+    [directory]
+  );
 
   const relatedOptions = React.useMemo(() => {
     if (currentUserType === "super_admin") {
-      return unitOptions.length > 0 ? unitOptions : getAllUnits();
+      return unitOptions.length > 0 ? unitOptions : getAllUnits(directory);
     }
     if (currentUserType === "college_coordinator") return unitOptions;
     if (currentUserType === "unit_coordinator" && currentDepartment) {
-      const units = getUnitsByDepartment(currentDepartment);
+      const units = getUnitsByDepartment(currentDepartment, directory);
       return units.length > 0 ? units : currentUnit ? [currentUnit] : [];
     }
     return [] as string[];
-  }, [currentUserType, unitOptions, currentDepartment, currentUnit]);
+  }, [currentUserType, unitOptions, currentDepartment, currentUnit, directory]);
 
   const categoryCandidate =
     project?.category === "on process" || project?.category === "processing"
@@ -513,7 +519,7 @@ export function ProjectForm({
       funding_remarks_date: typeof fundingData.remarks_date === "string" ? fundingData.remarks_date : "",
       visibility_scope: project?.visibility_scope || (currentUserType === "unit_coordinator" ? "specific_units" : currentUserType === "super_admin" ? "all_departments" : "public"),
       visible_units: project?.visible_units || (currentUserType === "unit_coordinator" && currentUnit ? [currentUnit] : []),
-      visible_departments: project?.visible_departments || (currentUserType === "super_admin" ? [...DEPARTMENTS] : currentDepartment ? [currentDepartment] : []),
+      visible_departments: project?.visible_departments || (currentUserType === "super_admin" ? [...departmentOptions] : currentDepartment ? [currentDepartment] : []),
       documents: project?.documents || [],
     },
   });
@@ -592,11 +598,11 @@ export function ProjectForm({
     if (
       currentUserType === "super_admin" &&
       visibilityScope === "all_departments" &&
-      (form.getValues("visible_departments") || []).length !== DEPARTMENTS.length
+      (form.getValues("visible_departments") || []).length !== departmentOptions.length
     ) {
-      form.setValue("visible_departments", [...DEPARTMENTS], { shouldValidate: true });
+      form.setValue("visible_departments", [...departmentOptions], { shouldValidate: true });
     }
-  }, [currentUserType, currentDepartment, visibilityScope, form]);
+  }, [currentUserType, currentDepartment, visibilityScope, form, departmentOptions]);
 
   async function onSubmit(values: FormOutput) {
     if (isViewOnly) return;
@@ -769,7 +775,7 @@ export function ProjectForm({
                     <FormControl><Input value={currentDepartment || (field.value || []).join(", ")} readOnly disabled className="h-8 text-[10px] bg-muted/20" /></FormControl>
                   ) : (
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                      {DEPARTMENTS.map((option) => (
+                      {departmentOptions.map((option) => (
                         <label key={option} className="flex items-center gap-2 rounded-md border border-border/50 px-2 py-1.5">
                           <Checkbox
                             checked={(field.value || []).includes(option)}
@@ -1243,7 +1249,7 @@ export function ProjectForm({
                   {visibilityScope === "specific_departments" && (
                     <FormField control={form.control} name="visible_departments" render={({ field: deptField }) => (
                       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                        {DEPARTMENTS.map((departmentName) => (
+                        {departmentOptions.map((departmentName) => (
                           <label key={departmentName} className="flex items-center gap-2 rounded-md border border-border/50 px-2 py-1.5">
                             <Checkbox checked={(deptField.value || []).includes(departmentName)} disabled={isViewOnly} onCheckedChange={() => deptField.onChange(toggleArrayItem(deptField.value || [], departmentName))} />
                             <span className="text-[10px]">{departmentName}</span>

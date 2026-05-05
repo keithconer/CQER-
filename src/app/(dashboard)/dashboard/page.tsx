@@ -52,6 +52,7 @@ import { OtherActivitiesManagement } from "@/components/dashboard/other-activiti
 import { ProjectLeaderRecordsManagement } from "@/components/dashboard/project-leader-records-management";
 import { ProjectLeaderDashboard } from "@/components/dashboard/project-leader-dashboard";
 import { CollegeCoordinatorDashboard } from "@/components/dashboard/college-coordinator-dashboard";
+import { SuperAdminDashboard } from "@/components/dashboard/super-admin-dashboard";
 import {
   UnitCoordinatorDashboard,
   type UnitDashboardCommitteeMember,
@@ -1624,6 +1625,8 @@ export default async function DashboardPage({
                 </div>
               </div>
             </>
+          ) : userType === "super_admin" ? (
+            <SuperAdminDashboard accounts={allAccounts} />
           ) : userType === "college_coordinator" ? (
             <>
               <CollegeCoordinatorDashboard

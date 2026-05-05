@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { format } from "date-fns";
+import { differenceInMonths, format } from "date-fns";
 import {
   Activity,
   ArrowUpRight,
@@ -14,6 +14,7 @@ import {
   ClipboardCheck,
   Cpu,
   Factory,
+  Filter,
   FolderKanban,
   Landmark,
   Megaphone,
@@ -170,6 +171,7 @@ const chartGridColor = "var(--border)";
 type TrainingTimeFilter = "all" | "this_month" | "custom_period";
 type ParticipantFilter = "all" | "up_to_25" | "26_to_50" | "51_to_100" | "101_plus";
 type WeightedDaysFilter = "all" | "up_to_1" | "1_to_5" | "above_5";
+type BudgetResultFilter = "all" | "totalBudget" | "utilizedBudget" | "remainingBudget";
 
 function formatDate(value: string | null | undefined) {
   if (!value) return "-";
@@ -191,6 +193,19 @@ function getProjectLeaderNames(project: Project) {
 
 function getProjectBudget(project: Project) {
   return getProjectOverallBudget(project);
+}
+
+function getProjectAgeStatus(project: Project) {
+  const createdAtValue = (project as Project & { created_at?: string | null })
+    .created_at;
+  if (!createdAtValue) return "Unknown";
+  const createdAt = new Date(createdAtValue);
+  if (Number.isNaN(createdAt.getTime())) return "Unknown";
+
+  const ageInMonths = Math.max(0, differenceInMonths(new Date(), createdAt));
+  if (ageInMonths < 2) return "New";
+  if (ageInMonths >= 6) return "Old";
+  return "Existing";
 }
 
 function getTrainingDate(record: TrainingRecord) {
@@ -243,7 +258,7 @@ async function exportProjectsExcel(records: Project[]) {
     { header: "Duration", key: "duration", width: 28 },
     { header: "Project Leader", key: "leader", width: 26 },
     { header: "Total Budget", key: "budget", width: 18 },
-    { header: "Category", key: "category", width: 20 },
+    { header: "Status", key: "status", width: 20 },
   ];
   sheet.columns = columns.map((column) => ({ key: column.key, width: column.width }));
   sheet.mergeCells("A1:E1");
@@ -261,7 +276,7 @@ async function exportProjectsExcel(records: Project[]) {
       duration: formatProjectDuration(project),
       leader: getProjectLeaderNames(project),
       budget: getProjectBudget(project),
-      category: project.category || "-",
+      status: getProjectAgeStatus(project),
     });
   });
   const buffer = await workbook.xlsx.writeBuffer();
@@ -284,13 +299,13 @@ async function exportProjectsPdf(records: Project[]) {
   doc.text("Project Records", doc.internal.pageSize.getWidth() / 2, 12, { align: "center" });
   autoTable(doc, {
     startY: 18,
-    head: [["Project Name", "Duration", "Project Leader", "Total Budget", "Category"]],
+    head: [["Project Name", "Duration", "Project Leader", "Total Budget", "Status"]],
     body: records.map((project) => [
       project.title || "Untitled project",
       formatProjectDuration(project),
       getProjectLeaderNames(project),
       formatCurrency(getProjectBudget(project)),
-      project.category || "-",
+      getProjectAgeStatus(project),
     ]),
     theme: "grid",
     headStyles: { fillColor: [21, 158, 68], textColor: [255, 255, 255], fontSize: 8 },
@@ -644,27 +659,65 @@ export function ProjectLeaderDashboard({
   const [utilizedOpen, setUtilizedOpen] = React.useState(false);
   const [facultyPage, setFacultyPage] = React.useState(1);
   const [projectSearch, setProjectSearch] = React.useState("");
-  const [projectCategoryFilter, setProjectCategoryFilter] = React.useState("all");
+  const [projectStatusFilter, setProjectStatusFilter] = React.useState("all");
   const [trainingSearch, setTrainingSearch] = React.useState("");
   const [trainingTimeFilter, setTrainingTimeFilter] = React.useState<TrainingTimeFilter>("all");
   const [trainingParticipantsFilter, setTrainingParticipantsFilter] = React.useState<ParticipantFilter>("all");
   const [trainingWeightedDaysFilter, setTrainingWeightedDaysFilter] = React.useState<WeightedDaysFilter>("all");
   const [trainingPeriodFrom, setTrainingPeriodFrom] = React.useState("");
   const [trainingPeriodTo, setTrainingPeriodTo] = React.useState("");
+  const [budgetResultFilter, setBudgetResultFilter] =
+    React.useState<BudgetResultFilter>("all");
   const maxRadar = Math.max(1, ...radarSeries.map((item) => item.fullMark));
+  const filteredBudgetItems = React.useMemo(() => {
+    const visibleItems = budgetDetails.filter(
+      (item) =>
+        item.totalBudget > 0 ||
+        item.utilizedBudget > 0 ||
+        item.remainingBudget > 0
+    );
+
+    const metric =
+      budgetResultFilter === "all" ? "totalBudget" : budgetResultFilter;
+    const scopedItems =
+      budgetResultFilter === "all"
+        ? visibleItems
+        : visibleItems.filter((item) => Number(item[metric]) > 0);
+
+    return [...scopedItems]
+      .sort((left, right) => Number(right[metric]) - Number(left[metric]))
+      .slice(0, 6);
+  }, [budgetDetails, budgetResultFilter]);
   const budgetComparisonData = React.useMemo(
     () =>
-      budgetDetails
-        .filter((item) => item.totalBudget > 0 || item.utilizedBudget > 0 || item.remainingBudget > 0)
-        .sort((left, right) => right.totalBudget - left.totalBudget)
-        .slice(0, 6)
-        .map((item) => ({
-          label: item.title.length > 18 ? `${item.title.slice(0, 18)}...` : item.title,
-          totalBudget: item.totalBudget,
-          utilizedBudget: item.utilizedBudget,
-          remainingBudget: item.remainingBudget,
-        })),
-    [budgetDetails]
+      filteredBudgetItems.map((item) => ({
+        label: item.title.length > 18 ? `${item.title.slice(0, 18)}...` : item.title,
+        totalBudget: item.totalBudget,
+        utilizedBudget: item.utilizedBudget,
+        remainingBudget: item.remainingBudget,
+      })),
+    [filteredBudgetItems]
+  );
+  const filteredBudgetTotals = React.useMemo(
+    () =>
+      filteredBudgetItems.reduce(
+        (acc, item) => {
+          acc.totalBudget += item.totalBudget;
+          acc.utilizedBudget += item.utilizedBudget;
+          acc.remainingBudget += item.remainingBudget;
+          return acc;
+        },
+        { totalBudget: 0, utilizedBudget: 0, remainingBudget: 0 }
+      ),
+    [filteredBudgetItems]
+  );
+  const budgetShareData = React.useMemo(
+    () => [
+      { label: "Total Budget", value: filteredBudgetTotals.totalBudget, color: "hsl(142, 72%, 29%)" },
+      { label: "Total Utilized", value: filteredBudgetTotals.utilizedBudget, color: "hsl(142, 71%, 45%)" },
+      { label: "Total Remaining", value: filteredBudgetTotals.remainingBudget, color: "hsl(142, 45%, 68%)" },
+    ],
+    [filteredBudgetTotals]
   );
   const facultyPageSize = 10;
   const facultyTotalPages = Math.max(1, Math.ceil(facultyInvolvement.length / facultyPageSize));
@@ -679,18 +732,19 @@ export function ProjectLeaderDashboard({
 
   const filteredProjects = React.useMemo(() => {
     return projects.filter((project) => {
+      const status = getProjectAgeStatus(project);
       const haystack = [
         project.title,
         getProjectLeaderNames(project),
-        project.category || "",
+        status,
       ]
         .join(" ")
         .toLowerCase();
       if (projectSearch && !haystack.includes(projectSearch.toLowerCase())) return false;
-      if (projectCategoryFilter !== "all" && (project.category || "") !== projectCategoryFilter) return false;
+      if (projectStatusFilter !== "all" && status !== projectStatusFilter) return false;
       return true;
     });
-  }, [projectCategoryFilter, projectSearch, projects]);
+  }, [projectSearch, projectStatusFilter, projects]);
 
   const projectLinkedTrainings = React.useMemo(
     () =>
@@ -762,7 +816,7 @@ export function ProjectLeaderDashboard({
 
   React.useEffect(() => {
     resetProjectPagination();
-  }, [projectCategoryFilter, projectSearch, resetProjectPagination]);
+  }, [projectSearch, projectStatusFilter, resetProjectPagination]);
 
   React.useEffect(() => {
     resetTrainingPagination();
@@ -776,9 +830,9 @@ export function ProjectLeaderDashboard({
     trainingWeightedDaysFilter,
   ]);
 
-  const projectCategories = React.useMemo(
+  const projectStatuses = React.useMemo(
     () =>
-      Array.from(new Set(projects.map((project) => project.category).filter(Boolean) as string[])).sort((a, b) =>
+      Array.from(new Set(projects.map((project) => getProjectAgeStatus(project)))).sort((a, b) =>
         a.localeCompare(b)
       ),
     [projects]
@@ -818,7 +872,7 @@ export function ProjectLeaderDashboard({
           />
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-12 lg:grid-rows-2">
+        <div className="grid gap-4 lg:grid-cols-12">
           <Card className="border-border/50 bg-card/50 shadow-sm lg:col-span-8">
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-[13px] font-bold">
@@ -889,13 +943,36 @@ export function ProjectLeaderDashboard({
 
           <Card className="border-border/50 bg-card/50 shadow-sm lg:col-span-5">
             <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-[13px] font-bold">
-                <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
-                Budget Utilization Analysis
-              </CardTitle>
-              <CardDescription className="text-[10px]">
-                Compare total budget, utilized budget, and remaining budget across your highest-budget projects.
-              </CardDescription>
+              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-[13px] font-bold">
+                    <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
+                    Budget Utilization Analysis
+                  </CardTitle>
+                  <CardDescription className="text-[10px]">
+                    Compare total budget, utilized budget, and remaining budget across the filtered project results.
+                  </CardDescription>
+                </div>
+                <div className="w-full md:w-[180px]">
+                  <Select
+                    value={budgetResultFilter}
+                    onValueChange={(value: BudgetResultFilter) =>
+                      setBudgetResultFilter(value)
+                    }
+                  >
+                    <SelectTrigger className="h-8 text-[10px]">
+                      <Filter className="mr-2 h-3 w-3 text-muted-foreground" />
+                      <SelectValue placeholder="Results filter" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all" className="text-[10px]">All results</SelectItem>
+                      <SelectItem value="totalBudget" className="text-[10px]">Total budget</SelectItem>
+                      <SelectItem value="utilizedBudget" className="text-[10px]">Total utilized</SelectItem>
+                      <SelectItem value="remainingBudget" className="text-[10px]">Total remaining</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="h-[220px] w-full">
@@ -941,18 +1018,67 @@ export function ProjectLeaderDashboard({
               <div className="mt-3 grid gap-2 md:grid-cols-3">
                 <div className="rounded-xl border border-border/50 bg-background/60 px-3 py-2">
                   <p className="text-[9px] text-muted-foreground">Total Budget</p>
-                  <p className="mt-1 text-xs font-semibold">{formatCurrency(totalBudget)}</p>
+                  <p className="mt-1 text-xs font-semibold">{formatCurrency(filteredBudgetTotals.totalBudget)}</p>
                 </div>
                 <div className="rounded-xl border border-border/50 bg-background/60 px-3 py-2">
                   <p className="text-[9px] text-muted-foreground">Total Utilized</p>
-                  <p className="mt-1 text-xs font-semibold">{formatCurrency(utilizedBudget)}</p>
+                  <p className="mt-1 text-xs font-semibold">{formatCurrency(filteredBudgetTotals.utilizedBudget)}</p>
                 </div>
                 <div className="rounded-xl border border-border/50 bg-background/60 px-3 py-2">
                   <p className="text-[9px] text-muted-foreground">Total Remaining</p>
                   <p className="mt-1 text-xs font-semibold">
-                    {formatCurrency(Math.max(0, totalBudget - utilizedBudget))}
+                    {formatCurrency(filteredBudgetTotals.remainingBudget)}
                   </p>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/50 bg-card/50 shadow-sm lg:col-span-3">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-[13px] font-bold">
+                <Wallet className="h-3.5 w-3.5 text-emerald-600" />
+                Budget Share
+              </CardTitle>
+              <CardDescription className="text-[10px]">
+                Pie chart summary using the same results filter as the bar graph.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="h-[220px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={budgetShareData}
+                      dataKey="value"
+                      nameKey="label"
+                      innerRadius={44}
+                      outerRadius={76}
+                      paddingAngle={4}
+                      stroke="none"
+                    >
+                      {budgetShareData.map((item) => (
+                        <Cell key={item.label} fill={item.color} />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip
+                      content={<SimpleChartTooltip valueFormatter={formatCurrency} />}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="space-y-2">
+                {budgetShareData.map((item) => (
+                  <div key={item.label} className="flex items-center justify-between rounded-xl border border-border/50 bg-background/60 px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                      <span className="text-[10px] text-muted-foreground">{item.label}</span>
+                    </div>
+                    <span className="text-[10px] font-semibold text-foreground">
+                      {formatCurrency(item.value)}
+                    </span>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
@@ -982,7 +1108,7 @@ export function ProjectLeaderDashboard({
             </CardContent>
           </Card>
 
-          <Card className="border-border/50 bg-card/50 shadow-sm lg:col-span-3">
+          <Card className="border-border/50 bg-card/50 shadow-sm lg:col-span-12">
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-[13px] font-bold">
                 <Users2 className="h-3.5 w-3.5 text-emerald-600" />
@@ -1117,20 +1243,20 @@ export function ProjectLeaderDashboard({
                 <Input
                   value={projectSearch}
                   onChange={(event) => setProjectSearch(event.target.value)}
-                  placeholder="Search project, leader, or category..."
+                  placeholder="Search project, leader, or status..."
                   className="h-9 w-full min-w-0 text-xs"
                 />
               </div>
               <div className="min-w-0 sm:grid sm:grid-cols-2 sm:gap-2 lg:col-span-4">
-                <Select value={projectCategoryFilter} onValueChange={setProjectCategoryFilter}>
+                <Select value={projectStatusFilter} onValueChange={setProjectStatusFilter}>
                   <SelectTrigger className="h-9 w-full min-w-0 text-xs">
-                    <SelectValue placeholder="Category" className="truncate" />
+                    <SelectValue placeholder="Status" className="truncate" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all" className="text-xs">All categories</SelectItem>
-                    {projectCategories.map((category) => (
-                      <SelectItem key={category} value={category} className="text-xs">
-                        {category}
+                    <SelectItem value="all" className="text-xs">All statuses</SelectItem>
+                    {projectStatuses.map((status) => (
+                      <SelectItem key={status} value={status} className="text-xs">
+                        {status}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1157,7 +1283,7 @@ export function ProjectLeaderDashboard({
                     <TableHead className="text-[10px]">Duration</TableHead>
                     <TableHead className="text-[10px]">Project Leader</TableHead>
                     <TableHead className="text-[10px]">Budget</TableHead>
-                    <TableHead className="text-[10px]">Category</TableHead>
+                    <TableHead className="text-[10px]">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1167,7 +1293,11 @@ export function ProjectLeaderDashboard({
                       <TableCell className="text-[11px]">{formatProjectDuration(project)}</TableCell>
                       <TableCell className="text-[11px]">{getProjectLeaderNames(project)}</TableCell>
                       <TableCell className="text-[11px]">{formatCurrency(getProjectBudget(project))}</TableCell>
-                      <TableCell className="text-[11px]">{project.category || "-"}</TableCell>
+                      <TableCell className="text-[11px]">
+                        <Badge variant="outline" className="text-[9px]">
+                          {getProjectAgeStatus(project)}
+                        </Badge>
+                      </TableCell>
                     </TableRow>
                   ))}
                   {filteredProjects.length === 0 ? (

@@ -46,7 +46,7 @@ import {
 import { createProject, updateProject } from "@/lib/actions/projects";
 import { FileUpload } from "./file-upload";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DEPARTMENTS, getDepartmentNames, getUnitsByDepartment } from "@/lib/departments";
+import { getDepartmentNames, getUnitsByDepartment } from "@/lib/departments";
 import { ProjectLeaderInput } from "./project-leader-input";
 import { MultiSelectDropdown } from "@/components/ui/multi-select-dropdown";
 import { useDepartmentDirectory } from "@/lib/use-department-directory";
@@ -290,7 +290,7 @@ export function ProjectProposalForm({
       visible_departments: proposal && isSuperAdmin
         ? normalizeStringArray((proposal as Record<string, unknown>).visible_departments)
         : isSuperAdmin
-          ? [...DEPARTMENTS]
+          ? [...departmentOptions]
           : currentDepartment ? [currentDepartment] : [],
       documents: proposal?.documents || [],
     },
