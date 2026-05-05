@@ -1,12 +1,16 @@
 "use client";
 
 import * as React from "react";
-import { Check, CheckSquare2, ChevronDown, ListFilter } from "lucide-react";
+import { Check, ChevronDown, ListFilter } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
@@ -39,8 +43,8 @@ export function MultiSelectDropdown({
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen} modal={false}>
-      <PopoverTrigger asChild disabled={disabled}>
+    <DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
+      <DropdownMenuTrigger asChild disabled={disabled}>
         <Button
           type="button"
           variant="outline"
@@ -51,7 +55,7 @@ export function MultiSelectDropdown({
           disabled={disabled}
         >
           <span className="flex min-w-0 items-center gap-2">
-            <CheckSquare2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <ListFilter className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
             <span className="truncate leading-snug">
               {values.length > 0 ? values.join(", ") : placeholder}
             </span>
@@ -62,64 +66,78 @@ export function MultiSelectDropdown({
                 {values.length}
               </Badge>
             ) : null}
-            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+            <ChevronDown
+              className={cn(
+                "h-3.5 w-3.5 text-muted-foreground transition-transform duration-200",
+                open && "rotate-180"
+              )}
+            />
           </span>
         </Button>
-      </PopoverTrigger>
-      <PopoverContent
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent
         align="start"
-        sideOffset={8}
+        sideOffset={6}
         collisionPadding={16}
-        className="z-[70] w-[min(var(--radix-popover-trigger-width),calc(100vw-2rem))] min-w-[18rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-border/60 p-0 shadow-lg"
+        className="z-[200] w-[var(--radix-dropdown-menu-trigger-width)] min-w-[18rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-border/60 p-0 shadow-xl"
+        onCloseAutoFocus={(e) => e.preventDefault()}
       >
-        <div className="border-b border-border/50 bg-muted/20 px-3 py-3">
+        {/* Header */}
+        <div className="border-b border-border/50 bg-muted/20 px-3 py-2.5">
           <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                <ListFilter className="h-3.5 w-3.5" />
-                {label}
-              </p>
-              <p className="mt-1 text-[10px] text-muted-foreground">
-                Keep selecting items. The list stays open until you close it.
-              </p>
-            </div>
+            <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <ListFilter className="h-3 w-3" />
+              {label}
+            </p>
             <Badge variant="outline" className="rounded-full text-[10px]">
               {values.length} selected
             </Badge>
           </div>
+          <p className="mt-0.5 text-[10px] text-muted-foreground">
+            Click items to toggle. List stays open.
+          </p>
         </div>
-        <ScrollArea className="max-h-[min(18rem,var(--radix-popover-content-available-height))]">
-          <div className="space-y-2 p-3">
+
+        {/* Scrollable options list */}
+        <ScrollArea className="max-h-64">
+          <div className="space-y-1 p-2">
             {options.map((option) => {
               const checked = values.includes(option);
               return (
                 <button
-                  type="button"
                   key={option}
-                  onMouseDown={(event) => event.preventDefault()}
-                  onClick={() => toggleValue(option)}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleValue(option);
+                  }}
+                  onMouseDown={(e) => e.preventDefault()}
                   className={cn(
-                    "flex w-full items-start gap-3 rounded-xl border px-3 py-2.5 text-left text-[11px] transition-colors",
+                    "flex w-full items-start gap-3 rounded-xl border px-3 py-2 text-left text-[11px] transition-colors",
                     checked
-                      ? "border-primary/40 bg-primary/5"
-                      : "border-border/50 bg-background/50 hover:bg-muted/40"
+                      ? "border-primary/40 bg-primary/5 text-foreground"
+                      : "border-border/50 bg-background/50 text-foreground hover:bg-muted/40"
                   )}
                 >
                   <Checkbox
                     checked={checked}
-                    className="pointer-events-none mt-0.5"
+                    className="pointer-events-none mt-0.5 shrink-0"
                     aria-hidden="true"
                   />
                   <span className="flex min-w-0 flex-1 items-start justify-between gap-3">
                     <span className="leading-snug">{option}</span>
-                    {checked ? <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" /> : null}
+                    {checked ? (
+                      <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                    ) : null}
                   </span>
                 </button>
               );
             })}
           </div>
         </ScrollArea>
-      </PopoverContent>
-    </Popover>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
