@@ -11,7 +11,6 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 type MultiSelectDropdownProps = {
@@ -80,11 +79,12 @@ export function MultiSelectDropdown({
         align="start"
         sideOffset={6}
         collisionPadding={16}
-        className="z-[200] w-[var(--radix-dropdown-menu-trigger-width)] min-w-[18rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-border/60 p-0 shadow-xl"
+        className="z-[200] w-[var(--radix-dropdown-menu-trigger-width)] min-w-[18rem] max-w-[calc(100vw-2rem)] rounded-2xl border border-border/60 p-0 shadow-xl"
         onCloseAutoFocus={(e) => e.preventDefault()}
+        style={{ overflow: "visible" }}
       >
-        {/* Header */}
-        <div className="border-b border-border/50 bg-muted/20 px-3 py-2.5">
+        {/* Sticky header */}
+        <div className="sticky top-0 z-10 rounded-t-2xl border-b border-border/50 bg-popover px-3 py-2.5">
           <div className="flex items-center justify-between gap-3">
             <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
               <ListFilter className="h-3 w-3" />
@@ -99,9 +99,9 @@ export function MultiSelectDropdown({
           </p>
         </div>
 
-        {/* Scrollable options list */}
-        <ScrollArea className="max-h-64">
-          <div className="space-y-1 p-2">
+        {/* Scrollable options — plain div so scroll actually works */}
+        <div className="max-h-64 overflow-y-auto rounded-b-2xl p-2">
+          <div className="space-y-1">
             {options.map((option) => {
               const checked = values.includes(option);
               return (
@@ -136,7 +136,7 @@ export function MultiSelectDropdown({
               );
             })}
           </div>
-        </ScrollArea>
+        </div>
       </DropdownMenuContent>
     </DropdownMenu>
   );
