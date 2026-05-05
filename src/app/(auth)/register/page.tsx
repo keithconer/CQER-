@@ -9,12 +9,13 @@ import { getBaseURL } from "@/lib/utils";
 import {
   BSINDT_TRACKS,
   BS_INDUSTRIAL_TECHNOLOGY,
-  DEPARTMENTS,
   DEPARTMENT_OF_INDUSTRIAL_ENGINEERING_AND_TECHNOLOGY,
   buildUnitValue,
+  getDepartmentNames,
   getUnitsByDepartment,
   isIndustrialEngineeringAndTechnologyDepartment,
 } from "@/lib/departments";
+import { useDepartmentDirectory } from "@/lib/use-department-directory";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,6 +27,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Eye,
   EyeOff,
@@ -68,6 +76,9 @@ function RegisterForm() {
   const [dietTrack, setDietTrack] = useState("");
   const [googleVerified, setGoogleVerified] = useState(false);
   const [googleEmail, setGoogleEmail] = useState("");
+  const { directory } = useDepartmentDirectory();
+  const departmentOptions = getDepartmentNames(directory);
+  const unitOptions = getUnitsByDepartment(department, directory);
 
   const supabase = createClient();
 
@@ -438,23 +449,25 @@ function RegisterForm() {
               <Label htmlFor="department" className="text-[11px] font-semibold text-foreground/90 ml-0.5">
                 Department
               </Label>
-              <select
-                id="department"
+              <Select
                 value={department}
-                onChange={(e) => {
-                  setDepartment(e.target.value);
-                  setUnit(""); // Reset unit when department changes
+                onValueChange={(value) => {
+                  setDepartment(value);
+                  setUnit("");
                   setDietTrack("");
                 }}
-                className="flex h-9 w-full rounded-md border border-border/80 bg-muted/10 px-3 py-1 text-[11px] shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground/70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <option value="" disabled>Select Department</option>
-                {DEPARTMENTS.map((dept) => (
-                  <option key={dept} value={dept}>
-                    {dept}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id="department" className="h-9 text-[11px]">
+                  <SelectValue placeholder="Select Department" />
+                </SelectTrigger>
+                <SelectContent>
+                  {departmentOptions.map((dept) => (
+                    <SelectItem key={dept} value={dept} className="text-[11px]">
+                      {dept}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {userType === "unit_coordinator" && department && (
@@ -462,19 +475,18 @@ function RegisterForm() {
                 <Label htmlFor="unit" className="text-[11px] font-semibold text-foreground/90 ml-0.5">
                   Unit
                 </Label>
-                <select
-                  id="unit"
-                  value={unit}
-                  onChange={(e) => setUnit(e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-border/80 bg-muted/10 px-3 py-1 text-[11px] shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground/70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <option value="" disabled>Select Unit</option>
-                  {getUnitsByDepartment(department).map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
+                <Select value={unit} onValueChange={setUnit}>
+                  <SelectTrigger id="unit" className="h-9 text-[11px]">
+                    <SelectValue placeholder="Select Unit" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {unitOptions.map((opt) => (
+                      <SelectItem key={opt} value={opt} className="text-[11px]">
+                        {opt}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
 
@@ -485,19 +497,18 @@ function RegisterForm() {
                 <Label htmlFor="diet-track" className="text-[11px] font-semibold text-foreground/90 ml-0.5">
                   BS Industrial Technology Major
                 </Label>
-                <select
-                  id="diet-track"
-                  value={dietTrack}
-                  onChange={(e) => setDietTrack(e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-border/80 bg-muted/10 px-3 py-1 text-[11px] shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground/70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <option value="" disabled>Select Major</option>
-                  {BSINDT_TRACKS.map((track) => (
-                    <option key={track} value={track}>
-                      {track}
-                    </option>
-                  ))}
-                </select>
+                <Select value={dietTrack} onValueChange={setDietTrack}>
+                  <SelectTrigger id="diet-track" className="h-9 text-[11px]">
+                    <SelectValue placeholder="Select Major" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BSINDT_TRACKS.map((track) => (
+                      <SelectItem key={track} value={track} className="text-[11px]">
+                        {track}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
           </div>

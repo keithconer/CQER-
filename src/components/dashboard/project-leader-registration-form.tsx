@@ -48,6 +48,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
+import { MultiSelectDropdown } from "@/components/ui/multi-select-dropdown";
 import { SDG_OPTIONS, normalizeSdgArray } from "@/lib/sdg";
 import { cn, toTitleCase } from "@/lib/utils";
 import { createProject, updateProject } from "@/lib/actions/projects";
@@ -677,38 +678,6 @@ function DateTextField({
       maxLength={10}
       className="h-9 rounded-xl text-xs"
     />
-  );
-}
-
-function CheckboxGrid({
-  options,
-  values,
-  onToggle,
-  disabled,
-}: {
-  options: readonly string[];
-  values: string[];
-  onToggle: (value: string) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
-      {options.map((option) => {
-        const checked = values.includes(option);
-        return (
-          <label
-            key={option}
-            className={cn(
-              "flex min-h-12 items-start gap-3 rounded-2xl border border-border/40 bg-background px-4 py-3 text-sm",
-              checked && "border-primary/50 bg-primary/5"
-            )}
-          >
-            <Checkbox checked={checked} onCheckedChange={() => onToggle(option)} disabled={disabled} className="mt-0.5" />
-            <span className="leading-5 text-[13px] sm:text-sm">{option}</span>
-          </label>
-        );
-      })}
-    </div>
   );
 }
 
@@ -1427,7 +1396,18 @@ export function ProjectLeaderRegistrationForm({
                   </div>
                   <div className="space-y-3">
                     <div><Label className="text-xs">University Extension Agenda</Label><p className="text-xs text-muted-foreground">Select one or more agenda areas for this registration.</p></div>
-                    <CheckboxGrid options={agendaOptions} values={extensionAgenda} onToggle={(value) => handleToggleValue("extension_agenda", value)} disabled={isViewOnly} />
+                    <MultiSelectDropdown
+                      options={[...agendaOptions]}
+                      values={extensionAgenda}
+                      onChange={(values) =>
+                        form.setValue("extension_agenda", values, {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        })
+                      }
+                      placeholder="Select one or more agenda areas"
+                      disabled={isViewOnly}
+                    />
                     {form.formState.errors.extension_agenda?.message && (
                       <p className="text-xs font-medium text-destructive">{form.formState.errors.extension_agenda.message}</p>
                     )}

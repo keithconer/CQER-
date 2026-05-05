@@ -34,6 +34,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  LabelList,
   Pie,
   PieChart,
   PolarAngleAxis,
@@ -73,12 +74,6 @@ import { type Project } from "@/components/dashboard/projects-table";
 import { type TrainingRecord } from "@/components/dashboard/trainings-form";
 import { RecordPagination, useRecordPagination } from "@/components/dashboard/record-pagination";
 import { getProjectOverallBudget } from "@/lib/project-budget";
-
-type ModuleCount = {
-  label: string;
-  value: number;
-  href: string;
-};
 
 type MonthlyActivityPoint = {
   label: string;
@@ -127,7 +122,6 @@ interface ProjectLeaderDashboardProps {
   totalBudget: number;
   utilizedBudget: number;
   utilizationRate: number;
-  moduleCounts: ModuleCount[];
   monthlyActivitySeries: MonthlyActivityPoint[];
   projectStatusShare: ProjectStatusPoint[];
   radarSeries: RadarPoint[];
@@ -166,6 +160,9 @@ const formatCurrency = (value: number) =>
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(value);
+
+const formatCurrencyLabel = (value: unknown) =>
+  formatCurrency(Number(value || 0));
 
 const chartTextColor = "var(--foreground)";
 const chartGridColor = "var(--border)";
@@ -418,10 +415,12 @@ function SimpleChartTooltip({
   active,
   payload,
   label,
+  valueFormatter,
 }: {
   active?: boolean;
   payload?: Array<{ name?: string; value?: number; color?: string }>;
   label?: string;
+  valueFormatter?: (value: number) => string;
 }) {
   if (!active || !payload?.length) return null;
 
@@ -435,7 +434,11 @@ function SimpleChartTooltip({
               <div className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
               <span className="text-[10px] text-muted-foreground">{entry.name}</span>
             </div>
-            <span className="text-[10px] font-bold text-foreground">{(entry.value || 0).toLocaleString()}</span>
+            <span className="text-[10px] font-bold text-foreground">
+              {valueFormatter
+                ? valueFormatter(Number(entry.value || 0))
+                : (entry.value || 0).toLocaleString()}
+            </span>
           </div>
         ))}
       </div>
@@ -628,7 +631,6 @@ export function ProjectLeaderDashboard({
   totalBudget,
   utilizedBudget,
   utilizationRate,
-  moduleCounts,
   monthlyActivitySeries,
   projectStatusShare,
   radarSeries,
@@ -649,8 +651,21 @@ export function ProjectLeaderDashboard({
   const [trainingWeightedDaysFilter, setTrainingWeightedDaysFilter] = React.useState<WeightedDaysFilter>("all");
   const [trainingPeriodFrom, setTrainingPeriodFrom] = React.useState("");
   const [trainingPeriodTo, setTrainingPeriodTo] = React.useState("");
-  const populatedModules = moduleCounts.filter((item) => item.value > 0);
   const maxRadar = Math.max(1, ...radarSeries.map((item) => item.fullMark));
+  const budgetComparisonData = React.useMemo(
+    () =>
+      budgetDetails
+        .filter((item) => item.totalBudget > 0 || item.utilizedBudget > 0 || item.remainingBudget > 0)
+        .sort((left, right) => right.totalBudget - left.totalBudget)
+        .slice(0, 6)
+        .map((item) => ({
+          label: item.title.length > 18 ? `${item.title.slice(0, 18)}...` : item.title,
+          totalBudget: item.totalBudget,
+          utilizedBudget: item.utilizedBudget,
+          remainingBudget: item.remainingBudget,
+        })),
+    [budgetDetails]
+  );
   const facultyPageSize = 10;
   const facultyTotalPages = Math.max(1, Math.ceil(facultyInvolvement.length / facultyPageSize));
   const facultyPageItems = facultyInvolvement.slice(
@@ -842,7 +857,7 @@ export function ProjectLeaderDashboard({
                 Project Mix
               </CardTitle>
               <CardDescription className="text-[10px]">
-                Distribution of your registered projects by current category.
+                Project age mix based on record age: under 2 months is new, 2 to 5 months is existing, and 6 months onward is old.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -876,23 +891,68 @@ export function ProjectLeaderDashboard({
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-[13px] font-bold">
                 <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
-                Output Coverage
+                Budget Utilization Analysis
               </CardTitle>
               <CardDescription className="text-[10px]">
-                How your records are distributed across the modules you manage.
+                Compare total budget, utilized budget, and remaining budget across your highest-budget projects.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="h-[220px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={populatedModules} margin={{ top: 0, right: 0, left: -20, bottom: 20 }}>
-                    <CartesianGrid stroke={chartGridColor} strokeDasharray="3 3" vertical={false} opacity={0.5} />
-                    <XAxis dataKey="label" angle={-20} textAnchor="end" height={48} interval={0} fontSize={8} tickLine={false} axisLine={false} tick={{ fill: chartTextColor }} />
-                    <YAxis fontSize={9} tickLine={false} axisLine={false} allowDecimals={false} tick={{ fill: chartTextColor }} />
-                    <RechartsTooltip content={<SimpleChartTooltip />} />
-                    <Bar dataKey="value" name="Records" radius={[8, 8, 0, 0]} fill="hsl(142, 71%, 45%)" />
-                  </BarChart>
-                </ResponsiveContainer>
+                {budgetComparisonData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={budgetComparisonData}
+                      margin={{ top: 16, right: 12, left: -18, bottom: 20 }}
+                    >
+                      <CartesianGrid stroke={chartGridColor} strokeDasharray="3 3" vertical={false} opacity={0.5} />
+                      <XAxis dataKey="label" angle={-18} textAnchor="end" height={54} interval={0} fontSize={8} tickLine={false} axisLine={false} tick={{ fill: chartTextColor }} />
+                      <YAxis
+                        fontSize={9}
+                        tickLine={false}
+                        axisLine={false}
+                        tick={{ fill: chartTextColor }}
+                        tickFormatter={(value) =>
+                          `P${Number(value) >= 1000 ? `${Math.round(Number(value) / 1000)}k` : Number(value)}`
+                        }
+                      />
+                      <RechartsTooltip
+                        content={
+                          <SimpleChartTooltip valueFormatter={formatCurrency} />
+                        }
+                      />
+                      <Bar dataKey="totalBudget" name="Total Budget" radius={[6, 6, 0, 0]} fill="hsl(142, 72%, 29%)">
+                        <LabelList dataKey="totalBudget" position="top" fontSize={8} fill={chartTextColor} formatter={formatCurrencyLabel} />
+                      </Bar>
+                      <Bar dataKey="utilizedBudget" name="Total Utilized" radius={[6, 6, 0, 0]} fill="hsl(142, 71%, 45%)">
+                        <LabelList dataKey="utilizedBudget" position="top" fontSize={8} fill={chartTextColor} formatter={formatCurrencyLabel} />
+                      </Bar>
+                      <Bar dataKey="remainingBudget" name="Total Remaining" radius={[6, 6, 0, 0]} fill="hsl(142, 45%, 68%)">
+                        <LabelList dataKey="remainingBudget" position="top" fontSize={8} fill={chartTextColor} formatter={formatCurrencyLabel} />
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-border/50 bg-background/60 px-4 text-center text-xs text-muted-foreground">
+                    No budget utilization data to visualize yet.
+                  </div>
+                )}
+              </div>
+              <div className="mt-3 grid gap-2 md:grid-cols-3">
+                <div className="rounded-xl border border-border/50 bg-background/60 px-3 py-2">
+                  <p className="text-[9px] text-muted-foreground">Total Budget</p>
+                  <p className="mt-1 text-xs font-semibold">{formatCurrency(totalBudget)}</p>
+                </div>
+                <div className="rounded-xl border border-border/50 bg-background/60 px-3 py-2">
+                  <p className="text-[9px] text-muted-foreground">Total Utilized</p>
+                  <p className="mt-1 text-xs font-semibold">{formatCurrency(utilizedBudget)}</p>
+                </div>
+                <div className="rounded-xl border border-border/50 bg-background/60 px-3 py-2">
+                  <p className="text-[9px] text-muted-foreground">Total Remaining</p>
+                  <p className="mt-1 text-xs font-semibold">
+                    {formatCurrency(Math.max(0, totalBudget - utilizedBudget))}
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>

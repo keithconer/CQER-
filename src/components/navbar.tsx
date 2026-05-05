@@ -44,6 +44,7 @@ import {
   UserCog,
   UserPlus,
   LayoutDashboard,
+  Building2,
   Users2,
   Download,
   BriefcaseBusiness,
@@ -128,6 +129,7 @@ export function Navbar({ user }: NavbarProps) {
     panelParam === "extension-program" ||
     panelParam === "awards-recognition" ||
     panelParam === "other-activities" ||
+    panelParam === "department-management" ||
     panelParam === "projects"
       ? panelParam
       : "overview";
@@ -150,6 +152,7 @@ export function Navbar({ user }: NavbarProps) {
     router.prefetch("/dashboard?panel=extension-program");
     router.prefetch("/dashboard?panel=awards-recognition");
     router.prefetch("/dashboard?panel=other-activities");
+    router.prefetch("/dashboard?panel=department-management");
     router.prefetch("/dashboard?panel=accounts");
     router.prefetch("/dashboard?panel=account-management&account=register");
     router.prefetch("/dashboard?panel=projects&view=project-registration");
@@ -238,6 +241,15 @@ export function Navbar({ user }: NavbarProps) {
         description: "Open the CQER Community announcement feed.",
         icon: Users2,
         roles: ["super_admin", "college_coordinator", "unit_coordinator", "project_leader"],
+      },
+      {
+        id: "department-management",
+        label: "Create Departments",
+        href: "/dashboard?panel=department-management",
+        keywords: ["departments", "units", "department catalog", "create departments"],
+        description: "Manage departments and units across the system.",
+        icon: Building2,
+        roles: ["super_admin"],
       },
       {
         id: "account-management",
@@ -407,6 +419,13 @@ export function Navbar({ user }: NavbarProps) {
             href: "/dashboard?panel=community",
             icon: Users2,
             roles: ["super_admin", "college_coordinator", "unit_coordinator", "project_leader"],
+          },
+          {
+            label: "Create Departments",
+            panel: "department-management",
+            href: "/dashboard?panel=department-management",
+            icon: Building2,
+            roles: ["super_admin"],
           },
           {
             label: "Create Backup",

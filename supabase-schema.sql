@@ -1053,6 +1053,327 @@ end
 $$;
 -- ============================================================
 -- END COPY: Awards Module (College and Unit Coordinators)
+
+-- START COPY: Dynamic Department Catalog
+
+create table if not exists public.departments (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+create table if not exists public.department_units (
+  id uuid primary key default gen_random_uuid(),
+  department_id uuid not null references public.departments(id) on delete cascade,
+  name text not null,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now()),
+  constraint department_units_unique_name_per_department unique (department_id, name)
+);
+
+create or replace function public.set_department_catalog_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = timezone('utc', now());
+  return new;
+end;
+$$;
+
+drop trigger if exists departments_set_updated_at on public.departments;
+create trigger departments_set_updated_at
+before update on public.departments
+for each row execute function public.set_department_catalog_updated_at();
+
+drop trigger if exists department_units_set_updated_at on public.department_units;
+create trigger department_units_set_updated_at
+before update on public.department_units
+for each row execute function public.set_department_catalog_updated_at();
+
+alter table public.departments enable row level security;
+alter table public.department_units enable row level security;
+
+drop policy if exists "Authenticated users can read departments" on public.departments;
+create policy "Authenticated users can read departments" on public.departments
+for select
+to authenticated
+using (true);
+
+drop policy if exists "Authenticated users can read department units" on public.department_units;
+create policy "Authenticated users can read department units" on public.department_units
+for select
+to authenticated
+using (true);
+
+drop policy if exists "Super admins can manage departments" on public.departments;
+create policy "Super admins can manage departments" on public.departments
+for all
+to authenticated
+using (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.user_type = 'super_admin'
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.user_type = 'super_admin'
+  )
+);
+
+drop policy if exists "Super admins can manage department units" on public.department_units;
+create policy "Super admins can manage department units" on public.department_units
+for all
+to authenticated
+using (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.user_type = 'super_admin'
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.user_type = 'super_admin'
+  )
+);
+
+insert into public.departments (name)
+values
+  ('Department of Information Technology'),
+  ('Department of Industrial Engineering and Technology'),
+  ('Department of Agricultural and Food Engineering'),
+  ('Department of Computer Engineering and Electrical Engineering'),
+  ('Department of Civil Engineering and Architecture')
+on conflict (name) do nothing;
+
+insert into public.department_units (department_id, name)
+select departments.id, source.unit_name
+from (
+  values
+    ('Department of Information Technology', 'BS Information Technology'),
+    ('Department of Information Technology', 'BS Computer Science'),
+    ('Department of Industrial Engineering and Technology', 'BS Industrial Engineering'),
+    ('Department of Industrial Engineering and Technology', 'BS Industrial Technology'),
+    ('Department of Agricultural and Food Engineering', 'BS Agricultural and Biosystems Engineering'),
+    ('Department of Computer Engineering and Electrical Engineering', 'BS Computer Engineering'),
+    ('Department of Computer Engineering and Electrical Engineering', 'BS Electrical Engineering'),
+    ('Department of Computer Engineering and Electrical Engineering', 'BS Electronics Engineering'),
+    ('Department of Civil Engineering and Architecture', 'BS Architecture'),
+    ('Department of Civil Engineering and Architecture', 'BS Civil Engineering')
+) as source(department_name, unit_name)
+join public.departments
+  on departments.name = source.department_name
+on conflict (department_id, name) do nothing;
+
+create or replace function public.replace_jsonb_text_array(
+  source jsonb,
+  old_value text,
+  new_value text
+)
+returns jsonb
+language sql
+immutable
+as $$
+  select coalesce(
+    jsonb_agg(
+      case
+        when item = to_jsonb(old_value) then to_jsonb(new_value)
+        else item
+      end
+    ),
+    '[]'::jsonb
+  )
+  from jsonb_array_elements(coalesce(source, '[]'::jsonb)) as item;
+$$;
+
+create or replace function public.count_department_references(target_name text)
+returns bigint
+language plpgsql
+as $$
+declare
+  record_item record;
+  matched_count bigint := 0;
+  total_count bigint := 0;
+begin
+  for record_item in
+    select table_name, column_name
+    from information_schema.columns
+    where table_schema = 'public'
+      and column_name in ('department', 'proposal_department')
+  loop
+    execute format(
+      'select count(*) from public.%I where %I = $1',
+      record_item.table_name,
+      record_item.column_name
+    )
+    into matched_count
+    using target_name;
+
+    total_count := total_count + coalesce(matched_count, 0);
+  end loop;
+
+  select total_count + count(*)
+  into total_count
+  from public.projects
+  where coalesce(visible_departments, '[]'::jsonb) @> to_jsonb(array[target_name]);
+
+  select total_count + count(*)
+  into total_count
+  from public.projects
+  where coalesce(funding_data #>> '{registration_data,department_unit}', '') like target_name || ' / %';
+
+  return total_count;
+end;
+$$;
+
+create or replace function public.count_unit_references(target_name text)
+returns bigint
+language plpgsql
+as $$
+declare
+  record_item record;
+  matched_count bigint := 0;
+  total_count bigint := 0;
+begin
+  for record_item in
+    select table_name, column_name
+    from information_schema.columns
+    where table_schema = 'public'
+      and column_name in ('unit', 'proposal_unit')
+  loop
+    execute format(
+      'select count(*) from public.%I where %I = $1',
+      record_item.table_name,
+      record_item.column_name
+    )
+    into matched_count
+    using target_name;
+
+    total_count := total_count + coalesce(matched_count, 0);
+  end loop;
+
+  select total_count + count(*)
+  into total_count
+  from public.projects
+  where coalesce(lead_units, '[]'::jsonb) @> to_jsonb(array[target_name]);
+
+  select total_count + count(*)
+  into total_count
+  from public.projects
+  where coalesce(related_curricular_offerings, '[]'::jsonb) @> to_jsonb(array[target_name]);
+
+  select total_count + count(*)
+  into total_count
+  from public.projects
+  where coalesce(funding_data #>> '{registration_data,department_unit}', '') like '% / ' || target_name
+     or coalesce(funding_data #>> '{registration_data,department_unit}', '') like '% / ' || target_name || ' - %';
+
+  return total_count;
+end;
+$$;
+
+create or replace function public.sync_department_reference_name(old_name text, new_name text)
+returns void
+language plpgsql
+as $$
+declare
+  record_item record;
+begin
+  for record_item in
+    select table_name, column_name
+    from information_schema.columns
+    where table_schema = 'public'
+      and column_name in ('department', 'proposal_department')
+  loop
+    execute format(
+      'update public.%I set %I = $1 where %I = $2',
+      record_item.table_name,
+      record_item.column_name,
+      record_item.column_name
+    )
+    using new_name, old_name;
+  end loop;
+
+  update public.projects
+  set visible_departments = public.replace_jsonb_text_array(
+    visible_departments,
+    old_name,
+    new_name
+  )
+  where coalesce(visible_departments, '[]'::jsonb) @> to_jsonb(array[old_name]);
+
+  update public.projects
+  set funding_data = jsonb_set(
+    funding_data,
+    '{registration_data,department_unit}',
+    to_jsonb(replace(coalesce(funding_data #>> '{registration_data,department_unit}', ''), old_name, new_name)),
+    true
+  )
+  where coalesce(funding_data #>> '{registration_data,department_unit}', '') like old_name || ' / %';
+end;
+$$;
+
+create or replace function public.sync_unit_reference_name(
+  department_name text,
+  old_name text,
+  new_name text
+)
+returns void
+language plpgsql
+as $$
+begin
+  update public.profiles
+  set unit = new_name
+  where department = department_name
+    and unit = old_name;
+
+  update public.pending_registrations
+  set unit = new_name
+  where department = department_name
+    and unit = old_name;
+
+  update public.projects
+  set proposal_unit = new_name
+  where proposal_department = department_name
+    and proposal_unit = old_name;
+
+  update public.projects
+  set lead_units = public.replace_jsonb_text_array(lead_units, old_name, new_name)
+  where coalesce(lead_units, '[]'::jsonb) @> to_jsonb(array[old_name]);
+
+  update public.projects
+  set related_curricular_offerings = public.replace_jsonb_text_array(
+    related_curricular_offerings,
+    old_name,
+    new_name
+  )
+  where coalesce(related_curricular_offerings, '[]'::jsonb) @> to_jsonb(array[old_name]);
+
+  update public.projects
+  set funding_data = jsonb_set(
+    funding_data,
+    '{registration_data,department_unit}',
+    to_jsonb(replace(coalesce(funding_data #>> '{registration_data,department_unit}', ''), old_name, new_name)),
+    true
+  )
+  where coalesce(funding_data #>> '{registration_data,department_unit}', '') like '% / ' || old_name
+     or coalesce(funding_data #>> '{registration_data,department_unit}', '') like '% / ' || old_name || ' - %';
+end;
+$$;
+
+-- END COPY: Dynamic Department Catalog
 -- ============================================================
 
 -- ============================================================

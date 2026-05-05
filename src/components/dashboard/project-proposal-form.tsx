@@ -25,7 +25,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -47,8 +46,10 @@ import {
 import { createProject, updateProject } from "@/lib/actions/projects";
 import { FileUpload } from "./file-upload";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DEPARTMENTS, getUnitsByDepartment } from "@/lib/departments";
+import { DEPARTMENTS, getDepartmentNames, getUnitsByDepartment } from "@/lib/departments";
 import { ProjectLeaderInput } from "./project-leader-input";
+import { MultiSelectDropdown } from "@/components/ui/multi-select-dropdown";
+import { useDepartmentDirectory } from "@/lib/use-department-directory";
 
 const agendaOptions = [
   "Agri-Fisheries and Food Security",
@@ -250,6 +251,8 @@ export function ProjectProposalForm({
   currentUnit,
   unitOptions = [],
 }: ProjectProposalFormProps) {
+  const { directory } = useDepartmentDirectory();
+  const departmentOptions = getDepartmentNames(directory);
   const departmentLabel = `${currentDepartment || "N/A"}${currentUnit ? ` / ${currentUnit}` : ""}`;
   const isSuperAdmin = currentUserType === "super_admin";
   const form = useForm<FormInput, unknown, FormOutput>({
@@ -319,9 +322,11 @@ export function ProjectProposalForm({
   const availableUnits = React.useMemo(
     () =>
       isSuperAdmin
-        ? (watchedDepartment ? getUnitsByDepartment(watchedDepartment) : unitOptions)
-        : getUnitsByDepartment(watchedDepartment || currentDepartment),
-    [currentDepartment, isSuperAdmin, unitOptions, watchedDepartment]
+        ? (watchedDepartment
+            ? getUnitsByDepartment(watchedDepartment, directory)
+            : unitOptions)
+        : getUnitsByDepartment(watchedDepartment || currentDepartment, directory),
+    [currentDepartment, directory, isSuperAdmin, unitOptions, watchedDepartment]
   );
 
   React.useEffect(() => {
@@ -336,11 +341,14 @@ export function ProjectProposalForm({
     if (!isSuperAdmin) return;
     if (
       watchedVisibilityScope === "all_departments" &&
-      (form.getValues("visible_departments") || []).length !== DEPARTMENTS.length
+      (form.getValues("visible_departments") || []).length !==
+        departmentOptions.length
     ) {
-      form.setValue("visible_departments", [...DEPARTMENTS], { shouldValidate: true });
+      form.setValue("visible_departments", [...departmentOptions], {
+        shouldValidate: true,
+      });
     }
-  }, [form, isSuperAdmin, watchedVisibilityScope]);
+  }, [departmentOptions, form, isSuperAdmin, watchedVisibilityScope]);
 
   async function onSubmit(values: FormValues) {
     if (isViewOnly) return;
@@ -424,18 +432,13 @@ export function ProjectProposalForm({
               render={({ field }) => (
                 <FormItem className="space-y-1">
                   <FormLabel className="text-[10px] leading-none">University Extension Agenda Classification</FormLabel>
-                  <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
-                    {agendaOptions.map((option) => (
-                      <label key={option} className="flex items-start gap-2 rounded-md border border-border/50 px-2 py-1.5">
-                        <Checkbox
-                          checked={(field.value || []).includes(option)}
-                          disabled={isViewOnly}
-                          onCheckedChange={() => field.onChange(toggleArrayItem(field.value || [], option))}
-                        />
-                        <span className="text-[10px] leading-snug">{option}</span>
-                      </label>
-                    ))}
-                  </div>
+                  <MultiSelectDropdown
+                    options={[...agendaOptions]}
+                    values={field.value || []}
+                    onChange={field.onChange}
+                    placeholder="Select one or more agenda classifications"
+                    disabled={isViewOnly}
+                  />
                   <FormMessage className="text-[10px]" />
                 </FormItem>
               )}
@@ -572,7 +575,7 @@ export function ProjectProposalForm({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {DEPARTMENTS.map((departmentName) => (
+                          {departmentOptions.map((departmentName) => (
                             <SelectItem key={departmentName} value={departmentName} className="text-[10px]">
                               {departmentName}
                             </SelectItem>
@@ -647,7 +650,7 @@ export function ProjectProposalForm({
                         name="visible_departments"
                         render={({ field: departmentField }) => (
                           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                            {DEPARTMENTS.map((departmentName) => (
+                            {departmentOptions.map((departmentName) => (
                               <label key={departmentName} className="flex items-center gap-2 rounded-md border border-border/50 px-2 py-1.5">
                                 <Checkbox checked={(departmentField.value || []).includes(departmentName)} disabled={isViewOnly} onCheckedChange={() => departmentField.onChange(toggleArrayItem(departmentField.value || [], departmentName))} />
                                 <span className="text-[10px]">{departmentName}</span>

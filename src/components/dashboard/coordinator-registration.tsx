@@ -18,12 +18,20 @@ import { registerCoordinators } from "@/lib/actions/auth";
 import {
   BSINDT_TRACKS,
   BS_INDUSTRIAL_TECHNOLOGY,
-  DEPARTMENTS,
   DEPARTMENT_OF_INDUSTRIAL_ENGINEERING_AND_TECHNOLOGY,
   buildUnitValue,
+  getDepartmentNames,
   getUnitsByDepartment,
   isIndustrialEngineeringAndTechnologyDepartment,
 } from "@/lib/departments";
+import { useDepartmentDirectory } from "@/lib/use-department-directory";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const COORDINATOR_EMAIL_REGEX = /^main\.[a-zA-Z]+\.[a-zA-Z]+@cvsu\.edu\.ph$/;
 
@@ -52,6 +60,8 @@ export function CoordinatorRegistration({ userType, title, description, departme
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [results, setResults] = useState<RegistrationResult[]>([]);
+  const { directory } = useDepartmentDirectory();
+  const departmentOptions = getDepartmentNames(directory);
 
   const handleAddEmail = () => setEmails([...emails, ""]);
   const handleRemoveEmail = (index: number) => {
@@ -249,52 +259,78 @@ export function CoordinatorRegistration({ userType, title, description, departme
                   {!fixedDepartment && (
                     <div className="space-y-1.5">
                       <Label className="text-[10px] font-semibold">Department</Label>
-                      <select
+                      <Select
                         value={departments[email] || ""}
-                        onChange={(e) => {
-                          setDepartments({ ...departments, [email]: e.target.value });
+                        onValueChange={(value) => {
+                          setDepartments({ ...departments, [email]: value });
                           setUnits({ ...units, [email]: "" });
                           setDietTracks({ ...dietTracks, [email]: "" });
                         }}
-                        className="flex h-8 w-full rounded-md border border-border/80 bg-background px-3 py-1 text-[11px] shadow-sm focus:outline-none"
                       >
-                        <option value="" disabled>Select Department</option>
-                        {DEPARTMENTS.map((d) => (
-                          <option key={d} value={d}>{d}</option>
-                        ))}
-                      </select>
+                        <SelectTrigger className="h-8 text-[11px]">
+                          <SelectValue placeholder="Select Department" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {departmentOptions.map((d) => (
+                            <SelectItem key={d} value={d} className="text-[11px]">
+                              {d}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   )}
 
                   {userType === "unit_coordinator" && (
                     <div className="space-y-1.5">
                       <Label className="text-[10px] font-semibold">Unit</Label>
-                      <select
+                      <Select
                         value={units[email] || ""}
-                        onChange={(e) => {
-                          setUnits({ ...units, [email]: e.target.value });
+                        onValueChange={(value) => {
+                          setUnits({ ...units, [email]: value });
                           setDietTracks({ ...dietTracks, [email]: "" });
                         }}
-                        className="flex h-8 w-full rounded-md border border-border/80 bg-background px-3 py-1 text-[11px] shadow-sm focus:outline-none"
                       >
-                        <option value="" disabled>Select Unit</option>
-                        {getUnitsByDepartment(fixedDepartment || departments[email]).map((u) => (
-                          <option key={u} value={u}>{u}</option>
-                        ))}
-                      </select>
+                        <SelectTrigger className="h-8 text-[11px]">
+                          <SelectValue placeholder="Select Unit" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getUnitsByDepartment(
+                            fixedDepartment || departments[email],
+                            directory
+                          ).map((u) => (
+                            <SelectItem key={u} value={u} className="text-[11px]">
+                              {u}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   )}
                   {userType === "unit_coordinator" && (
                     <div className="space-y-1.5">
                       <Label className="text-[10px] font-semibold">Role (Optional)</Label>
-                      <select
-                        value={roles[email] || ""}
-                        onChange={(e) => setRoles({ ...roles, [email]: e.target.value })}
-                        className="flex h-8 w-full rounded-md border border-border/80 bg-background px-3 py-1 text-[11px] shadow-sm focus:outline-none"
+                      <Select
+                        value={roles[email] || "unit_coordinator"}
+                        onValueChange={(value) =>
+                          setRoles({
+                            ...roles,
+                            [email]: value === "unit_coordinator" ? "" : value,
+                          })
+                        }
                       >
-                        <option value="">Unit Coordinator</option>
-                        <option value="project_leader">Project Leader</option>
-                      </select>
+                        <SelectTrigger className="h-8 text-[11px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="unit_coordinator" className="text-[11px]">
+                            Unit Coordinator
+                          </SelectItem>
+                          <SelectItem value="project_leader" className="text-[11px]">
+                            Project Leader
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
                       <p className="text-[9px] text-muted-foreground">
                         Leave as Unit Coordinator unless assigning a Project Leader role.
                       </p>
@@ -309,20 +345,23 @@ export function CoordinatorRegistration({ userType, title, description, departme
                         <Label className="text-[10px] font-semibold">
                           BS Industrial Technology Major
                         </Label>
-                        <select
+                        <Select
                           value={dietTracks[email] || ""}
-                          onChange={(e) =>
-                            setDietTracks({ ...dietTracks, [email]: e.target.value })
+                          onValueChange={(value) =>
+                            setDietTracks({ ...dietTracks, [email]: value })
                           }
-                          className="flex h-8 w-full rounded-md border border-border/80 bg-background px-3 py-1 text-[11px] shadow-sm focus:outline-none"
                         >
-                          <option value="" disabled>Select Major</option>
-                          {BSINDT_TRACKS.map((track) => (
-                            <option key={track} value={track}>
-                              {track}
-                            </option>
-                          ))}
-                        </select>
+                          <SelectTrigger className="h-8 text-[11px]">
+                            <SelectValue placeholder="Select Major" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {BSINDT_TRACKS.map((track) => (
+                              <SelectItem key={track} value={track} className="text-[11px]">
+                                {track}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     )}
                 </div>

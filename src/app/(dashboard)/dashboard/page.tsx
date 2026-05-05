@@ -15,8 +15,12 @@ import { TrainingsManagement } from "@/components/dashboard/trainings-management
 import { type TrainingFacultyOption, type TrainingProjectOption, type TrainingRecord } from "@/components/dashboard/trainings-form";
 import { AccountsTable } from "@/components/dashboard/accounts-table";
 import { DashboardAnalytics } from "@/components/dashboard/dashboard-analytics";
-import { format, startOfMonth, subMonths } from "date-fns";
-import { DEPARTMENTS } from "@/lib/departments";
+import { differenceInMonths, format, startOfMonth, subMonths } from "date-fns";
+import {
+  fetchDepartmentDirectory,
+  getDepartmentNames,
+  getUnitsByDepartment,
+} from "@/lib/departments";
 import { ActiveCoordinators, type CoordinatorActivity } from "@/components/dashboard/active-coordinators";
 import { CommunityPanel } from "@/components/dashboard/community-panel";
 import { getCommunityBootstrap, type CommunityPost } from "@/lib/actions/community";
@@ -58,6 +62,7 @@ import { normalizeSdgArray } from "@/lib/sdg";
 import { getProjectLeaderRecords, type ProjectLeaderRecord } from "@/lib/actions/project-leader-records";
 import { getFacultyRegistryRecords, type FacultyRegistryRecord } from "@/lib/actions/faculty-registry";
 import { getProjectBudgetSnapshot, getProjectOverallBudget } from "@/lib/project-budget";
+import { DepartmentManagement } from "@/components/dashboard/department-management";
 
 
 function extractPartnerAgencyNames(projects: Project[]) {
@@ -345,6 +350,23 @@ function normalizeProjectCategory(value: string | null | undefined) {
   return "Uncategorized";
 }
 
+function getProjectMixCategory(project: AnalyticsProject) {
+  if (!project.created_at) {
+    return normalizeProjectCategory(project.category);
+  }
+
+  const createdAt = new Date(project.created_at);
+  if (Number.isNaN(createdAt.getTime())) {
+    return normalizeProjectCategory(project.category);
+  }
+
+  const ageInMonths = Math.max(0, differenceInMonths(new Date(), createdAt));
+
+  if (ageInMonths < 2) return "New";
+  if (ageInMonths >= 6) return "Old";
+  return "Existing";
+}
+
 function buildProjectLeaderActivitySeries(
   sources: { label: string; records: TimelineRecord[] }[]
 ) {
@@ -414,6 +436,7 @@ export default async function DashboardPage({
     panelParam === "extension-program" ||
     panelParam === "awards-recognition" ||
     panelParam === "other-activities" ||
+    panelParam === "department-management" ||
     panelParam === "projects"
       ? panelParam
       : "overview";
@@ -440,7 +463,14 @@ export default async function DashboardPage({
   }
 
   const allowedPanelsByRole: Record<string, string[]> = {
-    super_admin: ["overview", "community", "backup", "account-management", "accounts"],
+    super_admin: [
+      "overview",
+      "community",
+      "backup",
+      "account-management",
+      "accounts",
+      "department-management",
+    ],
     college_coordinator: ["overview", "community", "backup", "account-management", "accounts", "projects", "budget-utilization", "ordinance-resolution", "impact-assessment", "extension-program", "awards-recognition", "other-activities", "trainings", "consultancy", "technical-advisory", "adopters-with-enterprise", "technologies-innovations-commercialized", "iec-materials"],
     unit_coordinator: ["overview", "community", "backup", "trainings", "project-leader-records"],
     project_leader: ["overview", "community", "backup", "projects", "budget-utilization", "ordinance-resolution", "impact-assessment", "extension-program", "awards-recognition", "other-activities", "trainings", "consultancy", "technical-advisory", "adopters-with-enterprise", "technologies-innovations-commercialized", "iec-materials"],
@@ -472,6 +502,14 @@ export default async function DashboardPage({
   let trainingPartnerAgencyOptions: string[] = [];
   let trainingProjectOptions: TrainingProjectOption[] = [];
   let trainingFacultyOptions: TrainingFacultyOption[] = [];
+  const departmentDirectory = await fetchDepartmentDirectory(
+    supabase as unknown as Parameters<typeof fetchDepartmentDirectory>[0]
+  );
+  const dashboardDepartments = getDepartmentNames(departmentDirectory);
+  const scopedUnitOptions = getUnitsByDepartment(
+    profile.department,
+    departmentDirectory
+  );
   let publicCommunityPosts: CommunityPost[] = [];
   let departmentCommunityPosts: CommunityPost[] = [];
   let communityUsers = [] as Awaited<ReturnType<typeof getCommunityBootstrap>>["mentionableUsers"];
@@ -699,7 +737,6 @@ export default async function DashboardPage({
   let analyticsMoaCompleted = 0;
   let analyticsMoaNew = 0;
   let analyticsScopeLabel = "Based on your current visibility.";
-  let projectLeaderModuleCounts: { label: string; value: number; href: string }[] = [];
   let projectLeaderActivitySeries: { label: string; value: number; breakdown: { name: string; count: number }[] }[] = [];
   let projectLeaderStatusShare: { label: string; value: number }[] = [];
   let projectLeaderRadarSeries: { label: string; value: number; fullMark: number }[] = [];
@@ -1215,32 +1252,16 @@ export default async function DashboardPage({
     analyticsExternalFunding = fundingCounts.external;
 
     const normalizedCategories = leaderProjects.map((project) =>
-      normalizeProjectCategory(project.category)
+      getProjectMixCategory(project)
     );
-    analyticsMoaNew = normalizedCategories.filter((value) => value === "New" || value === "Proposal").length;
-    analyticsMoaExisting = normalizedCategories.filter((value) => value === "Existing / Ongoing").length;
-    analyticsMoaCompleted = normalizedCategories.filter((value) => value === "Completed").length;
-
-    projectLeaderModuleCounts = [
-      { label: "Project Registration", value: leaderProjects.length, href: "/dashboard?panel=projects&view=project-registration" },
-      { label: "Budget Utilization", value: budgetUtilizationRecords.length, href: "/dashboard?panel=budget-utilization" },
-      { label: "Ordinance / Resolution", value: ordinanceResolutionRecords.length, href: "/dashboard?panel=ordinance-resolution" },
-      { label: "Impact Assessment", value: impactAssessmentRecords.length, href: "/dashboard?panel=impact-assessment" },
-      { label: "Extension Program", value: extensionProgramRecords.length, href: "/dashboard?panel=extension-program" },
-      { label: "Awards", value: awardsRecognitionRecords.length, href: "/dashboard?panel=awards-recognition" },
-      { label: "Other Activities", value: otherActivityRecords.length, href: "/dashboard?panel=other-activities" },
-      { label: "Trainings", value: trainingRecords.length, href: "/dashboard?panel=trainings" },
-      { label: "Consultancy", value: consultancyRecords.length, href: "/dashboard?panel=consultancy" },
-      { label: "Technical Advisory", value: technicalAdvisoryRecords.length, href: "/dashboard?panel=technical-advisory" },
-      { label: "Adopters with Enterprise", value: adoptersWithEnterpriseRecords.length, href: "/dashboard?panel=adopters-with-enterprise" },
-      { label: "Technologies", value: technologyCommercializationRecords.length, href: "/dashboard?panel=technologies-innovations-commercialized" },
-      { label: "IEC Materials", value: iecMaterialRecords.length, href: "/dashboard?panel=iec-materials" },
-    ];
+    analyticsMoaNew = normalizedCategories.filter((value) => value === "New").length;
+    analyticsMoaExisting = normalizedCategories.filter((value) => value === "Existing").length;
+    analyticsMoaCompleted = normalizedCategories.filter((value) => value === "Old").length;
 
     projectLeaderTrainingCount = trainingRecords.length;
 
     projectLeaderActiveProjects = normalizedCategories.filter(
-      (value) => value === "New" || value === "Proposal" || value === "Existing / Ongoing"
+      (value) => value === "New" || value === "Existing"
     ).length;
 
     projectLeaderUtilizedBudget = leaderProjects.reduce(
@@ -1530,6 +1551,7 @@ export default async function DashboardPage({
     backup: "Create Backup",
     "account-management": "Account Management",
     accounts: "Account Management",
+    "department-management": "Create Departments",
   };
   const pageTitle = panelTitleMap[activePanel] || "Dashboard";
   const activityBreakdownLabel =
@@ -1576,7 +1598,6 @@ export default async function DashboardPage({
               totalBudget={analyticsTotalBudget}
               utilizedBudget={projectLeaderUtilizedBudget}
               utilizationRate={projectLeaderUtilizationRate}
-              moduleCounts={projectLeaderModuleCounts}
               monthlyActivitySeries={projectLeaderActivitySeries}
               projectStatusShare={projectLeaderStatusShare}
               radarSeries={projectLeaderRadarSeries}
@@ -1598,7 +1619,7 @@ export default async function DashboardPage({
                 <div className="lg:col-span-12">
                   <ActiveCoordinators
                     coordinators={leaderboard}
-                    departments={[...DEPARTMENTS]}
+                    departments={dashboardDepartments}
                   />
                 </div>
               </div>
@@ -1616,7 +1637,7 @@ export default async function DashboardPage({
                 <div className="lg:col-span-12">
                   <ActiveCoordinators
                     coordinators={leaderboard}
-                    departments={[...DEPARTMENTS]}
+                    departments={dashboardDepartments}
                   />
                 </div>
               </div>
@@ -1651,7 +1672,7 @@ export default async function DashboardPage({
                 <div className="lg:col-span-12">
                   <ActiveCoordinators 
                     coordinators={leaderboard} 
-                    departments={[...DEPARTMENTS]} 
+                    departments={dashboardDepartments} 
                   />
                 </div>
               </div>
@@ -1698,6 +1719,8 @@ export default async function DashboardPage({
             </>
           ) : activePanel === "backup" ? (
             <BackupManagement datasets={backupDatasets} />
+          ) : activePanel === "department-management" ? (
+            <DepartmentManagement initialDirectory={departmentDirectory} />
           ) : null}
         </div>
       )}
@@ -1717,7 +1740,7 @@ export default async function DashboardPage({
               department={profile.department}
               userType={userType}
               unit={profile.unit}
-              unitOptions={[]}
+              unitOptions={scopedUnitOptions}
               partnerAgencyOptions={trainingPartnerAgencyOptions}
               projectOptions={trainingProjectOptions}
               facultyOptions={trainingFacultyOptions}
@@ -1773,7 +1796,7 @@ export default async function DashboardPage({
             department={profile.department}
             userType={userType}
             unit={profile.unit}
-            unitOptions={[]}
+            unitOptions={scopedUnitOptions}
             partnerAgencyOptions={trainingPartnerAgencyOptions}
             projectOptions={trainingProjectOptions}
             facultyOptions={trainingFacultyOptions}
@@ -1794,7 +1817,7 @@ export default async function DashboardPage({
             department={profile.department}
             userType={userType}
             unit={profile.unit}
-            unitOptions={[]}
+            unitOptions={scopedUnitOptions}
             partnerAgencyOptions={trainingPartnerAgencyOptions}
             projectOptions={trainingProjectOptions}
             facultyOptions={trainingFacultyOptions}
