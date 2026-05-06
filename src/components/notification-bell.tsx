@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, FileText, MessageSquareMore, UserPlus } from "lucide-react";
+import { Bell, BookMarked, FileText, MessageSquareMore, UserPlus } from "lucide-react";
 import {
   getCommunityUnreadDirectNotifications,
   markCommunityThreadRead,
@@ -30,7 +30,9 @@ type NotificationItem = {
     | "mentioned"
     | "commented"
     | "replied"
-    | "message_received";
+    | "message_received"
+    | "training_assigned"
+    | "training_filled";
   route: string;
   created_at: string;
   read_at: string | null;
@@ -96,6 +98,14 @@ function buildMessage(item: NotificationDisplayItem) {
     return `${actorName} has assigned you on a project as a project leader`;
   }
 
+  if (item.action_type === "training_assigned") {
+    return `${actorName} has assigned you on a training.`;
+  }
+
+  if (item.action_type === "training_filled") {
+    return `${actorName} has filled up on the training that they are assigned.`;
+  }
+
   if (item.action_type === "mentioned") {
     return `${actorName} mentioned you in a CQER Community announcement`;
   }
@@ -136,8 +146,8 @@ function getNotificationIcon(item: NotificationDisplayItem) {
     return FileText;
   }
 
-  if (item.action_type === "assigned") {
-    return UserPlus;
+  if (item.action_type === "assigned" || item.action_type === "training_assigned" || item.action_type === "training_filled") {
+    return item.action_type === "training_assigned" || item.action_type === "training_filled" ? BookMarked : UserPlus;
   }
 
   return Bell;

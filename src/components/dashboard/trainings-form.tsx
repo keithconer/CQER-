@@ -448,7 +448,9 @@ interface TrainingsFormProps {
   hideProjectField?: boolean;
   record?: TrainingRecord | null;
   isViewOnly?: boolean;
-  onSuccess: (action: "created" | "updated") => void;
+  /** When set, pre-fills the training_title field and locks it (used by Assign Training flow) */
+  prefillTitle?: string | null;
+  onSuccess: (action: "created" | "updated", payload?: Record<string, unknown>) => void;
   onClose?: () => void;
 }
 
@@ -1100,6 +1102,7 @@ export function TrainingsForm({
   hideProjectField = false,
   record,
   isViewOnly = false,
+  prefillTitle,
   onSuccess,
   onClose,
 }: TrainingsFormProps) {
@@ -1109,7 +1112,14 @@ export function TrainingsForm({
 
   const form = useForm<InputValues, unknown, OutputValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: buildDefaultValues(record, department, currentUserName, unit),
+    defaultValues: buildDefaultValues(
+      prefillTitle && !record
+        ? { training_title: prefillTitle } as unknown as TrainingRecord
+        : record,
+      department,
+      currentUserName,
+      unit
+    ),
   });
 
   const studentArray = useFieldArray({
@@ -1397,7 +1407,7 @@ export function TrainingsForm({
       return;
     }
 
-    onSuccess(record?.id ? "updated" : "created");
+    onSuccess(record?.id ? "updated" : "created", payload as unknown as Record<string, unknown>);
   });
 
   React.useEffect(() => {

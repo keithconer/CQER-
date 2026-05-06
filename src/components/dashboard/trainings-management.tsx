@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Eye, FileDown, Pencil, Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react";
+import { BookMarked, Eye, FileDown, Pencil, Plus, Search, SlidersHorizontal, Trash2, UserPlus } from "lucide-react";
 import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 
@@ -11,6 +11,9 @@ import {
   type TrainingRecord,
   TrainingsForm,
 } from "@/components/dashboard/trainings-form";
+import { AssignedTrainingsManagement } from "@/components/dashboard/assigned-trainings-management";
+import { AssignTrainingForm } from "@/components/dashboard/assign-training-form";
+import { type AssignedTrainingRecord, type SystemUser } from "@/lib/actions/assigned-trainings";
 import { RecordPagination, useRecordPagination } from "@/components/dashboard/record-pagination";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,9 +52,16 @@ interface TrainingsManagementProps {
   currentUserId: string;
   currentUserName: string;
   isViewOnly?: boolean;
+  /** Assigned trainings records — only passed for college_coordinator */
+  assignedTrainings?: AssignedTrainingRecord[];
+  /** All system users for the assignee picker */
+  systemUsers?: SystemUser[];
+  /** Initial sub-tab: "create" | "assigned" */
+  initialSub?: string;
 }
 
 type FilterMode = "all" | "with_documents" | "this_year" | "created_by_me";
+type SubTab = "create" | "assigned";
 
 function getDateRange(record: TrainingRecord) {
   if (record.conducted_sessions?.length) {
@@ -188,8 +198,20 @@ export function TrainingsManagement({
   currentUserId,
   currentUserName,
   isViewOnly = false,
+  assignedTrainings = [],
+  systemUsers = [],
+  initialSub,
 }: TrainingsManagementProps) {
   const router = useRouter();
+
+  // Tab state — only college_coordinator gets the "assigned" tab
+  const showTabs = userType === "college_coordinator" || userType === "super_admin";
+  const [activeTab, setActiveTab] = React.useState<SubTab>(
+    showTabs && initialSub === "assigned" ? "assigned" : "create"
+  );
+  const [assignFormOpen, setAssignFormOpen] = React.useState(false);
+
+  // Create-tab state
   const [searchTerm, setSearchTerm] = React.useState("");
   const [filterMode, setFilterMode] = React.useState<FilterMode>("all");
   const [selectedRecord, setSelectedRecord] = React.useState<TrainingRecord | null>(null);
@@ -225,6 +247,7 @@ export function TrainingsManagement({
       return true;
     });
   }, [currentUserId, filterMode, initialRecords, searchTerm]);
+
   const {
     currentPage,
     paginatedItems: paginatedRecords,
@@ -274,165 +297,244 @@ export function TrainingsManagement({
               </CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="rounded-xl">
-                    <FileDown className="mr-2 h-4 w-4" />
-                    Export
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => void exportExcel(filteredRecords)}>Export Excel</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => void exportPdf(filteredRecords)}>Export PDF</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              {!isViewOnly && (
+              {activeTab === "create" && (
+                <>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" className="rounded-xl">
+                        <FileDown className="mr-2 h-4 w-4" />
+                        Export
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => void exportExcel(filteredRecords)}>Export Excel</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => void exportPdf(filteredRecords)}>Export PDF</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  {!isViewOnly && (
+                    <Button
+                      className="rounded-xl bg-[#159E44] text-white hover:bg-[#12843a] focus-visible:ring-[#159E44]/30"
+                      onClick={() => setCreateOpen(true)}
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create Training
+                    </Button>
+                  )}
+                </>
+              )}
+              {activeTab === "assigned" && showTabs && !isViewOnly && (
                 <Button
                   className="rounded-xl bg-[#159E44] text-white hover:bg-[#12843a] focus-visible:ring-[#159E44]/30"
-                  onClick={() => setCreateOpen(true)}
+                  onClick={() => setAssignFormOpen(true)}
                 >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Training
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Assign Training
                 </Button>
               )}
             </div>
           </div>
 
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-            <div className="relative w-full max-w-xl">
-              <Search className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Search title, project, venue, category, or dates..."
-                className="h-11 rounded-xl pl-10 text-sm"
-              />
+          {/* ── Sub-tabs (only for coordinators) ───────────── */}
+          {showTabs && (
+            <div className="flex gap-1 rounded-xl border border-border/50 bg-muted/20 p-1 w-fit">
+              <button
+                type="button"
+                onClick={() => setActiveTab("assigned")}
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                  activeTab === "assigned"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <BookMarked className="h-3.5 w-3.5" />
+                Assign Trainings
+                {assignedTrainings.filter((r) => r.status !== "resolved").length > 0 && (
+                  <span className="ml-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[9px] font-semibold text-white">
+                    {assignedTrainings.filter((r) => r.status !== "resolved").length}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("create")}
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                  activeTab === "create"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Create Trainings
+              </button>
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="rounded-xl">
-                  <SlidersHorizontal className="mr-2 h-4 w-4" />
-                  Results Filter
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>Show</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuCheckboxItem checked={filterMode === "all"} onCheckedChange={() => setFilterMode("all")}>
-                  All trainings
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem checked={filterMode === "with_documents"} onCheckedChange={() => setFilterMode("with_documents")}>
-                  With documents only
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem checked={filterMode === "created_by_me"} onCheckedChange={() => setFilterMode("created_by_me")}>
-                  Created by me
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem checked={filterMode === "this_year"} onCheckedChange={() => setFilterMode("this_year")}>
-                  This year only
-                </DropdownMenuCheckboxItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          )}
+
+          {/* ── Create-tab search + filter bar ─────────────── */}
+          {activeTab === "create" && (
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+              <div className="relative w-full max-w-xl">
+                <Search className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Search title, project, venue, category, or dates..."
+                  className="h-11 rounded-xl pl-10 text-sm"
+                />
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="rounded-xl">
+                    <SlidersHorizontal className="mr-2 h-4 w-4" />
+                    Results Filter
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>Show</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuCheckboxItem checked={filterMode === "all"} onCheckedChange={() => setFilterMode("all")}>
+                    All trainings
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem checked={filterMode === "with_documents"} onCheckedChange={() => setFilterMode("with_documents")}>
+                    With documents only
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem checked={filterMode === "created_by_me"} onCheckedChange={() => setFilterMode("created_by_me")}>
+                    Created by me
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem checked={filterMode === "this_year"} onCheckedChange={() => setFilterMode("this_year")}>
+                    This year only
+                  </DropdownMenuCheckboxItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
         </CardHeader>
 
         <CardContent>
-          <div className="rounded-2xl border border-border/60">
-            <Table>
-              <TableHeader className="bg-muted/30">
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="h-12 text-base font-semibold">Title of Training</TableHead>
-                  <TableHead className="h-12 text-base font-semibold">Project</TableHead>
-                  <TableHead className="h-12 text-base font-semibold">Category</TableHead>
-                  <TableHead className="h-12 text-base font-semibold">Venue / Platform</TableHead>
-                  <TableHead className="h-12 text-base font-semibold">Dates / Duration</TableHead>
-                  <TableHead className="h-12 text-base font-semibold">Participants</TableHead>
-                  <TableHead className="h-12 text-base font-semibold">Documents</TableHead>
-                  <TableHead className="h-12 text-right text-base font-semibold">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredRecords.length > 0 ? (
-                  paginatedRecords.map((record) => (
-                    <TableRow
-                      key={record.id}
-                      title={
-                        userType === "unit_coordinator" &&
-                        record.created_by !== currentUserId &&
-                        record.creator_full_name
-                          ? `Training is created by: ${record.creator_full_name}`
-                          : undefined
-                      }
-                    >
-                      <TableCell className="py-4 text-base font-medium">
-                        <div className="flex items-center gap-2">
-                          <span>{record.training_title}</span>
-                          {userType === "unit_coordinator" && record.created_by !== currentUserId && record.creator_full_name ? (
-                            <TooltipProvider delayDuration={150}>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className="cursor-help text-xs text-muted-foreground underline decoration-dotted underline-offset-4">
-                                    coworker
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Training is created by: {record.creator_full_name}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          ) : null}
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-4 text-base">{record.related_project_title || "-"}</TableCell>
-                      <TableCell className="py-4 text-base">
-                        {getCategoryLabel(record)}
-                      </TableCell>
-                      <TableCell className="py-4 text-base">{record.venue_platform}</TableCell>
-                      <TableCell className="py-4 text-base">
-                        <div>{getDateRange(record)}</div>
-                        <div className="text-sm text-muted-foreground">{getDuration(record)}</div>
-                      </TableCell>
-                      <TableCell className="py-4 text-base font-medium">{record.participants_overall_total || 0}</TableCell>
-                      <TableCell className="py-4 text-sm"><DocumentPreview documents={record.documents} /></TableCell>
-                      <TableCell className="py-4">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl" onClick={() => setSelectedRecord(record)}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          {canMutateRecord(record) && (
-                            <>
-                              <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl" onClick={() => setEditingRecord(record)}>
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl text-destructive" onClick={() => setDeleteTarget(record)}>
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </TableCell>
+          {/* ── Assigned Trainings Tab ──────────────────────── */}
+          {activeTab === "assigned" && showTabs ? (
+            <AssignedTrainingsManagement
+              records={assignedTrainings}
+              currentUserId={currentUserId}
+              currentUserName={currentUserName}
+              userType={userType}
+              department={department}
+              unit={unit}
+              unitOptions={unitOptions}
+              partnerAgencyOptions={partnerAgencyOptions}
+              projectOptions={projectOptions}
+              facultyOptions={facultyOptions}
+            />
+          ) : (
+            /* ── Create Trainings Tab ──────────────────────── */
+            <>
+              <div className="rounded-2xl border border-border/60">
+                <Table>
+                  <TableHeader className="bg-muted/30">
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="h-12 text-base font-semibold">Title of Training</TableHead>
+                      <TableHead className="h-12 text-base font-semibold">Project</TableHead>
+                      <TableHead className="h-12 text-base font-semibold">Category</TableHead>
+                      <TableHead className="h-12 text-base font-semibold">Venue / Platform</TableHead>
+                      <TableHead className="h-12 text-base font-semibold">Dates / Duration</TableHead>
+                      <TableHead className="h-12 text-base font-semibold">Participants</TableHead>
+                      <TableHead className="h-12 text-base font-semibold">Documents</TableHead>
+                      <TableHead className="h-12 text-right text-base font-semibold">Actions</TableHead>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={8} className="h-28 text-center text-base text-muted-foreground">
-                      No training records match the current search or filter.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-          <RecordPagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            startIndex={startIndex}
-            totalItems={filteredRecords.length}
-            itemLabel="trainings"
-            onPageChange={setCurrentPage}
-          />
+                  </TableHeader>
+                  <TableBody>
+                    {filteredRecords.length > 0 ? (
+                      paginatedRecords.map((record) => (
+                        <TableRow
+                          key={record.id}
+                          title={
+                            userType === "unit_coordinator" &&
+                            record.created_by !== currentUserId &&
+                            record.creator_full_name
+                              ? `Training is created by: ${record.creator_full_name}`
+                              : undefined
+                          }
+                        >
+                          <TableCell className="py-4 text-base font-medium">
+                            <div className="flex items-center gap-2">
+                              <span>{record.training_title}</span>
+                              {userType === "unit_coordinator" && record.created_by !== currentUserId && record.creator_full_name ? (
+                                <TooltipProvider delayDuration={150}>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="cursor-help text-xs text-muted-foreground underline decoration-dotted underline-offset-4">
+                                        coworker
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Training is created by: {record.creator_full_name}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              ) : null}
+                            </div>
+                          </TableCell>
+                          <TableCell className="py-4 text-base">{record.related_project_title || "-"}</TableCell>
+                          <TableCell className="py-4 text-base">
+                            {getCategoryLabel(record)}
+                          </TableCell>
+                          <TableCell className="py-4 text-base">{record.venue_platform}</TableCell>
+                          <TableCell className="py-4 text-base">
+                            <div>{getDateRange(record)}</div>
+                            <div className="text-sm text-muted-foreground">{getDuration(record)}</div>
+                          </TableCell>
+                          <TableCell className="py-4 text-base font-medium">{record.participants_overall_total || 0}</TableCell>
+                          <TableCell className="py-4 text-sm"><DocumentPreview documents={record.documents} /></TableCell>
+                          <TableCell className="py-4">
+                            <div className="flex justify-end gap-2">
+                              <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl" onClick={() => setSelectedRecord(record)}>
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              {canMutateRecord(record) && (
+                                <>
+                                  <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl" onClick={() => setEditingRecord(record)}>
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl text-destructive" onClick={() => setDeleteTarget(record)}>
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={8} className="h-28 text-center text-base text-muted-foreground">
+                          No training records match the current search or filter.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+              <RecordPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                startIndex={startIndex}
+                totalItems={filteredRecords.length}
+                itemLabel="trainings"
+                onPageChange={setCurrentPage}
+              />
+            </>
+          )}
         </CardContent>
       </Card>
 
+      {/* ── Assign Training Form Dialog ───────────────────── */}
+      <AssignTrainingForm
+        open={assignFormOpen}
+        onOpenChange={setAssignFormOpen}
+        systemUsers={systemUsers}
+        onSuccess={() => router.refresh()}
+      />
+
+      {/* ── Create Training fullscreen dialog ────────────── */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent showCloseButton={false} className="flex flex-col overflow-hidden fixed inset-0 left-0 top-0 h-[100dvh] w-screen max-w-none sm:max-w-none translate-x-0 translate-y-0 rounded-none border-0 p-0 shadow-none">
           <TrainingsForm
@@ -451,6 +553,7 @@ export function TrainingsManagement({
         </DialogContent>
       </Dialog>
 
+      {/* ── View Training fullscreen dialog ──────────────── */}
       <Dialog open={!!selectedRecord} onOpenChange={(open) => !open && setSelectedRecord(null)}>
         <DialogContent showCloseButton={false} className="flex flex-col overflow-hidden fixed inset-0 left-0 top-0 h-[100dvh] w-screen max-w-none sm:max-w-none translate-x-0 translate-y-0 rounded-none border-0 p-0 shadow-none">
           {selectedRecord && (
@@ -473,6 +576,7 @@ export function TrainingsManagement({
         </DialogContent>
       </Dialog>
 
+      {/* ── Edit Training fullscreen dialog ──────────────── */}
       <Dialog open={!!editingRecord} onOpenChange={(open) => !open && setEditingRecord(null)}>
         <DialogContent showCloseButton={false} className="flex flex-col overflow-hidden fixed inset-0 left-0 top-0 h-[100dvh] w-screen max-w-none sm:max-w-none translate-x-0 translate-y-0 rounded-none border-0 p-0 shadow-none">
           {editingRecord && (
@@ -494,6 +598,7 @@ export function TrainingsManagement({
         </DialogContent>
       </Dialog>
 
+      {/* ── Success dialog ────────────────────────────────── */}
       <Dialog open={successOpen} onOpenChange={setSuccessOpen}>
         <DialogContent className="max-w-md rounded-3xl">
           <DialogHeader>
@@ -505,6 +610,7 @@ export function TrainingsManagement({
         </DialogContent>
       </Dialog>
 
+      {/* ── Delete dialog ─────────────────────────────────── */}
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent className="max-w-md rounded-3xl">
           <DialogHeader>

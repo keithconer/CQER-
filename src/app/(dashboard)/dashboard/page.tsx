@@ -5,6 +5,7 @@ import { getCollegeProjects, getProjectLeaderProjects, getUnitProjects } from "@
 import { getTrainings } from "@/lib/actions/trainings";
 import { getConsultancyExtensions } from "@/lib/actions/consultancy-extension";
 import { getTechnicalAdvisoryServices } from "@/lib/actions/technical-advisory-services";
+
 import { getAdoptersWithEnterprise } from "@/lib/actions/adopters-with-enterprise";
 import { getTechnologiesInnovationsCommercialized } from "@/lib/actions/technologies-innovations-commercialized";
 import { getIecMaterials } from "@/lib/actions/iec-materials";
@@ -13,6 +14,7 @@ import { UnitCoordinatorsPanel } from "@/components/dashboard/unit-coordinators-
 import { type Project } from "@/components/dashboard/projects-table";
 import { TrainingsManagement } from "@/components/dashboard/trainings-management";
 import { type TrainingFacultyOption, type TrainingProjectOption, type TrainingRecord } from "@/components/dashboard/trainings-form";
+import { getAssignedTrainings, getSystemUsers, type AssignedTrainingRecord, type SystemUser } from "@/lib/actions/assigned-trainings";
 import { AccountsTable } from "@/components/dashboard/accounts-table";
 import { DashboardAnalytics } from "@/components/dashboard/dashboard-analytics";
 import { format, startOfMonth, subMonths } from "date-fns";
@@ -385,10 +387,11 @@ function buildProjectLeaderRecentActivities(items: ProjectLeaderRecentActivity[]
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ view?: string; panel?: string; account?: string }>;
+  searchParams?: Promise<{ view?: string; panel?: string; account?: string; sub?: string }>;
 }) {
   const resolvedSearchParams = (await searchParams) || {};
   const panelParam = resolvedSearchParams.panel;
+  const subParam = resolvedSearchParams.sub || "";
   const accountPanelSelected = panelParam === "account-management" || panelParam === "accounts";
   let activePanel =
     panelParam === "overview" ||
@@ -475,6 +478,8 @@ export default async function DashboardPage({
   let trainingPartnerAgencyOptions: string[] = [];
   let trainingProjectOptions: TrainingProjectOption[] = [];
   let trainingFacultyOptions: TrainingFacultyOption[] = [];
+  let assignedTrainingRecords: AssignedTrainingRecord[] = [];
+  let systemUsersList: SystemUser[] = [];
   const departmentDirectory = await fetchDepartmentDirectory(
     supabase as unknown as Parameters<typeof fetchDepartmentDirectory>[0]
   );
@@ -537,6 +542,12 @@ export default async function DashboardPage({
       trainingPartnerAgencyOptions = extractPartnerAgencyNames(collegeProjects);
       trainingProjectOptions = extractProjectOptions(collegeProjects);
       trainingFacultyOptions = await loadTrainingFacultyOptions();
+      const [assignedResult, usersResult] = await Promise.all([
+        getAssignedTrainings(),
+        getSystemUsers(),
+      ]);
+      assignedTrainingRecords = assignedResult.data || [];
+      systemUsersList = usersResult.data || [];
     } else if (activePanel === "consultancy") {
       consultancyRecords = (await getConsultancyExtensions()).data || [];
       const collegeProjectsResult = await getCollegeProjects();
@@ -1722,6 +1733,9 @@ export default async function DashboardPage({
               facultyOptions={trainingFacultyOptions}
               currentUserName={`${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "College Coordinator"}
               currentUserId={user.id}
+              assignedTrainings={assignedTrainingRecords}
+              systemUsers={systemUsersList}
+              initialSub={subParam}
             />
           ) : activePanel === "consultancy" ? (
             <ConsultancyExtensionManagement
