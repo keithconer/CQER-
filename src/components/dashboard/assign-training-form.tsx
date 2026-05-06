@@ -201,8 +201,8 @@ export function AssignTrainingForm({
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) handleClose(); else onOpenChange(true); }}>
-      <DialogContent className="max-w-lg rounded-2xl">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl rounded-2xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
+        <DialogHeader className="p-6 pb-2">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-muted">
               <BookMarked className="h-4 w-4 text-muted-foreground" />
@@ -216,7 +216,9 @@ export function AssignTrainingForm({
           </div>
         </DialogHeader>
 
-        <div className="space-y-4 pt-1">
+        <ScrollArea className="flex-1 px-6 pb-6">
+          <div className="space-y-5 pt-1">
+
           {/* Title */}
           <div className="space-y-1.5">
             <Label className="text-xs font-medium">Title of Training <span className="text-destructive">*</span></Label>
@@ -436,7 +438,8 @@ export function AssignTrainingForm({
               {submitting ? "Assigning..." : "Assign Training"}
             </Button>
           </div>
-        </div>
+          </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );

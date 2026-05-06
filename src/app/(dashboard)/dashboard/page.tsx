@@ -524,6 +524,12 @@ export default async function DashboardPage({
     } else if (activePanel === "trainings" && profile.user_type === "unit_coordinator") {
       trainingRecords = (await getTrainings()).data || [];
       trainingFacultyOptions = await loadTrainingFacultyOptions();
+      const [assignedResult, usersResult] = await Promise.all([
+        getAssignedTrainings(),
+        getSystemUsers(),
+      ]);
+      assignedTrainingRecords = assignedResult.data || [];
+      systemUsersList = usersResult.data || [];
     } else if (activePanel === "project-leader-records" && profile.user_type === "unit_coordinator") {
       projectLeaderRecords = (await getProjectLeaderRecords()).data || [];
     }
@@ -645,6 +651,13 @@ export default async function DashboardPage({
       extensionProgramRecords = (extensionResult.data || []) as ExtensionProgramRecord[];
       awardsRecognitionRecords = (awardsResult.data || []) as AwardsRecognitionRecord[];
       otherActivityRecords = (otherResult.data || []) as OtherActivityRecord[];
+
+      const [assignedResult, usersResult] = await Promise.all([
+        getAssignedTrainings(),
+        getSystemUsers(),
+      ]);
+      assignedTrainingRecords = assignedResult.data || [];
+      systemUsersList = usersResult.data || [];
     } else if (activePanel === "trainings") {
       trainingRecords = (await getTrainings()).data || [];
       const leaderProjectsResult = await getProjectLeaderProjects();
@@ -1792,6 +1805,9 @@ export default async function DashboardPage({
             facultyOptions={trainingFacultyOptions}
             currentUserName={`${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "Unit Coordinator"}
             currentUserId={user.id}
+            assignedTrainings={assignedTrainingRecords}
+            systemUsers={systemUsersList}
+            initialSub={subParam}
           />
         ) : activePanel === "project-leader-records" ? (
           <ProjectLeaderRecordsManagement initialRecords={projectLeaderRecords} />
@@ -1813,6 +1829,9 @@ export default async function DashboardPage({
             facultyOptions={trainingFacultyOptions}
             currentUserName={`${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "Project Leader"}
             currentUserId={user.id}
+            assignedTrainings={assignedTrainingRecords}
+            systemUsers={systemUsersList}
+            initialSub={subParam}
           />
         ) : activePanel === "consultancy" ? (
           <ConsultancyExtensionManagement

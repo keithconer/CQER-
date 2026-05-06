@@ -204,11 +204,17 @@ export function TrainingsManagement({
 }: TrainingsManagementProps) {
   const router = useRouter();
 
-  // Tab state — only college_coordinator gets the "assigned" tab
-  const showTabs = userType === "college_coordinator" || userType === "super_admin";
+  // Tab state — available for all roles to see their assignments
+  const showTabs =
+    userType === "college_coordinator" ||
+    userType === "super_admin" ||
+    userType === "unit_coordinator" ||
+    userType === "project_leader";
+
   const [activeTab, setActiveTab] = React.useState<SubTab>(
     showTabs && initialSub === "assigned" ? "assigned" : "create"
   );
+
   const [assignFormOpen, setAssignFormOpen] = React.useState(false);
 
   // Create-tab state
