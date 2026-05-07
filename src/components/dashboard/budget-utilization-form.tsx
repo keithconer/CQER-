@@ -329,6 +329,13 @@ export function BudgetUtilizationForm({
   });
   const typedControl = form.control as BudgetUtilizationControl;
   const breakdownArray = useFieldArray({ control: typedControl, name: "monthly_breakdown" });
+  // Store a stable ref to breakdownArray.replace so we don't put the entire
+  // breakdownArray object (which changes every render) into useEffect deps.
+  const replaceBreakdownRef = React.useRef(breakdownArray.replace);
+  React.useLayoutEffect(() => {
+    replaceBreakdownRef.current = breakdownArray.replace;
+  });
+
   const selectedProjectId = useWatch({ control: typedControl, name: "project_id" });
   const monthlyBreakdown = useWatch({
     control: typedControl,
@@ -372,6 +379,9 @@ export function BudgetUtilizationForm({
     const range = getProjectDateRange(selectedProject);
     if (!range) return;
 
+    // In view-only mode: populate with existing saved values.
+    // In create/update mode: always start with zero-filled fields so the user
+    // only enters newly incurred expenses this session.
     const nextEntries = buildMonthlyBreakdown(
       selectedProject,
       isViewOnly ? existingBreakdown : undefined
@@ -382,9 +392,9 @@ export function BudgetUtilizationForm({
     form.setValue("coverage_start", record?.coverage_start || range.start.toISOString(), { shouldDirty: false });
     form.setValue("coverage_end", record?.coverage_end || range.end.toISOString(), { shouldDirty: false });
     form.setValue("documents", isViewOnly ? existingDocuments : [], { shouldDirty: false });
-    breakdownArray.replace(nextEntries);
+    // Use the stable ref so this effect doesn't re-run when breakdownArray changes.
+    replaceBreakdownRef.current(nextEntries);
   }, [
-    breakdownArray,
     existingBreakdown,
     existingDocuments,
     form,
