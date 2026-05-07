@@ -74,6 +74,10 @@ export function ExportPreviewMenu({
   const isExcel = previewFormat === "excel";
   const formatLabel = isExcel ? "Excel" : "PDF";
   const FormatIcon = isExcel ? FileSpreadsheet : FileText;
+  const tableMinWidth = React.useMemo(() => {
+    if (columns.length <= 4) return 880;
+    return Math.max(980, columns.length * 170);
+  }, [columns.length]);
 
   const handleDownload = async () => {
     if (!previewFormat) return;
@@ -113,8 +117,8 @@ export function ExportPreviewMenu({
       </DropdownMenu>
 
       <Dialog open={!!previewFormat} onOpenChange={(open) => !open && setPreviewFormat(null)}>
-        <DialogContent className="max-w-6xl rounded-3xl border-border/70 p-0 shadow-xl">
-          <DialogHeader className="border-b px-6 py-5">
+        <DialogContent className="flex h-[min(92vh,880px)] w-[min(96vw,1520px)] max-w-none flex-col overflow-hidden rounded-[28px] border border-border/70 bg-background p-0 shadow-2xl">
+          <DialogHeader className="shrink-0 border-b bg-background px-6 py-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="space-y-1">
                 <DialogTitle className="flex items-center gap-2 text-xl">
@@ -137,14 +141,14 @@ export function ExportPreviewMenu({
             </div>
           </DialogHeader>
 
-          <div className="px-6 py-5">
-            <div className="rounded-2xl border border-border/60 bg-muted/10 px-4 py-3 text-sm text-muted-foreground">
+          <div className="flex min-h-0 flex-1 flex-col bg-background px-6 py-5">
+            <div className="shrink-0 rounded-2xl border border-border/60 bg-muted/10 px-4 py-3 text-sm text-muted-foreground">
               The file will download only after you click the download button below.
             </div>
 
-            <div className="mt-4 rounded-2xl border border-border/60">
-              <ScrollArea className="max-h-[55vh]">
-                <Table>
+            <div className="mt-4 min-h-0 flex-1 overflow-hidden rounded-2xl border border-border/60 bg-card">
+              <ScrollArea className="h-full w-full">
+                <Table className="min-w-full bg-card" style={{ minWidth: `${tableMinWidth}px` }}>
                   <TableHeader className="bg-muted/30">
                     <TableRow className="hover:bg-transparent">
                       {columns.map((column) => (
@@ -175,7 +179,7 @@ export function ExportPreviewMenu({
                       <TableRow>
                         <TableCell
                           colSpan={columns.length}
-                          className="h-28 text-center text-sm text-muted-foreground"
+                          className="h-28 whitespace-normal text-center text-sm text-muted-foreground"
                         >
                           {emptyMessage}
                         </TableCell>
@@ -187,7 +191,7 @@ export function ExportPreviewMenu({
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-2 border-t px-6 py-4">
+          <div className="flex shrink-0 items-center justify-end gap-2 border-t bg-background px-6 py-4">
             <Button
               type="button"
               variant="outline"
