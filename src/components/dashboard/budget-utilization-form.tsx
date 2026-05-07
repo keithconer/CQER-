@@ -139,6 +139,48 @@ function currency(value: number) {
   return formatPhpCurrency(value);
 }
 
+function toValidDate(value: string | null | undefined) {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function formatOptionalDate(value: string | null | undefined, pattern: string) {
+  const parsed = toValidDate(value);
+  return parsed ? format(parsed, pattern) : null;
+}
+
+function normalizeDocuments(documents: BudgetUtilizationRecord["documents"] | null | undefined) {
+  if (!Array.isArray(documents)) return [];
+
+  return documents.filter(
+    (document): document is { url: string; name: string } =>
+      Boolean(document && typeof document.url === "string" && typeof document.name === "string")
+  );
+}
+
+function normalizeMonthlyBreakdown(entries: BudgetUtilizationRecord["monthly_breakdown"] | null | undefined) {
+  if (!Array.isArray(entries)) return [];
+
+  return entries
+    .filter((entry): entry is BudgetUtilizationMonthEntry => Boolean(entry && typeof entry === "object"))
+    .map((entry) => ({
+      year: Number(entry.year || 0),
+      month: Number(entry.month || 0),
+      month_key: typeof entry.month_key === "string" ? entry.month_key : "",
+      month_label: typeof entry.month_label === "string" ? entry.month_label : "",
+      coverage_start: typeof entry.coverage_start === "string" ? entry.coverage_start : "",
+      coverage_end: typeof entry.coverage_end === "string" ? entry.coverage_end : "",
+      food_and_beverage: Number(entry.food_and_beverage || 0),
+      travel: Number(entry.travel || 0),
+      suppliers_and_materials: Number(entry.suppliers_and_materials || 0),
+      communication: Number(entry.communication || 0),
+      other_mooe: Number(entry.other_mooe || 0),
+      total: Number(entry.total || 0),
+    }))
+    .filter((entry) => entry.year > 0 && entry.month > 0);
+}
+
 function sumMonthEntry(entry?: Partial<BudgetUtilizationMonthEntry> | null) {
   return (
     Number(entry?.food_and_beverage || 0) +
@@ -205,8 +247,8 @@ function buildDefaultValues(record?: BudgetUtilizationRecord | null): FormValues
     total_budget: Number(record?.total_budget || 0),
     coverage_start: record?.coverage_start || "",
     coverage_end: record?.coverage_end || "",
-    monthly_breakdown: record?.monthly_breakdown || [],
-    documents: record?.documents || [],
+    monthly_breakdown: normalizeMonthlyBreakdown(record?.monthly_breakdown),
+    documents: normalizeDocuments(record?.documents),
   };
 }
 
@@ -273,10 +315,10 @@ export function BudgetUtilizationForm({
 }: BudgetUtilizationFormProps) {
   const isUpdateMode = !isViewOnly && Boolean(record?.id);
   const existingBreakdown = React.useMemo(
-    () => (record?.monthly_breakdown || []) as BudgetUtilizationMonthEntry[],
+    () => normalizeMonthlyBreakdown(record?.monthly_breakdown),
     [record]
   );
-  const existingDocuments = React.useMemo(() => record?.documents || [], [record]);
+  const existingDocuments = React.useMemo(() => normalizeDocuments(record?.documents), [record]);
   const existingUtilizedTotal = React.useMemo(
     () => existingBreakdown.reduce((sum, entry) => sum + sumMonthEntry(entry), 0),
     [existingBreakdown]
@@ -507,24 +549,30 @@ export function BudgetUtilizationForm({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Title of the Project</FormLabel>
-                        <Select
-                          disabled={isViewOnly || isUpdateMode}
-                          value={field.value}
-                          onValueChange={field.onChange}
-                        >
+                        {isViewOnly || isUpdateMode ? (
                           <FormControl>
-                            <SelectTrigger className="h-11 rounded-xl">
-                              <SelectValue placeholder="Select a project" />
-                            </SelectTrigger>
+                            <Input
+                              value={record?.project_title || selectedProject?.title || ""}
+                              readOnly
+                              className="h-11 rounded-xl"
+                            />
                           </FormControl>
-                          <SelectContent>
-                            {projects.map((project) => (
-                              <SelectItem key={project.id} value={project.id}>
-                                {project.title}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        ) : (
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <FormControl>
+                              <SelectTrigger className="h-11 rounded-xl">
+                                <SelectValue placeholder="Select a project" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {projects.map((project) => (
+                                <SelectItem key={project.id} value={project.id}>
+                                  {project.title}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
                         <FormMessage />
                       </FormItem>
                     )}
@@ -556,9 +604,13 @@ export function BudgetUtilizationForm({
                       Project Date Coverage
                     </Label>
                     <p className="mt-2 text-sm font-medium text-foreground">
-                      {coverageStart && coverageEnd
-                        ? `${format(new Date(coverageStart), "MMMM d, yyyy")} - ${format(new Date(coverageEnd), "MMMM d, yyyy")}`
-                        : "Select a project to load the coverage dates."}
+                      {(() => {
+                        const formattedStart = formatOptionalDate(coverageStart, "MMMM d, yyyy");
+                        const formattedEnd = formatOptionalDate(coverageEnd, "MMMM d, yyyy");
+                        return formattedStart && formattedEnd
+                          ? `${formattedStart} - ${formattedEnd}`
+                          : "Select a project to load the coverage dates.";
+                      })()}
                     </p>
                   </div>
                   <div className="rounded-2xl border border-border/60 bg-muted/10 p-4">
@@ -699,7 +751,13 @@ export function BudgetUtilizationForm({
                                   <th key={entry.month_key} className="px-2 py-3 text-center font-semibold">
                                     <div>{entry.month_label}</div>
                                     <div className="text-[10px] font-normal text-muted-foreground">
-                                      {format(new Date(entry.coverage_start), "MMM d")} - {format(new Date(entry.coverage_end), "MMM d, yyyy")}
+                                      {(() => {
+                                        const formattedStart = formatOptionalDate(entry.coverage_start, "MMM d");
+                                        const formattedEnd = formatOptionalDate(entry.coverage_end, "MMM d, yyyy");
+                                        return formattedStart && formattedEnd
+                                          ? `${formattedStart} - ${formattedEnd}`
+                                          : "Coverage unavailable";
+                                      })()}
                                     </div>
                                   </th>
                                 ))}

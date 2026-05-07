@@ -33,7 +33,7 @@ import {
   deleteBudgetUtilization,
   type BudgetUtilizationRecord,
 } from "@/lib/actions/budget-utilization";
-import { formatPhpCurrency } from "@/lib/currency";
+import { formatPhpAmount, formatPhpCurrency } from "@/lib/currency";
 import { getProjectBudgetSummaryTotal } from "@/lib/project-budget";
 
 type FilterMode = "all" | "with_documents" | "this_year" | "over_budget";
@@ -47,9 +47,21 @@ function currency(value: number) {
   return formatPhpCurrency(value);
 }
 
+function pdfCurrency(value: number) {
+  return `PHP ${formatPhpAmount(value)}`;
+}
+
+function toValidDate(value: string | null | undefined) {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 function getCoverageLabel(record: BudgetUtilizationRecord) {
-  if (!record.coverage_start || !record.coverage_end) return "-";
-  return `${format(new Date(record.coverage_start), "MMM d, yyyy")} - ${format(new Date(record.coverage_end), "MMM d, yyyy")}`;
+  const startDate = toValidDate(record.coverage_start);
+  const endDate = toValidDate(record.coverage_end);
+  if (!startDate || !endDate) return "-";
+  return `${format(startDate, "MMM d, yyyy")} - ${format(endDate, "MMM d, yyyy")}`;
 }
 
 const exportColumns = [
@@ -136,9 +148,9 @@ async function exportPdf(records: BudgetUtilizationRecord[]) {
     body: records.map((record) => ([
       record.project_title,
       getCoverageLabel(record),
-      currency(Number(record.total_budget || 0)),
-      currency(Number(record.utilized_total || 0)),
-      currency(Number(record.total_budget || 0) - Number(record.utilized_total || 0)),
+      pdfCurrency(Number(record.total_budget || 0)),
+      pdfCurrency(Number(record.utilized_total || 0)),
+      pdfCurrency(Number(record.total_budget || 0) - Number(record.utilized_total || 0)),
       String(record.monthly_breakdown?.length || 0),
     ])),
     theme: "grid",
@@ -185,7 +197,7 @@ export function BudgetUtilizationManagement({
       if (searchTerm && !haystack.includes(searchTerm.toLowerCase())) return false;
       if (filterMode === "with_documents" && (!record.documents || record.documents.length === 0)) return false;
       if (filterMode === "this_year") {
-        const startYear = record.coverage_start ? new Date(record.coverage_start).getFullYear() : null;
+        const startYear = toValidDate(record.coverage_start)?.getFullYear() ?? null;
         if (startYear !== year) return false;
       }
       if (filterMode === "over_budget" && Number(record.utilized_total || 0) <= Number(record.total_budget || 0)) {
