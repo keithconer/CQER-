@@ -1,13 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { CalendarDays, Eye, FileDown, Megaphone, Pencil, Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react";
+import { CalendarDays, Eye, Megaphone, Pencil, Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 
 import { type Project } from "@/components/dashboard/projects-table";
 import { ExtensionProgramForm } from "@/components/dashboard/extension-program-form";
 import { DocumentPreview } from "@/components/dashboard/document-preview";
+import { ExportPreviewMenu, type ExportPreviewColumn } from "@/components/dashboard/export-preview-menu";
 import { RecordPagination, useRecordPagination } from "@/components/dashboard/record-pagination";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +23,6 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -43,6 +43,24 @@ interface ExtensionProgramManagementProps {
 
 function getDateLabel(record: ExtensionProgramRecord) {
   return record.date_featured ? format(new Date(record.date_featured), "MMM d, yyyy") : "-";
+}
+
+const exportColumns = [
+  { key: "project", label: "Project" },
+  { key: "activity", label: "Activity Title" },
+  { key: "media", label: "Media" },
+  { key: "date", label: "Date Featured" },
+  { key: "remarks", label: "Remarks" },
+] satisfies ExportPreviewColumn[];
+
+function buildExportRows(records: ExtensionProgramRecord[]) {
+  return records.map((record) => ({
+    project: record.project_title || "N/A",
+    activity: record.activity_title,
+    media: record.media_channels,
+    date: getDateLabel(record),
+    remarks: record.remarks,
+  }));
 }
 
 async function exportExcel(records: ExtensionProgramRecord[]) {
@@ -195,18 +213,15 @@ export function ExtensionProgramManagement({
               </CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="rounded-xl">
-                    <FileDown className="mr-2 h-4 w-4" />
-                    Export
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => void exportExcel(filteredRecords)}>Export Excel</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => void exportPdf(filteredRecords)}>Export PDF</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <ExportPreviewMenu
+                title="Extension Program"
+                description="Preview the filtered extension program records before exporting them."
+                columns={exportColumns}
+                rows={buildExportRows(filteredRecords)}
+                onDownloadExcel={() => exportExcel(filteredRecords)}
+                onDownloadPdf={() => exportPdf(filteredRecords)}
+                triggerClassName="rounded-xl"
+              />
               <Button className="rounded-xl bg-[#159E44] text-white hover:bg-[#128A3B]" onClick={() => setCreateOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Manage Extension

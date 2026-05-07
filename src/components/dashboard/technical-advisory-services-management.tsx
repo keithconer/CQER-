@@ -2,9 +2,7 @@
 
 import * as React from "react";
 import {
-  Briefcase,
   Eye,
-  FileDown,
   Pencil,
   Plus,
   Search,
@@ -18,12 +16,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ExportPreviewMenu, type ExportPreviewColumn } from "@/components/dashboard/export-preview-menu";
 import { RecordPagination, useRecordPagination } from "@/components/dashboard/record-pagination";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -54,6 +52,30 @@ function getGrandTotal(record: TechnicalAdvisoryServiceRecord) {
     sumBreakdown(record.rating_timeliness_breakdown) +
     sumBreakdown(record.rating_overall_breakdown)
   );
+}
+
+const exportColumns = [
+  { key: "agencyName", label: "Agency Name" },
+  { key: "category", label: "Category" },
+  { key: "date", label: "Date" },
+  { key: "venue", label: "Venue" },
+  { key: "hours", label: "No. of Hours", align: "right" },
+  { key: "clients", label: "Clients", align: "center" },
+  { key: "facultyMembers", label: "Faculty Members" },
+  { key: "grandTotal", label: "Grand Total Ratings", align: "right" },
+] satisfies ExportPreviewColumn[];
+
+function buildExportRows(records: TechnicalAdvisoryServiceRecord[]) {
+  return records.map((record) => ({
+    agencyName: record.agency_name,
+    category: record.category,
+    date: record.advisory_date ? format(new Date(record.advisory_date), "MMM d, yyyy") : "-",
+    venue: record.venue,
+    hours: String(record.number_of_hours),
+    clients: String(record.clients.length),
+    facultyMembers: record.faculty_members.map((item) => item.name).join(", "),
+    grandTotal: String(getGrandTotal(record)),
+  }));
 }
 
 async function exportExcel(records: TechnicalAdvisoryServiceRecord[]) {
@@ -212,18 +234,15 @@ export function TechnicalAdvisoryServicesManagement({
               </CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="rounded-xl">
-                    <FileDown className="mr-2 h-4 w-4" />
-                    Export
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => void exportExcel(filteredRecords)}>Export Excel</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => void exportPdf(filteredRecords)}>Export PDF</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <ExportPreviewMenu
+                title="Technical Advisory"
+                description="Preview the filtered technical advisory records before exporting them."
+                columns={exportColumns}
+                rows={buildExportRows(filteredRecords)}
+                onDownloadExcel={() => exportExcel(filteredRecords)}
+                onDownloadPdf={() => exportPdf(filteredRecords)}
+                triggerClassName="rounded-xl"
+              />
               <Button className="rounded-xl bg-[#159E44] text-white hover:bg-[#128A3B]" onClick={() => setCreateOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Create Technical Advisory

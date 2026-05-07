@@ -4,7 +4,7 @@ import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useWatch } from "react-hook-form";
 import * as z from "zod";
-import { BriefcaseBusiness, FileDown, Pencil, Search, SlidersHorizontal, Trash2, Users2 } from "lucide-react";
+import { BriefcaseBusiness, Pencil, Search, SlidersHorizontal, Trash2, Users2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -14,6 +14,7 @@ import {
   type FacultyRegistryEmployment,
   type FacultyRegistryRecord,
 } from "@/lib/actions/faculty-registry";
+import { ExportPreviewMenu, type ExportPreviewColumn } from "@/components/dashboard/export-preview-menu";
 import { RecordPagination, useRecordPagination } from "@/components/dashboard/record-pagination";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,7 +36,6 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuLabel,
-  DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -72,6 +72,24 @@ type ResultFilter = "all" | "permanent" | "contract_of_service";
 
 function getFullName(record: FacultyRegistryRecord) {
   return `${record.first_name} ${record.last_name}`.trim();
+}
+
+const exportColumns = [
+  { key: "firstName", label: "First Name" },
+  { key: "lastName", label: "Last Name" },
+  { key: "designation", label: "Designation" },
+  { key: "unit", label: "Unit" },
+  { key: "employment", label: "Employment" },
+] satisfies ExportPreviewColumn[];
+
+function buildExportRows(records: FacultyRegistryRecord[]) {
+  return records.map((record) => ({
+    firstName: record.first_name,
+    lastName: record.last_name,
+    designation: record.designation,
+    unit: record.unit || "-",
+    employment: record.employment,
+  }));
 }
 
 async function exportFacultyRegistryExcel(records: FacultyRegistryRecord[]) {
@@ -466,22 +484,15 @@ export function FacultyRegistryManagement({
               </CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="h-9 rounded-xl text-xs">
-                    <FileDown className="mr-2 h-3.5 w-3.5" />
-                    Export
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => void exportFacultyRegistryExcel(filteredRecords)}>
-                    Export Excel
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => void exportFacultyRegistryPdf(filteredRecords)}>
-                    Export PDF
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <ExportPreviewMenu
+                title="Faculty Registry"
+                description="Preview the filtered faculty registry records before exporting them."
+                columns={exportColumns}
+                rows={buildExportRows(filteredRecords)}
+                onDownloadExcel={() => exportFacultyRegistryExcel(filteredRecords)}
+                onDownloadPdf={() => exportFacultyRegistryPdf(filteredRecords)}
+                triggerClassName="h-9 rounded-xl text-xs"
+              />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="h-9 rounded-xl text-xs">

@@ -5,7 +5,6 @@ import Link from "next/link";
 import { format } from "date-fns";
 import {
   Activity,
-  ArrowUpRight,
   BriefcaseBusiness,
   BookOpenCheck,
   CalendarRange,
@@ -50,8 +49,8 @@ import {
 } from "recharts";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ExportPreviewMenu, type ExportPreviewColumn } from "@/components/dashboard/export-preview-menu";
 import {
   Dialog,
   DialogContent,
@@ -59,12 +58,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -367,6 +360,42 @@ async function exportTrainingsPdf(records: TrainingRecord[]) {
     styles: { fontSize: 7, cellPadding: 2, overflow: "linebreak" },
   });
   doc.save(`project-leader-trainings-${new Date().toISOString().slice(0, 10)}.pdf`);
+}
+
+const projectExportColumns = [
+  { key: "title", label: "Project Name" },
+  { key: "duration", label: "Duration" },
+  { key: "leader", label: "Project Leader" },
+  { key: "budget", label: "Total Budget", align: "right" },
+  { key: "status", label: "Status" },
+] satisfies ExportPreviewColumn[];
+
+const trainingExportColumns = [
+  { key: "title", label: "Training Title" },
+  { key: "project", label: "Related Project" },
+  { key: "schedule", label: "Schedule" },
+  { key: "participants", label: "Participants", align: "right" },
+  { key: "weightedDays", label: "Weighted Days", align: "right" },
+] satisfies ExportPreviewColumn[];
+
+function buildProjectExportRows(records: Project[]) {
+  return records.map((project) => ({
+    title: project.title || "Untitled project",
+    duration: formatProjectDuration(project),
+    leader: getProjectLeaderNames(project),
+    budget: formatCurrency(getProjectBudget(project)),
+    status: getProjectAgeStatus(project),
+  }));
+}
+
+function buildTrainingExportRows(records: TrainingRecord[]) {
+  return records.map((record) => ({
+    title: record.training_title,
+    project: record.related_project_title || "-",
+    schedule: getTrainingSchedule(record),
+    participants: String(record.participants_overall_total || 0),
+    weightedDays: String(record.weighted_days_trained || 0),
+  }));
 }
 
 function ChartTooltip({
@@ -1258,18 +1287,15 @@ export function ProjectLeaderDashboard({
                     ))}
                   </SelectContent>
                 </Select>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="h-9 w-full text-xs">
-                      <ArrowUpRight className="mr-2 h-3.5 w-3.5" />
-                      Export
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => void exportProjectsExcel(filteredProjects)}>Export Excel</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => void exportProjectsPdf(filteredProjects)}>Export PDF</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <ExportPreviewMenu
+                  title="Project Records"
+                  description="Preview the filtered project records before exporting them."
+                  columns={projectExportColumns}
+                  rows={buildProjectExportRows(filteredProjects)}
+                  onDownloadExcel={() => exportProjectsExcel(filteredProjects)}
+                  onDownloadPdf={() => exportProjectsPdf(filteredProjects)}
+                  triggerClassName="h-9 w-full text-xs"
+                />
               </div>
             </div>
             <ScrollArea className="max-h-[60vh] rounded-xl border border-border/50">
@@ -1372,18 +1398,15 @@ export function ProjectLeaderDashboard({
                 </Select>
               </div>
               <div className="min-w-0 lg:col-span-1">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="h-9 w-full text-xs">
-                      <ArrowUpRight className="mr-2 h-3.5 w-3.5" />
-                      Export
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => void exportTrainingsExcel(filteredTrainings)}>Export Excel</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => void exportTrainingsPdf(filteredTrainings)}>Export PDF</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <ExportPreviewMenu
+                  title="Training Records"
+                  description="Preview the filtered training records before exporting them."
+                  columns={trainingExportColumns}
+                  rows={buildTrainingExportRows(filteredTrainings)}
+                  onDownloadExcel={() => exportTrainingsExcel(filteredTrainings)}
+                  onDownloadPdf={() => exportTrainingsPdf(filteredTrainings)}
+                  triggerClassName="h-9 w-full text-xs"
+                />
               </div>
             </div>
             {trainingTimeFilter === "custom_period" ? (

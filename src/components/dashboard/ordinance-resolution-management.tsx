@@ -1,13 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { CalendarDays, Eye, FileDown, Landmark, Pencil, Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react";
+import { CalendarDays, Eye, Landmark, Pencil, Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 
 import { type Project } from "@/components/dashboard/projects-table";
 import { OrdinanceResolutionForm } from "@/components/dashboard/ordinance-resolution-form";
 import { DocumentPreview } from "@/components/dashboard/document-preview";
+import { ExportPreviewMenu, type ExportPreviewColumn } from "@/components/dashboard/export-preview-menu";
 import { RecordPagination, useRecordPagination } from "@/components/dashboard/record-pagination";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +23,6 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -47,6 +47,24 @@ function getStatusLabel(status: string) {
 
 function getApprovalLabel(record: OrdinanceResolutionRecord) {
   return record.date_of_approval ? format(new Date(record.date_of_approval), "MMM d, yyyy") : "-";
+}
+
+const exportColumns = [
+  { key: "name", label: "Ordinance / Resolution" },
+  { key: "agency", label: "Implementing Agency" },
+  { key: "status", label: "Status" },
+  { key: "approvalDate", label: "Date of Approval" },
+  { key: "project", label: "Linked Project" },
+] satisfies ExportPreviewColumn[];
+
+function buildExportRows(records: OrdinanceResolutionRecord[]) {
+  return records.map((record) => ({
+    name: record.name,
+    agency: record.implementing_agency,
+    status: getStatusLabel(record.status),
+    approvalDate: getApprovalLabel(record),
+    project: record.project_title || "-",
+  }));
 }
 
 async function exportExcel(records: OrdinanceResolutionRecord[]) {
@@ -197,18 +215,15 @@ export function OrdinanceResolutionManagement({
               </CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="rounded-xl">
-                    <FileDown className="mr-2 h-4 w-4" />
-                    Export
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => void exportExcel(filteredRecords)}>Export Excel</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => void exportPdf(filteredRecords)}>Export PDF</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <ExportPreviewMenu
+                title="Ordinance / Resolution"
+                description="Preview the filtered ordinance or resolution records before exporting them."
+                columns={exportColumns}
+                rows={buildExportRows(filteredRecords)}
+                onDownloadExcel={() => exportExcel(filteredRecords)}
+                onDownloadPdf={() => exportPdf(filteredRecords)}
+                triggerClassName="rounded-xl"
+              />
               <Button className="rounded-xl bg-[#159E44] text-white hover:bg-[#128A3B]" onClick={() => setCreateOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Create Ordinance

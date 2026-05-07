@@ -1,13 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { Eye, FileDown, Plus, Search, SlidersHorizontal, Trash2, Wallet } from "lucide-react";
+import { Eye, Pencil, Plus, Search, SlidersHorizontal, Trash2, Wallet } from "lucide-react";
 import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 
 import { type Project } from "@/components/dashboard/projects-table";
 import { BudgetUtilizationForm } from "@/components/dashboard/budget-utilization-form";
 import { DocumentPreview } from "@/components/dashboard/document-preview";
+import { ExportPreviewMenu, type ExportPreviewColumn } from "@/components/dashboard/export-preview-menu";
 import { RecordPagination, useRecordPagination } from "@/components/dashboard/record-pagination";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +23,6 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -50,6 +50,26 @@ function currency(value: number) {
 function getCoverageLabel(record: BudgetUtilizationRecord) {
   if (!record.coverage_start || !record.coverage_end) return "-";
   return `${format(new Date(record.coverage_start), "MMM d, yyyy")} - ${format(new Date(record.coverage_end), "MMM d, yyyy")}`;
+}
+
+const exportColumns = [
+  { key: "projectTitle", label: "Project Title" },
+  { key: "coverage", label: "Inclusive Dates" },
+  { key: "totalBudget", label: "Budget Summary", align: "right" },
+  { key: "utilizedBudget", label: "Utilized", align: "right" },
+  { key: "remainingBudget", label: "Remaining", align: "right" },
+  { key: "monthsCovered", label: "Months Covered", align: "center" },
+] satisfies ExportPreviewColumn[];
+
+function buildExportRows(records: BudgetUtilizationRecord[]) {
+  return records.map((record) => ({
+    projectTitle: record.project_title,
+    coverage: getCoverageLabel(record),
+    totalBudget: currency(Number(record.total_budget || 0)),
+    utilizedBudget: currency(Number(record.utilized_total || 0)),
+    remainingBudget: currency(Number(record.total_budget || 0) - Number(record.utilized_total || 0)),
+    monthsCovered: String(record.monthly_breakdown?.length || 0),
+  }));
 }
 
 async function exportExcel(records: BudgetUtilizationRecord[]) {
@@ -136,8 +156,10 @@ export function BudgetUtilizationManagement({
   const [searchTerm, setSearchTerm] = React.useState("");
   const [filterMode, setFilterMode] = React.useState<FilterMode>("all");
   const [selectedRecord, setSelectedRecord] = React.useState<BudgetUtilizationRecord | null>(null);
+  const [editingRecord, setEditingRecord] = React.useState<BudgetUtilizationRecord | null>(null);
   const [createOpen, setCreateOpen] = React.useState(false);
   const [successOpen, setSuccessOpen] = React.useState(false);
+  const [successMessage, setSuccessMessage] = React.useState("Budget utilization saved successfully.");
   const [deleteTarget, setDeleteTarget] = React.useState<BudgetUtilizationRecord | null>(null);
   const availableProjects = React.useMemo(() => {
     const usedProjectIds = new Set(records.map((record) => record.project_id));
@@ -188,6 +210,7 @@ export function BudgetUtilizationManagement({
   const handleSaved = () => {
     setCreateOpen(false);
     setSelectedRecord(null);
+    setEditingRecord(null);
     setSuccessOpen(true);
     router.refresh();
   };
@@ -211,22 +234,19 @@ export function BudgetUtilizationManagement({
             <div>
               <CardTitle className="text-xl font-semibold">Budget Utilization</CardTitle>
               <CardDescription className="text-sm">
-                Track the final monthly breakdown of each project budget summary.
+                Track actual budget utilization over time and update each project whenever new expenses are logged.
               </CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="rounded-xl">
-                    <FileDown className="mr-2 h-4 w-4" />
-                    Export
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => void exportExcel(filteredRecords)}>Export Excel</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => void exportPdf(filteredRecords)}>Export PDF</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <ExportPreviewMenu
+                title="Budget Utilization"
+                description="Preview the filtered budget utilization records before exporting them."
+                columns={exportColumns}
+                rows={buildExportRows(filteredRecords)}
+                onDownloadExcel={() => exportExcel(filteredRecords)}
+                onDownloadPdf={() => exportPdf(filteredRecords)}
+                triggerClassName="rounded-xl"
+              />
               <Button
                 className="rounded-xl bg-[#159E44] text-white hover:bg-[#128A3B]"
                 onClick={() => setCreateOpen(true)}
@@ -318,6 +338,9 @@ export function BudgetUtilizationManagement({
                             <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl" onClick={() => setSelectedRecord(record)}>
                               <Eye className="h-4 w-4" />
                             </Button>
+                            <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl" onClick={() => setEditingRecord(record)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
                             <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl text-destructive" onClick={() => setDeleteTarget(record)}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -351,9 +374,28 @@ export function BudgetUtilizationManagement({
         <DialogContent showCloseButton={false} className="flex flex-col overflow-hidden fixed inset-0 left-0 top-0 h-[100dvh] w-screen max-w-none sm:max-w-none translate-x-0 translate-y-0 rounded-none border-0 p-0 shadow-none">
           <BudgetUtilizationForm
             projects={availableProjects}
-            onSuccess={handleSaved}
+            onSuccess={() => {
+              setSuccessMessage("Budget utilization saved successfully.");
+              handleSaved();
+            }}
             onClose={() => setCreateOpen(false)}
           />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editingRecord} onOpenChange={(open) => !open && setEditingRecord(null)}>
+        <DialogContent showCloseButton={false} className="flex flex-col overflow-hidden fixed inset-0 left-0 top-0 h-[100dvh] w-screen max-w-none sm:max-w-none translate-x-0 translate-y-0 rounded-none border-0 p-0 shadow-none">
+          {editingRecord && (
+            <BudgetUtilizationForm
+              record={editingRecord}
+              projects={projects}
+              onSuccess={() => {
+                setSuccessMessage("Budget utilization updated successfully.");
+                handleSaved();
+              }}
+              onClose={() => setEditingRecord(null)}
+            />
+          )}
         </DialogContent>
       </Dialog>
 
@@ -376,7 +418,7 @@ export function BudgetUtilizationManagement({
           <DialogHeader>
             <DialogTitle>Budget utilization saved</DialogTitle>
             <DialogDescription>
-              The monthly breakdown was saved successfully and is now locked for viewing only.
+              {successMessage}
             </DialogDescription>
           </DialogHeader>
         </DialogContent>

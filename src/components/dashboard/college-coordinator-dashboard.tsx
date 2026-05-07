@@ -4,7 +4,6 @@ import * as React from "react";
 import { format } from "date-fns";
 import {
   BookOpenCheck,
-  Download,
   Filter,
   FolderKanban,
   PiggyBank,
@@ -12,6 +11,7 @@ import {
   Wallet,
 } from "lucide-react";
 
+import { ExportPreviewMenu, type ExportPreviewColumn } from "@/components/dashboard/export-preview-menu";
 import { type Project } from "@/components/dashboard/projects-table";
 import { type TrainingRecord } from "@/components/dashboard/trainings-form";
 import { FacultyRegistryManagement } from "@/components/dashboard/faculty-registry-management";
@@ -19,7 +19,6 @@ import { RecordPagination, useRecordPagination } from "@/components/dashboard/re
 import { type FacultyRegistryRecord } from "@/lib/actions/faculty-registry";
 import { getProjectBudgetSnapshot, getProjectOverallBudget } from "@/lib/project-budget";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -28,12 +27,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -315,6 +308,51 @@ async function exportTrainingsPdf(records: TrainingRecord[]) {
     styles: { fontSize: 7, cellPadding: 2, overflow: "linebreak" },
   });
   doc.save(`college-trainings-${new Date().toISOString().slice(0, 10)}.pdf`);
+}
+
+const projectExportColumns = [
+  { key: "title", label: "Project Name" },
+  { key: "duration", label: "Duration" },
+  { key: "leader", label: "Project Leader" },
+  { key: "budget", label: "Total Budget", align: "right" },
+  { key: "creator", label: "Created By" },
+  { key: "role", label: "Creator Role" },
+  { key: "scope", label: "Unit / Department" },
+] satisfies ExportPreviewColumn[];
+
+const trainingExportColumns = [
+  { key: "title", label: "Training Title" },
+  { key: "project", label: "Related Project" },
+  { key: "schedule", label: "Schedule" },
+  { key: "participants", label: "Participants", align: "right" },
+  { key: "weightedDays", label: "Weighted Days", align: "right" },
+  { key: "creator", label: "Created By" },
+] satisfies ExportPreviewColumn[];
+
+function buildProjectExportRows(records: Project[]) {
+  return records.map((project) => {
+    const creator = getCreatorLabel(project);
+    return {
+      title: project.title || "Untitled project",
+      duration: formatProjectDuration(project),
+      leader: getProjectLeaderNames(project),
+      budget: currency(getProjectBudget(project)),
+      creator: creator.name,
+      role: creator.role,
+      scope: `${creator.unit} / ${creator.department}`,
+    };
+  });
+}
+
+function buildTrainingExportRows(records: TrainingRecord[]) {
+  return records.map((record) => ({
+    title: record.training_title,
+    project: record.related_project_title || "-",
+    schedule: getTrainingSchedule(record),
+    participants: String(record.participants_overall_total || 0),
+    weightedDays: String(record.weighted_days_trained || 0),
+    creator: getTrainingCreator(record),
+  }));
 }
 
 function OverviewCard({
@@ -626,18 +664,15 @@ export function CollegeCoordinatorDashboard({
                 </Select>
               </div>
               <div className="min-w-0 lg:col-span-1">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="h-9 w-full text-xs">
-                      <Download className="mr-2 h-3.5 w-3.5" />
-                      Export
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => void exportProjectsExcel(filteredProjects.filter(isActiveProject))}>Export Excel</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => void exportProjectsPdf(filteredProjects.filter(isActiveProject))}>Export PDF</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <ExportPreviewMenu
+                  title="Active Projects Report"
+                  description="Preview the filtered active project records before exporting them."
+                  columns={projectExportColumns}
+                  rows={buildProjectExportRows(filteredProjects.filter(isActiveProject))}
+                  onDownloadExcel={() => exportProjectsExcel(filteredProjects.filter(isActiveProject))}
+                  onDownloadPdf={() => exportProjectsPdf(filteredProjects.filter(isActiveProject))}
+                  triggerClassName="h-9 w-full text-xs"
+                />
               </div>
             </div>
             <ScrollArea className="max-h-[60vh] rounded-xl border border-border/50">
@@ -742,18 +777,15 @@ export function CollegeCoordinatorDashboard({
                   <SelectItem value="above_5" className="text-xs">Above 5</SelectItem>
                 </SelectContent>
               </Select>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="h-9 text-xs">
-                    <Download className="mr-2 h-3.5 w-3.5" />
-                    Export
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => void exportTrainingsExcel(filteredTrainings)}>Export Excel</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => void exportTrainingsPdf(filteredTrainings)}>Export PDF</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <ExportPreviewMenu
+                title="Project Trainings Report"
+                description="Preview the filtered project training records before exporting them."
+                columns={trainingExportColumns}
+                rows={buildTrainingExportRows(filteredTrainings)}
+                onDownloadExcel={() => exportTrainingsExcel(filteredTrainings)}
+                onDownloadPdf={() => exportTrainingsPdf(filteredTrainings)}
+                triggerClassName="h-9 text-xs"
+              />
             </div>
             {trainingTimeFilter === "custom_period" ? (
               <div className="grid gap-2 md:grid-cols-2">

@@ -1,12 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { CalendarDays, ClipboardList, Eye, FileDown, Pencil, Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react";
+import { CalendarDays, ClipboardList, Eye, Pencil, Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 
 import { OtherActivitiesForm } from "@/components/dashboard/other-activities-form";
 import { DocumentPreview } from "@/components/dashboard/document-preview";
+import { ExportPreviewMenu, type ExportPreviewColumn } from "@/components/dashboard/export-preview-menu";
 import { RecordPagination, useRecordPagination } from "@/components/dashboard/record-pagination";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +22,6 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -41,6 +41,29 @@ interface OtherActivitiesManagementProps {
 
 function getDateLabel(record: OtherActivityRecord) {
   return record.activity_date ? format(new Date(record.activity_date), "MMM d, yyyy") : "-";
+}
+
+const exportColumns = [
+  { key: "date", label: "Date" },
+  { key: "activity", label: "Activity" },
+  { key: "category", label: "Category" },
+  { key: "participants", label: "Participants" },
+  { key: "budget", label: "Budget Involved", align: "right" },
+  { key: "fund", label: "Source of Fund" },
+] satisfies ExportPreviewColumn[];
+
+function buildExportRows(records: OtherActivityRecord[]) {
+  return records.map((record) => ({
+    date: getDateLabel(record),
+    activity: record.activity_title,
+    category: record.category,
+    participants: record.participants,
+    budget: Number(record.budget_involved || 0).toLocaleString("en-PH", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }),
+    fund: record.source_of_fund === "Others" ? `Others: ${record.source_of_fund_other || "-"}` : record.source_of_fund,
+  }));
 }
 
 async function exportExcel(records: OtherActivityRecord[]) {
@@ -199,18 +222,15 @@ export function OtherActivitiesManagement({
               </CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="rounded-xl">
-                    <FileDown className="mr-2 h-4 w-4" />
-                    Export
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => void exportExcel(filteredRecords)}>Export Excel</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => void exportPdf(filteredRecords)}>Export PDF</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <ExportPreviewMenu
+                title="Other Activities"
+                description="Preview the filtered other activity records before exporting them."
+                columns={exportColumns}
+                rows={buildExportRows(filteredRecords)}
+                onDownloadExcel={() => exportExcel(filteredRecords)}
+                onDownloadPdf={() => exportPdf(filteredRecords)}
+                triggerClassName="rounded-xl"
+              />
               <Button className="rounded-xl bg-[#159E44] text-white hover:bg-[#128A3B]" onClick={() => setCreateOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Manage Other Activities

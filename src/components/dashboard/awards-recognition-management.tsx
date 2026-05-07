@@ -1,13 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { Award, CalendarDays, Eye, FileDown, Pencil, Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react";
+import { Award, CalendarDays, Eye, Pencil, Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 
 import { type Project } from "@/components/dashboard/projects-table";
 import { AwardsRecognitionForm } from "@/components/dashboard/awards-recognition-form";
 import { DocumentPreview } from "@/components/dashboard/document-preview";
+import { ExportPreviewMenu, type ExportPreviewColumn } from "@/components/dashboard/export-preview-menu";
 import { RecordPagination, useRecordPagination } from "@/components/dashboard/record-pagination";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +23,6 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -52,7 +52,27 @@ function getLevelLabel(level: string) {
       ? "Regional"
       : level === "national"
         ? "National"
-        : "International";
+      : "International";
+}
+
+const exportColumns = [
+  { key: "award", label: "Award / Recognition" },
+  { key: "donor", label: "Donor / Awarding Body" },
+  { key: "level", label: "Level" },
+  { key: "date", label: "Date Received" },
+  { key: "project", label: "Project" },
+  { key: "event", label: "Event / Conference" },
+] satisfies ExportPreviewColumn[];
+
+function buildExportRows(records: AwardsRecognitionRecord[]) {
+  return records.map((record) => ({
+    award: record.award_title,
+    donor: record.donor_body,
+    level: getLevelLabel(record.level),
+    date: getDateLabel(record),
+    project: record.project_title || "N/A",
+    event: record.event_title,
+  }));
 }
 
 async function exportExcel(records: AwardsRecognitionRecord[]) {
@@ -210,18 +230,15 @@ export function AwardsRecognitionManagement({
               </CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="rounded-xl">
-                    <FileDown className="mr-2 h-4 w-4" />
-                    Export
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => void exportExcel(filteredRecords)}>Export Excel</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => void exportPdf(filteredRecords)}>Export PDF</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <ExportPreviewMenu
+                title="Awards and Recognition"
+                description="Preview the filtered awards and recognition records before exporting them."
+                columns={exportColumns}
+                rows={buildExportRows(filteredRecords)}
+                onDownloadExcel={() => exportExcel(filteredRecords)}
+                onDownloadPdf={() => exportPdf(filteredRecords)}
+                triggerClassName="rounded-xl"
+              />
               <Button className="rounded-xl bg-[#159E44] text-white hover:bg-[#128A3B]" onClick={() => setCreateOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Manage Awards

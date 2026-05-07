@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { BookMarked, Eye, FileDown, Pencil, Plus, Search, SlidersHorizontal, Trash2, UserPlus } from "lucide-react";
+import { BookMarked, Eye, Pencil, Plus, Search, SlidersHorizontal, Trash2, UserPlus } from "lucide-react";
 import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 
@@ -13,6 +13,7 @@ import {
 } from "@/components/dashboard/trainings-form";
 import { AssignedTrainingsManagement } from "@/components/dashboard/assigned-trainings-management";
 import { AssignTrainingForm } from "@/components/dashboard/assign-training-form";
+import { ExportPreviewMenu, type ExportPreviewColumn } from "@/components/dashboard/export-preview-menu";
 import { type AssignedTrainingRecord, type SystemUser } from "@/lib/actions/assigned-trainings";
 import { RecordPagination, useRecordPagination } from "@/components/dashboard/record-pagination";
 import { Button } from "@/components/ui/button";
@@ -28,7 +29,6 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -104,6 +104,28 @@ function getCategoryLabel(record: TrainingRecord) {
     return toTitleCase(value);
   });
   return labels.join(", ");
+}
+
+const exportColumns = [
+  { key: "title", label: "Title of Training" },
+  { key: "project", label: "Project" },
+  { key: "category", label: "Category" },
+  { key: "mode", label: "Mode" },
+  { key: "venue", label: "Venue / Platform" },
+  { key: "dates", label: "Dates / Hours" },
+  { key: "participants", label: "Participants", align: "right" },
+] satisfies ExportPreviewColumn[];
+
+function buildExportRows(records: TrainingRecord[]) {
+  return records.map((record) => ({
+    title: record.training_title,
+    project: record.related_project_title || "-",
+    category: getCategoryLabel(record),
+    mode: record.training_mode,
+    venue: record.venue_platform,
+    dates: getDateRange(record),
+    participants: String(record.participants_overall_total || 0),
+  }));
 }
 
 async function exportExcel(records: TrainingRecord[]) {
@@ -305,18 +327,15 @@ export function TrainingsManagement({
             <div className="flex flex-wrap gap-2">
               {activeTab === "create" && (
                 <>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" className="rounded-xl">
-                        <FileDown className="mr-2 h-4 w-4" />
-                        Export
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => void exportExcel(filteredRecords)}>Export Excel</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => void exportPdf(filteredRecords)}>Export PDF</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <ExportPreviewMenu
+                    title="Trainings"
+                    description="Preview the filtered training records before exporting them."
+                    columns={exportColumns}
+                    rows={buildExportRows(filteredRecords)}
+                    onDownloadExcel={() => exportExcel(filteredRecords)}
+                    onDownloadPdf={() => exportPdf(filteredRecords)}
+                    triggerClassName="rounded-xl"
+                  />
                   {!isViewOnly && (
                     <Button
                       className="rounded-xl bg-[#159E44] text-white hover:bg-[#12843a] focus-visible:ring-[#159E44]/30"

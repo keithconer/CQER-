@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Download, Eye, Factory, FileDown, Pencil, Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react";
+import { Eye, Pencil, Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 
@@ -12,6 +12,7 @@ import {
   type AdoptersWithEnterpriseRecord,
 } from "@/lib/actions/adopters-with-enterprise";
 import { DocumentPreview } from "@/components/dashboard/document-preview";
+import { ExportPreviewMenu, type ExportPreviewColumn } from "@/components/dashboard/export-preview-menu";
 import { RecordPagination, useRecordPagination } from "@/components/dashboard/record-pagination";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +21,6 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -34,6 +34,24 @@ interface AdoptersWithEnterpriseManagementProps {
 }
 
 type FilterMode = "all" | "with_project" | "without_project" | "with_documents";
+
+const exportColumns = [
+  { key: "technology", label: "Technology Transferred" },
+  { key: "date", label: "Date of Transfer" },
+  { key: "project", label: "Project" },
+  { key: "adopters", label: "Adopters", align: "center" },
+  { key: "addresses", label: "Addresses" },
+] satisfies ExportPreviewColumn[];
+
+function buildExportRows(records: AdoptersWithEnterpriseRecord[]) {
+  return records.map((record) => ({
+    technology: record.technology_transferred,
+    date: record.transfer_date ? format(new Date(record.transfer_date), "MMM d, yyyy") : "-",
+    project: record.related_project_title || "-",
+    adopters: String(record.adopters.length),
+    addresses: record.adopters.map((item) => item.address).join(", "),
+  }));
+}
 
 async function exportExcel(records: AdoptersWithEnterpriseRecord[]) {
   const ExcelJSImport = await import("exceljs/dist/exceljs.min.js");
@@ -172,18 +190,15 @@ export function AdoptersWithEnterpriseManagement({
               </CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="rounded-xl">
-                    <FileDown className="mr-2 h-4 w-4" />
-                    Export
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => void exportExcel(filteredRecords)}>Export Excel</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => void exportPdf(filteredRecords)}>Export PDF</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <ExportPreviewMenu
+                title="Adopters with Enterprise"
+                description="Preview the filtered adopters with enterprise records before exporting them."
+                columns={exportColumns}
+                rows={buildExportRows(filteredRecords)}
+                onDownloadExcel={() => exportExcel(filteredRecords)}
+                onDownloadPdf={() => exportPdf(filteredRecords)}
+                triggerClassName="rounded-xl"
+              />
               <Button className="rounded-xl bg-[#159E44] text-white hover:bg-[#128A3B]" onClick={() => setCreateOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Create Adopters

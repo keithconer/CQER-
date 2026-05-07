@@ -2,9 +2,7 @@
 
 import * as React from "react";
 import {
-  BriefcaseBusiness,
   Eye,
-  FileDown,
   Pencil,
   Plus,
   Search,
@@ -18,6 +16,7 @@ import {
   deleteConsultancyExtension,
   type ConsultancyExtension,
 } from "@/lib/actions/consultancy-extension";
+import { ExportPreviewMenu, type ExportPreviewColumn } from "@/components/dashboard/export-preview-menu";
 import { RecordPagination, useRecordPagination } from "@/components/dashboard/record-pagination";
 import { type Project } from "./projects-table";
 import { Button } from "@/components/ui/button";
@@ -33,7 +32,6 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -49,6 +47,26 @@ interface ConsultancyExtensionManagementProps {
 }
 
 type FilterMode = "all" | "on-going" | "completed" | "with_project" | "without_project";
+
+const exportColumns = [
+  { key: "title", label: "Title of Consultancy" },
+  { key: "agency", label: "Base Agency / Institute" },
+  { key: "nature", label: "Nature of Consultancy" },
+  { key: "project", label: "Project" },
+  { key: "category", label: "Category" },
+  { key: "status", label: "Status" },
+] satisfies ExportPreviewColumn[];
+
+function buildExportRows(records: ConsultancyExtension[]) {
+  return records.map((record) => ({
+    title: record.title_of_consultancy,
+    agency: record.base_agency_institute,
+    nature: record.nature_of_consultancy,
+    project: record.related_project_title || "-",
+    category: record.category,
+    status: record.status,
+  }));
+}
 
 async function exportExcel(records: ConsultancyExtension[]) {
   const ExcelJSImport = await import("exceljs/dist/exceljs.min.js");
@@ -203,18 +221,15 @@ export function ConsultancyExtensionManagement({
               </CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="rounded-xl">
-                    <FileDown className="mr-2 h-4 w-4" />
-                    Export
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => void exportExcel(filteredRecords)}>Export Excel</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => void exportPdf(filteredRecords)}>Export PDF</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <ExportPreviewMenu
+                title="Consultancy"
+                description="Preview the filtered consultancy records before exporting them."
+                columns={exportColumns}
+                rows={buildExportRows(filteredRecords)}
+                onDownloadExcel={() => exportExcel(filteredRecords)}
+                onDownloadPdf={() => exportPdf(filteredRecords)}
+                triggerClassName="rounded-xl"
+              />
               {!isViewOnly && (
                 <Button className="rounded-xl bg-[#159E44] text-white hover:bg-[#128A3B]" onClick={() => setCreateOpen(true)}>
                   <Plus className="mr-2 h-4 w-4" />

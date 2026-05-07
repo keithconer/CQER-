@@ -1,11 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { Eye, FileDown, Pencil, Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react";
+import { Eye, Pencil, Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 
 import { ProjectLeaderRegistrationForm } from "@/components/dashboard/project-leader-registration-form";
+import { ExportPreviewMenu, type ExportPreviewColumn } from "@/components/dashboard/export-preview-menu";
 import { RecordPagination, useRecordPagination } from "@/components/dashboard/record-pagination";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +21,6 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -84,6 +84,35 @@ function getBudget(project: Project) {
 
 function getStatus(project: Project) {
   return getProjectLifecycleStatus(project as Project & { created_at?: string | null });
+}
+
+const exportColumns = [
+  { key: "title", label: "Project Title" },
+  { key: "departmentUnit", label: "Department / Unit" },
+  { key: "inclusiveDates", label: "Project Dates" },
+  { key: "duration", label: "Duration" },
+  { key: "status", label: "Status" },
+  { key: "beneficiaries", label: "Target Beneficiaries" },
+  { key: "budget", label: "Budget Total", align: "right" },
+  { key: "partners", label: "Partner Agencies" },
+] satisfies ExportPreviewColumn[];
+
+function buildExportRows(projects: Project[]) {
+  return projects.map((project) => {
+    const registration = getRegistrationData(project);
+    return {
+      title: project.title,
+      departmentUnit: getDepartmentUnit(project),
+      inclusiveDates: getDateRange(project),
+      duration: getDuration(project),
+      status: getStatus(project),
+      beneficiaries: getBeneficiaries(project),
+      budget: formatPhpCurrency(getBudget(project)),
+      partners: Array.isArray(registration?.partner_agencies)
+        ? registration.partner_agencies.map((item) => String((item as Record<string, unknown>).name || "")).join(", ")
+        : project.collaborating_agencies || "",
+    };
+  });
 }
 
 async function exportExcel(projects: Project[]) {
@@ -253,18 +282,15 @@ export function ProjectLeaderRegistrationManagement({
               </CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="rounded-xl">
-                    <FileDown className="mr-2 h-4 w-4" />
-                    Export
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => void exportExcel(filteredProjects)}>Export Excel</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => void exportPdf(filteredProjects)}>Export PDF</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <ExportPreviewMenu
+                title="Project Registration"
+                description="Preview the filtered project registration records before exporting them."
+                columns={exportColumns}
+                rows={buildExportRows(filteredProjects)}
+                onDownloadExcel={() => exportExcel(filteredProjects)}
+                onDownloadPdf={() => exportPdf(filteredProjects)}
+                triggerClassName="rounded-xl"
+              />
               <Button className="rounded-xl bg-[#159E44] text-white hover:bg-[#128A3B]" onClick={() => setCreateOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Register Project

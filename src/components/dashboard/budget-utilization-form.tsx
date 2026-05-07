@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 
+import { DocumentPreview } from "@/components/dashboard/document-preview";
 import { FileUpload } from "@/components/dashboard/file-upload";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -138,6 +139,16 @@ function currency(value: number) {
   return formatPhpCurrency(value);
 }
 
+function sumMonthEntry(entry?: Partial<BudgetUtilizationMonthEntry> | null) {
+  return (
+    Number(entry?.food_and_beverage || 0) +
+    Number(entry?.travel || 0) +
+    Number(entry?.suppliers_and_materials || 0) +
+    Number(entry?.communication || 0) +
+    Number(entry?.other_mooe || 0)
+  );
+}
+
 function buildMonthlyBreakdown(
   project: Project | null | undefined,
   existing?: BudgetUtilizationMonthEntry[] | null
@@ -205,6 +216,54 @@ function buildYearBudgetMap(project?: Project | null) {
   );
 }
 
+function buildYearTotalMap(entries: BudgetUtilizationMonthEntry[] = []) {
+  return entries.reduce((map, entry) => {
+    map.set(entry.year, (map.get(entry.year) || 0) + sumMonthEntry(entry));
+    return map;
+  }, new Map<number, number>());
+}
+
+function mergeMonthlyBreakdowns(
+  existingEntries: BudgetUtilizationMonthEntry[] = [],
+  nextEntries: BudgetUtilizationMonthEntry[] = []
+) {
+  const nextMap = new Map(nextEntries.map((entry) => [entry.month_key, entry]));
+
+  return existingEntries.map((entry) => {
+    const nextEntry = nextMap.get(entry.month_key);
+    const foodAndBeverage = Number(entry.food_and_beverage || 0) + Number(nextEntry?.food_and_beverage || 0);
+    const travel = Number(entry.travel || 0) + Number(nextEntry?.travel || 0);
+    const suppliersAndMaterials =
+      Number(entry.suppliers_and_materials || 0) + Number(nextEntry?.suppliers_and_materials || 0);
+    const communication = Number(entry.communication || 0) + Number(nextEntry?.communication || 0);
+    const otherMooe = Number(entry.other_mooe || 0) + Number(nextEntry?.other_mooe || 0);
+
+    return {
+      ...entry,
+      food_and_beverage: foodAndBeverage,
+      travel,
+      suppliers_and_materials: suppliersAndMaterials,
+      communication,
+      other_mooe: otherMooe,
+      total: foodAndBeverage + travel + suppliersAndMaterials + communication + otherMooe,
+    };
+  });
+}
+
+function mergeDocuments(
+  existingDocuments: { url: string; name: string }[] = [],
+  nextDocuments: { url: string; name: string }[] = []
+) {
+  const documentMap = new Map<string, { url: string; name: string }>();
+
+  [...existingDocuments, ...nextDocuments].forEach((document) => {
+    if (!document?.url) return;
+    documentMap.set(document.url, document);
+  });
+
+  return Array.from(documentMap.values());
+}
+
 export function BudgetUtilizationForm({
   record,
   projects,
@@ -212,6 +271,16 @@ export function BudgetUtilizationForm({
   onClose,
   isViewOnly = false,
 }: BudgetUtilizationFormProps) {
+  const isUpdateMode = !isViewOnly && Boolean(record?.id);
+  const existingBreakdown = React.useMemo(
+    () => (record?.monthly_breakdown || []) as BudgetUtilizationMonthEntry[],
+    [record]
+  );
+  const existingDocuments = React.useMemo(() => record?.documents || [], [record]);
+  const existingUtilizedTotal = React.useMemo(
+    () => existingBreakdown.reduce((sum, entry) => sum + sumMonthEntry(entry), 0),
+    [existingBreakdown]
+  );
   const form = useForm<InputValues, unknown, OutputValues>({
     resolver: zodResolver(formSchema),
     defaultValues: buildDefaultValues(record),
@@ -246,6 +315,14 @@ export function BudgetUtilizationForm({
     () => getProjectOverallBudget(selectedProject),
     [selectedProject]
   );
+  const savedYearTotals = React.useMemo(
+    () => buildYearTotalMap(existingBreakdown),
+    [existingBreakdown]
+  );
+  const storedTotalBudget = React.useMemo(
+    () => (record ? Number(record.total_budget || 0) : allocatableBudgetTotal),
+    [record, allocatableBudgetTotal]
+  );
 
   React.useEffect(() => {
     if (!selectedProject) return;
@@ -255,15 +332,25 @@ export function BudgetUtilizationForm({
 
     const nextEntries = buildMonthlyBreakdown(
       selectedProject,
-      (form.getValues("monthly_breakdown") as BudgetUtilizationMonthEntry[] | undefined) || []
+      isViewOnly ? existingBreakdown : undefined
     );
 
-    form.setValue("project_title", selectedProject.title, { shouldDirty: true });
-    form.setValue("total_budget", allocatableBudgetTotal, { shouldDirty: true });
-    form.setValue("coverage_start", range.start.toISOString(), { shouldDirty: true });
-    form.setValue("coverage_end", range.end.toISOString(), { shouldDirty: true });
+    form.setValue("project_title", record?.project_title || selectedProject.title, { shouldDirty: false });
+    form.setValue("total_budget", storedTotalBudget, { shouldDirty: false });
+    form.setValue("coverage_start", record?.coverage_start || range.start.toISOString(), { shouldDirty: false });
+    form.setValue("coverage_end", record?.coverage_end || range.end.toISOString(), { shouldDirty: false });
+    form.setValue("documents", isViewOnly ? existingDocuments : [], { shouldDirty: false });
     breakdownArray.replace(nextEntries);
-  }, [selectedProject, form, breakdownArray, allocatableBudgetTotal]);
+  }, [
+    breakdownArray,
+    existingBreakdown,
+    existingDocuments,
+    form,
+    isViewOnly,
+    record,
+    selectedProject,
+    storedTotalBudget,
+  ]);
 
   React.useEffect(() => {
     monthlyBreakdown.forEach((entry, index) => {
@@ -290,68 +377,71 @@ export function BudgetUtilizationForm({
     return Array.from(map.entries()).sort((left, right) => left[0] - right[0]);
   }, [monthlyBreakdown]);
 
-  const utilizedTotal = React.useMemo(
+  const pendingUtilizedTotal = React.useMemo(
     () => monthlyBreakdown.reduce((sum, entry) => sum + Number(entry.total || 0), 0),
     [monthlyBreakdown]
   );
   const totalBudget = Number(useWatch({ control: typedControl, name: "total_budget" }) || 0);
-  const remainingBudget = Math.max(totalBudget - utilizedTotal, 0);
+  const availableBudget = Math.max(totalBudget - (isViewOnly ? pendingUtilizedTotal : existingUtilizedTotal), 0);
+  const remainingBudgetAfterSave = Math.max(
+    totalBudget - existingUtilizedTotal - (isViewOnly ? 0 : pendingUtilizedTotal),
+    0
+  );
   const coverageStart = useWatch({ control: typedControl, name: "coverage_start" });
   const coverageEnd = useWatch({ control: typedControl, name: "coverage_end" });
 
   const handleSubmit = async (values: FormValues) => {
     const yearBudgetMap = buildYearBudgetMap(selectedProject);
-    const yearTotals = values.monthly_breakdown.reduce((map, entry) => {
-      map.set(entry.year, (map.get(entry.year) || 0) + Number(entry.total || 0));
-      return map;
-    }, new Map<number, number>());
-    const overallAllocated = values.monthly_breakdown.reduce(
+    const yearTotals = buildYearTotalMap(values.monthly_breakdown);
+    const currentEntryAllocated = values.monthly_breakdown.reduce(
       (sum, entry) => sum + Number(entry.total || 0),
       0
     );
 
+    if (currentEntryAllocated <= 0) {
+      alert("Enter at least one utilized amount before saving this budget utilization.");
+      return;
+    }
+
+    if (currentEntryAllocated > availableBudget) {
+      alert(
+        `This utilization exceeds the remaining budget. You can only save up to ${currency(availableBudget)} right now.`
+      );
+      return;
+    }
+
     const yearOverBudget = Array.from(yearTotals.entries()).find(([year, total]) => {
       const yearBudget = Number(yearBudgetMap.get(year) || 0);
-      return total > yearBudget;
+      const savedTotal = Number(savedYearTotals.get(year) || 0);
+      return savedTotal + total > yearBudget;
     });
 
     if (yearOverBudget) {
       const [year, total] = yearOverBudget;
       const yearBudget = Number(yearBudgetMap.get(year) || 0);
+      const savedTotal = Number(savedYearTotals.get(year) || 0);
       alert(
-        `Year ${year} exceeds its budget summary. Assigned ${currency(total)} but only ${currency(yearBudget)} is available.`
+        `Year ${year} exceeds its budget summary. This entry brings the total to ${currency(savedTotal + total)} but only ${currency(yearBudget)} is available.`
       );
       return;
     }
 
-    if (overallAllocated > Number(values.total_budget || 0)) {
-      alert("Monthly utilization cannot exceed the available budget summary total.");
-      return;
-    }
-
-    if (Math.abs(Number(values.total_budget || 0) - overallAllocated) > 0.009) {
-      alert("Finish allocating the full budget summary first. Remaining budget must be zero before saving.");
-      return;
-    }
-
     setSaving(true);
+    const mergedBreakdown = isUpdateMode
+      ? mergeMonthlyBreakdowns(existingBreakdown, values.monthly_breakdown)
+      : values.monthly_breakdown.map((entry) => ({
+          ...entry,
+          total: sumMonthEntry(entry),
+        }));
     const payload = {
       project_id: values.project_id,
       project_title: values.project_title,
       total_budget: Number(values.total_budget || 0),
-      utilized_total: values.monthly_breakdown.reduce((sum, entry) => sum + Number(entry.total || 0), 0),
+      utilized_total: existingUtilizedTotal + currentEntryAllocated,
       coverage_start: values.coverage_start,
       coverage_end: values.coverage_end,
-      monthly_breakdown: values.monthly_breakdown.map((entry) => ({
-        ...entry,
-        total:
-          Number(entry.food_and_beverage || 0) +
-          Number(entry.travel || 0) +
-          Number(entry.suppliers_and_materials || 0) +
-          Number(entry.communication || 0) +
-          Number(entry.other_mooe || 0),
-      })),
-      documents: values.documents,
+      monthly_breakdown: mergedBreakdown,
+      documents: isUpdateMode ? mergeDocuments(existingDocuments, values.documents) : values.documents,
     };
 
     const result = record?.id
@@ -373,10 +463,18 @@ export function BudgetUtilizationForm({
       <div className="flex items-center justify-between border-b px-6 py-4">
         <div>
           <h2 className="text-xl font-semibold">
-            {isViewOnly ? "Budget Utilization Details" : record ? "Budget Utilization" : "Utilize Budget"}
+            {isViewOnly
+              ? "Budget Utilization Details"
+              : isUpdateMode
+                ? "Update Budget Utilization"
+                : "Utilize Budget"}
           </h2>
           <p className="text-sm text-muted-foreground">
-            The yearly budget summary is loaded from project registration, then allocated across the covered months.
+            {isViewOnly
+              ? "Review the saved monthly utilization and supporting documents for this project."
+              : isUpdateMode
+                ? "Log newly utilized amounts only. Earlier utilization stays deducted and the monthly inputs start fresh for this update."
+                : "Log actual expenses by month. You can save partial utilization now and come back later to add more."}
           </p>
         </div>
         <Button type="button" variant="ghost" size="icon" className="rounded-full" onClick={onClose}>
@@ -394,7 +492,11 @@ export function BudgetUtilizationForm({
                   Budget Utilization
                 </CardTitle>
                 <CardDescription className="text-sm">
-                  Select a registered project and allocate the yearly budget summary across the covered months.
+                  {isViewOnly
+                    ? "Review the cumulative monthly utilization saved for this project."
+                    : isUpdateMode
+                    ? "Add the latest expense allocation for this project. New amounts will be added to the saved utilization totals."
+                    : "Select a registered project and allocate only the budget amounts that have actually been utilized so far."}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-5">
@@ -406,7 +508,7 @@ export function BudgetUtilizationForm({
                       <FormItem>
                         <FormLabel>Title of the Project</FormLabel>
                         <Select
-                          disabled={isViewOnly}
+                          disabled={isViewOnly || isUpdateMode}
                           value={field.value}
                           onValueChange={field.onChange}
                         >
@@ -476,22 +578,44 @@ export function BudgetUtilizationForm({
                   <div className="rounded-2xl border border-border/60 bg-muted/10 p-4">
                     <Label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       <FileSpreadsheet className="h-3.5 w-3.5" />
-                      Assigned by Month
+                      {isViewOnly ? "Utilized by Month" : "Previously Utilized"}
                     </Label>
-                    <p className="mt-2 text-sm font-medium text-foreground">{currency(utilizedTotal)}</p>
+                    <p className="mt-2 text-sm font-medium text-foreground">
+                      {currency(isViewOnly ? pendingUtilizedTotal : existingUtilizedTotal)}
+                    </p>
                   </div>
                   <div className="rounded-2xl border border-border/60 bg-muted/10 p-4">
                     <Label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       <FileSpreadsheet className="h-3.5 w-3.5" />
-                      Remaining to Allocate
+                      {isViewOnly ? "Remaining Balance" : "This Entry"}
                     </Label>
-                    <p className="mt-2 text-sm font-medium text-foreground">{currency(remainingBudget)}</p>
+                    <p className="mt-2 text-sm font-medium text-foreground">
+                      {currency(isViewOnly ? availableBudget : pendingUtilizedTotal)}
+                    </p>
                   </div>
+                  {!isViewOnly && (
+                    <div className="rounded-2xl border border-border/60 bg-muted/10 p-4">
+                      <Label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        <FileSpreadsheet className="h-3.5 w-3.5" />
+                        Available to Utilize Now
+                      </Label>
+                      <p className="mt-2 text-sm font-medium text-foreground">{currency(availableBudget)}</p>
+                    </div>
+                  )}
+                  {!isViewOnly && (
+                    <div className="rounded-2xl border border-border/60 bg-muted/10 p-4">
+                      <Label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        <FileSpreadsheet className="h-3.5 w-3.5" />
+                        Remaining After Save
+                      </Label>
+                      <p className="mt-2 text-sm font-medium text-foreground">{currency(remainingBudgetAfterSave)}</p>
+                    </div>
+                  )}
                 </div>
 
-                {!isViewOnly && totalBudget > 0 && remainingBudget > 0 ? (
-                  <div className="rounded-2xl border border-amber-300/50 bg-amber-50 px-4 py-3 text-xs text-amber-900">
-                    Continue until the remaining amount becomes `PHP 0.00`. Saving stays locked until the full budget summary is distributed across the monthly fields.
+                {!isViewOnly && totalBudget > 0 ? (
+                  <div className="rounded-2xl border border-border/60 bg-muted/10 px-4 py-3 text-xs text-muted-foreground">
+                    Save only the expenses already utilized. Any untouched months or years can remain at zero until you need to log another update.
                   </div>
                 ) : null}
 
@@ -515,30 +639,55 @@ export function BudgetUtilizationForm({
                               Coverage for this year is based on the project start and end dates.
                             </p>
                           </div>
-                          <div className="grid gap-2 sm:grid-cols-3">
-                            <div className="rounded-xl border border-border/60 bg-muted/10 px-3 py-2">
-                              <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Year Budget</p>
-                              <p className="text-sm font-semibold text-foreground">{currency(Number(selectedProjectYearBudgetMap.get(year) || 0))}</p>
+                            <div className="grid gap-2 sm:grid-cols-3">
+                              <div className="rounded-xl border border-border/60 bg-muted/10 px-3 py-2">
+                                <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Year Budget</p>
+                                <p className="text-sm font-semibold text-foreground">{currency(Number(selectedProjectYearBudgetMap.get(year) || 0))}</p>
+                              </div>
+                              <div className="rounded-xl border border-border/60 bg-muted/10 px-3 py-2">
+                                <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                                  {isViewOnly ? "Utilized" : "Previously Utilized"}
+                                </p>
+                                <p className="text-sm font-semibold text-foreground">
+                                  {currency(
+                                    isViewOnly
+                                      ? entries.reduce((sum, entry) => sum + Number(entry.total || 0), 0)
+                                      : Number(savedYearTotals.get(year) || 0)
+                                  )}
+                                </p>
+                              </div>
+                              <div className="rounded-xl border border-border/60 bg-muted/10 px-3 py-2">
+                                <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                                  {isViewOnly ? "Remaining" : "This Entry"}
+                                </p>
+                                <p className="text-sm font-semibold text-foreground">
+                                  {currency(
+                                    isViewOnly
+                                      ? Math.max(
+                                          Number(selectedProjectYearBudgetMap.get(year) || 0) -
+                                            entries.reduce((sum, entry) => sum + Number(entry.total || 0), 0),
+                                          0
+                                        )
+                                      : entries.reduce((sum, entry) => sum + Number(entry.total || 0), 0)
+                                  )}
+                                </p>
+                              </div>
+                              {!isViewOnly && (
+                                <div className="rounded-xl border border-border/60 bg-muted/10 px-3 py-2">
+                                  <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Remaining After Save</p>
+                                  <p className="text-sm font-semibold text-foreground">
+                                    {currency(
+                                      Math.max(
+                                        Number(selectedProjectYearBudgetMap.get(year) || 0) -
+                                          Number(savedYearTotals.get(year) || 0) -
+                                          entries.reduce((sum, entry) => sum + Number(entry.total || 0), 0),
+                                        0
+                                      )
+                                    )}
+                                  </p>
+                                </div>
+                              )}
                             </div>
-                            <div className="rounded-xl border border-border/60 bg-muted/10 px-3 py-2">
-                              <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Assigned</p>
-                              <p className="text-sm font-semibold text-foreground">
-                                {currency(entries.reduce((sum, entry) => sum + Number(entry.total || 0), 0))}
-                              </p>
-                            </div>
-                            <div className="rounded-xl border border-border/60 bg-muted/10 px-3 py-2">
-                              <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Remaining</p>
-                              <p className="text-sm font-semibold text-foreground">
-                                {currency(
-                                  Math.max(
-                                    Number(selectedProjectYearBudgetMap.get(year) || 0) -
-                                      entries.reduce((sum, entry) => sum + Number(entry.total || 0), 0),
-                                    0
-                                  )
-                                )}
-                              </p>
-                            </div>
-                          </div>
                         </div>
 
                         <div className="overflow-x-auto rounded-xl border border-border/60">
@@ -591,6 +740,7 @@ export function BudgetUtilizationForm({
                                                     (
                                                       Math.max(
                                                         Number(selectedProjectYearBudgetMap.get(entry.year) || 0) -
+                                                          Number(savedYearTotals.get(entry.year) || 0) -
                                                           entries.reduce((sum, item) => sum + Number(item.total || 0), 0),
                                                         0
                                                       ) <= 0 &&
@@ -634,6 +784,18 @@ export function BudgetUtilizationForm({
 
                 <Separator />
 
+                {!isViewOnly && isUpdateMode && existingDocuments.length > 0 ? (
+                  <div className="space-y-3 rounded-2xl border border-border/60 bg-muted/10 p-4">
+                    <div>
+                      <h3 className="text-sm font-semibold">Previously Uploaded Documents</h3>
+                      <p className="text-xs text-muted-foreground">
+                        These files are already attached to the saved utilization record. Any new upload below will be added to them.
+                      </p>
+                    </div>
+                    <DocumentPreview documents={existingDocuments} bucket="cqer-budgetutil_pdf" />
+                  </div>
+                ) : null}
+
                 <FormField
                   control={typedControl}
                   name="documents"
@@ -670,11 +832,15 @@ export function BudgetUtilizationForm({
           <Button
             type="button"
             className="rounded-xl bg-[#159E44] text-white hover:bg-[#128A3B]"
-            disabled={saving || totalBudget <= 0 || remainingBudget > 0}
+            disabled={saving || totalBudget <= 0 || (isUpdateMode && availableBudget <= 0)}
             onClick={form.handleSubmit(handleSubmit)}
           >
             <Save className="mr-2 h-4 w-4" />
-            {saving ? "Saving..." : "Save Budget Utilization"}
+            {saving
+              ? "Saving..."
+              : isUpdateMode
+                ? "Update Budget Utilization"
+                : "Save Budget Utilization"}
           </Button>
         )}
       </div>

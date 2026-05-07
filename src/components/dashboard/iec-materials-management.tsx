@@ -1,13 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { Eye, FileDown, Pencil, Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react";
+import { Eye, Pencil, Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { type Project } from "./projects-table";
 import { IecMaterialsForm } from "./iec-materials-form";
 import { deleteIecMaterial, type IecMaterialRecord } from "@/lib/actions/iec-materials";
 import { DocumentPreview } from "@/components/dashboard/document-preview";
+import { ExportPreviewMenu, type ExportPreviewColumn } from "@/components/dashboard/export-preview-menu";
 import { RecordPagination, useRecordPagination } from "@/components/dashboard/record-pagination";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +17,6 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -49,6 +49,26 @@ function getCategoryTotal(record: IecMaterialRecord) {
 
 function getGrandTotal(record: IecMaterialRecord) {
   return Math.max(getSexTotal(record), getCategoryTotal(record));
+}
+
+const exportColumns = [
+  { key: "title", label: "Title" },
+  { key: "format", label: "Format" },
+  { key: "project", label: "Project" },
+  { key: "sdgs", label: "SDGs" },
+  { key: "thematicArea", label: "Thematic Area" },
+  { key: "grandTotal", label: "Grand Total", align: "right" },
+] satisfies ExportPreviewColumn[];
+
+function buildExportRows(records: IecMaterialRecord[]) {
+  return records.map((record) => ({
+    title: record.title,
+    format: record.format,
+    project: record.related_project_title || "-",
+    sdgs: record.sdg_goals.join(", "),
+    thematicArea: record.thematic_area.join(", "),
+    grandTotal: String(getGrandTotal(record)),
+  }));
 }
 
 async function exportExcel(records: IecMaterialRecord[]) {
@@ -193,18 +213,15 @@ export function IecMaterialsManagement({
               </CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="rounded-xl">
-                    <FileDown className="mr-2 h-4 w-4" />
-                    Export
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => void exportExcel(filteredRecords)}>Export Excel</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => void exportPdf(filteredRecords)}>Export PDF</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <ExportPreviewMenu
+                title="IEC Materials"
+                description="Preview the filtered IEC materials records before exporting them."
+                columns={exportColumns}
+                rows={buildExportRows(filteredRecords)}
+                onDownloadExcel={() => exportExcel(filteredRecords)}
+                onDownloadPdf={() => exportPdf(filteredRecords)}
+                triggerClassName="rounded-xl"
+              />
               <Button className="rounded-xl bg-[#159E44] text-white hover:bg-[#128A3B]" onClick={() => setCreateOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Create IEC Materials

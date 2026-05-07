@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Cpu, Eye, FileDown, Pencil, Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react";
+import { Eye, Pencil, Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 
@@ -12,6 +12,7 @@ import {
   type TechnologyCommercializationRecord,
 } from "@/lib/actions/technologies-innovations-commercialized";
 import { DocumentPreview } from "@/components/dashboard/document-preview";
+import { ExportPreviewMenu, type ExportPreviewColumn } from "@/components/dashboard/export-preview-menu";
 import { RecordPagination, useRecordPagination } from "@/components/dashboard/record-pagination";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +21,6 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -34,6 +34,24 @@ interface TechnologiesInnovationsCommercializedManagementProps {
 }
 
 type FilterMode = "all" | "with_project" | "without_project" | "commercialized";
+
+const exportColumns = [
+  { key: "technologyName", label: "Name of the Technology" },
+  { key: "yearDeveloped", label: "Year Developed" },
+  { key: "technologyGenerator", label: "Technology Generator" },
+  { key: "project", label: "Project" },
+  { key: "status", label: "Status" },
+] satisfies ExportPreviewColumn[];
+
+function buildExportRows(records: TechnologyCommercializationRecord[]) {
+  return records.map((record) => ({
+    technologyName: record.technology_name,
+    yearDeveloped: record.year_developed ? format(new Date(record.year_developed), "MMM d, yyyy") : "-",
+    technologyGenerator: record.technology_generator,
+    project: record.related_project_title || "-",
+    status: record.status,
+  }));
+}
 
 async function exportExcel(records: TechnologyCommercializationRecord[]) {
   const ExcelJSImport = await import("exceljs/dist/exceljs.min.js");
@@ -171,18 +189,15 @@ export function TechnologiesInnovationsCommercializedManagement({
               </CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="rounded-xl">
-                    <FileDown className="mr-2 h-4 w-4" />
-                    Export
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => void exportExcel(filteredRecords)}>Export Excel</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => void exportPdf(filteredRecords)}>Export PDF</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <ExportPreviewMenu
+                title="Technologies / Innovations Commercialized"
+                description="Preview the filtered technologies or innovations commercialized records before exporting them."
+                columns={exportColumns}
+                rows={buildExportRows(filteredRecords)}
+                onDownloadExcel={() => exportExcel(filteredRecords)}
+                onDownloadPdf={() => exportPdf(filteredRecords)}
+                triggerClassName="rounded-xl"
+              />
               <Button className="rounded-xl bg-[#159E44] text-white hover:bg-[#128A3B]" onClick={() => setCreateOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Create Technology

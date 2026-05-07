@@ -5,13 +5,13 @@ import { format } from "date-fns";
 import {
   BookOpenCheck,
   ChevronRight,
-  FileDown,
   Filter,
   Layers3,
   Mail,
   Users,
 } from "lucide-react";
 
+import { ExportPreviewMenu, type ExportPreviewColumn } from "@/components/dashboard/export-preview-menu";
 import { RecordPagination, useRecordPagination } from "@/components/dashboard/record-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -75,7 +75,6 @@ interface UnitCoordinatorDashboardProps {
 }
 
 type ActiveDialog = "committee" | "trainings" | null;
-type TrainingFilter = "all" | "linked_only" | "standalone_only" | "created_by_me";
 type CommitteeFilter = "all" | "registered_project_leaders" | "unit_accounts";
 
 function formatDate(value: string | null) {
@@ -237,6 +236,48 @@ async function exportCommitteePdf(records: UnitDashboardCommitteeMember[]) {
   doc.save(`unit-committee-${new Date().toISOString().slice(0, 10)}.pdf`);
 }
 
+const trainingExportColumns = [
+  { key: "title", label: "Training Title" },
+  { key: "category", label: "Category" },
+  { key: "mode", label: "Mode" },
+  { key: "participants", label: "Participants", align: "right" },
+  { key: "venue", label: "Venue/Platform" },
+  { key: "createdBy", label: "Created By" },
+  { key: "createdAt", label: "Created At" },
+] satisfies ExportPreviewColumn[];
+
+const committeeExportColumns = [
+  { key: "name", label: "Name" },
+  { key: "source", label: "Source" },
+  { key: "designation", label: "Designation" },
+  { key: "email", label: "Email" },
+  { key: "role", label: "Role" },
+  { key: "unit", label: "Unit" },
+] satisfies ExportPreviewColumn[];
+
+function buildTrainingExportRows(records: UnitDashboardTraining[]) {
+  return records.map((training) => ({
+    title: training.title,
+    category: training.categorySummary,
+    mode: training.modeLabel,
+    participants: String(training.participants),
+    venue: training.venue || "-",
+    createdBy: training.creatorName,
+    createdAt: training.createdAt ? format(new Date(training.createdAt), "yyyy-MM-dd") : "-",
+  }));
+}
+
+function buildCommitteeExportRows(records: UnitDashboardCommitteeMember[]) {
+  return records.map((record) => ({
+    name: record.name,
+    source: getCommitteeSourceLabel(record.source),
+    designation: record.designation || "-",
+    email: record.email || "-",
+    role: formatRole(record.userType),
+    unit: record.unit || "-",
+  }));
+}
+
 function OverviewCard({
   title,
   description,
@@ -274,7 +315,6 @@ function OverviewCard({
 }
 
 export function UnitCoordinatorDashboard({
-  currentUserId,
   scopeLabel,
   committeeMembers,
   trainings,
@@ -467,18 +507,15 @@ export function UnitCoordinatorDashboard({
                 placeholder="Search training, category, mode, venue, or creator..."
                 className="h-9 text-xs"
               />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="h-9 text-xs">
-                    <FileDown className="mr-2 h-3.5 w-3.5" />
-                    Export
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => void exportTrainingsExcel(filteredTrainings)}>Export Excel</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => void exportTrainingsPdf(filteredTrainings)}>Export PDF</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <ExportPreviewMenu
+                title="Unit Training Records"
+                description="Preview the filtered unit training records before exporting them."
+                columns={trainingExportColumns}
+                rows={buildTrainingExportRows(filteredTrainings)}
+                onDownloadExcel={() => exportTrainingsExcel(filteredTrainings)}
+                onDownloadPdf={() => exportTrainingsPdf(filteredTrainings)}
+                triggerClassName="h-9 text-xs"
+              />
             </div>
 
             <ScrollArea className="max-h-[60vh] rounded-xl border border-border/50">
@@ -571,18 +608,15 @@ export function UnitCoordinatorDashboard({
                   <DropdownMenuItem onClick={() => setCommitteeFilter("unit_accounts")}>Same-unit people</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="h-9 text-xs">
-                    <FileDown className="mr-2 h-3.5 w-3.5" />
-                    Export
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => void exportCommitteeExcel(filteredCommitteeMembers)}>Export Excel</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => void exportCommitteePdf(filteredCommitteeMembers)}>Export PDF</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <ExportPreviewMenu
+                title="Unit Committee"
+                description="Preview the filtered unit committee records before exporting them."
+                columns={committeeExportColumns}
+                rows={buildCommitteeExportRows(filteredCommitteeMembers)}
+                onDownloadExcel={() => exportCommitteeExcel(filteredCommitteeMembers)}
+                onDownloadPdf={() => exportCommitteePdf(filteredCommitteeMembers)}
+                triggerClassName="h-9 text-xs"
+              />
             </div>
 
             <ScrollArea className="max-h-[60vh] rounded-xl border border-border/50">
