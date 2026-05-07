@@ -9,14 +9,10 @@ import {
   Loader2,
 } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -113,36 +109,74 @@ export function ExportPreviewMenu({
       </DropdownMenu>
 
       <Dialog open={!!previewFormat} onOpenChange={(open) => !open && setPreviewFormat(null)}>
-        <DialogContent className="fixed inset-4 flex h-auto w-auto max-w-none translate-x-0 translate-y-0 flex-col overflow-hidden rounded-[28px] border border-border/70 bg-background p-0 shadow-2xl sm:inset-5 lg:inset-6">
-          <DialogHeader className="shrink-0 border-b bg-background px-6 py-5 lg:px-8 lg:py-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="space-y-1">
-                <DialogTitle className="flex items-center gap-2 text-xl lg:text-2xl">
+        <DialogContent
+          showCloseButton={false}
+          className="fixed inset-0 left-0 top-0 flex h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 flex-col overflow-hidden rounded-none border-0 bg-background p-0 shadow-none sm:max-w-none"
+        >
+          <div className="shrink-0 border-b border-border/40 bg-background px-4 py-3 sm:px-6 lg:px-8">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1 space-y-3">
+                <div className="flex items-center gap-2">
                   <Eye className="h-5 w-5 text-[#159E44]" />
-                  {title} Preview
-                </DialogTitle>
-                <DialogDescription className="max-w-3xl text-sm lg:text-base">
+                  <h1 className="text-xl font-bold text-foreground lg:text-2xl">{title} Preview</h1>
+                </div>
+                <p className="max-w-4xl text-sm leading-7 text-muted-foreground lg:text-base">
                   {description} Review the content first, then confirm the download.
-                </DialogDescription>
+                </p>
+                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                  <div className="rounded-xl border border-border/40 bg-muted/10 px-3 py-2.5">
+                    <div className="flex items-start gap-2">
+                      <FormatIcon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80">Export Format</p>
+                        <p className="text-sm font-medium text-foreground lg:text-[15px]">{formatLabel}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-border/40 bg-muted/10 px-3 py-2.5">
+                    <div className="flex items-start gap-2">
+                      <FileDown className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80">Rows Included</p>
+                        <p className="text-sm font-medium text-foreground lg:text-[15px]">
+                          {rows.length} record{rows.length === 1 ? "" : "s"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-border/40 bg-muted/10 px-3 py-2.5">
+                    <div className="flex items-start gap-2">
+                      <FileSpreadsheet className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80">Columns Visible</p>
+                        <p className="text-sm font-medium text-foreground lg:text-[15px]">{columns.length} columns</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline" className="rounded-full px-3 py-1 text-[11px] uppercase tracking-wide">
-                  <FormatIcon className="mr-1.5 h-3.5 w-3.5" />
-                  {formatLabel}
-                </Badge>
-                <Badge variant="secondary" className="rounded-full px-3 py-1 text-[11px]">
-                  {rows.length} record{rows.length === 1 ? "" : "s"}
-                </Badge>
-              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 shrink-0 rounded-full"
+                onClick={() => setPreviewFormat(null)}
+              >
+                <span className="sr-only">Close preview</span>
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
+                </svg>
+              </Button>
             </div>
-          </DialogHeader>
+          </div>
 
-          <div className="flex min-h-0 flex-1 flex-col bg-background px-6 py-5 lg:px-8 lg:py-6">
+          <div className="flex min-h-0 flex-1 flex-col bg-background px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6">
             <div className="shrink-0 rounded-2xl border border-border/60 bg-muted/10 px-4 py-3 text-sm text-muted-foreground lg:px-5 lg:py-4 lg:text-[15px]">
               The file will download only after you click the download button below.
             </div>
 
-            <div className="mt-4 min-h-0 flex-1 overflow-hidden rounded-2xl border border-border/60 bg-card">
+            <div className="mt-4 min-h-0 flex-1 overflow-hidden rounded-3xl border border-border/60 bg-card">
               <ScrollArea className="h-full w-full">
                 <Table className="w-full table-fixed bg-card text-sm">
                   <TableHeader className="bg-muted/30">
@@ -187,7 +221,7 @@ export function ExportPreviewMenu({
             </div>
           </div>
 
-          <div className="flex shrink-0 items-center justify-end gap-2 border-t bg-background px-6 py-4 lg:px-8 lg:py-5">
+          <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border/40 bg-background px-4 py-3 sm:px-6 lg:px-8 lg:py-4">
             <Button
               type="button"
               variant="outline"
