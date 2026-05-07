@@ -113,15 +113,15 @@ export function ExportPreviewMenu({
       </DropdownMenu>
 
       <Dialog open={!!previewFormat} onOpenChange={(open) => !open && setPreviewFormat(null)}>
-        <DialogContent className="flex h-[min(92vh,880px)] w-[min(96vw,1520px)] max-w-none flex-col overflow-hidden rounded-[28px] border border-border/70 bg-background p-0 shadow-2xl">
-          <DialogHeader className="shrink-0 border-b bg-background px-6 py-5">
+        <DialogContent className="fixed inset-4 flex h-auto w-auto max-w-none translate-x-0 translate-y-0 flex-col overflow-hidden rounded-[28px] border border-border/70 bg-background p-0 shadow-2xl sm:inset-5 lg:inset-6">
+          <DialogHeader className="shrink-0 border-b bg-background px-6 py-5 lg:px-8 lg:py-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="space-y-1">
-                <DialogTitle className="flex items-center gap-2 text-xl">
+                <DialogTitle className="flex items-center gap-2 text-xl lg:text-2xl">
                   <Eye className="h-5 w-5 text-[#159E44]" />
                   {title} Preview
                 </DialogTitle>
-                <DialogDescription>
+                <DialogDescription className="max-w-3xl text-sm lg:text-base">
                   {description} Review the content first, then confirm the download.
                 </DialogDescription>
               </div>
@@ -137,20 +137,20 @@ export function ExportPreviewMenu({
             </div>
           </DialogHeader>
 
-          <div className="flex min-h-0 flex-1 flex-col bg-background px-6 py-5">
-            <div className="shrink-0 rounded-2xl border border-border/60 bg-muted/10 px-4 py-3 text-sm text-muted-foreground">
+          <div className="flex min-h-0 flex-1 flex-col bg-background px-6 py-5 lg:px-8 lg:py-6">
+            <div className="shrink-0 rounded-2xl border border-border/60 bg-muted/10 px-4 py-3 text-sm text-muted-foreground lg:px-5 lg:py-4 lg:text-[15px]">
               The file will download only after you click the download button below.
             </div>
 
             <div className="mt-4 min-h-0 flex-1 overflow-hidden rounded-2xl border border-border/60 bg-card">
               <ScrollArea className="h-full w-full">
-                <Table className="w-full table-fixed bg-card text-xs">
+                <Table className="w-full table-fixed bg-card text-sm">
                   <TableHeader className="bg-muted/30">
                     <TableRow className="hover:bg-transparent">
                       {columns.map((column) => (
                         <TableHead
                           key={column.key}
-                          className={`h-11 whitespace-normal break-words px-3 text-xs leading-snug font-semibold ${getAlignmentClass(column.align)}`}
+                          className={`h-14 whitespace-normal break-words px-4 text-sm leading-snug font-semibold lg:px-5 lg:text-[15px] ${getAlignmentClass(column.align)}`}
                         >
                           {column.label}
                         </TableHead>
@@ -164,7 +164,7 @@ export function ExportPreviewMenu({
                           {columns.map((column) => (
                             <TableCell
                               key={`${column.key}-${index}`}
-                              className={`whitespace-normal break-words px-3 py-3 align-top text-xs leading-snug ${getAlignmentClass(column.align)}`}
+                              className={`whitespace-normal break-words px-4 py-4 align-top text-sm leading-snug lg:px-5 lg:py-4 lg:text-[15px] ${getAlignmentClass(column.align)}`}
                             >
                               {row[column.key] ?? "-"}
                             </TableCell>
@@ -175,7 +175,7 @@ export function ExportPreviewMenu({
                       <TableRow>
                         <TableCell
                           colSpan={columns.length}
-                          className="h-28 whitespace-normal text-center text-sm text-muted-foreground"
+                          className="h-32 whitespace-normal px-4 text-center text-sm text-muted-foreground lg:text-[15px]"
                         >
                           {emptyMessage}
                         </TableCell>
@@ -187,11 +187,11 @@ export function ExportPreviewMenu({
             </div>
           </div>
 
-          <div className="flex shrink-0 items-center justify-end gap-2 border-t bg-background px-6 py-4">
+          <div className="flex shrink-0 items-center justify-end gap-2 border-t bg-background px-6 py-4 lg:px-8 lg:py-5">
             <Button
               type="button"
               variant="outline"
-              className="rounded-xl"
+              className="h-11 rounded-xl px-5 text-sm lg:h-12 lg:px-6 lg:text-base"
               onClick={() => setPreviewFormat(null)}
               disabled={downloading}
             >
@@ -199,7 +199,7 @@ export function ExportPreviewMenu({
             </Button>
             <Button
               type="button"
-              className="rounded-xl bg-[#159E44] text-white hover:bg-[#128A3B]"
+              className="h-11 rounded-xl bg-[#159E44] px-5 text-sm text-white hover:bg-[#128A3B] lg:h-12 lg:px-6 lg:text-base"
               onClick={() => void handleDownload()}
               disabled={downloading || rows.length === 0}
             >
