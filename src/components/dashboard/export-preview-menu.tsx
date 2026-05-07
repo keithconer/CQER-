@@ -74,10 +74,6 @@ export function ExportPreviewMenu({
   const isExcel = previewFormat === "excel";
   const formatLabel = isExcel ? "Excel" : "PDF";
   const FormatIcon = isExcel ? FileSpreadsheet : FileText;
-  const tableMinWidth = React.useMemo(() => {
-    if (columns.length <= 4) return 880;
-    return Math.max(980, columns.length * 170);
-  }, [columns.length]);
 
   const handleDownload = async () => {
     if (!previewFormat) return;
@@ -148,13 +144,13 @@ export function ExportPreviewMenu({
 
             <div className="mt-4 min-h-0 flex-1 overflow-hidden rounded-2xl border border-border/60 bg-card">
               <ScrollArea className="h-full w-full">
-                <Table className="min-w-full bg-card" style={{ minWidth: `${tableMinWidth}px` }}>
+                <Table className="w-full table-fixed bg-card text-xs">
                   <TableHeader className="bg-muted/30">
                     <TableRow className="hover:bg-transparent">
                       {columns.map((column) => (
                         <TableHead
                           key={column.key}
-                          className={`h-11 text-sm font-semibold ${getAlignmentClass(column.align)}`}
+                          className={`h-11 whitespace-normal break-words px-3 text-xs leading-snug font-semibold ${getAlignmentClass(column.align)}`}
                         >
                           {column.label}
                         </TableHead>
@@ -168,7 +164,7 @@ export function ExportPreviewMenu({
                           {columns.map((column) => (
                             <TableCell
                               key={`${column.key}-${index}`}
-                              className={`py-3 text-sm ${getAlignmentClass(column.align)}`}
+                              className={`whitespace-normal break-words px-3 py-3 align-top text-xs leading-snug ${getAlignmentClass(column.align)}`}
                             >
                               {row[column.key] ?? "-"}
                             </TableCell>
