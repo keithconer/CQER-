@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+const RECORD_MANAGER_ROLES = ["project_leader", "college_coordinator", "super_admin"];
+
 export type OrdinanceResolutionStatus = "submitted" | "endorsed" | "approved";
 
 export interface OrdinanceResolutionPayload {
@@ -74,7 +76,7 @@ export async function getOrdinanceResolutions() {
 export async function createOrdinanceResolution(payload: OrdinanceResolutionPayload) {
   const { supabase, user, userType } = await getContext();
 
-  if (!["project_leader", "super_admin"].includes(userType || "")) {
+  if (!RECORD_MANAGER_ROLES.includes(userType || "")) {
     return { error: "Insufficient permissions to create this record." };
   }
 
@@ -100,7 +102,7 @@ export async function createOrdinanceResolution(payload: OrdinanceResolutionPayl
 export async function updateOrdinanceResolution(id: string, payload: OrdinanceResolutionPayload) {
   const { supabase, adminClient, user, userType } = await getContext();
 
-  if (!["project_leader", "super_admin"].includes(userType || "")) {
+  if (!RECORD_MANAGER_ROLES.includes(userType || "")) {
     return { error: "Insufficient permissions to update this record." };
   }
 
@@ -134,7 +136,7 @@ export async function updateOrdinanceResolution(id: string, payload: OrdinanceRe
 export async function deleteOrdinanceResolution(id: string) {
   const { supabase, adminClient, user, userType } = await getContext();
 
-  if (!["project_leader", "super_admin"].includes(userType || "")) {
+  if (!RECORD_MANAGER_ROLES.includes(userType || "")) {
     return { error: "Insufficient permissions to delete this record." };
   }
 

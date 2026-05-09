@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+const RECORD_MANAGER_ROLES = ["project_leader", "college_coordinator", "super_admin"];
+
 export interface BudgetUtilizationMonthEntry {
   year: number;
   month: number;
@@ -88,7 +90,7 @@ export async function getBudgetUtilizations() {
 export async function createBudgetUtilization(payload: BudgetUtilizationPayload) {
   const { supabase, adminClient, user, userType } = await getContext();
 
-  if (!["project_leader", "super_admin"].includes(userType || "")) {
+  if (!RECORD_MANAGER_ROLES.includes(userType || "")) {
     return { error: "Insufficient permissions to create this record." };
   }
 
@@ -130,7 +132,7 @@ export async function createBudgetUtilization(payload: BudgetUtilizationPayload)
 export async function updateBudgetUtilization(id: string, payload: BudgetUtilizationPayload) {
   const { supabase, adminClient, user, userType } = await getContext();
 
-  if (!["project_leader", "super_admin"].includes(userType || "")) {
+  if (!RECORD_MANAGER_ROLES.includes(userType || "")) {
     return { error: "Insufficient permissions to update this record." };
   }
 
@@ -164,7 +166,7 @@ export async function updateBudgetUtilization(id: string, payload: BudgetUtiliza
 export async function deleteBudgetUtilization(id: string) {
   const { supabase, adminClient, user, userType } = await getContext();
 
-  if (!["project_leader", "super_admin"].includes(userType || "")) {
+  if (!RECORD_MANAGER_ROLES.includes(userType || "")) {
     return { error: "Insufficient permissions to delete this record." };
   }
 

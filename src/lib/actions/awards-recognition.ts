@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+const RECORD_MANAGER_ROLES = ["project_leader", "college_coordinator", "super_admin"];
+
 export type AwardLevel = "local" | "regional" | "national" | "international";
 
 export interface AwardsRecognitionPayload {
@@ -73,7 +75,7 @@ export async function getAwardsRecognitions() {
 export async function createAwardsRecognition(payload: AwardsRecognitionPayload) {
   const { supabase, user, userType } = await getContext();
 
-  if (!["project_leader", "super_admin"].includes(userType || "")) {
+  if (!RECORD_MANAGER_ROLES.includes(userType || "")) {
     return { error: "Insufficient permissions to create this record." };
   }
 
@@ -94,7 +96,7 @@ export async function createAwardsRecognition(payload: AwardsRecognitionPayload)
 export async function updateAwardsRecognition(id: string, payload: AwardsRecognitionPayload) {
   const { supabase, adminClient, user, userType } = await getContext();
 
-  if (!["project_leader", "super_admin"].includes(userType || "")) {
+  if (!RECORD_MANAGER_ROLES.includes(userType || "")) {
     return { error: "Insufficient permissions to update this record." };
   }
 
@@ -128,7 +130,7 @@ export async function updateAwardsRecognition(id: string, payload: AwardsRecogni
 export async function deleteAwardsRecognition(id: string) {
   const { supabase, adminClient, user, userType } = await getContext();
 
-  if (!["project_leader", "super_admin"].includes(userType || "")) {
+  if (!RECORD_MANAGER_ROLES.includes(userType || "")) {
     return { error: "Insufficient permissions to delete this record." };
   }
 

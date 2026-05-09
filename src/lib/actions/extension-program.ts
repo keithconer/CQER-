@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+const RECORD_MANAGER_ROLES = ["project_leader", "college_coordinator", "super_admin"];
+
 export interface ExtensionProgramPayload {
   project_id: string | null;
   project_title: string | null;
@@ -70,7 +72,7 @@ export async function getExtensionPrograms() {
 export async function createExtensionProgram(payload: ExtensionProgramPayload) {
   const { supabase, user, userType } = await getContext();
 
-  if (!["project_leader", "super_admin"].includes(userType || "")) {
+  if (!RECORD_MANAGER_ROLES.includes(userType || "")) {
     return { error: "Insufficient permissions to create this record." };
   }
 
@@ -91,7 +93,7 @@ export async function createExtensionProgram(payload: ExtensionProgramPayload) {
 export async function updateExtensionProgram(id: string, payload: ExtensionProgramPayload) {
   const { supabase, adminClient, user, userType } = await getContext();
 
-  if (!["project_leader", "super_admin"].includes(userType || "")) {
+  if (!RECORD_MANAGER_ROLES.includes(userType || "")) {
     return { error: "Insufficient permissions to update this record." };
   }
 
@@ -125,7 +127,7 @@ export async function updateExtensionProgram(id: string, payload: ExtensionProgr
 export async function deleteExtensionProgram(id: string) {
   const { supabase, adminClient, user, userType } = await getContext();
 
-  if (!["project_leader", "super_admin"].includes(userType || "")) {
+  if (!RECORD_MANAGER_ROLES.includes(userType || "")) {
     return { error: "Insufficient permissions to delete this record." };
   }
 

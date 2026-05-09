@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+const RECORD_MANAGER_ROLES = ["project_leader", "college_coordinator", "super_admin"];
+
 export type OtherActivityCategory =
   | "Meeting"
   | "Workshop"
@@ -87,7 +89,7 @@ export async function getOtherActivities() {
 export async function createOtherActivity(payload: OtherActivityPayload) {
   const { supabase, user, userType } = await getContext();
 
-  if (!["project_leader", "super_admin"].includes(userType || "")) {
+  if (!RECORD_MANAGER_ROLES.includes(userType || "")) {
     return { error: "Insufficient permissions to create this record." };
   }
 
@@ -108,7 +110,7 @@ export async function createOtherActivity(payload: OtherActivityPayload) {
 export async function updateOtherActivity(id: string, payload: OtherActivityPayload) {
   const { supabase, adminClient, user, userType } = await getContext();
 
-  if (!["project_leader", "super_admin"].includes(userType || "")) {
+  if (!RECORD_MANAGER_ROLES.includes(userType || "")) {
     return { error: "Insufficient permissions to update this record." };
   }
 
@@ -142,7 +144,7 @@ export async function updateOtherActivity(id: string, payload: OtherActivityPayl
 export async function deleteOtherActivity(id: string) {
   const { supabase, adminClient, user, userType } = await getContext();
 
-  if (!["project_leader", "super_admin"].includes(userType || "")) {
+  if (!RECORD_MANAGER_ROLES.includes(userType || "")) {
     return { error: "Insufficient permissions to delete this record." };
   }
 
