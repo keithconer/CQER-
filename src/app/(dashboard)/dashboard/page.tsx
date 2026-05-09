@@ -1628,6 +1628,7 @@ export default async function DashboardPage({
             <>
               <CollegeCoordinatorDashboard
                 department={profile.department || "Department"}
+                coordinatorName={`${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "College Coordinator"}
                 projects={analyticsProjects}
                 trainings={collegeOverviewTrainings}
                 facultyRecords={facultyRegistryRecords}

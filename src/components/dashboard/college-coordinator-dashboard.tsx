@@ -15,6 +15,7 @@ import { ExportPreviewMenu, type ExportPreviewColumn } from "@/components/dashbo
 import { type Project } from "@/components/dashboard/projects-table";
 import { type TrainingRecord } from "@/components/dashboard/trainings-form";
 import { FacultyRegistryManagement } from "@/components/dashboard/faculty-registry-management";
+import { QuarterlyReportExportDialog } from "@/components/dashboard/quarterly-report-export-dialog";
 import { RecordPagination, useRecordPagination } from "@/components/dashboard/record-pagination";
 import { type FacultyRegistryRecord } from "@/lib/actions/faculty-registry";
 import { getProjectBudgetSnapshot, getProjectOverallBudget } from "@/lib/project-budget";
@@ -46,6 +47,7 @@ type WeightedDaysFilter = "all" | "up_to_1" | "1_to_5" | "above_5";
 
 interface CollegeCoordinatorDashboardProps {
   department: string;
+  coordinatorName: string;
   projects: Project[];
   trainings: TrainingRecord[];
   facultyRecords: FacultyRegistryRecord[];
@@ -392,6 +394,7 @@ function OverviewCard({
 
 export function CollegeCoordinatorDashboard({
   department,
+  coordinatorName,
   projects,
   trainings,
   facultyRecords,
@@ -563,11 +566,14 @@ export function CollegeCoordinatorDashboard({
   return (
     <>
       <Card className="border-border/50 bg-card/40 shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold">College Coordinator Dashboard</CardTitle>
-          <CardDescription className="text-[11px]">
-            Compact department-level controls for {department}.
-          </CardDescription>
+        <CardHeader className="flex flex-col gap-3 pb-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <CardTitle className="text-sm font-semibold">College Coordinator Dashboard</CardTitle>
+            <CardDescription className="text-[11px]">
+              Compact department-level controls for {department}.
+            </CardDescription>
+          </div>
+          <QuarterlyReportExportDialog college={department} generatedBy={coordinatorName} />
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
           <OverviewCard
