@@ -90,6 +90,7 @@ type BudgetUtilizationControl = Control<InputValues, unknown, OutputValues>;
 
 interface BudgetUtilizationFormProps {
   record?: BudgetUtilizationRecord | null;
+  existingRecords?: BudgetUtilizationRecord[];
   projects: Project[];
   onSuccess?: () => void;
   onClose?: () => void;
@@ -271,7 +272,7 @@ function mergeMonthlyBreakdowns(
 ) {
   const nextMap = new Map(nextEntries.map((entry) => [entry.month_key, entry]));
 
-  return existingEntries.map((entry) => {
+  const mergedEntries = existingEntries.map((entry) => {
     const nextEntry = nextMap.get(entry.month_key);
     const foodAndBeverage = Number(entry.food_and_beverage || 0) + Number(nextEntry?.food_and_beverage || 0);
     const travel = Number(entry.travel || 0) + Number(nextEntry?.travel || 0);
@@ -290,6 +291,18 @@ function mergeMonthlyBreakdowns(
       total: foodAndBeverage + travel + suppliersAndMaterials + communication + otherMooe,
     };
   });
+
+  const existingKeys = new Set(existingEntries.map((entry) => entry.month_key));
+  nextEntries.forEach((entry) => {
+    if (!existingKeys.has(entry.month_key)) {
+      mergedEntries.push({
+        ...entry,
+        total: sumMonthEntry(entry),
+      });
+    }
+  });
+
+  return mergedEntries.sort((left, right) => left.month_key.localeCompare(right.month_key));
 }
 
 function mergeDocuments(
@@ -308,21 +321,12 @@ function mergeDocuments(
 
 export function BudgetUtilizationForm({
   record,
+  existingRecords = [],
   projects,
   onSuccess,
   onClose,
   isViewOnly = false,
 }: BudgetUtilizationFormProps) {
-  const isUpdateMode = !isViewOnly && Boolean(record?.id);
-  const existingBreakdown = React.useMemo(
-    () => normalizeMonthlyBreakdown(record?.monthly_breakdown),
-    [record]
-  );
-  const existingDocuments = React.useMemo(() => normalizeDocuments(record?.documents), [record]);
-  const existingUtilizedTotal = React.useMemo(
-    () => existingBreakdown.reduce((sum, entry) => sum + sumMonthEntry(entry), 0),
-    [existingBreakdown]
-  );
   const form = useForm<InputValues, unknown, OutputValues>({
     resolver: zodResolver(formSchema),
     defaultValues: buildDefaultValues(record),
@@ -348,6 +352,26 @@ export function BudgetUtilizationForm({
     () => projects.find((project) => project.id === selectedProjectId) || null,
     [projects, selectedProjectId]
   );
+  const selectedExistingRecord = React.useMemo(
+    () =>
+      record?.id
+        ? record
+        : existingRecords.find((existingRecord) => existingRecord.project_id === selectedProjectId) || null,
+    [existingRecords, record, selectedProjectId]
+  );
+  const isUpdateMode = !isViewOnly && Boolean(selectedExistingRecord?.id);
+  const existingBreakdown = React.useMemo(
+    () => normalizeMonthlyBreakdown(selectedExistingRecord?.monthly_breakdown),
+    [selectedExistingRecord]
+  );
+  const existingDocuments = React.useMemo(
+    () => normalizeDocuments(selectedExistingRecord?.documents),
+    [selectedExistingRecord]
+  );
+  const existingUtilizedTotal = React.useMemo(
+    () => existingBreakdown.reduce((sum, entry) => sum + sumMonthEntry(entry), 0),
+    [existingBreakdown]
+  );
   const selectedProjectYearBudgets = React.useMemo(
     () => getProjectBudgetSummaryByYear(selectedProject),
     [selectedProject]
@@ -369,8 +393,8 @@ export function BudgetUtilizationForm({
     [existingBreakdown]
   );
   const storedTotalBudget = React.useMemo(
-    () => (record ? Number(record.total_budget || 0) : allocatableBudgetTotal),
-    [record, allocatableBudgetTotal]
+    () => (selectedExistingRecord ? Number(selectedExistingRecord.total_budget || 0) : allocatableBudgetTotal),
+    [selectedExistingRecord, allocatableBudgetTotal]
   );
 
   React.useEffect(() => {
@@ -387,10 +411,10 @@ export function BudgetUtilizationForm({
       isViewOnly ? existingBreakdown : undefined
     );
 
-    form.setValue("project_title", record?.project_title || selectedProject.title, { shouldDirty: false });
+    form.setValue("project_title", selectedExistingRecord?.project_title || selectedProject.title, { shouldDirty: false });
     form.setValue("total_budget", storedTotalBudget, { shouldDirty: false });
-    form.setValue("coverage_start", record?.coverage_start || range.start.toISOString(), { shouldDirty: false });
-    form.setValue("coverage_end", record?.coverage_end || range.end.toISOString(), { shouldDirty: false });
+    form.setValue("coverage_start", selectedExistingRecord?.coverage_start || range.start.toISOString(), { shouldDirty: false });
+    form.setValue("coverage_end", selectedExistingRecord?.coverage_end || range.end.toISOString(), { shouldDirty: false });
     form.setValue("documents", isViewOnly ? existingDocuments : [], { shouldDirty: false });
     // Use the stable ref so this effect doesn't re-run when breakdownArray changes.
     replaceBreakdownRef.current(nextEntries);
@@ -399,8 +423,8 @@ export function BudgetUtilizationForm({
     existingDocuments,
     form,
     isViewOnly,
-    record,
     selectedProject,
+    selectedExistingRecord,
     storedTotalBudget,
   ]);
 
@@ -496,8 +520,8 @@ export function BudgetUtilizationForm({
       documents: isUpdateMode ? mergeDocuments(existingDocuments, values.documents) : values.documents,
     };
 
-    const result = record?.id
-      ? await updateBudgetUtilization(record.id, payload)
+    const result = selectedExistingRecord?.id
+      ? await updateBudgetUtilization(selectedExistingRecord.id, payload)
       : await createBudgetUtilization(payload);
 
     setSaving(false);
@@ -518,7 +542,7 @@ export function BudgetUtilizationForm({
             {isViewOnly
               ? "Budget Utilization Details"
               : isUpdateMode
-                ? "Update Budget Utilization"
+                ? "Add Budget Utilization"
                 : "Utilize Budget"}
           </h2>
           <p className="text-sm text-muted-foreground">
@@ -559,10 +583,10 @@ export function BudgetUtilizationForm({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Title of the Project</FormLabel>
-                        {isViewOnly || isUpdateMode ? (
+                        {isViewOnly || Boolean(record?.id) ? (
                           <FormControl>
                             <Input
-                              value={record?.project_title || selectedProject?.title || ""}
+                              value={selectedExistingRecord?.project_title || selectedProject?.title || ""}
                               readOnly
                               className="h-11 rounded-xl"
                             />
@@ -677,7 +701,7 @@ export function BudgetUtilizationForm({
 
                 {!isViewOnly && totalBudget > 0 ? (
                   <div className="rounded-2xl border border-border/60 bg-muted/10 px-4 py-3 text-xs text-muted-foreground">
-                    Save only the expenses already utilized. Any untouched months or years can remain at zero until you need to log another update.
+                    Save only the expenses already utilized. Already saved months are counted in the totals; enter only the new amount for this update.
                   </div>
                 ) : null}
 
@@ -907,7 +931,7 @@ export function BudgetUtilizationForm({
             {saving
               ? "Saving..."
               : isUpdateMode
-                ? "Update Budget Utilization"
+                ? "Add Budget Utilization"
                 : "Save Budget Utilization"}
           </Button>
         )}

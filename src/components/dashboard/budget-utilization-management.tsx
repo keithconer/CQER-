@@ -173,14 +173,9 @@ export function BudgetUtilizationManagement({
   const [successOpen, setSuccessOpen] = React.useState(false);
   const [successMessage, setSuccessMessage] = React.useState("Budget utilization saved successfully.");
   const [deleteTarget, setDeleteTarget] = React.useState<BudgetUtilizationRecord | null>(null);
-  const availableProjects = React.useMemo(() => {
-    const usedProjectIds = new Set(records.map((record) => record.project_id));
-    return projects.filter(
-      (project) =>
-        !usedProjectIds.has(project.id) &&
-        getProjectBudgetSummaryTotal(project) > 0
-    );
-  }, [projects, records]);
+  const budgetedProjects = React.useMemo(() => {
+    return projects.filter((project) => getProjectBudgetSummaryTotal(project) > 0);
+  }, [projects]);
 
   const filteredRecords = React.useMemo(() => {
     const year = new Date().getFullYear();
@@ -262,7 +257,7 @@ export function BudgetUtilizationManagement({
               <Button
                 className="rounded-xl bg-[#159E44] text-white hover:bg-[#128A3B]"
                 onClick={() => setCreateOpen(true)}
-                disabled={availableProjects.length === 0}
+                disabled={budgetedProjects.length === 0}
               >
                 <Plus className="mr-2 h-4 w-4" />
                 Utilize Budget
@@ -385,7 +380,8 @@ export function BudgetUtilizationManagement({
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent showCloseButton={false} className="flex flex-col overflow-hidden fixed inset-0 left-0 top-0 h-[100dvh] w-screen max-w-none sm:max-w-none translate-x-0 translate-y-0 rounded-none border-0 p-0 shadow-none">
           <BudgetUtilizationForm
-            projects={availableProjects}
+            existingRecords={records}
+            projects={budgetedProjects}
             onSuccess={() => {
               setSuccessMessage("Budget utilization saved successfully.");
               handleSaved();
@@ -400,6 +396,7 @@ export function BudgetUtilizationManagement({
           {editingRecord && (
             <BudgetUtilizationForm
               record={editingRecord}
+              existingRecords={records}
               projects={projects}
               onSuccess={() => {
                 setSuccessMessage("Budget utilization updated successfully.");
@@ -416,6 +413,7 @@ export function BudgetUtilizationManagement({
           {selectedRecord && (
             <BudgetUtilizationForm
               record={selectedRecord}
+              existingRecords={records}
               projects={projects}
               onSuccess={() => setSelectedRecord(null)}
               onClose={() => setSelectedRecord(null)}
