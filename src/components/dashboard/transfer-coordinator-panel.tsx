@@ -28,7 +28,7 @@ export interface TransferAccount {
   email: string | null;
   first_name: string | null;
   last_name: string | null;
-  user_type: RoleType;
+  user_type?: RoleType | null;
   department: string | null;
   unit: string | null;
 }
@@ -39,7 +39,7 @@ interface TransferCoordinatorPanelProps {
   department?: string | null;
 }
 
-function formatRole(role: RoleType) {
+function formatRole(role?: RoleType | null) {
   if (role === "super_admin") return "Super Admin";
   if (role === "college_coordinator") return "College Coordinator";
   if (role === "project_leader") return "Project Leader";
@@ -65,8 +65,14 @@ export function TransferCoordinatorPanel({
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
   const [usageCounts, setUsageCounts] = React.useState<Record<string, number> | null>(null);
+  const [usageLabels, setUsageLabels] = React.useState<Record<string, string> | null>(null);
   const [usageTotal, setUsageTotal] = React.useState<number | null>(null);
   const [usageLoading, setUsageLoading] = React.useState(false);
+  const panelTitle = mode === "unit" ? "Transfer Unit Coordinator" : "Transfer College Coordinator";
+  const panelDescription =
+    mode === "unit"
+      ? "Move all unit coordinator records to a registered replacement before deleting the old account."
+      : "Move all college coordinator records to a registered replacement before deleting the old account.";
 
   const sourceAccounts = React.useMemo(() => {
     if (mode === "unit") {
@@ -104,6 +110,7 @@ export function TransferCoordinatorPanel({
     let active = true;
     if (!sourceId) {
       setUsageCounts(null);
+      setUsageLabels(null);
       setUsageTotal(null);
       return;
     }
@@ -113,10 +120,12 @@ export function TransferCoordinatorPanel({
       if (!active) return;
       if ("error" in result) {
         setUsageCounts(null);
+        setUsageLabels(null);
         setUsageTotal(null);
         setStatusMessage(result.error ?? "Failed to load account usage.");
       } else {
         setUsageCounts(result.counts);
+        setUsageLabels(result.labels);
         setUsageTotal(result.total);
       }
       setUsageLoading(false);
@@ -175,6 +184,7 @@ export function TransferCoordinatorPanel({
         setTargetId("");
         setConfirmText("");
         setUsageCounts(null);
+        setUsageLabels(null);
         setUsageTotal(null);
         router.refresh();
       }
@@ -185,20 +195,27 @@ export function TransferCoordinatorPanel({
     }
   };
 
-  const usageEntries = [
-    { key: "projects", label: "Projects" },
-    { key: "trainings", label: "Trainings" },
-  ];
+  const usageEntries = React.useMemo(() => {
+    if (!usageCounts) return [];
+    return Object.entries(usageCounts)
+      .filter(([, count]) => count > 0)
+      .map(([key, count]) => ({
+        key,
+        label: usageLabels?.[key] || key.replace(/_/g, " "),
+        count,
+      }))
+      .sort((left, right) => left.label.localeCompare(right.label));
+  }, [usageCounts, usageLabels]);
 
   return (
     <Card className="border-border/50 shadow-sm">
       <CardHeader className="pb-3 pt-4 px-4 space-y-2">
         <div className="flex items-center gap-2">
           <UserMinus className="h-4 w-4 text-muted-foreground" />
-          <CardTitle className="text-xs font-semibold">Transfer Coordinator Role</CardTitle>
+          <CardTitle className="text-xs font-semibold">{panelTitle}</CardTitle>
         </div>
         <CardDescription className="text-[10px]">
-          Move all records to a new coordinator before deleting the old account.
+          {panelDescription}
         </CardDescription>
       </CardHeader>
       <CardContent className="px-4 pb-4 space-y-3">
@@ -295,9 +312,14 @@ export function TransferCoordinatorPanel({
               )}
               {!usageLoading && usageCounts && usageEntries.map((entry) => (
                 <Badge key={entry.key} variant="outline" className="text-[9px] border-border/50">
-                  {entry.label}: {usageCounts[entry.key] ?? 0}
+                  {entry.label}: {entry.count}
                 </Badge>
               ))}
+              {!usageLoading && usageCounts && usageEntries.length === 0 && usageTotal !== 0 && (
+                <Badge variant="outline" className="text-[9px] border-border/50">
+                  Records: {usageTotal ?? 0}
+                </Badge>
+              )}
               {!usageLoading && !usageCounts && (
                 <Badge variant="outline" className="text-[9px] border-border/50">
                   Select an account

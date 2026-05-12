@@ -4,6 +4,7 @@ import * as React from "react";
 import { ShieldCheck, Users2 } from "lucide-react";
 
 import { AccountsTable, type AccountRow } from "@/components/dashboard/accounts-table";
+import { TransferCoordinatorPanel } from "@/components/dashboard/transfer-coordinator-panel";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -76,6 +77,7 @@ export function SuperAdminDashboard({
             title="All Users"
             description="All users currently registered in the system."
           />
+          <TransferCoordinatorPanel mode="college" accounts={accounts} />
         </DialogContent>
       </Dialog>
     </>

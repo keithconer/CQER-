@@ -4,8 +4,34 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 const TRANSFER_TABLES = [
-  "projects",
-  "trainings",
+  { name: "projects", label: "Projects" },
+  { name: "trainings", label: "Trainings" },
+  { name: "awards", label: "Awards" },
+  { name: "student_involvement", label: "Student Involvement" },
+  { name: "faculty_involvement", label: "Faculty Involvement" },
+  { name: "pool_of_experts", label: "Faculty Registry" },
+  { name: "technologies_innovations", label: "Technologies" },
+  { name: "ordinance_resolutions", label: "Ordinance / Resolution" },
+  { name: "needs_assessments", label: "Needs Assessments" },
+  { name: "technical_advisory_services", label: "Technical Advisory" },
+  { name: "consultancy_extensions", label: "Consultancy" },
+  { name: "adopters_with_enterprise", label: "Adopters with Enterprise" },
+  { name: "technologies_innovations_commercialized", label: "Commercialized Technologies" },
+  { name: "iec_materials", label: "IEC Materials" },
+  { name: "budget_utilizations", label: "Budget Utilization" },
+  { name: "impact_assessments", label: "Impact Assessment" },
+  { name: "extension_programs", label: "Extension Programs" },
+  { name: "awards_recognitions", label: "Awards and Recognition" },
+  { name: "other_activities", label: "Other Activities" },
+  { name: "faculty_registry_records", label: "Faculty Records" },
+  { name: "project_leader_records", label: "Project Leader Records" },
+];
+
+const AUTHOR_TRANSFER_TABLES = [
+  { name: "community_posts", column: "author_id", label: "Community Posts" },
+  { name: "community_comments", column: "author_id", label: "Community Comments" },
+  { name: "community_chat_threads", column: "created_by", label: "Community Chat Threads" },
+  { name: "community_chat_messages", column: "sender_id", label: "Community Chat Messages" },
 ];
 
 type TransferMode = "unit" | "college";
@@ -17,25 +43,40 @@ export async function getCoordinatorUsageCounts(sourceId: string) {
   const results = await Promise.all(
     TRANSFER_TABLES.map(async (table) => {
       const { count, error } = await adminClient
-        .from(table)
+        .from(table.name)
         .select("id", { count: "exact", head: true })
         .eq("created_by", sourceId);
-      return { table, count: count ?? 0, error };
+      return { key: table.name, label: table.label, count: count ?? 0, error };
     })
   );
 
-  const errorResult = results.find((item) => item.error);
+  const authorResults = await Promise.all(
+    AUTHOR_TRANSFER_TABLES.map(async (table) => {
+      const { count, error } = await adminClient
+        .from(table.name)
+        .select("id", { count: "exact", head: true })
+        .eq(table.column, sourceId);
+      return { key: table.name, label: table.label, count: count ?? 0, error };
+    })
+  );
+
+  const allResults = [...results, ...authorResults];
+  const errorResult = allResults.find((item) => item.error);
   if (errorResult) {
     return { error: "Failed to load account usage." };
   }
 
-  const counts = results.reduce<Record<string, number>>((acc, item) => {
-    acc[item.table] = item.count;
+  const counts = allResults.reduce<Record<string, number>>((acc, item) => {
+    acc[item.key] = item.count;
+    return acc;
+  }, {});
+  const labels = allResults.reduce<Record<string, string>>((acc, item) => {
+    acc[item.key] = item.label;
     return acc;
   }, {});
   const total = Object.values(counts).reduce((sum, value) => sum + value, 0);
 
-  return { counts, total };
+  return { counts, labels, total };
 }
 
 export async function transferCoordinatorRole(params: {
@@ -113,11 +154,21 @@ export async function transferCoordinatorRole(params: {
 
   for (const table of TRANSFER_TABLES) {
     const { error } = await adminClient
-      .from(table)
+      .from(table.name)
       .update({ created_by: targetId })
       .eq("created_by", sourceId);
     if (error) {
-      return { error: `Failed to transfer records in ${table}.` };
+      return { error: `Failed to transfer records in ${table.label}.` };
+    }
+  }
+
+  for (const table of AUTHOR_TRANSFER_TABLES) {
+    const { error } = await adminClient
+      .from(table.name)
+      .update({ [table.column]: targetId })
+      .eq(table.column, sourceId);
+    if (error) {
+      return { error: `Failed to transfer records in ${table.label}.` };
     }
   }
 

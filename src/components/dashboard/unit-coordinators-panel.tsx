@@ -1,6 +1,7 @@
 "use client";
 import { CoordinatorRegistration } from "./coordinator-registration";
 import { AccountsTable } from "./accounts-table";
+import { TransferCoordinatorPanel } from "./transfer-coordinator-panel";
 
 interface UnitCoordinatorAccount {
   id: string;
@@ -32,6 +33,12 @@ export function UnitCoordinatorsPanel({ accounts, department }: UnitCoordinators
         accounts={accounts}
         title="Registered Unit Coordinators"
         description="Accounts under your department units."
+      />
+
+      <TransferCoordinatorPanel
+        mode="unit"
+        accounts={accounts}
+        department={department}
       />
     </div>
   );

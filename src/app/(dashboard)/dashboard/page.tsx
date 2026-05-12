@@ -56,6 +56,7 @@ import { ProjectLeaderRecordsManagement } from "@/components/dashboard/project-l
 import { ProjectLeaderDashboard } from "@/components/dashboard/project-leader-dashboard";
 import { CollegeCoordinatorDashboard } from "@/components/dashboard/college-coordinator-dashboard";
 import { SuperAdminDashboard } from "@/components/dashboard/super-admin-dashboard";
+import { TransferCoordinatorPanel } from "@/components/dashboard/transfer-coordinator-panel";
 import {
   UnitCoordinatorDashboard,
   type UnitDashboardCommitteeMember,
@@ -1716,6 +1717,10 @@ export default async function DashboardPage({
                 accounts={allAccounts}
                 title="Registered Coordinators"
                 description="All coordinator accounts across departments."
+              />
+              <TransferCoordinatorPanel
+                mode="college"
+                accounts={allAccounts}
               />
             </>
           ) : activePanel === "backup" ? (
