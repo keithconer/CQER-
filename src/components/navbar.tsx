@@ -43,6 +43,7 @@ import {
   Sun,
   UserCog,
   UserPlus,
+  ArrowRightLeft,
   LayoutDashboard,
   Building2,
   Users2,
@@ -155,6 +156,7 @@ export function Navbar({ user }: NavbarProps) {
     router.prefetch("/dashboard?panel=department-management");
     router.prefetch("/dashboard?panel=accounts");
     router.prefetch("/dashboard?panel=account-management&account=register");
+    router.prefetch("/dashboard?panel=account-management&account=transfer");
     router.prefetch("/dashboard?panel=projects&view=project-registration");
     router.prefetch("/settings");
   }, [router]);
@@ -544,7 +546,9 @@ export function Navbar({ user }: NavbarProps) {
     []
   );
   const showAccountSection = user.userType === "super_admin" || user.userType === "college_coordinator";
-  const accountRegistrationLabel = user.userType === "super_admin" ? "Register College Coordinators" : "Register Unit Coordinators";
+  const accountRegistrationLabel = user.userType === "super_admin" ? "Register College Coordinator" : "Register Unit Coordinator";
+  const accountTransferLabel = user.userType === "super_admin" ? "Transfer College Coordinator" : "Transfer Unit Coordinator";
+  const activeAccountView = searchParams.get("account") === "transfer" ? "transfer" : "register";
 
   const withTooltip = (label: string, content: ReactNode) => {
     if (sidebarOpen) return content;
@@ -807,11 +811,19 @@ export function Navbar({ user }: NavbarProps) {
                         <div className="space-y-1">
                           <Button
                             variant="ghost"
-                            className={navItemClass(isAccountPanel)}
+                            className={navItemClass(isAccountPanel && activeAccountView === "register")}
                             onClick={() => goTo("/dashboard?panel=account-management&account=register")}
                           >
                             <UserPlus className="mr-2 h-3 w-3" />
                             {accountRegistrationLabel}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            className={navItemClass(isAccountPanel && activeAccountView === "transfer")}
+                            onClick={() => goTo("/dashboard?panel=account-management&account=transfer")}
+                          >
+                            <ArrowRightLeft className="mr-2 h-3 w-3" />
+                            {accountTransferLabel}
                           </Button>
                         </div>
                       </PopoverContent>
@@ -834,11 +846,19 @@ export function Navbar({ user }: NavbarProps) {
                     <div className="space-y-1 px-2 pb-3">
                       <Button
                         variant="ghost"
-                        className={navItemClass(isAccountPanel)}
+                        className={navItemClass(isAccountPanel && activeAccountView === "register")}
                         onClick={() => goTo("/dashboard?panel=account-management&account=register")}
                       >
                         <UserPlus className="mr-2 h-3 w-3" />
                         {accountRegistrationLabel}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className={navItemClass(isAccountPanel && activeAccountView === "transfer")}
+                        onClick={() => goTo("/dashboard?panel=account-management&account=transfer")}
+                      >
+                        <ArrowRightLeft className="mr-2 h-3 w-3" />
+                        {accountTransferLabel}
                       </Button>
                     </div>
                   )}

@@ -15,7 +15,6 @@ import { type Project } from "@/components/dashboard/projects-table";
 import { TrainingsManagement } from "@/components/dashboard/trainings-management";
 import { type TrainingFacultyOption, type TrainingProjectOption, type TrainingRecord } from "@/components/dashboard/trainings-form";
 import { getAssignedTrainings, getSystemUsers, type AssignedTrainingRecord, type SystemUser } from "@/lib/actions/assigned-trainings";
-import { AccountsTable } from "@/components/dashboard/accounts-table";
 import { DashboardAnalytics } from "@/components/dashboard/dashboard-analytics";
 import { format, startOfMonth, subMonths } from "date-fns";
 import {
@@ -393,6 +392,7 @@ export default async function DashboardPage({
   const resolvedSearchParams = (await searchParams) || {};
   const panelParam = resolvedSearchParams.panel;
   const subParam = resolvedSearchParams.sub || "";
+  const accountParam = resolvedSearchParams.account === "transfer" ? "transfer" : "register";
   const accountPanelSelected = panelParam === "account-management" || panelParam === "accounts";
   let activePanel =
     panelParam === "overview" ||
@@ -1707,22 +1707,18 @@ export default async function DashboardPage({
       {userType === "super_admin" && activePanel !== "community" && (
         <div className="space-y-4">
           {accountPanelSelected ? (
-            <>
-              <CoordinatorRegistration
-                userType="college_coordinator"
-                title="College Coordinators"
-                description="Register emails of College coordinators for their specific departments."
-              />
-              <AccountsTable
-                accounts={allAccounts}
-                title="Registered Coordinators"
-                description="All coordinator accounts across departments."
-              />
+            accountParam === "transfer" ? (
               <TransferCoordinatorPanel
                 mode="college"
                 accounts={allAccounts}
               />
-            </>
+            ) : (
+              <CoordinatorRegistration
+                userType="college_coordinator"
+                title="Register College Coordinator"
+                description="Register emails of College coordinators for their specific departments."
+              />
+            )
           ) : activePanel === "backup" ? (
             <BackupManagement datasets={backupDatasets} />
           ) : activePanel === "department-management" ? (
@@ -1737,6 +1733,7 @@ export default async function DashboardPage({
             <UnitCoordinatorsPanel
               accounts={collegeUnitCoordinatorAccounts}
               department={profile.department}
+              view={accountParam}
             />
           ) : activePanel === "backup" ? (
             <BackupManagement datasets={backupDatasets} />

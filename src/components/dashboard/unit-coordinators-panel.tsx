@@ -1,6 +1,5 @@
 "use client";
 import { CoordinatorRegistration } from "./coordinator-registration";
-import { AccountsTable } from "./accounts-table";
 import { TransferCoordinatorPanel } from "./transfer-coordinator-panel";
 
 interface UnitCoordinatorAccount {
@@ -17,9 +16,20 @@ interface UnitCoordinatorAccount {
 interface UnitCoordinatorsPanelProps {
   accounts: UnitCoordinatorAccount[];
   department?: string | null;
+  view?: "register" | "transfer";
 }
 
-export function UnitCoordinatorsPanel({ accounts, department }: UnitCoordinatorsPanelProps) {
+export function UnitCoordinatorsPanel({ accounts, department, view = "register" }: UnitCoordinatorsPanelProps) {
+  if (view === "transfer") {
+    return (
+      <TransferCoordinatorPanel
+        mode="unit"
+        accounts={accounts}
+        department={department}
+      />
+    );
+  }
+
   return (
     <div className="space-y-4">
       <CoordinatorRegistration
@@ -27,18 +37,6 @@ export function UnitCoordinatorsPanel({ accounts, department }: UnitCoordinators
         title="Unit Coordinators"
         description="Register emails of Unit coordinators for your department."
         department={department || undefined}
-      />
-
-      <AccountsTable
-        accounts={accounts}
-        title="Registered Unit Coordinators"
-        description="Accounts under your department units."
-      />
-
-      <TransferCoordinatorPanel
-        mode="unit"
-        accounts={accounts}
-        department={department}
       />
     </div>
   );
