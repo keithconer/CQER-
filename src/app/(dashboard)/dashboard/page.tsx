@@ -15,6 +15,7 @@ import { type Project } from "@/components/dashboard/projects-table";
 import { TrainingsManagement } from "@/components/dashboard/trainings-management";
 import { type TrainingFacultyOption, type TrainingProjectOption, type TrainingRecord } from "@/components/dashboard/trainings-form";
 import { getAssignedTrainings, getSystemUsers, type AssignedTrainingRecord, type SystemUser } from "@/lib/actions/assigned-trainings";
+import { AccountsTable } from "@/components/dashboard/accounts-table";
 import { DashboardAnalytics } from "@/components/dashboard/dashboard-analytics";
 import { format, startOfMonth, subMonths } from "date-fns";
 import {
@@ -1529,6 +1530,9 @@ export default async function DashboardPage({
   }
 
   const userType = profile.user_type;
+  const collegeCoordinatorAccounts = allAccounts.filter(
+    (account) => account.user_type === "college_coordinator"
+  );
 
   const firstName = profile.first_name || "User";
   const panelTitleMap: Record<string, string> = {
@@ -1713,11 +1717,18 @@ export default async function DashboardPage({
                 accounts={allAccounts}
               />
             ) : (
-              <CoordinatorRegistration
-                userType="college_coordinator"
-                title="Register College Coordinator"
-                description="Register emails of College coordinators for their specific departments."
-              />
+              <>
+                <CoordinatorRegistration
+                  userType="college_coordinator"
+                  title="Register College Coordinator"
+                  description="Register emails of College coordinators for their specific departments."
+                />
+                <AccountsTable
+                  accounts={collegeCoordinatorAccounts}
+                  title="Registered College Coordinators"
+                  description="College coordinator accounts with their assigned departments."
+                />
+              </>
             )
           ) : activePanel === "backup" ? (
             <BackupManagement datasets={backupDatasets} />
