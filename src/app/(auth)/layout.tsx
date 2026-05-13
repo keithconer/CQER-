@@ -36,7 +36,7 @@ export default function AuthLayout({
           />
         </div>
       </div>
-      <div className="relative z-10 flex min-h-screen items-start justify-center px-4 pb-32 pt-6">
+      <div className="relative z-10 flex min-h-screen items-center justify-center px-4 pb-28 pt-16">
         <FooterControls />
         <div className="w-full max-w-[384px]">
           {children}
