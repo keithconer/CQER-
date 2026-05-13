@@ -28,7 +28,7 @@ export function FooterControls() {
   };
 
   return (
-    <div className="absolute -top-20 right-0 z-20 flex flex-col items-end gap-2">
+    <div className="flex flex-col items-end gap-2">
       <Button
         type="button"
         variant="outline"
@@ -51,7 +51,7 @@ export function FooterControls() {
         >
           <Info className="h-3.5 w-3.5" />
         </Button>
-        <div className="pointer-events-none absolute right-0 top-11 w-72 rounded-lg border border-border/70 bg-background/95 p-3 text-[10px] text-foreground shadow-lg opacity-0 transition-opacity group-hover:opacity-100">
+        <div className="pointer-events-none absolute right-0 top-11 z-30 w-72 rounded-lg border border-border/70 bg-background/95 p-3 text-[10px] text-foreground shadow-lg opacity-0 transition-opacity group-hover:opacity-100">
           <p className="font-semibold">For documentation and repository</p>
           <p className="mt-2 flex items-center gap-1 text-muted-foreground">
             <Mail className="h-3 w-3 shrink-0" />
@@ -63,4 +63,3 @@ export function FooterControls() {
     </div>
   );
 }
-
