@@ -37,15 +37,13 @@ export default function AuthLayout({
         </div>
       </div>
       <div className="relative z-10 flex min-h-screen items-start justify-center px-4 pb-32 pt-6">
+        <FooterControls />
         <div className="w-full max-w-[384px]">
           {children}
         </div>
       </div>
       <footer className="pointer-events-none absolute inset-x-0 bottom-4 z-10 px-4">
         <div className="pointer-events-auto relative mx-auto flex w-full max-w-[384px] items-center gap-3 rounded-xl border border-border/60 bg-background/88 px-4 py-3 shadow-sm backdrop-blur-md">
-          <div className="absolute right-2 top-2">
-            <FooterControls />
-          </div>
           <div className="flex shrink-0 items-center gap-2">
             <Link href="https://www.bagongpilipinastayo.com/" className="cursor-pointer" target="_blank" rel="noreferrer">
               <Image

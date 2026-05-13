@@ -28,7 +28,7 @@ export function FooterControls() {
   };
 
   return (
-    <div className="flex flex-col items-end gap-2">
+    <div className="fixed right-4 top-4 z-30 flex flex-col items-end gap-2">
       <Button
         type="button"
         variant="outline"
