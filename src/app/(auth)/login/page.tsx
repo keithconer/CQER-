@@ -12,7 +12,7 @@ import {
   CardContent,
   CardHeader,
 } from "@/components/ui/card";
-import { Eye, EyeOff, Mail, Moon, Sun } from "lucide-react";
+import { Eye, EyeOff, Mail } from "lucide-react";
 import { Loader2 } from "lucide-react";
 
 function LoginContent() {
@@ -25,8 +25,6 @@ function LoginContent() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState(false);
-  const [isDark, setIsDark] = useState(false);
-  const [isThemeReady, setIsThemeReady] = useState(false);
 
   const supabase = useMemo(() => createClient(), []);
 
@@ -101,37 +99,8 @@ function LoginContent() {
 
   const callbackError = searchParams.get("error");
 
-  useEffect(() => {
-    const root = document.documentElement;
-    const savedTheme = window.localStorage.getItem("theme");
-    const preferDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const useDark = savedTheme ? savedTheme === "dark" : preferDark;
-    root.classList.toggle("dark", useDark);
-    setIsDark(useDark);
-    setIsThemeReady(true);
-  }, []);
-
-  const handleThemeToggle = () => {
-    const nextIsDark = !isDark;
-    const root = document.documentElement;
-    root.classList.toggle("dark", nextIsDark);
-    window.localStorage.setItem("theme", nextIsDark ? "dark" : "light");
-    setIsDark(nextIsDark);
-  };
-
   return (
     <div className="relative">
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
-        aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
-        className="fixed right-4 top-4 z-20 h-9 w-9 rounded-full border-border/70 bg-background/90 backdrop-blur-sm"
-        onClick={handleThemeToggle}
-        disabled={!isThemeReady}
-      >
-        {isDark ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
-      </Button>
       <Card
         className={`border-border/60 bg-card/92 shadow-lg rounded-2xl overflow-hidden backdrop-blur-sm ${
           loading || oauthLoading ? "cursor-wait" : ""
