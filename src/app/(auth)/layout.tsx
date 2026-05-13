@@ -15,7 +15,7 @@ export default function AuthLayout({
         <div className="absolute inset-0 bg-[linear-gradient(132deg,rgba(248,250,252,0.95)_0%,rgba(236,242,239,0.92)_32%,rgba(21,158,68,0.14)_58%,rgba(21,158,68,0.26)_100%)] dark:bg-[linear-gradient(132deg,rgba(9,12,14,0.97)_0%,rgba(11,16,14,0.95)_32%,rgba(21,158,68,0.20)_58%,rgba(21,158,68,0.36)_100%)]" />
       </div>
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[5]">
-        <div className="absolute bottom-[-22vh] left-1/2 hidden h-[128vh] w-[66vw] -translate-x-1/2 lg:block">
+        <div className="absolute bottom-[-18vh] left-1/2 hidden h-[108vh] w-[56vw] -translate-x-1/2 lg:block">
           <Image
             src="/layatdiwa.png"
             alt="Layat Diwa artwork background"
@@ -24,7 +24,7 @@ export default function AuthLayout({
             className="object-contain object-bottom opacity-[0.30] saturate-[1.08]"
           />
         </div>
-        <div className="absolute bottom-[-16vh] left-1/2 h-[82vh] w-[126vw] -translate-x-1/2 lg:hidden">
+        <div className="absolute bottom-[-12vh] left-1/2 h-[70vh] w-[110vw] -translate-x-1/2 lg:hidden">
           <Image
             src="/layatdiwa.png"
             alt="Layat Diwa artwork background"
@@ -41,7 +41,14 @@ export default function AuthLayout({
       </div>
       <footer className="pointer-events-none absolute inset-x-0 bottom-4 z-10 px-4">
         <div className="pointer-events-auto mx-auto flex w-full max-w-[384px] items-center gap-3 rounded-xl border border-border/60 bg-background/88 px-4 py-3 shadow-sm backdrop-blur-md">
-          <div className="shrink-0">
+          <div className="flex shrink-0 items-center gap-2">
+            <Image
+              src="/bagongpilipinas.png"
+              alt="Bagong Pilipinas Logo"
+              width={40}
+              height={40}
+              className="h-[40px] w-[40px] object-contain"
+            />
             <Image
               src="/cvsuLogo.png"
               alt="CvSU Logo"
