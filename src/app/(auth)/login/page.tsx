@@ -4,7 +4,6 @@ import Image from "next/image";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { LandingMetricsSection } from "@/components/auth/landing-metrics-section";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -244,10 +243,7 @@ export default function LoginPage() {
         </div>
       }
     >
-      <div className="w-full">
-        <LoginContent />
-        <LandingMetricsSection />
-      </div>
+      <LoginContent />
     </Suspense>
   );
 }
