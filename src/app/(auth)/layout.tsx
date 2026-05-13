@@ -15,22 +15,22 @@ export default function AuthLayout({
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(248,250,252,0.92)_0%,rgba(236,242,239,0.9)_46%,rgba(21,158,68,0.16)_70%,rgba(21,158,68,0.34)_100%)] dark:bg-[linear-gradient(90deg,rgba(9,12,14,0.96)_0%,rgba(11,16,14,0.94)_46%,rgba(21,158,68,0.22)_70%,rgba(21,158,68,0.42)_100%)]" />
       </div>
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[5]">
-        <div className="absolute bottom-[-56vh] right-[-7%] hidden h-[178vh] w-[72vw] lg:block">
+        <div className="absolute bottom-[-12vh] left-[-6%] hidden h-[108vh] w-[52vw] lg:block">
           <Image
             src="/layatdiwa.png"
             alt="Layat Diwa artwork background"
             fill
             priority
-            className="object-contain object-bottom-right opacity-[0.30] saturate-[1.12] dark:opacity-[0.42]"
+            className="object-contain object-bottom-left opacity-[0.24] saturate-[1.08] dark:opacity-[0.34]"
           />
         </div>
-        <div className="absolute bottom-[-46vh] right-[-42%] h-[128vh] w-[142vw] lg:hidden">
+        <div className="absolute bottom-[-12vh] left-[-32%] h-[70vh] w-[110vw] lg:hidden">
           <Image
             src="/layatdiwa.png"
             alt="Layat Diwa artwork background"
             fill
             priority
-            className="object-contain object-bottom-right opacity-[0.20] dark:opacity-[0.28]"
+            className="object-contain object-bottom-left opacity-[0.15] dark:opacity-[0.22]"
           />
         </div>
       </div>

@@ -217,7 +217,7 @@ function LoginContent() {
 
           <Button
             type="submit"
-            className="w-full h-9 text-[11px] font-bold bg-[#159E44] hover:bg-[#128A3B] text-white rounded-md shadow-sm transition-all active:scale-[0.98]"
+            className="w-full h-9 text-[11px] font-bold bg-[#138A3B] hover:bg-[#0F7532] text-white rounded-md shadow-sm transition-all active:scale-[0.98]"
             disabled={loading || oauthLoading}
           >
             {loading ? "Signing in..." : "Login"}
