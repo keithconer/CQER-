@@ -126,7 +126,7 @@ function LoginContent() {
         variant="outline"
         size="icon"
         aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
-        className="absolute -top-12 right-0 h-8 w-8 rounded-full border-border/70 bg-background/90 backdrop-blur-sm"
+        className="fixed right-4 top-4 z-20 h-9 w-9 rounded-full border-border/70 bg-background/90 backdrop-blur-sm"
         onClick={handleThemeToggle}
         disabled={!isThemeReady}
       >

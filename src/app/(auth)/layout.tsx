@@ -13,22 +13,22 @@ export default function AuthLayout({
         className="pointer-events-none absolute inset-0"
       >
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(248,250,252,0.92)_0%,rgba(236,242,239,0.9)_48%,rgba(22,163,74,0.14)_74%,rgba(22,163,74,0.26)_100%)] dark:bg-[linear-gradient(90deg,rgba(9,12,14,0.96)_0%,rgba(11,16,14,0.94)_48%,rgba(21,128,61,0.18)_74%,rgba(21,128,61,0.34)_100%)]" />
-        <div className="absolute right-[-5%] top-1/2 hidden h-[78vh] w-[42vw] -translate-y-1/2 lg:block">
+        <div className="absolute bottom-[-12vh] right-[-6%] hidden h-[108vh] w-[52vw] lg:block">
           <Image
             src="/layatdiwa.png"
             alt="Layat Diwa artwork background"
             fill
             priority
-            className="object-contain object-right opacity-[0.20] saturate-[1.05] dark:opacity-[0.28]"
+            className="object-contain object-bottom-right opacity-[0.24] saturate-[1.08] dark:opacity-[0.34]"
           />
         </div>
-        <div className="absolute right-[-28%] top-[54%] h-[46vh] w-[92vw] -translate-y-1/2 lg:hidden">
+        <div className="absolute bottom-[-12vh] right-[-32%] h-[70vh] w-[110vw] lg:hidden">
           <Image
             src="/layatdiwa.png"
             alt="Layat Diwa artwork background"
             fill
             priority
-            className="object-contain object-right opacity-[0.12] dark:opacity-[0.18]"
+            className="object-contain object-bottom-right opacity-[0.15] dark:opacity-[0.22]"
           />
         </div>
       </div>
@@ -57,7 +57,7 @@ export default function AuthLayout({
           </div>
           <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
             <Copyright className="h-3 w-3" />
-            {new Date().getFullYear()} All rights reserved
+            CQER 2026. All Rights Reserved
           </p>
           <p className="text-[11px] font-medium text-foreground/85">
             Canata Coner Gonzalez Hizon
