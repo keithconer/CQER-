@@ -15,7 +15,7 @@ export default function AuthLayout({
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(248,250,252,0.92)_0%,rgba(236,242,239,0.9)_46%,rgba(21,158,68,0.16)_70%,rgba(21,158,68,0.34)_100%)] dark:bg-[linear-gradient(90deg,rgba(9,12,14,0.96)_0%,rgba(11,16,14,0.94)_46%,rgba(21,158,68,0.22)_70%,rgba(21,158,68,0.42)_100%)]" />
       </div>
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[5]">
-        <div className="absolute bottom-[-14vh] left-1/2 hidden h-[116vh] w-[58vw] -translate-x-1/2 lg:block">
+        <div className="absolute bottom-[-22vh] left-1/2 hidden h-[132vh] w-[66vw] -translate-x-1/2 lg:block">
           <Image
             src="/layatdiwa.png"
             alt="Layat Diwa artwork background"
@@ -24,7 +24,7 @@ export default function AuthLayout({
             className="object-contain object-bottom opacity-[0.30] saturate-[1.08]"
           />
         </div>
-        <div className="absolute bottom-[-10vh] left-1/2 h-[74vh] w-[118vw] -translate-x-1/2 lg:hidden">
+        <div className="absolute bottom-[-18vh] left-1/2 h-[86vh] w-[130vw] -translate-x-1/2 lg:hidden">
           <Image
             src="/layatdiwa.png"
             alt="Layat Diwa artwork background"
