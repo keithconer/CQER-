@@ -15,7 +15,7 @@ export default function AuthLayout({
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(248,250,252,0.92)_0%,rgba(236,242,239,0.9)_46%,rgba(21,158,68,0.16)_70%,rgba(21,158,68,0.34)_100%)] dark:bg-[linear-gradient(90deg,rgba(9,12,14,0.96)_0%,rgba(11,16,14,0.94)_46%,rgba(21,158,68,0.22)_70%,rgba(21,158,68,0.42)_100%)]" />
       </div>
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[5]">
-        <div className="absolute bottom-[-22vh] left-1/2 hidden h-[132vh] w-[66vw] -translate-x-1/2 lg:block">
+        <div className="absolute bottom-[-20vh] left-1/2 hidden h-[124vh] w-[62vw] -translate-x-1/2 lg:block">
           <Image
             src="/layatdiwa.png"
             alt="Layat Diwa artwork background"
@@ -24,7 +24,7 @@ export default function AuthLayout({
             className="object-contain object-bottom opacity-[0.30] saturate-[1.08]"
           />
         </div>
-        <div className="absolute bottom-[-18vh] left-1/2 h-[86vh] w-[130vw] -translate-x-1/2 lg:hidden">
+        <div className="absolute bottom-[-16vh] left-1/2 h-[80vh] w-[122vw] -translate-x-1/2 lg:hidden">
           <Image
             src="/layatdiwa.png"
             alt="Layat Diwa artwork background"
@@ -35,31 +35,24 @@ export default function AuthLayout({
         </div>
       </div>
       <div className="relative z-10 flex min-h-screen items-center justify-center px-4 pb-32 pt-8">
-        <div className="w-full max-w-[400px]">
+        <div className="w-full max-w-[384px]">
           {children}
         </div>
       </div>
       <footer className="pointer-events-none absolute inset-x-0 bottom-4 z-10 px-4">
         <div className="pointer-events-auto mx-auto flex w-full max-w-[520px] flex-col items-center gap-2 rounded-xl border border-border/60 bg-background/88 px-5 py-3 text-center shadow-sm backdrop-blur-md">
-          <div className="flex items-center justify-center gap-4">
+          <div className="flex items-center justify-center">
             <Image
               src="/cvsuLogo.png"
               alt="CvSU Logo"
-              width={30}
-              height={30}
-              className="h-[30px] w-[30px] object-contain"
-            />
-            <Image
-              src="/CQERFINAL.png"
-              alt="CQER Final Logo"
-              width={30}
-              height={30}
-              className="h-[30px] w-[30px] object-contain"
+              width={42}
+              height={42}
+              className="h-[42px] w-[42px] object-contain"
             />
           </div>
           <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
             <Copyright className="h-3 w-3" />
-            College Quarterly Extension Report System ({new Date().getFullYear()}). All rights Reserved.
+            CQER {new Date().getFullYear()}. All rights Reserved.
           </p>
           <p className="text-[11px] font-medium text-foreground/85">
             Canata Coner Gonzalez Hizon

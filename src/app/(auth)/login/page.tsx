@@ -137,8 +137,8 @@ function LoginContent() {
           loading || oauthLoading ? "cursor-wait" : ""
         }`}
       >
-        <CardHeader className="pt-5 pb-1.5 flex flex-col items-center space-y-2">
-        <div className="relative w-20 h-20">
+        <CardHeader className="pt-6 pb-2 flex flex-col items-center space-y-3">
+        <div className="relative w-24 h-24">
           <Image 
             src="/CQERFINAL.png" 
             alt="CQER Logo" 
@@ -154,10 +154,10 @@ function LoginContent() {
           </p>
         </div>
         </CardHeader>
-        <CardContent className="px-5 pb-5 space-y-3">
+        <CardContent className="px-5 pb-6 space-y-4">
         {/* Manual Login Form */}
-        <form onSubmit={handleLogin} className="space-y-2.5">
-          <div className="space-y-1">
+        <form onSubmit={handleLogin} className="space-y-3">
+          <div className="space-y-1.5">
             <Label htmlFor="email" className="text-[11px] font-semibold text-foreground/90 ml-0.5">
               Email
             </Label>
@@ -174,7 +174,7 @@ function LoginContent() {
               />
             </div>
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <Label htmlFor="password" className="text-[11px] font-semibold text-foreground/90 ml-0.5">
               Password
             </Label>
@@ -217,7 +217,7 @@ function LoginContent() {
 
           <Button
             type="submit"
-            className="w-full h-8.5 text-[11px] font-bold bg-[#138A3B] hover:bg-[#0F7532] text-white rounded-md shadow-sm transition-all active:scale-[0.98]"
+            className="w-full h-9 text-[11px] font-bold bg-[#138A3B] hover:bg-[#0F7532] text-white rounded-md shadow-sm transition-all active:scale-[0.98]"
             disabled={loading || oauthLoading}
           >
             {loading ? "Signing in..." : "Login"}
@@ -235,7 +235,7 @@ function LoginContent() {
         {/* Google OAuth */}
         <Button
           variant="outline"
-          className="w-full h-8.5 text-[11px] font-semibold border-border/80 bg-background text-foreground hover:bg-muted/30 transition-all active:scale-[0.98] rounded-md shadow-sm"
+          className="w-full h-9 text-[11px] font-semibold border-border/80 bg-background text-foreground hover:bg-muted/30 transition-all active:scale-[0.98] rounded-md shadow-sm"
           onClick={handleGoogleLogin}
           disabled={loading || oauthLoading}
         >
