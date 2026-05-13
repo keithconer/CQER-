@@ -59,7 +59,7 @@ export default function AuthLayout({
           </div>
           <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
             <Copyright className="h-3 w-3" />
-            CQER 2026. All Rights Reserved
+            College Quarterly Extension Report System ({new Date().getFullYear()}). All rights Reserved.
           </p>
           <p className="text-[11px] font-medium text-foreground/85">
             Canata Coner Gonzalez Hizon
