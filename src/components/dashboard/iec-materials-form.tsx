@@ -38,7 +38,7 @@ import {
 import { cn } from "@/lib/utils";
 import { DEFAULT_DOCUMENT_ACCEPT, DOCUMENT_UPLOAD_GUIDANCE } from "@/lib/document-uploads";
 
-const stepLabels = ["IEC Material Details", "Receipts Details", "Saving"];
+const stepLabels = ["IEC Material Details", "Recipients Details", "Saving"];
 const noProjectValue = "__none__";
 const sdgOptions = [
   { id: "Goal 1", label: "Goal 1 - No Poverty" },
@@ -391,7 +391,7 @@ export function IecMaterialsForm({
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Users className="h-5 w-5 text-foreground" />
-                    Receipts Details
+                    Recipients Details
                   </CardTitle>
                   <CardDescription className="text-xs">
                     Encode the recipient breakdown, totals, and supporting PDF or Excel document.

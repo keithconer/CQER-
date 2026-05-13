@@ -67,7 +67,7 @@ function getCoverageLabel(record: BudgetUtilizationRecord) {
 const exportColumns = [
   { key: "projectTitle", label: "Project Title" },
   { key: "coverage", label: "Inclusive Dates" },
-  { key: "totalBudget", label: "Budget Summary", align: "right" },
+  { key: "totalBudget", label: "Total Budget", align: "right" },
   { key: "utilizedBudget", label: "Utilized", align: "right" },
   { key: "remainingBudget", label: "Remaining", align: "right" },
   { key: "monthsCovered", label: "Months Covered", align: "center" },
@@ -92,9 +92,9 @@ async function exportExcel(records: BudgetUtilizationRecord[]) {
   const columns = [
     { header: "Project Title", key: "projectTitle", width: 36 },
     { header: "Inclusive Dates", key: "coverage", width: 32 },
-    { header: "Budget Summary", key: "totalBudget", width: 18 },
-    { header: "Assigned Budget", key: "utilizedBudget", width: 18 },
-    { header: "Left to Assign", key: "remainingBudget", width: 18 },
+    { header: "Total Budget", key: "totalBudget", width: 18 },
+    { header: "Utilized", key: "utilizedBudget", width: 18 },
+    { header: "Remaining", key: "remainingBudget", width: 18 },
     { header: "Months Covered", key: "monthsCovered", width: 18 },
   ];
   sheet.columns = columns.map((column) => ({ key: column.key, width: column.width }));
@@ -140,9 +140,9 @@ async function exportPdf(records: BudgetUtilizationRecord[]) {
     head: [[
       "Project Title",
       "Inclusive Dates",
-      "Budget Summary",
-      "Assigned Budget",
-      "Left to Assign",
+      "Total Budget",
+      "Utilized",
+      "Remaining",
       "Months Covered",
     ]],
     body: records.map((record) => ([
@@ -309,9 +309,9 @@ export function BudgetUtilizationManagement({
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="h-12 text-base font-semibold">Project Title</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Inclusive Dates</TableHead>
-                  <TableHead className="h-12 text-base font-semibold">Budget Summary</TableHead>
-                  <TableHead className="h-12 text-base font-semibold">Assigned</TableHead>
-                  <TableHead className="h-12 text-base font-semibold">Left to Assign</TableHead>
+                  <TableHead className="h-12 text-base font-semibold">Total Budget</TableHead>
+                  <TableHead className="h-12 text-base font-semibold">Utilized</TableHead>
+                  <TableHead className="h-12 text-base font-semibold">Remaining</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Documents</TableHead>
                   <TableHead className="h-12 text-right text-base font-semibold">Actions</TableHead>
                 </TableRow>
