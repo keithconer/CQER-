@@ -12,7 +12,7 @@ import {
   CardContent,
   CardHeader,
 } from "@/components/ui/card";
-import { Eye, EyeOff, Copyright, Mail } from "lucide-react";
+import { Eye, EyeOff, Mail } from "lucide-react";
 import { Loader2 } from "lucide-react";
 
 function LoginContent() {
@@ -241,36 +241,7 @@ export default function LoginPage() {
         </div>
       }
     >
-      <div className="w-full flex flex-col items-center gap-4">
-        <LoginContent />
-        <footer className="w-full px-2">
-          <div className="mx-auto flex max-w-[400px] flex-col items-center gap-2 rounded-lg border border-border/60 bg-background/80 px-3 py-2 text-center">
-            <div className="flex items-center justify-center gap-3">
-              <Image
-                src="/cvsuLogo.png"
-                alt="CvSU Logo"
-                width={24}
-                height={24}
-                className="h-6 w-6 object-contain"
-              />
-              <Image
-                src="/cqerlogo.png"
-                alt="CQER Logo"
-                width={24}
-                height={24}
-                className="h-6 w-6 object-contain"
-              />
-            </div>
-            <p className="flex items-center gap-1 text-[10px] text-muted-foreground">
-              <Copyright className="h-3 w-3" />
-              {new Date().getFullYear()} All rights reserved
-            </p>
-            <p className="text-[10px] font-medium text-foreground/80">
-              Canata Coner Gonzalez Hizon
-            </p>
-          </div>
-        </footer>
-      </div>
+      <LoginContent />
     </Suspense>
   );
 }
