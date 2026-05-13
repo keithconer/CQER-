@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { Copyright } from "lucide-react";
+import { Building2, Copyright } from "lucide-react";
 
 export default function AuthLayout({
   children,
@@ -12,10 +12,10 @@ export default function AuthLayout({
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 z-0"
       >
-        <div className="absolute inset-0 bg-[radial-gradient(56rem_34rem_at_10%_18%,rgba(21,158,68,0.10),transparent_60%),radial-gradient(46rem_28rem_at_82%_22%,rgba(21,158,68,0.12),transparent_62%),radial-gradient(52rem_30rem_at_72%_78%,rgba(21,158,68,0.10),transparent_64%),radial-gradient(40rem_24rem_at_28%_82%,rgba(21,158,68,0.08),transparent_62%),linear-gradient(135deg,rgba(248,250,252,0.94)_0%,rgba(236,242,239,0.92)_100%)] dark:bg-[radial-gradient(56rem_34rem_at_10%_18%,rgba(21,158,68,0.16),transparent_60%),radial-gradient(46rem_28rem_at_82%_22%,rgba(21,158,68,0.20),transparent_62%),radial-gradient(52rem_30rem_at_72%_78%,rgba(21,158,68,0.16),transparent_64%),radial-gradient(40rem_24rem_at_28%_82%,rgba(21,158,68,0.12),transparent_62%),linear-gradient(135deg,rgba(9,12,14,0.96)_0%,rgba(11,16,14,0.95)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(132deg,rgba(248,250,252,0.95)_0%,rgba(236,242,239,0.92)_32%,rgba(21,158,68,0.14)_58%,rgba(21,158,68,0.26)_100%)] dark:bg-[linear-gradient(132deg,rgba(9,12,14,0.97)_0%,rgba(11,16,14,0.95)_32%,rgba(21,158,68,0.20)_58%,rgba(21,158,68,0.36)_100%)]" />
       </div>
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[5]">
-        <div className="absolute bottom-[-34vh] left-1/2 hidden h-[158vh] w-[78vw] -translate-x-1/2 lg:block">
+        <div className="absolute bottom-[-22vh] left-1/2 hidden h-[128vh] w-[66vw] -translate-x-1/2 lg:block">
           <Image
             src="/layatdiwa.png"
             alt="Layat Diwa artwork background"
@@ -24,7 +24,7 @@ export default function AuthLayout({
             className="object-contain object-bottom opacity-[0.30] saturate-[1.08]"
           />
         </div>
-        <div className="absolute bottom-[-26vh] left-1/2 h-[98vh] w-[152vw] -translate-x-1/2 lg:hidden">
+        <div className="absolute bottom-[-16vh] left-1/2 h-[82vh] w-[126vw] -translate-x-1/2 lg:hidden">
           <Image
             src="/layatdiwa.png"
             alt="Layat Diwa artwork background"
@@ -40,23 +40,29 @@ export default function AuthLayout({
         </div>
       </div>
       <footer className="pointer-events-none absolute inset-x-0 bottom-4 z-10 px-4">
-        <div className="pointer-events-auto mx-auto flex w-full max-w-[384px] flex-col items-center gap-2 rounded-xl border border-border/60 bg-background/88 px-5 py-3 text-center shadow-sm backdrop-blur-md">
-          <div className="flex items-center justify-center">
+        <div className="pointer-events-auto mx-auto flex w-full max-w-[384px] items-center gap-3 rounded-xl border border-border/60 bg-background/88 px-4 py-3 shadow-sm backdrop-blur-md">
+          <div className="shrink-0">
             <Image
               src="/cvsuLogo.png"
               alt="CvSU Logo"
-              width={42}
-              height={42}
-              className="h-[42px] w-[42px] object-contain"
+              width={40}
+              height={40}
+              className="h-[40px] w-[40px] object-contain"
             />
           </div>
-          <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
-            <Copyright className="h-3 w-3" />
-            CQER {new Date().getFullYear()}. All rights Reserved.
-          </p>
-          <p className="text-[11px] font-medium text-foreground/85">
-            Canata Coner Gonzalez Hizon
-          </p>
+          <div className="min-w-0 space-y-1">
+            <p className="flex items-center gap-1 text-[10px] text-muted-foreground">
+              <Copyright className="h-3 w-3 shrink-0" />
+              CQER {new Date().getFullYear()}. All rights Reserved.
+            </p>
+            <p className="flex items-center gap-1 text-[10px] font-medium text-foreground/85">
+              <Building2 className="h-3 w-3 shrink-0" />
+              DIT Interns
+            </p>
+            <p className="text-[10px] text-foreground/80">
+              Canata B. Coner K. Gonzalez D. Hizon S.
+            </p>
+          </div>
         </div>
       </footer>
     </div>
