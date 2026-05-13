@@ -12,7 +12,7 @@ import {
   CardContent,
   CardHeader,
 } from "@/components/ui/card";
-import { Eye, EyeOff, Mail } from "lucide-react";
+import { Eye, EyeOff, Mail, Moon, Sun } from "lucide-react";
 import { Loader2 } from "lucide-react";
 
 function LoginContent() {
@@ -25,6 +25,8 @@ function LoginContent() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState(false);
+  const [isDark, setIsDark] = useState(false);
+  const [isThemeReady, setIsThemeReady] = useState(false);
 
   const supabase = useMemo(() => createClient(), []);
 
@@ -99,13 +101,43 @@ function LoginContent() {
 
   const callbackError = searchParams.get("error");
 
+  useEffect(() => {
+    const root = document.documentElement;
+    const savedTheme = window.localStorage.getItem("theme");
+    const preferDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const useDark = savedTheme ? savedTheme === "dark" : preferDark;
+    root.classList.toggle("dark", useDark);
+    setIsDark(useDark);
+    setIsThemeReady(true);
+  }, []);
+
+  const handleThemeToggle = () => {
+    const nextIsDark = !isDark;
+    const root = document.documentElement;
+    root.classList.toggle("dark", nextIsDark);
+    window.localStorage.setItem("theme", nextIsDark ? "dark" : "light");
+    setIsDark(nextIsDark);
+  };
+
   return (
-    <Card
-      className={`border-border/50 shadow-md rounded-2xl overflow-hidden ${
-        loading || oauthLoading ? "cursor-wait" : ""
-      }`}
-    >
-      <CardHeader className="pt-6 pb-2 flex flex-col items-center space-y-3">
+    <div className="relative">
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
+        className="absolute -top-12 right-0 h-8 w-8 rounded-full border-border/70 bg-background/90 backdrop-blur-sm"
+        onClick={handleThemeToggle}
+        disabled={!isThemeReady}
+      >
+        {isDark ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+      </Button>
+      <Card
+        className={`border-border/60 bg-card/92 shadow-lg rounded-2xl overflow-hidden backdrop-blur-sm ${
+          loading || oauthLoading ? "cursor-wait" : ""
+        }`}
+      >
+        <CardHeader className="pt-6 pb-2 flex flex-col items-center space-y-3">
         <div className="relative w-24 h-24">
           <Image 
             src="/CQERFINAL.png" 
@@ -121,8 +153,8 @@ function LoginContent() {
             CEIT Quarterly Extension Report
           </p>
         </div>
-      </CardHeader>
-      <CardContent className="px-5 pb-6 space-y-4">
+        </CardHeader>
+        <CardContent className="px-5 pb-6 space-y-4">
         {/* Manual Login Form */}
         <form onSubmit={handleLogin} className="space-y-3">
           <div className="space-y-1.5">
@@ -227,8 +259,9 @@ function LoginContent() {
           </svg>
           {oauthLoading ? "Please wait..." : "Sign-in with Google"}
         </Button>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
