@@ -1,7 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Building2, Copyright } from "lucide-react";
+import { BookOpenText, Building2, Code2, Copyright, ShieldCheck } from "lucide-react";
 import { FooterControls } from "@/components/auth/footer-controls";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default function AuthLayout({
   children,
@@ -73,9 +79,54 @@ export default function AuthLayout({
               <Building2 className="h-3 w-3 shrink-0" />
               DIT Interns
             </p>
-            <p className="text-[10px] text-foreground/80">
-              Canata B. Coner K. Gonzalez D. Hizon S.
-            </p>
+            <TooltipProvider delayDuration={120}>
+              <p className="flex flex-wrap gap-x-2 gap-y-1 text-[10px] text-foreground/80">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex cursor-default">Canata B.</span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="px-2 py-1">
+                    <span className="inline-flex items-center gap-1 text-[10px]">
+                      <BookOpenText className="h-3 w-3" />
+                      Documentation &amp; Wireframe
+                    </span>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex cursor-default">Coner K.</span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="px-2 py-1">
+                    <span className="inline-flex items-center gap-1 text-[10px]">
+                      <Code2 className="h-3 w-3" />
+                      Lead Developer
+                    </span>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex cursor-default">Gonzazalez D.</span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="px-2 py-1">
+                    <span className="inline-flex items-center gap-1 text-[10px]">
+                      <BookOpenText className="h-3 w-3" />
+                      Documentation &amp; Wireframe
+                    </span>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex cursor-default">Hizon S.</span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="px-2 py-1">
+                    <span className="inline-flex items-center gap-1 text-[10px]">
+                      <ShieldCheck className="h-3 w-3" />
+                      System Analyst &amp; QA
+                    </span>
+                  </TooltipContent>
+                </Tooltip>
+              </p>
+            </TooltipProvider>
           </div>
         </div>
       </footer>
