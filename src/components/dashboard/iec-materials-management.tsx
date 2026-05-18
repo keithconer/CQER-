@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { CreatorIndicator } from "@/components/dashboard/creator-indicator";
 
 interface IecMaterialsManagementProps {
   initialRecords: IecMaterialRecord[];
@@ -275,6 +276,7 @@ export function IecMaterialsManagement({
               <TableHeader className="bg-muted/30">
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="h-12 text-base font-semibold">Title</TableHead>
+                  <TableHead className="h-12 text-base font-semibold">Created By</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Format</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Project</TableHead>
                   <TableHead className="h-12 text-base font-semibold">SDGs</TableHead>
@@ -288,6 +290,13 @@ export function IecMaterialsManagement({
                   paginatedRecords.map((record) => (
                     <TableRow key={record.id}>
                       <TableCell className="py-4 text-base font-medium">{record.title}</TableCell>
+                      <TableCell className="py-4">
+                        <CreatorIndicator
+                          name={record.created_by_name}
+                          avatarUrl={record.created_by_avatar_url}
+                          role={record.creator_user_type}
+                        />
+                      </TableCell>
                       <TableCell className="py-4 text-base capitalize">{record.format}</TableCell>
                       <TableCell className="py-4 text-base">{record.related_project_title || "-"}</TableCell>
                       <TableCell className="py-4 text-sm">{record.sdg_goals.join(", ") || "-"}</TableCell>
@@ -312,7 +321,7 @@ export function IecMaterialsManagement({
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-28 text-center text-base text-muted-foreground">
+                    <TableCell colSpan={8} className="h-28 text-center text-base text-muted-foreground">
                       No IEC materials records match the current search or filter.
                     </TableCell>
                   </TableRow>

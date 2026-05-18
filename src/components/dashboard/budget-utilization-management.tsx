@@ -10,6 +10,7 @@ import { BudgetUtilizationForm } from "@/components/dashboard/budget-utilization
 import { DocumentPreview } from "@/components/dashboard/document-preview";
 import { ExportPreviewMenu, type ExportPreviewColumn } from "@/components/dashboard/export-preview-menu";
 import { RecordPagination, useRecordPagination } from "@/components/dashboard/record-pagination";
+import { CreatorIndicator } from "@/components/dashboard/creator-indicator";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -308,6 +309,7 @@ export function BudgetUtilizationManagement({
               <TableHeader className="bg-muted/30">
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="h-12 text-base font-semibold">Project Title</TableHead>
+                  <TableHead className="h-12 text-base font-semibold">Created By</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Inclusive Dates</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Total Budget</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Utilized</TableHead>
@@ -332,6 +334,13 @@ export function BudgetUtilizationManagement({
                               </div>
                             </div>
                           </div>
+                        </TableCell>
+                        <TableCell className="py-4">
+                          <CreatorIndicator
+                            name={record.created_by_name || record.creator_full_name}
+                            avatarUrl={record.created_by_avatar_url || record.creator_avatar_url}
+                            role={record.creator_user_type}
+                          />
                         </TableCell>
                         <TableCell className="py-4 text-base">{getCoverageLabel(record)}</TableCell>
                         <TableCell className="py-4 text-base font-medium">{currency(Number(record.total_budget || 0))}</TableCell>
@@ -358,7 +367,7 @@ export function BudgetUtilizationManagement({
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-28 text-center text-base text-muted-foreground">
+                    <TableCell colSpan={8} className="h-28 text-center text-base text-muted-foreground">
                       No budget utilization records match the current search or filter.
                     </TableCell>
                   </TableRow>

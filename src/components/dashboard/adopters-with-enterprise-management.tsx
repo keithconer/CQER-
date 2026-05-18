@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { CreatorIndicator } from "@/components/dashboard/creator-indicator";
 
 interface AdoptersWithEnterpriseManagementProps {
   initialRecords: AdoptersWithEnterpriseRecord[];
@@ -249,6 +250,7 @@ export function AdoptersWithEnterpriseManagement({
               <TableHeader className="bg-muted/30">
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="h-12 text-base font-semibold">Technology Transferred</TableHead>
+                  <TableHead className="h-12 text-base font-semibold">Created By</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Date of Transfer</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Project</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Adopters</TableHead>
@@ -261,6 +263,13 @@ export function AdoptersWithEnterpriseManagement({
                   paginatedRecords.map((record) => (
                     <TableRow key={record.id}>
                       <TableCell className="py-4 text-base font-medium">{record.technology_transferred}</TableCell>
+                      <TableCell className="py-4">
+                        <CreatorIndicator
+                          name={record.created_by_name}
+                          avatarUrl={record.created_by_avatar_url}
+                          role={record.creator_user_type}
+                        />
+                      </TableCell>
                       <TableCell className="py-4 text-base">{record.transfer_date ? format(new Date(record.transfer_date), "MMM d, yyyy") : "-"}</TableCell>
                       <TableCell className="py-4 text-base">{record.related_project_title || "-"}</TableCell>
                       <TableCell className="py-4 text-base">{record.adopters.map((item) => item.name).join(", ") || "-"}</TableCell>
@@ -284,7 +293,7 @@ export function AdoptersWithEnterpriseManagement({
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-28 text-center text-base text-muted-foreground">
+                    <TableCell colSpan={7} className="h-28 text-center text-base text-muted-foreground">
                       No adopters with enterprise records match the current search or filter.
                     </TableCell>
                   </TableRow>

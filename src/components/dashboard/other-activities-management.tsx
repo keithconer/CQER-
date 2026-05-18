@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { CreatorIndicator } from "@/components/dashboard/creator-indicator";
 import {
   deleteOtherActivity,
   type OtherActivityRecord,
@@ -281,6 +282,7 @@ export function OtherActivitiesManagement({
               <TableHeader className="bg-muted/30">
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="h-12 text-base font-semibold">Date</TableHead>
+                  <TableHead className="h-12 text-base font-semibold">Created By</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Activity</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Category</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Participants</TableHead>
@@ -298,6 +300,13 @@ export function OtherActivitiesManagement({
                           <CalendarDays className="h-4 w-4 text-muted-foreground" />
                           <span>{getDateLabel(record)}</span>
                         </div>
+                      </TableCell>
+                      <TableCell className="py-4">
+                        <CreatorIndicator
+                          name={record.created_by_name || record.creator_full_name}
+                          avatarUrl={record.created_by_avatar_url || record.creator_avatar_url}
+                          role={record.creator_user_type}
+                        />
                       </TableCell>
                       <TableCell className="py-4 text-base font-medium">
                         <div className="flex items-start gap-2">
@@ -330,7 +339,7 @@ export function OtherActivitiesManagement({
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-28 text-center text-base text-muted-foreground">
+                    <TableCell colSpan={8} className="h-28 text-center text-base text-muted-foreground">
                       No other activity records match the current search or filter.
                     </TableCell>
                   </TableRow>

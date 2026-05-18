@@ -144,7 +144,7 @@ function stripMissingSchemaCacheColumn(payload: Record<string, unknown>, message
 
 function attachCreatorDetails<T extends { created_by?: string | null }>(
   records: T[],
-  profiles: Array<{ id: string; first_name: string | null; last_name: string | null }>
+  profiles: Array<{ id: string; first_name: string | null; last_name: string | null; avatar_url?: string | null; user_type?: string | null }>
 ) {
   const profileMap = new Map(
     profiles.map((profile) => [
@@ -152,6 +152,8 @@ function attachCreatorDetails<T extends { created_by?: string | null }>(
       {
         firstName: profile.first_name,
         lastName: profile.last_name,
+        avatarUrl: profile.avatar_url || null,
+        userType: profile.user_type || null,
       },
     ])
   );
@@ -165,6 +167,9 @@ function attachCreatorDetails<T extends { created_by?: string | null }>(
       creator_first_name: creator?.firstName || null,
       creator_last_name: creator?.lastName || null,
       creator_full_name: creatorFullName || null,
+      creator_avatar_url: creator?.avatarUrl || null,
+      created_by_avatar_url: creator?.avatarUrl || null,
+      creator_user_type: creator?.userType || null,
     };
   });
 }
@@ -185,8 +190,8 @@ export async function getTrainings() {
 
     const creatorIds = Array.from(new Set((data || []).map((item) => item.created_by).filter(Boolean)));
     const { data: profiles } = creatorIds.length
-      ? await adminClient.from("profiles").select("id, first_name, last_name").in("id", creatorIds)
-      : { data: [] as Array<{ id: string; first_name: string | null; last_name: string | null }> };
+      ? await adminClient.from("profiles").select("id, first_name, last_name, avatar_url, user_type").in("id", creatorIds)
+      : { data: [] as Array<{ id: string; first_name: string | null; last_name: string | null; avatar_url?: string | null; user_type?: string | null }> };
 
     return { data: attachCreatorDetails(data || [], profiles || []) };
   }
@@ -205,8 +210,8 @@ export async function getTrainings() {
 
     const creatorIds = Array.from(new Set((data || []).map((item) => item.created_by).filter(Boolean)));
     const { data: profiles } = creatorIds.length
-      ? await adminClient.from("profiles").select("id, first_name, last_name").in("id", creatorIds)
-      : { data: [] as Array<{ id: string; first_name: string | null; last_name: string | null }> };
+      ? await adminClient.from("profiles").select("id, first_name, last_name, avatar_url, user_type").in("id", creatorIds)
+      : { data: [] as Array<{ id: string; first_name: string | null; last_name: string | null; avatar_url?: string | null; user_type?: string | null }> };
 
     return { data: attachCreatorDetails(data || [], profiles || []) };
   }
@@ -249,8 +254,8 @@ export async function getTrainings() {
 
     const creatorIdsWithData = Array.from(new Set((data || []).map((item) => item.created_by).filter(Boolean)));
     const { data: profiles } = creatorIdsWithData.length
-      ? await adminClient.from("profiles").select("id, first_name, last_name").in("id", creatorIdsWithData)
-      : { data: [] as Array<{ id: string; first_name: string | null; last_name: string | null }> };
+      ? await adminClient.from("profiles").select("id, first_name, last_name, avatar_url, user_type").in("id", creatorIdsWithData)
+      : { data: [] as Array<{ id: string; first_name: string | null; last_name: string | null; avatar_url?: string | null; user_type?: string | null }> };
 
     return { data: attachCreatorDetails(data || [], profiles || []) };
   }
@@ -303,8 +308,8 @@ export async function getTrainings() {
   });
   const creatorIdsWithData = Array.from(new Set(visibleData.map((item) => item.created_by).filter(Boolean)));
   const { data: profiles } = creatorIdsWithData.length
-    ? await adminClient.from("profiles").select("id, first_name, last_name").in("id", creatorIdsWithData)
-    : { data: [] as Array<{ id: string; first_name: string | null; last_name: string | null }> };
+    ? await adminClient.from("profiles").select("id, first_name, last_name, avatar_url, user_type").in("id", creatorIdsWithData)
+    : { data: [] as Array<{ id: string; first_name: string | null; last_name: string | null; avatar_url?: string | null; user_type?: string | null }> };
 
   return {
     data: attachCreatorDetails(visibleData, profiles || []),

@@ -818,17 +818,29 @@ export default async function DashboardPage({
       );
       let creatorMap = new Map<
         string,
-        { user_type: "super_admin" | "college_coordinator" | "unit_coordinator" | "project_leader" | "extension_office"; unit: string | null }
+        {
+          user_type: "super_admin" | "college_coordinator" | "unit_coordinator" | "project_leader" | "extension_office";
+          unit: string | null;
+          first_name: string | null;
+          last_name: string | null;
+          avatar_url: string | null;
+        }
       >();
       if (creatorIds.length > 0) {
         const { data: creatorProfiles } = await adminClient
           .from("profiles")
-          .select("id, user_type, unit")
+          .select("id, user_type, unit, first_name, last_name, avatar_url")
           .in("id", creatorIds);
         creatorMap = new Map(
           (creatorProfiles || []).map((profile) => [
             profile.id,
-            { user_type: profile.user_type, unit: profile.unit },
+            {
+              user_type: profile.user_type,
+              unit: profile.unit,
+              first_name: profile.first_name,
+              last_name: profile.last_name,
+              avatar_url: profile.avatar_url,
+            },
           ])
         );
       }
@@ -840,6 +852,10 @@ export default async function DashboardPage({
             ...project,
             created_by_user_type: creator?.user_type || null,
             created_by_unit: creator?.unit || null,
+            creator_first_name: creator?.first_name || null,
+            creator_last_name: creator?.last_name || null,
+            creator_full_name: `${creator?.first_name || ""} ${creator?.last_name || ""}`.trim() || null,
+            creator_avatar_url: creator?.avatar_url || null,
           };
         }) || [];
       projects = allProjects;

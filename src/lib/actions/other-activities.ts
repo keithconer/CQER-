@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { attachCreatorProfiles, type CreatorProfileFields } from "@/lib/actions/creator-details";
 
 const RECORD_MANAGER_ROLES = ["project_leader", "college_coordinator", "super_admin"];
 
@@ -34,7 +35,7 @@ export interface OtherActivityPayload {
   documents: { url: string; name: string }[];
 }
 
-export interface OtherActivityRecord extends OtherActivityPayload {
+export interface OtherActivityRecord extends OtherActivityPayload, CreatorProfileFields {
   id: string;
   created_by: string;
   created_at: string | null;
@@ -83,7 +84,7 @@ export async function getOtherActivities() {
     return { error: error.message };
   }
 
-  return { data: (data || []) as OtherActivityRecord[] };
+  return { data: await attachCreatorProfiles(adminClient, (data || []) as OtherActivityRecord[]) };
 }
 
 export async function createOtherActivity(payload: OtherActivityPayload) {

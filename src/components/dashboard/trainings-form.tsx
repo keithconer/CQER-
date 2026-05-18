@@ -420,6 +420,9 @@ export interface TrainingRecord {
   creator_first_name?: string | null;
   creator_last_name?: string | null;
   creator_full_name?: string | null;
+  creator_avatar_url?: string | null;
+  created_by_avatar_url?: string | null;
+  creator_user_type?: string | null;
 }
 
 export interface TrainingProjectOption {

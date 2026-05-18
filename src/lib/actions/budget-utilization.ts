@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { attachCreatorProfiles, type CreatorProfileFields } from "@/lib/actions/creator-details";
 
 const RECORD_MANAGER_ROLES = ["project_leader", "college_coordinator", "super_admin"];
 
@@ -33,7 +34,7 @@ export interface BudgetUtilizationPayload {
   documents: { url: string; name: string }[];
 }
 
-export interface BudgetUtilizationRecord extends BudgetUtilizationPayload {
+export interface BudgetUtilizationRecord extends BudgetUtilizationPayload, CreatorProfileFields {
   id: string;
   created_at: string | null;
   updated_at: string | null;
@@ -184,7 +185,7 @@ export async function getBudgetUtilizations() {
     return { error: error.message };
   }
 
-  return { data: (data || []) as BudgetUtilizationRecord[] };
+  return { data: await attachCreatorProfiles(adminClient, (data || []) as BudgetUtilizationRecord[]) };
 }
 
 export async function createBudgetUtilization(payload: BudgetUtilizationPayload) {

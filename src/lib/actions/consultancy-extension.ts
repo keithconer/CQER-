@@ -3,11 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { attachCreatorProfiles, type CreatorProfileFields } from "@/lib/actions/creator-details";
 
 export type ConsultancyCategory = "Internally" | "Externally";
 export type ConsultancyStatus = "On-going" | "Completed";
 
-export interface ConsultancyExtension {
+export interface ConsultancyExtension extends CreatorProfileFields {
   id: string;
   title_of_consultancy: string;
   base_agency_institute: string;
@@ -72,7 +73,7 @@ export async function getConsultancyExtensions() {
       return { error: error.message };
     }
 
-    return { data: (data || []) as ConsultancyExtension[] };
+    return { data: await attachCreatorProfiles(adminClient, (data || []) as ConsultancyExtension[]) };
   }
 
   if (userType === "project_leader") {
@@ -87,7 +88,7 @@ export async function getConsultancyExtensions() {
       return { error: error.message };
     }
 
-    return { data: (data || []) as ConsultancyExtension[] };
+    return { data: await attachCreatorProfiles(adminClient, (data || []) as ConsultancyExtension[]) };
   }
 
   if (!department) {
@@ -135,7 +136,7 @@ export async function getConsultancyExtensions() {
     return { error: error.message };
   }
 
-  return { data: (data || []) as ConsultancyExtension[] };
+  return { data: await attachCreatorProfiles(adminClient, (data || []) as ConsultancyExtension[]) };
 }
 
 export async function createConsultancyExtension(payload: ConsultancyPayload) {

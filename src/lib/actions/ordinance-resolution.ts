@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { attachCreatorProfiles, type CreatorProfileFields } from "@/lib/actions/creator-details";
 
 const RECORD_MANAGER_ROLES = ["project_leader", "college_coordinator", "super_admin"];
 
@@ -19,7 +20,7 @@ export interface OrdinanceResolutionPayload {
   documents: { url: string; name: string }[];
 }
 
-export interface OrdinanceResolutionRecord extends OrdinanceResolutionPayload {
+export interface OrdinanceResolutionRecord extends OrdinanceResolutionPayload, CreatorProfileFields {
   id: string;
   created_by: string;
   created_at: string | null;
@@ -70,7 +71,7 @@ export async function getOrdinanceResolutions() {
     return { error: error.message };
   }
 
-  return { data: (data || []) as OrdinanceResolutionRecord[] };
+  return { data: await attachCreatorProfiles(adminClient, (data || []) as OrdinanceResolutionRecord[]) };
 }
 
 export async function createOrdinanceResolution(payload: OrdinanceResolutionPayload) {

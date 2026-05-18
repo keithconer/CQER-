@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { CreatorIndicator } from "@/components/dashboard/creator-indicator";
 
 interface TechnologiesInnovationsCommercializedManagementProps {
   initialRecords: TechnologyCommercializationRecord[];
@@ -248,6 +249,7 @@ export function TechnologiesInnovationsCommercializedManagement({
               <TableHeader className="bg-muted/30">
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="h-12 text-base font-semibold">Name of the Technology</TableHead>
+                  <TableHead className="h-12 text-base font-semibold">Created By</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Year Developed</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Technology Generator</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Project</TableHead>
@@ -261,6 +263,13 @@ export function TechnologiesInnovationsCommercializedManagement({
                   paginatedRecords.map((record) => (
                     <TableRow key={record.id}>
                       <TableCell className="py-4 text-base font-medium">{record.technology_name}</TableCell>
+                      <TableCell className="py-4">
+                        <CreatorIndicator
+                          name={record.created_by_name}
+                          avatarUrl={record.created_by_avatar_url}
+                          role={record.creator_user_type}
+                        />
+                      </TableCell>
                       <TableCell className="py-4 text-base">{record.year_developed ? format(new Date(record.year_developed), "MMM d, yyyy") : "-"}</TableCell>
                       <TableCell className="py-4 text-base">{record.technology_generator}</TableCell>
                       <TableCell className="py-4 text-base">{record.related_project_title || "-"}</TableCell>
@@ -285,7 +294,7 @@ export function TechnologiesInnovationsCommercializedManagement({
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-28 text-center text-base text-muted-foreground">
+                    <TableCell colSpan={8} className="h-28 text-center text-base text-muted-foreground">
                       No technologies / innovations commercialized records match the current search or filter.
                     </TableCell>
                   </TableRow>

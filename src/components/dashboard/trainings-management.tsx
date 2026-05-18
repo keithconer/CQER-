@@ -35,9 +35,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { deleteTraining } from "@/lib/actions/trainings";
 import { DocumentPreview } from "@/components/dashboard/document-preview";
+import { CreatorIndicator } from "@/components/dashboard/creator-indicator";
 import { toTitleCase } from "@/lib/utils";
 
 interface TrainingsManagementProps {
@@ -457,6 +457,7 @@ export function TrainingsManagement({
                   <TableHeader className="bg-muted/30">
                     <TableRow className="hover:bg-transparent">
                       <TableHead className="h-12 text-base font-semibold">Title of Training</TableHead>
+                      <TableHead className="h-12 text-base font-semibold">Created By</TableHead>
                       <TableHead className="h-12 text-base font-semibold">Project</TableHead>
                       <TableHead className="h-12 text-base font-semibold">Category</TableHead>
                       <TableHead className="h-12 text-base font-semibold">Venue / Platform</TableHead>
@@ -471,32 +472,16 @@ export function TrainingsManagement({
                       paginatedRecords.map((record) => (
                         <TableRow
                           key={record.id}
-                          title={
-                            userType === "unit_coordinator" &&
-                            record.created_by !== currentUserId &&
-                            record.creator_full_name
-                              ? `Training is created by: ${record.creator_full_name}`
-                              : undefined
-                          }
                         >
                           <TableCell className="py-4 text-base font-medium">
-                            <div className="flex items-center gap-2">
-                              <span>{record.training_title}</span>
-                              {userType === "unit_coordinator" && record.created_by !== currentUserId && record.creator_full_name ? (
-                                <TooltipProvider delayDuration={150}>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <span className="cursor-help text-xs text-muted-foreground underline decoration-dotted underline-offset-4">
-                                        coworker
-                                      </span>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>Training is created by: {record.creator_full_name}</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              ) : null}
-                            </div>
+                            {record.training_title}
+                          </TableCell>
+                          <TableCell className="py-4">
+                            <CreatorIndicator
+                              name={record.creator_full_name}
+                              avatarUrl={record.creator_avatar_url || record.created_by_avatar_url}
+                              role={record.creator_user_type}
+                            />
                           </TableCell>
                           <TableCell className="py-4 text-base">{record.related_project_title || "-"}</TableCell>
                           <TableCell className="py-4 text-base">
@@ -530,7 +515,7 @@ export function TrainingsManagement({
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={8} className="h-28 text-center text-base text-muted-foreground">
+                        <TableCell colSpan={9} className="h-28 text-center text-base text-muted-foreground">
                           No training records match the current search or filter.
                         </TableCell>
                       </TableRow>

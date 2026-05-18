@@ -39,6 +39,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DocumentPreview } from "@/components/dashboard/document-preview";
+import { CreatorIndicator } from "@/components/dashboard/creator-indicator";
 
 interface ConsultancyExtensionManagementProps {
   initialExtensions: ConsultancyExtension[];
@@ -285,6 +286,7 @@ export function ConsultancyExtensionManagement({
               <TableHeader className="bg-muted/30">
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="h-12 text-base font-semibold">Title of Consultancy</TableHead>
+                  <TableHead className="h-12 text-base font-semibold">Created By</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Base Agency / Institute</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Nature of Consultancy</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Project</TableHead>
@@ -299,6 +301,13 @@ export function ConsultancyExtensionManagement({
                   paginatedRecords.map((record) => (
                     <TableRow key={record.id}>
                       <TableCell className="py-4 text-base font-medium">{record.title_of_consultancy}</TableCell>
+                      <TableCell className="py-4">
+                        <CreatorIndicator
+                          name={record.created_by_name || record.creator_full_name}
+                          avatarUrl={record.created_by_avatar_url || record.creator_avatar_url}
+                          role={record.creator_user_type}
+                        />
+                      </TableCell>
                       <TableCell className="py-4 text-base">{record.base_agency_institute}</TableCell>
                       <TableCell className="py-4 text-base">{record.nature_of_consultancy}</TableCell>
                       <TableCell className="py-4 text-base">{record.related_project_title || "-"}</TableCell>
@@ -328,7 +337,7 @@ export function ConsultancyExtensionManagement({
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} className="h-28 text-center text-base text-muted-foreground">
+                    <TableCell colSpan={9} className="h-28 text-center text-base text-muted-foreground">
                       No consultancy records match the current search or filter.
                     </TableCell>
                   </TableRow>

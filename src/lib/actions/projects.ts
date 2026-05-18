@@ -239,7 +239,7 @@ export async function getCollegeProjects() {
 
     const { data: deptProfiles, error: deptProfilesError } = await adminClient
         .from("profiles")
-        .select("id, user_type, unit, department, first_name, last_name")
+        .select("id, user_type, unit, department, first_name, last_name, avatar_url")
         .in("user_type", ["college_coordinator", "unit_coordinator", "project_leader", "super_admin"])
         .eq("department", profile.department);
 
@@ -257,12 +257,13 @@ export async function getCollegeProjects() {
                 department: p.department,
                 first_name: p.first_name,
                 last_name: p.last_name,
+                avatar_url: p.avatar_url,
             },
         ])
     );
     const { data: superAdmins, error: superAdminError } = await adminClient
         .from("profiles")
-        .select("id, user_type, unit, department, first_name, last_name")
+        .select("id, user_type, unit, department, first_name, last_name, avatar_url")
         .eq("user_type", "super_admin");
 
     if (superAdminError) {
@@ -277,6 +278,7 @@ export async function getCollegeProjects() {
             department: entry.department,
             first_name: entry.first_name,
             last_name: entry.last_name,
+            avatar_url: entry.avatar_url,
         })
     );
 
@@ -316,6 +318,7 @@ export async function getCollegeProjects() {
                 creator_first_name: creator?.first_name || null,
                 creator_last_name: creator?.last_name || null,
                 creator_full_name: `${creator?.first_name || ""} ${creator?.last_name || ""}`.trim() || null,
+                creator_avatar_url: creator?.avatar_url || null,
             };
         }) || [];
 
@@ -350,7 +353,7 @@ export async function getUnitProjects() {
 
     const { data: deptProfiles, error: deptProfilesError } = await adminClient
         .from("profiles")
-        .select("id, user_type, unit")
+        .select("id, user_type, unit, first_name, last_name, avatar_url")
         .in("user_type", ["unit_coordinator", "college_coordinator"])
         .eq("department", profile.department);
 
@@ -360,11 +363,11 @@ export async function getUnitProjects() {
     }
 
     const profileMap = new Map(
-        (deptProfiles || []).map((p) => [p.id, { user_type: p.user_type, unit: p.unit }])
+        (deptProfiles || []).map((p) => [p.id, { user_type: p.user_type, unit: p.unit, first_name: p.first_name, last_name: p.last_name, avatar_url: p.avatar_url }])
     );
     const { data: superAdmins, error: superAdminError } = await adminClient
         .from("profiles")
-        .select("id, user_type, unit")
+        .select("id, user_type, unit, first_name, last_name, avatar_url")
         .eq("user_type", "super_admin");
 
     if (superAdminError) {
@@ -372,7 +375,7 @@ export async function getUnitProjects() {
         return { error: superAdminError.message };
     }
 
-    (superAdmins || []).forEach((entry) => profileMap.set(entry.id, { user_type: entry.user_type, unit: entry.unit }));
+    (superAdmins || []).forEach((entry) => profileMap.set(entry.id, { user_type: entry.user_type, unit: entry.unit, first_name: entry.first_name, last_name: entry.last_name, avatar_url: entry.avatar_url }));
 
     const creatorIds = Array.from(new Set([...(deptProfiles || []).map((p) => p.id), ...((superAdmins || []).map((p) => p.id))]));
 
@@ -416,7 +419,20 @@ export async function getUnitProjects() {
             return false;
         }) || [];
 
-    return { data: filtered };
+    return {
+        data: filtered.map((project) => {
+            const creator = profileMap.get(project.created_by);
+            return {
+                ...project,
+                created_by_user_type: creator?.user_type || null,
+                created_by_unit: creator?.unit || null,
+                creator_first_name: creator?.first_name || null,
+                creator_last_name: creator?.last_name || null,
+                creator_full_name: `${creator?.first_name || ""} ${creator?.last_name || ""}`.trim() || null,
+                creator_avatar_url: creator?.avatar_url || null,
+            };
+        }),
+    };
 }
 
 export async function getProjectLeaderProjects() {
@@ -455,16 +471,16 @@ export async function getProjectLeaderProjects() {
         new Set((data || []).map((project) => project.created_by).filter(Boolean))
     ) as string[];
 
-    let creatorMap = new Map<string, { user_type: string | null; unit: string | null }>();
+    let creatorMap = new Map<string, { user_type: string | null; unit: string | null; first_name: string | null; last_name: string | null; avatar_url: string | null }>();
     if (creatorIds.length > 0) {
         const { data: creatorProfiles } = await adminClient
             .from("profiles")
-            .select("id, user_type, unit")
+            .select("id, user_type, unit, first_name, last_name, avatar_url")
             .in("id", creatorIds);
         creatorMap = new Map(
             (creatorProfiles || []).map((entry) => [
                 entry.id,
-                { user_type: entry.user_type, unit: entry.unit },
+                { user_type: entry.user_type, unit: entry.unit, first_name: entry.first_name, last_name: entry.last_name, avatar_url: entry.avatar_url },
             ])
         );
     }
@@ -476,6 +492,10 @@ export async function getProjectLeaderProjects() {
                 ...project,
                 created_by_user_type: creator?.user_type || null,
                 created_by_unit: creator?.unit || null,
+                creator_first_name: creator?.first_name || null,
+                creator_last_name: creator?.last_name || null,
+                creator_full_name: `${creator?.first_name || ""} ${creator?.last_name || ""}`.trim() || null,
+                creator_avatar_url: creator?.avatar_url || null,
             };
         }) || [];
 

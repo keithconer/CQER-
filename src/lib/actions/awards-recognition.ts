@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { attachCreatorProfiles, type CreatorProfileFields } from "@/lib/actions/creator-details";
 
 const RECORD_MANAGER_ROLES = ["project_leader", "college_coordinator", "super_admin"];
 
@@ -20,7 +21,7 @@ export interface AwardsRecognitionPayload {
   documents: { url: string; name: string }[];
 }
 
-export interface AwardsRecognitionRecord extends AwardsRecognitionPayload {
+export interface AwardsRecognitionRecord extends AwardsRecognitionPayload, CreatorProfileFields {
   id: string;
   created_by: string;
   created_at: string | null;
@@ -69,7 +70,7 @@ export async function getAwardsRecognitions() {
     return { error: error.message };
   }
 
-  return { data: (data || []) as AwardsRecognitionRecord[] };
+  return { data: await attachCreatorProfiles(adminClient, (data || []) as AwardsRecognitionRecord[]) };
 }
 
 export async function createAwardsRecognition(payload: AwardsRecognitionPayload) {

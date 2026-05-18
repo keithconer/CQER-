@@ -32,6 +32,7 @@ import { useRouter } from "next/navigation";
 import { DocumentPreview } from "./document-preview";
 import { ProjectDeleteDialog } from "./project-delete-dialog";
 import { getProjectOverallBudget } from "@/lib/project-budget";
+import { CreatorIndicator } from "@/components/dashboard/creator-indicator";
 
 export interface Project {
   id: string;
@@ -43,6 +44,7 @@ export interface Project {
   creator_first_name?: string | null;
   creator_last_name?: string | null;
   creator_full_name?: string | null;
+  creator_avatar_url?: string | null;
   entry_type?: "project" | "project_proposal" | null;
   project_no?: string | null;
   project_leader_id?: string | null;
@@ -213,6 +215,7 @@ export function ProjectsTable({
           <TableHeader className="bg-muted/30">
             <TableRow className="hover:bg-transparent border-border/50">
               <TableHead className="text-[10px] font-semibold h-9">{recordLabel} Title</TableHead>
+              <TableHead className="text-[10px] font-semibold h-9">Created By</TableHead>
               <TableHead className="text-[10px] font-semibold h-9">Project Leader</TableHead>
               <TableHead className="text-[10px] font-semibold h-9">Co-Project Leaders</TableHead>
               <TableHead className="text-[10px] font-semibold h-9">Program</TableHead>
@@ -243,6 +246,13 @@ export function ProjectsTable({
                         {Array.isArray(project.classification) ? project.classification.join(", ") : String(project.classification).replace(/[\[\]"]/g, "")}
                       </span>
                     </div>
+                  </TableCell>
+                  <TableCell className="text-[10px] py-2.5 px-3">
+                    <CreatorIndicator
+                      name={project.creator_full_name}
+                      avatarUrl={project.creator_avatar_url}
+                      role={project.created_by_user_type}
+                    />
                   </TableCell>
                   <TableCell className="text-[10px] py-2.5 px-3 max-w-[220px]">
                     <span className="line-clamp-2" title={formatProjectLeaders(project.proponents)}>
@@ -319,7 +329,7 @@ export function ProjectsTable({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={showActionsColumn ? 11 : 10} className="h-24 text-center text-xs text-muted-foreground">
+                <TableCell colSpan={showActionsColumn ? 12 : 11} className="h-24 text-center text-xs text-muted-foreground">
                   No matches found for &quot;{searchTerm}&quot;
                 </TableCell>
               </TableRow>

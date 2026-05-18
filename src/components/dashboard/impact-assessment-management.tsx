@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { CreatorIndicator } from "@/components/dashboard/creator-indicator";
 import {
   deleteImpactAssessment,
   type ImpactAssessmentRecord,
@@ -271,6 +272,7 @@ export function ImpactAssessmentManagement({
               <TableHeader className="bg-muted/30">
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="h-12 text-base font-semibold">Project / Training Activity</TableHead>
+                  <TableHead className="h-12 text-base font-semibold">Created By</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Proponent</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Lead Evaluator</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Date of Assessment</TableHead>
@@ -287,6 +289,13 @@ export function ImpactAssessmentManagement({
                           <Activity className="mt-0.5 h-4 w-4 text-[#159E44]" />
                           <span>{record.activity_name}</span>
                         </div>
+                      </TableCell>
+                      <TableCell className="py-4">
+                        <CreatorIndicator
+                          name={record.created_by_name || record.creator_full_name}
+                          avatarUrl={record.created_by_avatar_url || record.creator_avatar_url}
+                          role={record.creator_user_type}
+                        />
                       </TableCell>
                       <TableCell className="py-4 text-base">{record.proponent}</TableCell>
                       <TableCell className="py-4 text-base">{record.lead_evaluator}</TableCell>
@@ -316,7 +325,7 @@ export function ImpactAssessmentManagement({
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-28 text-center text-base text-muted-foreground">
+                    <TableCell colSpan={7} className="h-28 text-center text-base text-muted-foreground">
                       No impact assessment records match the current search or filter.
                     </TableCell>
                   </TableRow>

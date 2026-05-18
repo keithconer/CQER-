@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { CreatorIndicator } from "@/components/dashboard/creator-indicator";
 import {
   deleteAwardsRecognition,
   type AwardsRecognitionRecord,
@@ -289,6 +290,7 @@ export function AwardsRecognitionManagement({
               <TableHeader className="bg-muted/30">
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="h-12 text-base font-semibold">Award / Recognition</TableHead>
+                  <TableHead className="h-12 text-base font-semibold">Created By</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Awarding Body</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Level</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Date Received</TableHead>
@@ -306,6 +308,13 @@ export function AwardsRecognitionManagement({
                           <Award className="mt-0.5 h-4 w-4 text-[#159E44]" />
                           <span>{record.award_title}</span>
                         </div>
+                      </TableCell>
+                      <TableCell className="py-4">
+                        <CreatorIndicator
+                          name={record.created_by_name || record.creator_full_name}
+                          avatarUrl={record.created_by_avatar_url || record.creator_avatar_url}
+                          role={record.creator_user_type}
+                        />
                       </TableCell>
                       <TableCell className="py-4 text-base">{record.donor_body}</TableCell>
                       <TableCell className="py-4 text-base">{getLevelLabel(record.level)}</TableCell>
@@ -336,7 +345,7 @@ export function AwardsRecognitionManagement({
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-28 text-center text-base text-muted-foreground">
+                    <TableCell colSpan={8} className="h-28 text-center text-base text-muted-foreground">
                       No awards and recognition records match the current search or filter.
                     </TableCell>
                   </TableRow>

@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DocumentPreview } from "@/components/dashboard/document-preview";
+import { CreatorIndicator } from "@/components/dashboard/creator-indicator";
 import {
   deleteTechnicalAdvisoryService,
   type RatingBreakdown,
@@ -293,6 +294,7 @@ export function TechnicalAdvisoryServicesManagement({
               <TableHeader className="bg-muted/30">
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="h-12 text-base font-semibold">Agency Name</TableHead>
+                  <TableHead className="h-12 text-base font-semibold">Created By</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Category</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Date</TableHead>
                   <TableHead className="h-12 text-base font-semibold">Venue</TableHead>
@@ -307,6 +309,13 @@ export function TechnicalAdvisoryServicesManagement({
                   paginatedRecords.map((record) => (
                     <TableRow key={record.id}>
                       <TableCell className="py-4 text-base font-medium">{record.agency_name}</TableCell>
+                      <TableCell className="py-4">
+                        <CreatorIndicator
+                          name={record.created_by_name}
+                          avatarUrl={record.created_by_avatar_url}
+                          role={record.creator_user_type}
+                        />
+                      </TableCell>
                       <TableCell className="py-4 text-base capitalize">{record.category}</TableCell>
                       <TableCell className="py-4 text-base">
                         {record.advisory_date ? format(new Date(record.advisory_date), "MMM d, yyyy") : "-"}
@@ -336,7 +345,7 @@ export function TechnicalAdvisoryServicesManagement({
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} className="h-28 text-center text-base text-muted-foreground">
+                    <TableCell colSpan={9} className="h-28 text-center text-base text-muted-foreground">
                       No technical advisory records match the current search or filter.
                     </TableCell>
                   </TableRow>

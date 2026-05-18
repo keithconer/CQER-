@@ -57,6 +57,8 @@ export interface TechnicalAdvisoryServiceRecord {
   created_at: string;
   updated_at: string;
   created_by_name?: string | null;
+  created_by_avatar_url?: string | null;
+  creator_user_type?: string | null;
 }
 
 export type CreateTechnicalAdvisoryServicePayload = Omit<
@@ -71,6 +73,7 @@ type ProfileLite = {
   unit: string | null;
   first_name: string | null;
   last_name: string | null;
+  avatar_url?: string | null;
 };
 
 const emptyRatings: RatingBreakdown = { "5": 0, "4": 0, "3": 0, "2": 0, "1": 0 };
@@ -103,6 +106,8 @@ function normalizeRecord(record: Record<string, unknown>, creator?: ProfileLite 
     rating_timeliness_breakdown: normalizeRatings(record.rating_timeliness_breakdown),
     rating_overall_breakdown: normalizeRatings(record.rating_overall_breakdown),
     created_by_name: fullName || null,
+    created_by_avatar_url: creator?.avatar_url || null,
+    creator_user_type: creator?.user_type || null,
   } as TechnicalAdvisoryServiceRecord;
 }
 
@@ -116,7 +121,7 @@ async function getAuthorizedProfile() {
 
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("id, user_type, department, unit, first_name, last_name")
+    .select("id, user_type, department, unit, first_name, last_name, avatar_url")
     .eq("id", user.id)
     .single();
 
@@ -176,7 +181,7 @@ export async function getTechnicalAdvisoryServices() {
   if (creatorIds.length > 0) {
     const { data: creators } = await adminClient
       .from("profiles")
-      .select("id, user_type, department, unit, first_name, last_name")
+      .select("id, user_type, department, unit, first_name, last_name, avatar_url")
       .in("id", creatorIds);
     creatorMap = new Map((creators || []).map((item) => [item.id, item as ProfileLite]));
   }

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { attachCreatorProfiles, type CreatorProfileFields } from "@/lib/actions/creator-details";
 
 const RECORD_MANAGER_ROLES = ["project_leader", "college_coordinator", "super_admin"];
 
@@ -17,7 +18,7 @@ export interface ExtensionProgramPayload {
   documents: { url: string; name: string }[];
 }
 
-export interface ExtensionProgramRecord extends ExtensionProgramPayload {
+export interface ExtensionProgramRecord extends ExtensionProgramPayload, CreatorProfileFields {
   id: string;
   created_by: string;
   created_at: string | null;
@@ -66,7 +67,7 @@ export async function getExtensionPrograms() {
     return { error: error.message };
   }
 
-  return { data: (data || []) as ExtensionProgramRecord[] };
+  return { data: await attachCreatorProfiles(adminClient, (data || []) as ExtensionProgramRecord[]) };
 }
 
 export async function createExtensionProgram(payload: ExtensionProgramPayload) {
