@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Clock3,
   GraduationCap,
+  Handshake,
   Layers3,
   MapPin,
   Plus,
@@ -55,6 +56,7 @@ import { THEMATIC_AREA_OPTIONS } from "@/lib/thematic-area";
 import { cn } from "@/lib/utils";
 
 const stepLabels = ["Training Details", "Committee", "Participants", "Saving"];
+const OTHER_PARTNER_AGENCY_VALUE = "__other_partner_agency__";
 
 const sdgOptions = SDG_OPTIONS;
 
@@ -1107,6 +1109,7 @@ export function TrainingsForm({
   onClose,
 }: TrainingsFormProps) {
   const isAssignedDraftRecord = Boolean(record?.id?.startsWith("assigned:"));
+  const [showCustomPartnerAgencyInput, setShowCustomPartnerAgencyInput] = React.useState(false);
   const [currentStep, setCurrentStep] = React.useState(1);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const autoSubmitStartedRef = React.useRef(false);
@@ -1141,6 +1144,7 @@ export function TrainingsForm({
   const numberOfDays = Number(useWatch({ control: form.control, name: "number_of_days" }) || 0);
   const watchedDepartment = useWatch({ control: form.control, name: "department" }) || department || "";
   const relatedProjectId = useWatch({ control: form.control, name: "related_project_id" }) || "";
+  const selectedExpensePartnerAgency = useWatch({ control: form.control, name: "expense_partner_agency_name" }) || "";
   const watchedConductedSessions = useWatch({ control: form.control, name: "conducted_sessions" });
   const watchedTrainingCategories = useWatch({ control: form.control, name: "training_categories" });
   const disabilityCount = Number(useWatch({ control: form.control, name: "tvl_disabilities_count" }) || 0);
@@ -1178,10 +1182,16 @@ export function TrainingsForm({
   const selectedProject = hideProjectField ? null : projectOptions.find((item) => item.id === relatedProjectId) || null;
   const sdgSourceMain = selectedProject?.sdg_main || [];
   const sdgSourceSub = selectedProject?.sdg_sub || [];
-  const selectedProjectPartnerAgencies = uniqueStringList([
-    ...(selectedProject?.partner_agencies || []),
-    ...existingPartnerAgencies,
-  ]);
+  const partnerAgencyDropdownOptions = selectedProject
+    ? uniqueStringList(selectedProject.partner_agencies || [])
+    : uniqueStringList(existingPartnerAgencies);
+  const canUseCustomPartnerAgency = !selectedProject;
+  const isCustomPartnerAgency =
+    canUseCustomPartnerAgency &&
+    Boolean(selectedExpensePartnerAgency.trim()) &&
+    !partnerAgencyDropdownOptions.includes(selectedExpensePartnerAgency);
+  const shouldShowCustomPartnerAgencyInput =
+    canUseCustomPartnerAgency && (showCustomPartnerAgencyInput || isCustomPartnerAgency);
 
   React.useEffect(() => {
     const currentSessions = form.getValues("conducted_sessions") || [];
@@ -1233,7 +1243,11 @@ export function TrainingsForm({
       const primaryPartnerAgency = uniqueStringList(selectedProject.partner_agencies || [])[0] || "";
       form.setValue("expense_partner_agency_name", primaryPartnerAgency, { shouldDirty: true, shouldValidate: true });
       form.setValue("partner_agencies", primaryPartnerAgency ? [primaryPartnerAgency] : [], { shouldDirty: true });
+    } else {
+      form.setValue("expense_partner_agency_name", "", { shouldDirty: true, shouldValidate: true });
+      form.setValue("partner_agencies", [], { shouldDirty: true });
     }
+    setShowCustomPartnerAgencyInput(false);
   }, [form, selectedProject]);
 
   React.useEffect(() => {
@@ -2043,28 +2057,57 @@ export function TrainingsForm({
                           <FormItem>
                             <FormLabel className="text-xs">Name of Partner Agency</FormLabel>
                             <Select
-                              value={field.value || "none"}
+                              value={
+                                shouldShowCustomPartnerAgencyInput
+                                  ? OTHER_PARTNER_AGENCY_VALUE
+                                  : field.value && partnerAgencyDropdownOptions.includes(field.value)
+                                    ? field.value
+                                    : "none"
+                              }
                               onValueChange={(value) => {
-                                const nextValue = value === "none" ? "" : value;
+                                setShowCustomPartnerAgencyInput(value === OTHER_PARTNER_AGENCY_VALUE);
+                                const nextValue =
+                                  value === "none" || value === OTHER_PARTNER_AGENCY_VALUE ? "" : value;
                                 field.onChange(nextValue);
                                 form.setValue("partner_agencies", nextValue ? [nextValue] : [], { shouldDirty: true });
                               }}
                               disabled={isViewOnly}
                             >
                               <FormControl>
-                                <SelectTrigger className="h-10 rounded-xl text-sm">
+                                <SelectTrigger className="h-10 rounded-xl text-xs">
+                                  <Handshake className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
                                   <SelectValue placeholder="Select partner agency" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="none" className="text-sm">None selected</SelectItem>
-                                {selectedProjectPartnerAgencies.map((agency) => (
-                                  <SelectItem key={agency} value={agency} className="text-sm">
+                                <SelectItem value="none" className="text-xs">None selected</SelectItem>
+                                {partnerAgencyDropdownOptions.map((agency) => (
+                                  <SelectItem key={agency} value={agency} className="text-xs">
                                     {agency}
                                   </SelectItem>
                                 ))}
+                                {canUseCustomPartnerAgency && (
+                                  <SelectItem value={OTHER_PARTNER_AGENCY_VALUE} className="text-xs">
+                                    Others
+                                  </SelectItem>
+                                )}
                               </SelectContent>
                             </Select>
+                            {shouldShowCustomPartnerAgencyInput ? (
+                              <FormControl>
+                                <Input
+                                  value={field.value || ""}
+                                  onChange={(event) => {
+                                    field.onChange(event.target.value);
+                                    const nextValue = event.target.value.trim();
+                                    form.setValue("partner_agencies", nextValue ? [nextValue] : [], { shouldDirty: true });
+                                  }}
+                                  placeholder="Enter partner agency"
+                                  className="mt-2 h-9 rounded-xl text-xs"
+                                  disabled={isViewOnly}
+                                />
+                              </FormControl>
+                            ) : null}
                             <FormMessage className="text-xs" />
                           </FormItem>
                         )}

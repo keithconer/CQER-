@@ -72,23 +72,36 @@ import { DepartmentManagement } from "@/components/dashboard/department-manageme
 
 function extractPartnerAgencyNames(projects: Project[]) {
   const values = new Set<string>();
-  projects.forEach((project) => {
-    const source = (project as unknown as Record<string, unknown>).partner_agencies;
+  const addValue = (value: unknown) => {
+    if (typeof value !== "string") return;
+    const normalized = value.trim();
+    if (normalized) values.add(normalized);
+  };
+  const addAgencyItems = (source: unknown) => {
     if (!Array.isArray(source)) return;
     source.forEach((item) => {
       if (typeof item === "string") {
-        const normalized = item.trim();
-        if (normalized) values.add(normalized);
+        addValue(item);
         return;
       }
       if (item && typeof item === "object") {
-        const maybeName =
-          typeof (item as { agency_name?: unknown }).agency_name === "string"
-            ? (item as { agency_name: string }).agency_name.trim()
-            : "";
-        if (maybeName) values.add(maybeName);
+        const record = item as Record<string, unknown>;
+        addValue(record.agency_name);
+        addValue(record.name);
+        addValue(record.funding_agency_name);
       }
     });
+  };
+  projects.forEach((project) => {
+    const projectRecord = project as unknown as Record<string, unknown>;
+    addAgencyItems(projectRecord.partner_agencies);
+
+    const fundingData = projectRecord.funding_data;
+    const registrationData =
+      fundingData && typeof fundingData === "object"
+        ? (fundingData as { registration_data?: Record<string, unknown> }).registration_data
+        : undefined;
+    addAgencyItems(registrationData?.partner_agencies);
   });
   return Array.from(values).sort((a, b) => a.localeCompare(b));
 }
@@ -525,6 +538,10 @@ export default async function DashboardPage({
       communityUsers = communityData.mentionableUsers;
     } else if (activePanel === "trainings" && profile.user_type === "unit_coordinator") {
       trainingRecords = (await getTrainings()).data || [];
+      const unitProjectsResult = await getUnitProjects();
+      const visibleUnitProjects = (unitProjectsResult.data || []) as Project[];
+      trainingPartnerAgencyOptions = extractPartnerAgencyNames(visibleUnitProjects);
+      trainingProjectOptions = extractProjectOptions(visibleUnitProjects);
       trainingFacultyOptions = await loadTrainingFacultyOptions();
       const [assignedResult, usersResult] = await Promise.all([
         getAssignedTrainings(),
@@ -774,6 +791,22 @@ export default async function DashboardPage({
       publicCommunityPosts = communityData.publicPosts;
       departmentCommunityPosts = communityData.departmentPosts;
       communityUsers = communityData.mentionableUsers;
+    } else if (activePanel === "trainings") {
+      trainingRecords = (await getTrainings()).data || [];
+      const { data: projectsData } = await adminClient
+        .from("projects")
+        .select("*")
+        .order("created_at", { ascending: false });
+      const visibleProjects = (projectsData as Project[] | null) || [];
+      trainingPartnerAgencyOptions = extractPartnerAgencyNames(visibleProjects);
+      trainingProjectOptions = extractProjectOptions(visibleProjects);
+      trainingFacultyOptions = await loadTrainingFacultyOptions();
+      const [assignedResult, usersResult] = await Promise.all([
+        getAssignedTrainings(),
+        getSystemUsers(),
+      ]);
+      assignedTrainingRecords = assignedResult.data || [];
+      systemUsersList = usersResult.data || [];
     } else if (hasEntitySelection) {
       const { data: projectsData } = await adminClient
         .from("projects")
