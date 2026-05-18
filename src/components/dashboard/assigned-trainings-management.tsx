@@ -21,7 +21,6 @@ import {
   deleteAssignedTraining,
   fillAssignedTraining,
   resolveAssignedTraining,
-  updateAssignedTraining,
 } from "@/lib/actions/assigned-trainings";
 import {
   type TrainingFacultyOption,
@@ -385,7 +384,7 @@ export function AssignedTrainingsManagement({
                                 <Button
                                   variant="outline"
                                   size="icon"
-                                  className="h-8 w-8 rounded-xl border-blue-200 text-blue-600 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-950/30"
+                                  className="h-8 w-8 rounded-xl"
                                   onClick={() => setFillRecord(record)}
                                 >
                                   <Pencil className="h-3.5 w-3.5" />
@@ -404,7 +403,7 @@ export function AssignedTrainingsManagement({
                                 <Button
                                   variant="outline"
                                   size="icon"
-                                  className="h-8 w-8 rounded-xl border-green-200 text-green-700 hover:bg-green-50 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-950/30"
+                                  className="h-8 w-8 rounded-xl"
                                   onClick={() => setResolveTarget(record)}
                                 >
                                   <CheckCircle2 className="h-3.5 w-3.5" />
@@ -603,7 +602,7 @@ export function AssignedTrainingsManagement({
             <DialogTitle className="text-sm font-semibold">Delete Assignment</DialogTitle>
             <DialogDescription className="text-[11px]">
               This will permanently remove{" "}
-              <span className="font-medium text-foreground">"{deleteTarget?.training_title}"</span>.
+              <span className="font-medium text-foreground">&quot;{deleteTarget?.training_title}&quot;</span>.
             </DialogDescription>
           </DialogHeader>
           {deleteError && (

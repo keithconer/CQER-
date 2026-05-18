@@ -1106,6 +1106,7 @@ export function TrainingsForm({
   onSuccess,
   onClose,
 }: TrainingsFormProps) {
+  const isAssignedDraftRecord = Boolean(record?.id?.startsWith("assigned:"));
   const [currentStep, setCurrentStep] = React.useState(1);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const autoSubmitStartedRef = React.useRef(false);
@@ -1397,6 +1398,12 @@ export function TrainingsForm({
       remarks: values.remarks || "",
       documents: values.documents,
     };
+
+    if (isAssignedDraftRecord) {
+      setIsSubmitting(false);
+      onSuccess("updated", payload as unknown as Record<string, unknown>);
+      return;
+    }
 
     const result = record?.id ? await updateTraining(record.id, payload) : await createTraining(payload);
     setIsSubmitting(false);
