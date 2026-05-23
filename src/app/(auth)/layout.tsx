@@ -83,17 +83,6 @@ export default function AuthLayout({
               <p className="flex flex-wrap gap-x-2 gap-y-1 text-[10px] text-foreground/80">
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <span className="inline-flex cursor-default">Canata B.</span>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="px-2 py-1">
-                    <span className="inline-flex items-center gap-1 text-[10px]">
-                      <BookOpenText className="h-3 w-3" />
-                      Documentation &amp; Wireframe
-                    </span>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
                     <span className="inline-flex cursor-default">Coner K.</span>
                   </TooltipTrigger>
                   <TooltipContent side="top" className="px-2 py-1">
@@ -105,7 +94,18 @@ export default function AuthLayout({
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <span className="inline-flex cursor-default">Gonzazalez D.</span>
+                    <span className="inline-flex cursor-default">Hizon S.</span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="px-2 py-1">
+                    <span className="inline-flex items-center gap-1 text-[10px]">
+                      <ShieldCheck className="h-3 w-3" />
+                      System Analyst &amp; QA
+                    </span>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex cursor-default">Gonzalez D.</span>
                   </TooltipTrigger>
                   <TooltipContent side="top" className="px-2 py-1">
                     <span className="inline-flex items-center gap-1 text-[10px]">
@@ -116,12 +116,12 @@ export default function AuthLayout({
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <span className="inline-flex cursor-default">Hizon S.</span>
+                    <span className="inline-flex cursor-default">Canata B.</span>
                   </TooltipTrigger>
                   <TooltipContent side="top" className="px-2 py-1">
                     <span className="inline-flex items-center gap-1 text-[10px]">
-                      <ShieldCheck className="h-3 w-3" />
-                      System Analyst &amp; QA
+                      <BookOpenText className="h-3 w-3" />
+                      Documentation &amp; Wireframe
                     </span>
                   </TooltipContent>
                 </Tooltip>
